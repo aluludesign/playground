@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>首爾 6/19-6/22 專屬自由行規劃</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: '#0F172A', // Slate 900
+                        accent: '#3B82F6', // Blue 500
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Noto Sans TC', sans-serif; background-color: #F8FAFC; }
+        .tab-btn.active { background-color: #1E293B; color: white; border-color: #1E293B; }
+        .tab-btn { transition: all 0.2s ease-in-out; }
+        .timeline-line::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 24px;
+            width: 2px;
+            background-color: #E2E8F0;
+            z-index: 0;
+        }
+        @media (max-width: 768px) {
+            .timeline-line::before { left: 20px; }
+        }
+    </style>
+</head>
+<body class="text-slate-800 antialiased pb-20">
+
+    <!-- Header / Hero Section -->
+    <header class="bg-slate-900 text-white rounded-b-[2.5rem] shadow-xl relative overflow-hidden">
+        <!-- Abstract architectural background shapes -->
+        <div class="absolute top-0 right-0 w-64 h-64 bg-blue-500 opacity-20 rounded-full blur-3xl transform translate-x-1/2 -translate-y-1/2"></div>
+        <div class="absolute bottom-0 left-0 w-48 h-48 bg-teal-400 opacity-20 rounded-full blur-2xl transform -translate-x-1/2 translate-y-1/2"></div>
+        
+        <div class="px-6 pt-16 pb-12 relative z-10">
+            <div class="max-w-3xl mx-auto">
+                <span class="inline-block py-1 px-3 rounded-md bg-white/10 text-xs font-bold tracking-wider uppercase backdrop-blur-md mb-4 border border-white/20">
+                    Seoul Design & Beauty Tour
+                </span>
+                <h1 class="text-3xl md:text-4xl font-bold mb-3 tracking-wide leading-tight">首爾美學與潮流之旅</h1>
+                <p class="text-slate-300 mt-2 text-sm md:text-base mb-6">建築設計 ✕ 質感逛街 ✕ 韓式美食</p>
+                
+                <!-- Info Cards -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div class="bg-white/10 backdrop-blur-sm p-3 rounded-xl border border-white/10 flex items-start gap-3">
+                        <i class="fa-solid fa-plane-arrival mt-1 text-blue-400"></i>
+                        <div class="text-sm">
+                            <div class="font-bold text-white">6/19 22:00 抵達</div>
+                            <div class="text-slate-300 text-xs mt-0.5">仁川機場 (ICN)</div>
+                        </div>
+                    </div>
+                    <div class="bg-white/10 backdrop-blur-sm p-3 rounded-xl border border-white/10 flex items-start gap-3">
+                        <i class="fa-solid fa-hotel mt-1 text-teal-400"></i>
+                        <div class="text-sm">
+                            <div class="font-bold text-white">永登浦區 오베르 (Auber)</div>
+                            <div class="text-slate-300 text-xs mt-0.5 break-all">영등포구 영신로30길 14</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Sticky Tabs Navigation -->
+    <div class="sticky top-0 z-40 bg-[#F8FAFC]/90 backdrop-blur-md mt-4 py-3 px-4 shadow-sm border-b border-slate-200">
+        <div class="max-w-3xl mx-auto flex gap-2 overflow-x-auto no-scrollbar pb-1">
+            <button onclick="switchTab('day1')" id="btn-day1" class="tab-btn active shrink-0 px-5 py-2 bg-white text-slate-600 font-medium rounded-full text-sm shadow-sm border border-slate-200">
+                6/19-20 (古今與設計)
+            </button>
+            <button onclick="switchTab('day2')" id="btn-day2" class="tab-btn shrink-0 px-5 py-2 bg-white text-slate-600 font-medium rounded-full text-sm shadow-sm border border-slate-200">
+                6/21 (建築與潮流)
+            </button>
+            <button onclick="switchTab('day3')" id="btn-day3" class="tab-btn shrink-0 px-5 py-2 bg-white text-slate-600 font-medium rounded-full text-sm shadow-sm border border-slate-200">
+                6/22 (醫美與賦歸)
+            </button>
+        </div>
+    </div>
+
+    <!-- Itinerary Content -->
+    <main class="max-w-3xl mx-auto px-4 mt-6">
+
+        <!-- ==================== 6/19-20 ==================== -->
+        <div id="day1" class="day-content timeline-line relative">
+            
+            <!-- 6/19 Arrival -->
+            <div class="relative z-10 pl-14 md:pl-16 mb-8 group">
+                <div class="absolute left-3 md:left-4 top-1 w-6 h-6 bg-slate-400 rounded-full border-4 border-[#F8FAFC] shadow-sm flex items-center justify-center"></div>
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4">
+                    <h3 class="font-bold text-base text-slate-800">6/19 (三) 抵達與入住</h3>
+                    <p class="text-sm text-slate-500 mt-1">22:00 抵達仁川機場。搭乘機場巴士或機場快線轉捷運至「永登浦站」，步行前往飯店 오베르 Check-in 休息。</p>
+                </div>
+            </div>
+
+            <!-- Event 1 -->
+            <div class="relative z-10 pl-14 md:pl-16 mb-8 group">
+                <div class="absolute left-3 md:left-4 top-1 w-6 h-6 bg-blue-500 rounded-full border-4 border-[#F8FAFC] shadow-sm flex items-center justify-center"></div>
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 hover:shadow-md transition">
+                    <div class="flex justify-between items-start mb-2">
+                        <h3 class="font-bold text-lg text-slate-800">北村韓屋村 <span class="text-sm font-normal text-slate-400 ml-1">傳統建築</span></h3>
+                        <span class="bg-amber-100 text-amber-700 text-xs px-2 py-1 rounded-md font-bold">早上</span>
+                    </div>
+                    <div class="flex flex-wrap gap-2 mb-3">
+                        <span class="bg-slate-100 text-slate-600 text-xs px-2 py-1 rounded"><i class="fa-solid fa-train-subway mr-1"></i>自永登浦搭 1號線 轉 3號線至「安國站」</span>
+                    </div>
+                    <p class="text-sm text-slate-600 leading-relaxed">
+                        一早前往北村，感受最寧靜的傳統韓屋建築美學。這裡保留了朝鮮時代的瓦房，穿梭在巷弄間，欣賞傳統屋簷與現代首爾市景的強烈對比。
+                    </p>
+                </div>
+            </div>
+
+            <!-- Event 2 -->
+            <div class="relative z-10 pl-14 md:pl-16 mb-8 group">
+                <div class="absolute left-3 md:left-4 top-1 w-6 h-6 bg-orange-500 rounded-full border-4 border-[#F8FAFC] shadow-sm flex items-center justify-center"></div>
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 hover:shadow-md transition">
+                    <div class="flex justify-between items-start mb-2">
+                        <h3 class="font-bold text-lg text-slate-800">鐘路三街：菜包肉一條街</h3>
+                        <span class="bg-amber-100 text-amber-700 text-xs px-2 py-1 rounded-md font-bold">午餐</span>
+                    </div>
+                    <p class="text-sm text-slate-600 leading-relaxed mb-3">
+                        從北村慢慢逛至鐘路區。這裡有著名的「菜包肉一條街 (보쌈골목)」。將軟嫩的白煮豬肉，搭配脆甜的生蚵、醃蘿蔔與泡菜，包在生菜裡一口咬下，是非常經典的道地美味！
+                    </p>
+                    <div class="bg-orange-50 text-orange-800 text-xs p-2 rounded flex items-center gap-2">
+                        <i class="fa-solid fa-utensils"></i> 推薦名店：三海烤肉 (삼해집) 或 將軍菜包肉 (장군보쌈)
+                    </div>
+                </div>
+            </div>
+
+            <!-- Event 3 -->
+            <div class="relative z-10 pl-14 md:pl-16 mb-8 group">
+                <div class="absolute left-3 md:left-4 top-1 w-6 h-6 bg-blue-500 rounded-full border-4 border-[#F8FAFC] shadow-sm flex items-center justify-center"></div>
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 hover:shadow-md transition">
+                    <div class="flex justify-between items-start mb-2">
+                        <h3 class="font-bold text-lg text-slate-800">DDP 東大門設計廣場 <span class="text-sm font-normal text-slate-400 ml-1">前衛建築</span></h3>
+                        <span class="bg-slate-100 text-slate-700 text-xs px-2 py-1 rounded-md font-bold">下午</span>
+                    </div>
+                    <p class="text-sm text-slate-600 leading-relaxed">
+                        由知名建築師 Zaha Hadid 設計，巨大的流線型金屬建築宛如外星飛船。內部有設計實驗室、展覽館及設計商品店。非常適合喜愛設計與建築的人來拍攝充滿未來感的照片。
+                    </p>
+                </div>
+            </div>
+
+            <!-- Event 4 -->
+            <div class="relative z-10 pl-14 md:pl-16 mb-8 group">
+                <div class="absolute left-3 md:left-4 top-1 w-6 h-6 bg-red-500 rounded-full border-4 border-[#F8FAFC] shadow-sm flex items-center justify-center"></div>
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 hover:shadow-md transition">
+                    <div class="flex justify-between items-start mb-2">
+                        <h3 class="font-bold text-lg text-slate-800">樂天購物 (明洞本店) & 韓式烤肉</h3>
+                        <span class="bg-slate-800 text-white text-xs px-2 py-1 rounded-md font-bold">傍晚/晚餐</span>
+                    </div>
+                    <div class="flex flex-wrap gap-2 mb-3">
+                        <span class="bg-slate-100 text-slate-600 text-xs px-2 py-1 rounded"><i class="fa-solid fa-train-subway mr-1"></i>2號線 乙支路入口站</span>
+                    </div>
+                    <p class="text-sm text-slate-600 leading-relaxed mb-3">
+                        前往「樂天百貨明洞本店」與「樂天免稅店」進行高效率的品牌掃貨與購物。
+                    </p>
+                    <div class="bg-red-50 text-red-800 text-xs p-2 rounded flex flex-col gap-1">
+                        <span class="font-bold"><i class="fa-solid fa-fire"></i> 晚餐：正宗韓式烤肉 (烤五花肉/韓牛)</span>
+                        <span>逛完直接在明洞商圈享用烤肉！推薦網友極度熱愛的排隊名店「王妃家 (왕비집)」或「肉典食堂 (육전식당)」，享受專人代烤的完美服務。</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== 6/21 ==================== -->
+        <div id="day2" class="day-content timeline-line relative hidden">
+            <!-- Event 1 -->
+            <div class="relative z-10 pl-14 md:pl-16 mb-8 group">
+                <div class="absolute left-3 md:left-4 top-1 w-6 h-6 bg-teal-500 rounded-full border-4 border-[#F8FAFC] shadow-sm flex items-center justify-center"></div>
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 hover:shadow-md transition">
+                    <div class="flex justify-between items-start mb-2">
+                        <h3 class="font-bold text-lg text-slate-800">聖水洞 <span class="text-sm font-normal text-slate-400 ml-1">工業風設計商圈</span></h3>
+                        <span class="bg-amber-100 text-amber-700 text-xs px-2 py-1 rounded-md font-bold">早上-午餐</span>
+                    </div>
+                    <p class="text-sm text-slate-600 leading-relaxed mb-3">
+                        目前首爾年輕人最愛去的地方！廢棄工廠改建而成的聚落，充滿濃厚的設計感。
+                    </p>
+                    <ul class="text-sm text-slate-600 list-disc pl-5 space-y-1 mb-3">
+                        <li><strong>Dior 聖水：</strong> 絕美的建築外觀，宛如巴黎劇院，必拍打卡點。</li>
+                        <li><strong>LCDC Seoul：</strong> 結合選物、咖啡與展覽的複合式設計空間。</li>
+                        <li><strong>Tamburins：</strong> 韓國爆紅香氛品牌，店內本身就是個大型裝置藝術展。</li>
+                    </ul>
+                    <div class="bg-teal-50 text-teal-800 text-xs p-2 rounded"><i class="fa-solid fa-utensils"></i> 午餐推薦：聖水洞人氣馬鈴薯排骨湯 (소문난 성수 감자탕)</div>
+                </div>
+            </div>
+
+            <!-- Event 2 -->
+            <div class="relative z-10 pl-14 md:pl-16 mb-8 group">
+                <div class="absolute left-3 md:left-4 top-1 w-6 h-6 bg-teal-500 rounded-full border-4 border-[#F8FAFC] shadow-sm flex items-center justify-center"></div>
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 hover:shadow-md transition">
+                    <div class="flex justify-between items-start mb-2">
+                        <h3 class="font-bold text-lg text-slate-800">漢南洞 & Leeum 美術館</h3>
+                        <span class="bg-slate-100 text-slate-700 text-xs px-2 py-1 rounded-md font-bold">下午</span>
+                    </div>
+                    <p class="text-sm text-slate-600 leading-relaxed">
+                        高級且具質感的街區。強烈推薦參觀 <strong>Leeum 美術館</strong>，建築本身由三位國際建築大師（Rem Koolhaas, Jean Nouvel, Mario Botta）共同打造，極具看頭。周邊街道則隱藏著許多韓國設計師服飾品牌（如 Mardi Mercredi, Marithé）非常適合逛街。
+                    </p>
+                </div>
+            </div>
+
+            <!-- Event 3 -->
+            <div class="relative z-10 pl-14 md:pl-16 mb-8 group">
+                <div class="absolute left-3 md:left-4 top-1 w-6 h-6 bg-teal-500 rounded-full border-4 border-[#F8FAFC] shadow-sm flex items-center justify-center"></div>
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 hover:shadow-md transition">
+                    <div class="flex justify-between items-start mb-2">
+                        <h3 class="font-bold text-lg text-slate-800">The Hyundai Seoul <span class="text-sm font-normal text-slate-400 ml-1">現代百貨</span></h3>
+                        <span class="bg-slate-800 text-white text-xs px-2 py-1 rounded-md font-bold">傍晚-晚上</span>
+                    </div>
+                    <div class="flex flex-wrap gap-2 mb-3">
+                        <span class="bg-slate-100 text-slate-600 text-xs px-2 py-1 rounded"><i class="fa-solid fa-location-dot mr-1"></i>位於汝矣島 (離永登浦飯店極近！)</span>
+                    </div>
+                    <p class="text-sm text-slate-600 leading-relaxed mb-3">
+                        全首爾最具話題的百貨！打破傳統商場設計，內部挑高引進自然光，室內擁有巨大的植物園（Sounds Forest）與壯觀的室內瀑布。地下二樓（B2）更是網羅了所有韓國時下最潮的年輕品牌與快閃展覽。
+                    </p>
+                    <div class="bg-slate-100 text-slate-600 text-xs p-2 rounded">
+                        <i class="fa-solid fa-circle-info"></i> 晚餐可以直接在商場內的美食街（網羅韓國各地名店）享用，之後輕鬆搭公車或捷運回永登浦飯店。
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== 6/22 ==================== -->
+        <div id="day3" class="day-content timeline-line relative hidden">
+            <!-- Event 1 -->
+            <div class="relative z-10 pl-14 md:pl-16 mb-8 group">
+                <div class="absolute left-3 md:left-4 top-1 w-6 h-6 bg-pink-500 rounded-full border-4 border-[#F8FAFC] shadow-sm flex items-center justify-center"></div>
+                <div class="bg-pink-50 rounded-2xl shadow-sm border border-pink-200 p-5 hover:shadow-md transition">
+                    <div class="flex justify-between items-start mb-2">
+                        <h3 class="font-bold text-lg text-pink-900"><i class="fa-solid fa-spa mr-2"></i>Aloha 醫美診所報到</h3>
+                        <span class="bg-pink-200 text-pink-800 text-xs px-2 py-1 rounded-md font-bold">10:00 預約</span>
+                    </div>
+                    <p class="text-sm text-pink-800/80 leading-relaxed">
+                        依照預約時間抵達 Aloha (알로하의원) 進行保養療程。療程通常需要抓 2-3 小時左右的緩衝時間，結束後可在診所附近商圈享用輕食午餐。
+                    </p>
+                </div>
+            </div>
+
+            <!-- Event 2 -->
+            <div class="relative z-10 pl-14 md:pl-16 mb-8 group">
+                <div class="absolute left-3 md:left-4 top-1 w-6 h-6 bg-blue-500 rounded-full border-4 border-[#F8FAFC] shadow-sm flex items-center justify-center"></div>
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 hover:shadow-md transition">
+                    <div class="flex justify-between items-start mb-2">
+                        <h3 class="font-bold text-lg text-slate-800">星空圖書館 <span class="text-sm font-normal text-slate-400 ml-1">COEX Mall</span></h3>
+                        <span class="bg-slate-100 text-slate-700 text-xs px-2 py-1 rounded-md font-bold">下午</span>
+                    </div>
+                    <p class="text-sm text-slate-600 leading-relaxed">
+                        醫美療程結束後，如果時間許可，可以前往位於江南區三成站的「星空圖書館 (Starfield Library)」。兩層樓高的巨型發光書牆帶來強烈的視覺震撼，是非常經典的空間設計，同時也能在 COEX 商城內做最後的逛街。
+                    </p>
+                </div>
+            </div>
+
+            <!-- Event 3 -->
+            <div class="relative z-10 pl-14 md:pl-16 mb-8 group">
+                <div class="absolute left-3 md:left-4 top-1 w-6 h-6 bg-slate-800 rounded-full border-4 border-[#F8FAFC] shadow-sm flex items-center justify-center"></div>
+                <div class="bg-slate-50 rounded-2xl shadow-sm border border-slate-200 p-5">
+                    <div class="flex justify-between items-start mb-2">
+                        <h3 class="font-bold text-lg text-slate-800"><i class="fa-solid fa-suitcase-rolling mr-2"></i>拿行李 & 出發去機場</h3>
+                        <span class="bg-slate-800 text-white text-xs px-2 py-1 rounded-md font-bold">18:00 前</span>
+                    </div>
+                    <p class="text-sm text-slate-600 leading-relaxed mb-3">
+                        返回永登浦的飯店 (오베르) 領取行李。永登浦車站本身就連接著「樂天百貨」，若有想買的伴手禮或零食，可以在此做最後衝刺！
+                    </p>
+                    <div class="bg-white border border-slate-200 text-slate-700 text-xs p-3 rounded flex flex-col gap-1">
+                        <span class="font-bold">交通建議：</span>
+                        <span>最晚於 18:00 離開永登浦，搭乘機場巴士或捷運轉乘機場快線前往仁川機場，準備搭機回國。</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <footer class="max-w-3xl mx-auto px-4 mt-8 mb-12">
+        <p class="text-center text-slate-400 text-xs">專屬客製化行程 • 祝您有個美好的首爾體驗</p>
+    </footer>
+
+    <!-- JavaScript for Tabs -->
+    <script>
+        function switchTab(dayId) {
+            document.querySelectorAll('.day-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active', 'bg-slate-800', 'text-white', 'border-slate-800');
+                btn.classList.add('bg-white', 'text-slate-600', 'border-slate-200');
+            });
+            
+            const targetContent = document.getElementById(dayId);
+            if(targetContent) {
+                targetContent.classList.remove('hidden');
+                targetContent.animate([
+                    { opacity: 0, transform: 'translateY(10px)' },
+                    { opacity: 1, transform: 'translateY(0)' }
+                ], { duration: 300, easing: 'ease-out' });
+            }
+            
+            const targetBtn = document.getElementById('btn-' + dayId);
+            if(targetBtn) {
+                targetBtn.classList.remove('bg-white', 'text-slate-600', 'border-slate-200');
+                targetBtn.classList.add('active');
+                // The CSS class .active handles the dark styling
+            }
+
+            window.scrollTo({
+                top: document.querySelector('.sticky').offsetTop - 10,
+                behavior: 'smooth'
+            });
+        }
+    </script>
+</body>
+</html>
