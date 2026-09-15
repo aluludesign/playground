@@ -1,17 +1,12 @@
-// 東京五人行 · 雲端連線設定
+// 東京五人行 · 前端設定
 //
-// 填法:Supabase 專案 → Settings → API
-//   supabaseUrl     = Project URL          (長得像 https://xxxxxxxx.supabase.co)
-//   supabaseAnonKey = Project API keys 的 anon / public key
-//
-// anon key 本來就是設計成放在前端的,公開沒關係 —— 真正的門鎖是資料表的
-// RLS 政策(見 supabase-setup.sql):沒登入就什麼都讀不到。
-// 帳號密碼不要寫進這個檔案。
-//
-// 兩個都留空的話,網站會退回離線模式(紀錄只存在自己的瀏覽器)。
+// apiBase  後端所在位置。同一個 Vercel 專案的話留空字串就好。
+//          如果網站放 GitHub Pages、後端另外部署在 Vercel,
+//          填 Vercel 的網址,例如 "https://tokyo-trip.vercel.app"
+// rate     日圓換台幣的匯率。這是「官方版本」,五個人看到的數字都用它。
+//          要改就改這裡然後 commit —— 記得同步改 Notion「台幣金額」欄位的公式。
 
 window.TRIP_CONFIG = {
-  supabaseUrl: "",
-  supabaseAnonKey: "",
-  trip: "tokyo-2026",
+  apiBase: "",
+  rate: 0.21,
 };

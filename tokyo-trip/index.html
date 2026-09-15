@@ -301,15 +301,8 @@
       <div class="sec">
         <div class="sec-head">
           <h2>費用明細</h2>
-          <div style="display:flex; gap:8px"><button class="btn btn-sm" id="rate-btn" type="button">匯率</button><button class="btn btn-sm btn-main" id="add-exp-btn" type="button">＋ 記一筆</button></div>
+          <button class="btn btn-sm btn-main" id="add-exp-btn" type="button">＋ 記一筆</button>
         </div>
-        <form class="form" id="rate-form" hidden>
-          <div class="grid2">
-            <div class="fld"><label for="rf-rate">1 日圓 ＝ ? 台幣</label><input type="number" id="rf-rate" step="0.0001" min="0.0001" required></div>
-            <div class="fld"><label>換算參考</label><div class="num" id="rf-preview" style="padding-top:8px; font-size:13px; color:var(--muted)"></div></div>
-          </div>
-          <div class="form-ops"><button type="button" class="btn btn-ghost btn-sm" id="rf-cancel">取消</button><button type="submit" class="btn btn-main btn-sm">更新匯率</button></div>
-        </form>
         <form class="form" id="exp-form" hidden>
           <div class="grid2">
             <div class="fld"><label for="ef-date">日期</label><input type="date" id="ef-date" required></div>
@@ -360,18 +353,17 @@
 <div class="overlay" id="signin-overlay" hidden>
   <form class="signin" id="signin-form">
     <h2>東京五人行</h2>
-    <p>花費紀錄存在雲端,五個人共用同一份。用大家共用的那組帳號登入。</p>
-    <div class="fld"><label for="si-email">Email</label><input type="email" id="si-email" autocomplete="username" required></div>
-    <div class="fld"><label for="si-pass">密碼</label><input type="password" id="si-pass" autocomplete="current-password" required></div>
+    <p>行程和花費存在大家共用的 Notion 裡。輸入通行碼就能開始記帳。</p>
+    <div class="fld"><label for="si-key">通行碼</label><input type="password" id="si-key" autocomplete="current-password" required></div>
     <div class="err" id="si-err" hidden></div>
     <div class="ops">
-      <button type="submit" class="btn btn-main" id="si-submit">登入</button>
+      <button type="submit" class="btn btn-main" id="si-submit">進入</button>
       <button type="button" class="btn btn-ghost btn-sm" id="si-offline">先用離線模式(只存這台裝置)</button>
     </div>
   </form>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+
 <script src="config.js"></script>
 
 <script>
@@ -441,7 +433,7 @@
   };
 
   /* ================= 狀態 ================= */
-  const state = { tab: "plan", day: "2026-10-03", rate: SEED.rate, names: {}, expenses: [], stops: [] };
+  const state = { tab: "plan", day: "2026-10-03", rate: (window.TRIP_CONFIG || {}).rate || SEED.rate, names: {}, expenses: [], stops: [] };
   const nameOf = id => state.names[id] || (MEMBERS.find(m => m.id === id) || {}).def || id;
   const colorOf = id => (MEMBERS.find(m => m.id === id) || {}).color || "#7E8796";
 
@@ -451,28 +443,51 @@
   const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 
-  /* ================= 儲存:雲端優先,沒有就退回本機 ================= */
+  /* ================= 儲存:Notion 優先,連不上就退回本機 ================= */
   const LS = "tokyo5-v1";
+  const KEYLS = "tokyo5-key";
   const CFG = window.TRIP_CONFIG || {};
-  const TRIP = CFG.trip || "tokyo-2026";
+  const API = (CFG.apiBase || "").replace(/\/$/, "") + "/api/notion";
   let storageOK = true;
-  let sb = null;        // supabase client
-  let cloud = false;    // 目前是否連著雲端
-  let channel = null;
+  let online = false;
+  let tripKey = "";
 
-  /* --- 欄位對照:資料庫用底線,程式用駝峰 --- */
+  /* 分類在 Notion 用中文,程式內部用代號 */
+  const CAT_TO_NOTION = { transport: "交通", stay: "住宿", food: "餐飲", sight: "景點", shop: "購物", other: "其他" };
+  const CAT_FROM_NOTION = {};
+  Object.keys(CAT_TO_NOTION).forEach(k => CAT_FROM_NOTION[CAT_TO_NOTION[k]] = k);
+  /* 人名在 Notion 用暱稱,程式內部用 id */
+  const idByName = {};
+  MEMBERS.forEach(m => idByName[m.def] = m.id);
+  const nameById = id => (MEMBERS.find(m => m.id === id) || {}).def || null;
+
+  async function api(path, init) {
+    const res = await fetch(API + path, {
+      ...init,
+      headers: { "Content-Type": "application/json", "x-trip-key": tripKey, ...(init && init.headers) },
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(body.error || ("HTTP " + res.status));
+    return body;
+  }
+
   const expFromRow = r => ({
-    id: r.id, date: r.date, title: r.title, category: r.category,
-    amount: Number(r.amount), currency: r.currency, payerId: r.payer_id,
-    participants: r.participants || [], note: r.note || "", createdAt: r.created_at,
+    id: r.id, date: r.date, title: r.title,
+    category: CAT_FROM_NOTION[r.category] || "other",
+    amount: Number(r.amount) || 0, currency: r.currency || "JPY",
+    payerId: idByName[r.payer] || null,
+    participants: (r.participants || []).map(n => idByName[n]).filter(Boolean),
+    note: r.note || "", createdAt: r.createdAt,
   });
   const expToRow = e => ({
-    trip: TRIP, date: e.date, title: e.title, category: e.category, amount: e.amount,
-    currency: e.currency, payer_id: e.payerId, participants: e.participants,
-    note: e.note, created_at: e.createdAt,
+    title: e.title, date: e.date, category: CAT_TO_NOTION[e.category] || "其他",
+    amount: e.amount, currency: e.currency,
+    payer: nameById(e.payerId),
+    participants: (e.participants || []).map(nameById).filter(Boolean),
+    note: e.note,
   });
   const stopFromRow = r => ({ id: r.id, day: r.day, time: r.time || "", title: r.title, place: r.place || "", note: r.note || "" });
-  const stopToRow = s => ({ trip: TRIP, day: s.day, time: s.time, title: s.title, place: s.place, note: s.note });
+  const stopToRow = s => ({ title: s.title, day: s.day, time: s.time, place: s.place, note: s.note, kind: "其他" });
 
   /* --- 本機 --- */
   function loadLocal() {
@@ -485,17 +500,16 @@
   }
   function apply(d) {
     const clone = v => JSON.parse(JSON.stringify(v));
-    state.rate = typeof d.rate === "number" && d.rate > 0 ? d.rate : SEED.rate;
     state.names = d.names && typeof d.names === "object" ? clone(d.names) : {};
     state.expenses = Array.isArray(d.expenses) ? clone(d.expenses) : [];
     state.stops = Array.isArray(d.stops) ? clone(d.stops) : [];
     sortExpenses();
   }
   function snapshot() {
-    return { version: 1, rate: state.rate, names: state.names, expenses: state.expenses, stops: state.stops };
+    return { version: 2, rate: state.rate, names: state.names, expenses: state.expenses, stops: state.stops };
   }
   function saveLocal() {
-    if (cloud) return;
+    if (online) return;
     try { localStorage.setItem(LS, JSON.stringify(snapshot())); }
     catch (_) { storageOK = false; }
   }
@@ -506,107 +520,99 @@
     el("sync").textContent = msg;
     setTimeout(renderSync, 2800);
   }
-  function cloudFail(e) {
-    console.error(e);
-    flash("雲端寫入失敗,這筆沒存到");
-  }
 
-  /* --- 寫入動作:兩種模式共用的入口 --- */
+  /* --- 寫入:兩種模式共用的入口 --- */
   async function addExpense(e) {
     state.expenses.push(e); sortExpenses(); saveLocal(); render();
-    if (!cloud) return;
-    const { data, error } = await sb.from("expenses").insert(expToRow(e)).select().single();
-    if (error) return cloudFail(error);
-    const k = state.expenses.indexOf(e);
-    if (k > -1) state.expenses[k] = expFromRow(data);
-    render();
+    if (!online) return;
+    try {
+      const { row } = await api("?resource=expenses", { method: "POST", body: JSON.stringify(expToRow(e)) });
+      const k = state.expenses.indexOf(e);
+      if (k > -1) state.expenses[k] = expFromRow(row);
+      render();
+    } catch (err) { failed(e, err); }
   }
   async function removeExpense(id) {
     const k = state.expenses.findIndex(x => x.id === id);
-    if (k > -1) state.expenses.splice(k, 1);
+    const gone = k > -1 ? state.expenses.splice(k, 1)[0] : null;
     saveLocal(); render();
-    if (!cloud) return;
-    const { error } = await sb.from("expenses").delete().eq("id", id);
-    if (error) cloudFail(error);
+    if (!online || !gone) return;
+    try { await api("?resource=expenses&id=" + encodeURIComponent(id), { method: "DELETE" }); }
+    catch (err) { state.expenses.push(gone); sortExpenses(); render(); flash("刪不掉:" + err.message); }
   }
   async function addStop(o) {
     state.stops.push(o); saveLocal(); render();
-    if (!cloud) return;
-    const { data, error } = await sb.from("stops").insert(stopToRow(o)).select().single();
-    if (error) return cloudFail(error);
-    const k = state.stops.indexOf(o);
-    if (k > -1) state.stops[k] = stopFromRow(data);
-    render();
+    if (!online) return;
+    try {
+      const { row } = await api("?resource=itinerary", { method: "POST", body: JSON.stringify(stopToRow(o)) });
+      const k = state.stops.indexOf(o);
+      if (k > -1) state.stops[k] = stopFromRow(row);
+      render();
+    } catch (err) { failStop(o, err); }
   }
   async function removeStop(id) {
     const k = state.stops.findIndex(x => x.id === id);
+    const gone = k > -1 ? state.stops.splice(k, 1)[0] : null;
+    saveLocal(); render();
+    if (!online || !gone) return;
+    try { await api("?resource=itinerary&id=" + encodeURIComponent(id), { method: "DELETE" }); }
+    catch (err) { state.stops.push(gone); render(); flash("刪不掉:" + err.message); }
+  }
+  function failed(e, err) {
+    const k = state.expenses.indexOf(e);
+    if (k > -1) state.expenses.splice(k, 1);
+    render();
+    flash("沒存進 Notion:" + err.message);
+  }
+  function failStop(o, err) {
+    const k = state.stops.indexOf(o);
     if (k > -1) state.stops.splice(k, 1);
-    saveLocal(); render();
-    if (!cloud) return;
-    const { error } = await sb.from("stops").delete().eq("id", id);
-    if (error) cloudFail(error);
+    render();
+    flash("沒存進 Notion:" + err.message);
   }
-  async function putSetting(key, value) {
-    saveLocal(); render();
-    if (!cloud) return;
-    const { error } = await sb.from("settings").upsert({ key, value, updated_at: new Date().toISOString() });
-    if (error) cloudFail(error);
-  }
+  function putSetting() { saveLocal(); render(); }
 
-  /* --- 雲端讀取與即時同步 --- */
+  /* --- 從 Notion 讀 --- */
   async function pull() {
-    const [ex, st, se] = await Promise.all([
-      sb.from("expenses").select("*").eq("trip", TRIP),
-      sb.from("stops").select("*").eq("trip", TRIP),
-      sb.from("settings").select("*"),
+    const [ex, st] = await Promise.all([
+      api("?resource=expenses"),
+      api("?resource=itinerary"),
     ]);
-    if (ex.error || st.error || se.error) throw (ex.error || st.error || se.error);
-    state.expenses = ex.data.map(expFromRow);
-    state.stops = st.data.map(stopFromRow);
-    const bag = {};
-    (se.data || []).forEach(r => bag[r.key] = r.value);
-    state.rate = typeof bag.rate === "number" && bag.rate > 0 ? bag.rate : SEED.rate;
-    state.names = bag.names && typeof bag.names === "object" ? bag.names : {};
+    state.expenses = ex.rows.map(expFromRow);
+    state.stops = st.rows.filter(r => r.day).map(stopFromRow);
     sortExpenses();
   }
 
   let pullTimer = null;
   function schedulePull() {
+    if (!online) return;
     clearTimeout(pullTimer);
-    pullTimer = setTimeout(() => pull().then(() => { fillPeopleControls(); render(); }).catch(() => {}), 350);
-  }
-  function listen() {
-    if (channel) return;
-    channel = sb.channel("trip-" + TRIP);
-    ["expenses", "stops", "settings"].forEach(t =>
-      channel.on("postgres_changes", { event: "*", schema: "public", table: t }, schedulePull));
-    channel.subscribe();
+    pullTimer = setTimeout(() => pull().then(render).catch(() => {}), 400);
   }
 
-  /* --- 模式切換 --- */
+  /* --- 模式 --- */
   function renderCloudBar() {
     const bar = el("cloudbar");
-    const configured = !!(CFG.supabaseUrl && CFG.supabaseAnonKey && window.supabase);
-    if (!configured) {
-      bar.hidden = false;
-      bar.className = "cloudbar off";
-      el("cloud-msg").textContent = "尚未接上雲端 —— 紀錄只存在這台裝置。設定方式見 README。";
-      el("cloud-ops").innerHTML = "";
-      return;
-    }
     bar.hidden = false;
-    bar.className = "cloudbar " + (cloud ? "on" : "off");
-    el("cloud-msg").textContent = cloud ? "已連上雲端 · 五人即時同步" : "離線模式 —— 紀錄只存在這台裝置";
-    el("cloud-ops").innerHTML = cloud
-      ? '<button type="button" class="btn btn-sm btn-ghost" id="cloud-out">登出</button>'
-      : '<button type="button" class="btn btn-sm" id="cloud-in">登入同步</button>';
-    const out = el("cloud-out"), inn = el("cloud-in");
-    if (out) out.addEventListener("click", async () => { await sb.auth.signOut(); location.reload(); });
-    if (inn) inn.addEventListener("click", () => { el("signin-overlay").hidden = false; el("si-email").focus(); });
+    bar.className = "cloudbar " + (online ? "on" : "off");
+    el("cloud-msg").textContent = online
+      ? "已連上 Notion · 五個人共用同一份紀錄"
+      : "離線模式 —— 紀錄只存在這台裝置";
+    el("cloud-ops").innerHTML = online
+      ? '<button type="button" class="btn btn-sm btn-ghost" id="cloud-sync">重新整理</button>' +
+        '<button type="button" class="btn btn-sm btn-ghost" id="cloud-out">登出</button>'
+      : '<button type="button" class="btn btn-sm" id="cloud-in">連上 Notion</button>';
+    const sync = el("cloud-sync"), out = el("cloud-out"), inn = el("cloud-in");
+    if (sync) sync.addEventListener("click", () => pull().then(render).then(() => flash("已更新")).catch(e => flash(e.message)));
+    if (out) out.addEventListener("click", () => {
+      try { localStorage.removeItem(KEYLS); } catch (_) {}
+      location.reload();
+    });
+    if (inn) inn.addEventListener("click", () => { el("signin-overlay").hidden = false; el("si-key").focus(); });
   }
 
   function goLocal() {
-    cloud = false;
+    online = false;
     el("signin-overlay").hidden = true;
     loadLocal();
     fillPeopleControls();
@@ -614,22 +620,14 @@
     renderCloudBar();
   }
 
-  async function goCloud() {
-    try {
-      await pull();
-      cloud = true;
-      el("signin-overlay").hidden = true;
-      listen();
-      fillPeopleControls();
-      render();
-      renderCloudBar();
-      window.addEventListener("focus", schedulePull);
-    } catch (e) {
-      console.error(e);
-      showSigninError("讀不到雲端資料,請確認 supabase-setup.sql 已經跑過。");
-      goLocal();
-      el("signin-overlay").hidden = false;
-    }
+  async function goOnline() {
+    await pull();
+    online = true;
+    el("signin-overlay").hidden = true;
+    fillPeopleControls();
+    render();
+    renderCloudBar();
+    window.addEventListener("focus", schedulePull);
   }
 
   function showSigninError(msg) {
@@ -784,7 +782,7 @@
   }
 
   function renderSync() {
-    el("sync").textContent = cloud ? "● 雲端同步中"
+    el("sync").textContent = online ? "● Notion 同步中"
       : storageOK ? "● 紀錄存在這台裝置"
       : "○ 瀏覽器不讓存檔,離開後會消失";
   }
@@ -832,21 +830,6 @@
   el("route").addEventListener("click", ev => {
     const b = ev.target.closest("[data-del-stop]");
     if (b) removeStop(b.dataset.delStop);
-  });
-
-  /* --- 匯率 --- */
-  function ratePreview() {
-    const r = parseFloat(el("rf-rate").value) || 0;
-    el("rf-preview").textContent = "¥1,000 ≈ " + twd(1000 * r) + " · ¥10,000 ≈ " + twd(10000 * r);
-  }
-  el("rate-btn").addEventListener("click", () => { el("rf-rate").value = state.rate; ratePreview(); toggleForm("rate-form"); });
-  el("rf-rate").addEventListener("input", ratePreview);
-  el("rf-cancel").addEventListener("click", () => toggleForm("rate-form", false));
-  el("rate-form").addEventListener("submit", ev => {
-    ev.preventDefault();
-    const r = parseFloat(el("rf-rate").value);
-    if (r > 0) { state.rate = r; putSetting("rate", r); }
-    toggleForm("rate-form", false);
   });
 
   /* --- 花費 --- */
@@ -914,7 +897,7 @@
     state.names = names;
     renameForm.hidden = true;
     fillPeopleControls();
-    putSetting("names", names);
+    saveLocal(); render();
   });
 
   /* --- 備份 --- */
@@ -935,7 +918,7 @@
       try {
         const d = JSON.parse(r.result);
         if (!d || typeof d !== "object") throw new Error("bad");
-        if (cloud) { flash("雲端模式不支援匯入,請先登出"); return; }
+        if (online) { flash("連著 Notion 時不支援匯入,請先登出"); return; }
         if (!confirm("匯入會覆蓋這台裝置上現有的紀錄,確定嗎?")) return;
         apply(d); saveLocal(); render(); fillPeopleControls();
         flash("已匯入 " + state.expenses.length + " 筆花費");
@@ -945,7 +928,7 @@
     ev.target.value = "";
   });
   el("reset-btn").addEventListener("click", () => {
-    if (cloud) { flash("雲端模式下請直接刪除個別紀錄"); return; }
+    if (online) { flash("連著 Notion 時請直接刪除個別紀錄"); return; }
     if (!confirm("會清掉這台裝置上所有自己加的行程和花費,回到只有機票的初始狀態。確定嗎?")) return;
     try { localStorage.removeItem(LS); } catch (_) {}
     apply(SEED);
@@ -955,21 +938,24 @@
     flash("已清除");
   });
 
-  /* --- 登入表單 --- */
+  /* --- 通行碼 --- */
+  async function tryKey(key) {
+    tripKey = key;
+    await goOnline();
+    try { localStorage.setItem(KEYLS, key); } catch (_) {}
+  }
   el("signin-form").addEventListener("submit", async ev => {
     ev.preventDefault();
-    if (!sb) { goLocal(); return; }
     const btn = el("si-submit");
-    btn.disabled = true; btn.textContent = "登入中…";
+    btn.disabled = true; btn.textContent = "連線中…";
     showSigninError("");
-    const { error } = await sb.auth.signInWithPassword({
-      email: el("si-email").value.trim(),
-      password: el("si-pass").value,
-    });
-    btn.disabled = false; btn.textContent = "登入";
-    if (error) { showSigninError("登入失敗:" + error.message); return; }
-    el("si-pass").value = "";
-    await goCloud();
+    try {
+      await tryKey(el("si-key").value);
+      el("si-key").value = "";
+    } catch (e) {
+      showSigninError(e.message === "通行碼不對" ? "通行碼不對,再試一次。" : "連不上 Notion:" + e.message);
+    }
+    btn.disabled = false; btn.textContent = "進入";
   });
   el("si-offline").addEventListener("click", goLocal);
 
@@ -979,16 +965,14 @@
   switchTab("plan");
 
   (async () => {
-    const configured = !!(CFG.supabaseUrl && CFG.supabaseAnonKey && window.supabase);
-    if (!configured) { goLocal(); return; }
-    try {
-      sb = window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseAnonKey);
-      const { data } = await sb.auth.getSession();
-      if (data && data.session) { await goCloud(); return; }
-    } catch (e) { console.error(e); }
+    let saved = null;
+    try { saved = localStorage.getItem(KEYLS); } catch (_) {}
+    if (saved !== null) {
+      try { await tryKey(saved); return; } catch (_) {}
+    }
     goLocal();
     el("signin-overlay").hidden = false;
-    el("si-email").focus();
+    el("si-key").focus();
   })();
 })();
 </script>
