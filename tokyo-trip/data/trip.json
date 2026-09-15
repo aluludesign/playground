@@ -1,0 +1,122 @@
+{
+  "title": "東京自由行",
+  "startDate": "2026-10-03",
+  "endDate": "2026-10-09",
+  "nights": 5,
+  "currency": {
+    "base": "TWD",
+    "foreign": "JPY",
+    "rate": 0.21,
+    "rateNote": "1 JPY = 0.21 TWD,網站上可調整"
+  },
+  "members": [
+    {
+      "id": "hsieh_chinhui",
+      "nameEn": "HSIEH CHINHUI",
+      "nameZh": null,
+      "short": null
+    },
+    {
+      "id": "chang_chiayu",
+      "nameEn": "CHANG CHIAYU",
+      "nameZh": null,
+      "short": null
+    },
+    {
+      "id": "chang_chihwei",
+      "nameEn": "CHANG CHIHWEI",
+      "nameZh": null,
+      "short": null
+    },
+    {
+      "id": "chang_yalun",
+      "nameEn": "CHANG YALUN",
+      "nameZh": null,
+      "short": null
+    },
+    {
+      "id": "chen_suchih",
+      "nameEn": "CHEN SUCHIH",
+      "nameZh": null,
+      "short": null
+    }
+  ],
+  "flights": [
+    {
+      "direction": "outbound",
+      "airline": "樂桃航空 Peach Aviation",
+      "flightNo": "MM626",
+      "fareType": "Standard (MSD)",
+      "from": {
+        "city": "台北",
+        "airport": "桃園",
+        "terminal": "第1航廈",
+        "datetime": "2026-10-03T10:50"
+      },
+      "to": {
+        "city": "東京",
+        "airport": "成田",
+        "terminal": "第1航廈",
+        "datetime": "2026-10-03T15:20"
+      },
+      "seats": {
+        "hsieh_chinhui": "27B",
+        "chang_chiayu": "27A",
+        "chang_chihwei": "27F",
+        "chang_yalun": "27D",
+        "chen_suchih": "27E"
+      },
+      "checkedBaggagePerPerson": 1
+    },
+    {
+      "direction": "return",
+      "airline": "樂桃航空 Peach Aviation",
+      "flightNo": "MM631",
+      "fareType": "Standard (RSD)",
+      "from": {
+        "city": "東京",
+        "airport": "成田",
+        "terminal": "第1航廈",
+        "datetime": "2026-10-08T21:50"
+      },
+      "to": {
+        "city": "台北",
+        "airport": "桃園",
+        "terminal": "第1航廈",
+        "datetime": "2026-10-09T00:40"
+      },
+      "seats": {
+        "hsieh_chinhui": "27B",
+        "chang_chiayu": "27A",
+        "chang_chihwei": "27D",
+        "chang_yalun": "27E",
+        "chen_suchih": "27F"
+      },
+      "checkedBaggagePerPerson": 1
+    }
+  ],
+  "baggageNote": "每位旅客可免費攜帶 2 件手提行李(合計不超過 7kg),另各含託運行李 1 件。",
+  "bookings": [
+    {
+      "id": "peach-flight",
+      "vendor": "Peach Aviation",
+      "bookingRef": "PTETF3",
+      "bookingDate": "2026-09-15T23:09",
+      "issueDate": "2026-09-15",
+      "amount": 61100,
+      "currency": "TWD",
+      "payment": "信用卡",
+      "note": "含票價、相關費用、稅金及其他附加費用(不含保險)",
+      "paidBy": "hsieh_chinhui",
+      "sharedBy": [
+        "hsieh_chinhui",
+        "chang_chiayu",
+        "chang_chihwei",
+        "chang_yalun",
+        "chen_suchih"
+      ]
+    }
+  ],
+  "expenses": [],
+  "itinerary": []
+}

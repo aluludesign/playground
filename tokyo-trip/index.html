@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>東京五人行</title>
+<meta name="description" content="2026 年 10 月東京六日遊的行程規劃、花費紀錄與五人分帳結算。">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗼</text></svg>">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;500;700&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap">
+<style>
+  :root{
+    --paper:#F1F2F6; --surface:#FFFFFF; --surface-2:#F7F8FB;
+    --ink:#15171D; --ink-2:#3C414E; --muted:#6C7385;
+    --line:#DDE1EA; --line-soft:#E9ECF3;
+    --accent:#24457E; --accent-ink:#FFFFFF; --accent-soft:#E6ECF8;
+    --pos:#0B6B53; --neg:#A93446; --warn:#8A5A00; --warn-soft:#FBF0DA;
+    --shadow:0 1px 2px rgba(20,26,45,.05), 0 8px 24px -14px rgba(20,26,45,.22);
+    --board-bg:#12141A; --board-ink:#F3F4F7; --board-muted:#878FA3; --board-line:#282C36; --board-amber:#F0B429;
+    --font-body:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+    --font-sign:"Zen Kaku Gothic New","Noto Sans TC",system-ui,sans-serif;
+    --font-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+    color-scheme:light dark;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#0E1016; --surface:#161922; --surface-2:#1C202B;
+      --ink:#E8EBF2; --ink-2:#C0C6D4; --muted:#939BAD;
+      --line:#272C38; --line-soft:#212632;
+      --accent:#8DAEE8; --accent-ink:#0E1016; --accent-soft:#1B2334;
+      --pos:#4FC0A1; --neg:#EE8090; --warn:#E0A94B; --warn-soft:#2A2214;
+      --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 28px -16px rgba(0,0,0,.8);
+      --board-bg:#0A0C11; --board-line:#20242E;
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#0E1016; --surface:#161922; --surface-2:#1C202B;
+    --ink:#E8EBF2; --ink-2:#C0C6D4; --muted:#939BAD;
+    --line:#272C38; --line-soft:#212632;
+    --accent:#8DAEE8; --accent-ink:#0E1016; --accent-soft:#1B2334;
+    --pos:#4FC0A1; --neg:#EE8090; --warn:#E0A94B; --warn-soft:#2A2214;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 28px -16px rgba(0,0,0,.8);
+    --board-bg:#0A0C11; --board-line:#20242E;
+  }
+
+  *,*::before,*::after{box-sizing:border-box;}
+  html{padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);}
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--font-body); font-size:14px; line-height:1.6; -webkit-font-smoothing:antialiased;}
+  img{max-width:100%;}
+  [hidden]{display:none!important;}
+  h1,h2,h3{margin:0; text-wrap:balance; font-weight:700; line-height:1.25;}
+  p{margin:0;}
+  button,input,select,textarea{font:inherit; color:inherit;}
+  :focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:4px;}
+  @media (prefers-reduced-motion: reduce){ *{animation:none!important; transition:none!important;} }
+
+  .wrap{max-width:880px; margin:0 auto; padding-inline:16px; padding-block:0 56px;}
+
+  /* ---- top bar ---- */
+  .topbar{position:sticky; top:env(safe-area-inset-top,0px); z-index:20; display:flex; align-items:flex-end; justify-content:space-between; gap:16px;
+    padding-block:18px 14px; background:var(--paper); border-bottom:1px solid var(--line-soft);}
+  .kicker{display:block; font-family:var(--font-mono); font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:var(--muted);}
+  .topbar h1{font-family:var(--font-sign); font-size:22px; letter-spacing:.04em;}
+  .countdown{text-align:right; font-family:var(--font-mono); font-size:11px; color:var(--muted); letter-spacing:.04em; white-space:nowrap;}
+  .countdown b{display:block; font-size:21px; font-weight:600; color:var(--ink); letter-spacing:0;}
+
+  /* ---- flight board ---- */
+  .board{background:var(--board-bg); border-radius:10px; overflow:hidden; margin-block:16px; box-shadow:var(--shadow);}
+  .board-head{display:flex; justify-content:space-between; align-items:center; gap:12px; padding:10px 16px; border-bottom:1px solid var(--board-line);
+    font-family:var(--font-mono); font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:var(--board-muted);}
+  .board-head .live{color:var(--board-amber);}
+  .leg{display:grid; grid-template-columns:auto 1fr auto; gap:6px 14px; align-items:center; padding:14px 16px; border-bottom:1px solid var(--board-line);}
+  .leg:last-child{border-bottom:0;}
+  .leg-tag{font-family:var(--font-mono); font-size:11px; font-weight:600; color:var(--board-amber); letter-spacing:.1em;}
+  .leg-no{font-family:var(--font-mono); font-size:11px; color:var(--board-muted); letter-spacing:.1em; text-align:right;}
+  .leg-route{grid-column:1/-1; display:flex; align-items:center; gap:12px; flex-wrap:wrap;}
+  .port{display:flex; flex-direction:column; gap:1px; min-width:104px;}
+  .port .code{font-family:var(--font-mono); font-size:22px; font-weight:600; color:var(--board-ink); letter-spacing:.06em; line-height:1.1;}
+  .port .sub{font-size:11px; color:var(--board-muted);}
+  .port .time{font-family:var(--font-mono); font-size:13px; color:var(--board-ink); letter-spacing:.04em;}
+  .port .time .next{color:var(--board-amber); font-size:10px;}
+  .dash{flex:1; min-width:40px; height:1px; background:linear-gradient(90deg,var(--board-line),var(--board-muted),var(--board-line)); position:relative;}
+  .dash::after{content:"✈"; position:absolute; top:50%; left:50%; transform:translate(-50%,-52%); font-size:12px; color:var(--board-muted); background:var(--board-bg); padding:0 6px;}
+  .seats{grid-column:1/-1; font-family:var(--font-mono); font-size:11px; color:var(--board-muted); letter-spacing:.06em;}
+
+  /* ---- tabs ---- */
+  .tabs{display:flex; gap:6px; margin-block:4px 18px; border-bottom:1px solid var(--line);}
+  .tab{appearance:none; background:none; border:0; border-bottom:2px solid transparent; padding:9px 14px 10px; cursor:pointer;
+    font-family:var(--font-sign); font-size:15px; font-weight:500; color:var(--muted); letter-spacing:.06em; transition:color .15s, border-color .15s;}
+  .tab:hover{color:var(--ink-2);}
+  .tab[aria-selected="true"]{color:var(--ink); border-bottom-color:var(--accent);}
+  .tab .n{font-family:var(--font-mono); font-size:10px; color:var(--muted); margin-left:5px;}
+
+  /* ---- generic ---- */
+  .sec{margin-bottom:28px;}
+  .sec-head{display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:10px; flex-wrap:wrap;}
+  .sec-head h2{font-family:var(--font-sign); font-size:14px; letter-spacing:.1em; font-weight:500; color:var(--ink-2);}
+  .sec-head .hint{font-size:11px; color:var(--muted);}
+  .card{background:var(--surface); border:1px solid var(--line); border-radius:10px;}
+  .btn{appearance:none; border:1px solid var(--line); background:var(--surface); border-radius:7px; padding:7px 13px; font-size:13px; font-weight:500; cursor:pointer;
+    transition:background .15s, border-color .15s;}
+  .btn:hover{background:var(--surface-2); border-color:var(--muted);}
+  .btn-main{background:var(--accent); border-color:var(--accent); color:var(--accent-ink);}
+  .btn-main:hover{background:var(--accent); border-color:var(--accent); filter:brightness(1.08);}
+  .btn-sm{padding:4px 9px; font-size:12px;}
+  .btn-ghost{border-color:transparent; background:none; color:var(--muted);}
+  .btn-ghost:hover{background:var(--surface-2); color:var(--ink); border-color:transparent;}
+  .empty{padding:26px 18px; text-align:center; color:var(--muted); font-size:13px;}
+  .note{display:flex; gap:9px; align-items:flex-start; padding:10px 13px; border-radius:8px; background:var(--warn-soft); color:var(--warn); font-size:12.5px; line-height:1.5;}
+  .num{font-family:var(--font-mono); font-variant-numeric:tabular-nums;}
+
+  /* ---- day rail ---- */
+  .days{display:flex; gap:7px; overflow-x:auto; padding-bottom:6px; margin-bottom:16px; scrollbar-width:thin;}
+  .day{flex:0 0 auto; display:flex; flex-direction:column; gap:2px; align-items:flex-start; padding:8px 12px 9px; border-radius:8px; cursor:pointer;
+    background:var(--surface); border:1px solid var(--line); border-left:4px solid var(--dc,var(--muted)); min-width:84px; transition:background .15s;}
+  .day:hover{background:var(--surface-2);}
+  .day[aria-pressed="true"]{background:var(--dc); border-color:var(--dc); color:#fff;}
+  .day .dn{font-family:var(--font-mono); font-size:10px; letter-spacing:.12em; opacity:.8;}
+  .day .dd{font-family:var(--font-sign); font-size:15px; font-weight:700; letter-spacing:.02em;}
+  .day .dw{font-size:10.5px; opacity:.75;}
+
+  /* ---- route timeline ---- */
+  .route{position:relative; padding-left:26px;}
+  .route::before{content:""; position:absolute; left:5px; top:10px; bottom:10px; width:2px; background:var(--dc,var(--line)); opacity:.35; border-radius:2px;}
+  .stop{position:relative; display:grid; grid-template-columns:54px 1fr auto; gap:4px 12px; align-items:start; padding:12px 0;}
+  .stop + .stop{border-top:1px solid var(--line-soft);}
+  .stop::before{content:""; position:absolute; left:-25px; top:18px; width:12px; height:12px; border-radius:50%; background:var(--surface); border:2.5px solid var(--dc,var(--muted));}
+  .stop.anchor::before{background:var(--dc,var(--muted));}
+  .stop .t{font-family:var(--font-mono); font-size:12.5px; color:var(--muted); padding-top:1px; letter-spacing:.02em;}
+  .stop .b .ti{font-family:var(--font-sign); font-size:15px; font-weight:500;}
+  .stop .b .pl{font-size:12px; color:var(--muted);}
+  .stop .b .nt{font-size:12.5px; color:var(--ink-2); margin-top:3px;}
+  .stop .x{opacity:0; transition:opacity .15s;}
+  .stop:hover .x, .stop:focus-within .x{opacity:1;}
+  @media (hover:none){ .stop .x{opacity:1;} }
+
+  /* ---- stat tiles ---- */
+  .stats{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:1px; background:var(--line); border:1px solid var(--line); border-radius:10px; overflow:hidden;}
+  .stat{background:var(--surface); padding:14px 16px 15px;}
+  .stat .lb{font-size:11px; color:var(--muted); letter-spacing:.05em;}
+  .stat .vl{font-family:var(--font-mono); font-size:23px; font-weight:600; letter-spacing:-.01em; margin-top:3px; line-height:1.15;}
+  .stat .sb{font-size:11px; color:var(--muted); margin-top:2px;}
+
+  /* ---- category bar ---- */
+  .catbar{display:flex; height:10px; border-radius:5px; overflow:hidden; background:var(--line-soft); margin-bottom:12px;}
+  .catbar span{display:block; height:100%;}
+  .catlist{display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:5px 18px;}
+  .catrow{display:flex; align-items:center; gap:8px; font-size:12.5px; padding:3px 0;}
+  .swatch{width:9px; height:9px; border-radius:2.5px; flex:0 0 auto;}
+  .catrow .nm{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .catrow .vv{font-family:var(--font-mono); font-variant-numeric:tabular-nums;}
+  .catrow .pc{font-family:var(--font-mono); color:var(--muted); font-size:11px; width:36px; text-align:right;}
+
+  /* ---- expense list ---- */
+  .datehead{display:flex; align-items:baseline; gap:10px; margin:18px 0 6px; font-family:var(--font-mono); font-size:11px; letter-spacing:.1em; color:var(--muted);}
+  .datehead .rule{flex:1; height:1px; background:var(--line-soft);}
+  .exp{display:grid; grid-template-columns:1fr auto; gap:2px 12px; padding:11px 14px; border:1px solid var(--line); border-radius:9px; background:var(--surface); margin-bottom:6px;}
+  .exp .hd{display:flex; align-items:center; gap:8px; flex-wrap:wrap; min-width:0;}
+  .exp .ti{font-weight:500; font-size:14.5px;}
+  .chip{font-size:10.5px; padding:1.5px 7px; border-radius:20px; background:var(--surface-2); color:var(--muted); border:1px solid var(--line); white-space:nowrap;}
+  .chip.cat{border-color:transparent; color:#fff;}
+  .exp .amt{text-align:right; font-family:var(--font-mono); font-variant-numeric:tabular-nums; font-size:15px; font-weight:600; white-space:nowrap;}
+  .exp .amt .sub{display:block; font-size:10.5px; font-weight:400; color:var(--muted);}
+  .exp .mt{grid-column:1/2; font-size:12px; color:var(--muted); display:flex; gap:6px; flex-wrap:wrap; align-items:center;}
+  .exp .ops{grid-column:2/3; text-align:right;}
+
+  /* ---- forms ---- */
+  .form{display:grid; gap:12px; padding:16px; border:1px dashed var(--line); border-radius:10px; background:var(--surface-2); margin-bottom:16px;}
+  .grid2{display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px;}
+  .fld{display:flex; flex-direction:column; gap:4px; min-width:0;}
+  .fld label{font-size:11px; color:var(--muted); letter-spacing:.05em;}
+  .fld input,.fld select,.fld textarea{background:var(--surface); border:1px solid var(--line); border-radius:7px; padding:7px 9px; font-size:14px; width:100%; min-width:0;}
+  .fld input[type="number"]{font-family:var(--font-mono);}
+  .who{display:flex; gap:6px; flex-wrap:wrap;}
+  .who label{display:inline-flex; align-items:center; gap:5px; padding:5px 10px; border:1px solid var(--line); border-radius:20px; background:var(--surface); font-size:12.5px; cursor:pointer;}
+  .who input{accent-color:var(--accent);}
+  .form-ops{display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap;}
+
+  /* ---- settle ---- */
+  .people{display:grid; grid-template-columns:repeat(auto-fit,minmax(168px,1fr)); gap:10px;}
+  .person{background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:13px 14px;}
+  .person .nm{display:flex; align-items:center; gap:7px; font-family:var(--font-sign); font-size:15px; font-weight:500; margin-bottom:9px;}
+  .dot{width:8px; height:8px; border-radius:50%; flex:0 0 auto;}
+  .kv{display:flex; justify-content:space-between; font-size:12px; color:var(--muted); padding:1.5px 0;}
+  .kv .num{color:var(--ink-2);}
+  .net{display:flex; justify-content:space-between; align-items:baseline; margin-top:8px; padding-top:8px; border-top:1px solid var(--line-soft); font-size:12px;}
+  .net .v{font-family:var(--font-mono); font-size:16px; font-weight:600; font-variant-numeric:tabular-nums;}
+  .pay{display:flex; align-items:center; gap:10px; padding:11px 14px; border:1px solid var(--line); border-radius:9px; background:var(--surface); margin-bottom:6px; flex-wrap:wrap;}
+  .pay .arr{color:var(--muted); font-family:var(--font-mono);}
+  .pay .who1,.pay .who2{font-family:var(--font-sign); font-weight:500;}
+  .pay .v{margin-left:auto; font-family:var(--font-mono); font-weight:600; font-variant-numeric:tabular-nums;}
+
+  /* ---- footer / backup ---- */
+  footer{margin-top:34px; padding-top:16px; border-top:1px solid var(--line-soft); font-size:11.5px; color:var(--muted);}
+  .foot-row{display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:center;}
+  .backup{display:flex; gap:7px; flex-wrap:wrap; margin-top:12px;}
+  .sync{font-family:var(--font-mono); font-size:10.5px; letter-spacing:.06em;}
+
+  @media (max-width:520px){
+    .topbar h1{font-size:19px;}
+    .countdown b{font-size:18px;}
+    .port{min-width:88px;}
+    .port .code{font-size:19px;}
+    .stop{grid-template-columns:48px 1fr auto;}
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="topbar">
+    <div class="brand">
+      <span class="kicker">TPE → NRT · Terminal 1</span>
+      <h1>東京五人行</h1>
+    </div>
+    <div class="countdown" id="countdown"></div>
+  </header>
+
+  <section class="board" aria-label="航班資訊">
+    <div class="board-head"><span>Peach Aviation · PTETF3</span><span class="live">5 PAX</span></div>
+    <div class="leg">
+      <span class="leg-tag">去程 OUT</span><span></span><span class="leg-no">MM626 · 10/03 SAT</span>
+      <div class="leg-route">
+        <div class="port"><span class="code">TPE</span><span class="sub">台北 桃園 T1</span><span class="time">10:50</span></div>
+        <div class="dash"></div>
+        <div class="port"><span class="code">NRT</span><span class="sub">東京 成田 T1</span><span class="time">15:20</span></div>
+      </div>
+      <div class="seats">SEAT 27A 27B 27D 27E 27F · 託運 1 件／人 · 手提 2 件 7kg</div>
+    </div>
+    <div class="leg">
+      <span class="leg-tag">回程 IN</span><span></span><span class="leg-no">MM631 · 10/08 THU</span>
+      <div class="leg-route">
+        <div class="port"><span class="code">NRT</span><span class="sub">東京 成田 T1</span><span class="time">21:50</span></div>
+        <div class="dash"></div>
+        <div class="port"><span class="code">TPE</span><span class="sub">台北 桃園 T1</span><span class="time">00:40 <span class="next">+1</span></span></div>
+      </div>
+      <div class="seats">SEAT 27A 27B 27D 27E 27F · 10/09 FRI 凌晨抵台</div>
+    </div>
+  </section>
+
+  <nav class="tabs" role="tablist" aria-label="頁面切換">
+    <button class="tab" role="tab" id="tab-plan" data-tab="plan" aria-selected="true" aria-controls="panel-plan">行程</button>
+    <button class="tab" role="tab" id="tab-cost" data-tab="cost" aria-selected="false" aria-controls="panel-cost">花費<span class="n" id="tab-cost-n"></span></button>
+    <button class="tab" role="tab" id="tab-split" data-tab="split" aria-selected="false" aria-controls="panel-split">分帳</button>
+  </nav>
+
+  <main>
+    <section class="panel" id="panel-plan" role="tabpanel" aria-labelledby="tab-plan">
+      <div class="days" id="days" role="group" aria-label="選擇日期"></div>
+      <div class="sec-head">
+        <h2 id="day-title">當日行程</h2>
+        <button class="btn btn-sm" id="add-stop-btn" type="button">＋ 加行程</button>
+      </div>
+      <form class="form" id="stop-form" hidden>
+        <div class="grid2">
+          <div class="fld"><label for="sf-time">時間</label><input type="time" id="sf-time" required></div>
+          <div class="fld"><label for="sf-title">做什麼</label><input type="text" id="sf-title" placeholder="淺草寺參拜" required></div>
+          <div class="fld"><label for="sf-place">地點／車站</label><input type="text" id="sf-place" placeholder="銀座線 淺草站"></div>
+        </div>
+        <div class="fld"><label for="sf-note">備註</label><input type="text" id="sf-note" placeholder="要先線上預約"></div>
+        <div class="form-ops">
+          <button type="button" class="btn btn-ghost btn-sm" id="sf-cancel">取消</button>
+          <button type="submit" class="btn btn-main btn-sm">加入這天</button>
+        </div>
+      </form>
+      <div class="route" id="route"></div>
+    </section>
+
+    <section class="panel" id="panel-cost" role="tabpanel" aria-labelledby="tab-cost" hidden>
+      <div class="stats" id="cost-stats"></div>
+      <div class="sec" style="margin-top:20px">
+        <div class="sec-head"><h2>分類佔比</h2><span class="hint" id="rate-hint"></span></div>
+        <div class="card" style="padding:15px 16px">
+          <div class="catbar" id="catbar"></div>
+          <div class="catlist" id="catlist"></div>
+        </div>
+      </div>
+      <div class="sec">
+        <div class="sec-head">
+          <h2>費用明細</h2>
+          <div style="display:flex; gap:8px"><button class="btn btn-sm" id="rate-btn" type="button">匯率</button><button class="btn btn-sm btn-main" id="add-exp-btn" type="button">＋ 記一筆</button></div>
+        </div>
+        <form class="form" id="rate-form" hidden>
+          <div class="grid2">
+            <div class="fld"><label for="rf-rate">1 日圓 ＝ ? 台幣</label><input type="number" id="rf-rate" step="0.0001" min="0.0001" required></div>
+            <div class="fld"><label>換算參考</label><div class="num" id="rf-preview" style="padding-top:8px; font-size:13px; color:var(--muted)"></div></div>
+          </div>
+          <div class="form-ops"><button type="button" class="btn btn-ghost btn-sm" id="rf-cancel">取消</button><button type="submit" class="btn btn-main btn-sm">更新匯率</button></div>
+        </form>
+        <form class="form" id="exp-form" hidden>
+          <div class="grid2">
+            <div class="fld"><label for="ef-date">日期</label><input type="date" id="ef-date" required></div>
+            <div class="fld"><label for="ef-title">項目</label><input type="text" id="ef-title" placeholder="一蘭拉麵" required></div>
+            <div class="fld"><label for="ef-cat">分類</label><select id="ef-cat"></select></div>
+          </div>
+          <div class="grid2">
+            <div class="fld"><label for="ef-amount">金額</label><input type="number" id="ef-amount" step="1" min="0" placeholder="0" required></div>
+            <div class="fld"><label for="ef-cur">幣別</label><select id="ef-cur"><option value="JPY">JPY 日圓</option><option value="TWD">TWD 台幣</option></select></div>
+            <div class="fld"><label for="ef-payer">誰付的</label><select id="ef-payer"></select></div>
+          </div>
+          <div class="fld"><label>誰分攤</label><div class="who" id="ef-who"></div></div>
+          <div class="fld"><label for="ef-note">備註</label><input type="text" id="ef-note" placeholder="可留白"></div>
+          <div class="form-ops"><button type="button" class="btn btn-ghost btn-sm" id="ef-cancel">取消</button><button type="submit" class="btn btn-main btn-sm">記下來</button></div>
+        </form>
+        <div id="exp-list"></div>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-split" role="tabpanel" aria-labelledby="tab-split" hidden>
+      <div id="split-warn"></div>
+      <div class="sec">
+        <div class="sec-head"><h2>每個人的帳</h2><button class="btn btn-sm btn-ghost" id="rename-btn" type="button">改名字</button></div>
+        <div class="people" id="people"></div>
+      </div>
+      <div class="sec">
+        <div class="sec-head"><h2>結清方式</h2><span class="hint">最少轉帳次數</span></div>
+        <div id="transfers"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="foot-row">
+      <span>2026.10.03 – 10.09 · 東京 6 天 5 夜 · 5 人</span>
+      <span class="sync" id="sync"></span>
+    </div>
+    <div class="backup">
+      <button class="btn btn-sm" id="export-btn" type="button">匯出備份</button>
+      <button class="btn btn-sm" id="import-btn" type="button">匯入備份</button>
+      <button class="btn btn-sm btn-ghost" id="reset-btn" type="button">清除本機紀錄</button>
+      <input type="file" id="import-file" accept="application/json,.json" hidden>
+    </div>
+    <p style="margin-top:10px; line-height:1.55">紀錄存在這台裝置的瀏覽器裡。要跟其他人對帳,按「匯出備份」把 JSON 傳給對方,對方用「匯入備份」讀進去。</p>
+  </footer>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  /* ================= 固定資料:從機票訂單來的事實 ================= */
+  const MEMBERS = [
+    { id: "hsieh_chinhui", def: "Chinhui", full: "HSIEH CHINHUI", color: "#E60012" },
+    { id: "chang_chiayu",  def: "Chiayu",  full: "CHANG CHIAYU",  color: "#F39700" },
+    { id: "chang_chihwei", def: "Chihwei", full: "CHANG CHIHWEI", color: "#009944" },
+    { id: "chang_yalun",   def: "Yalun",   full: "CHANG YALUN",   color: "#00A7DB" },
+    { id: "chen_suchih",   def: "Suchih",  full: "CHEN SUCHIH",   color: "#9B7CB6" },
+  ];
+  const IDS = MEMBERS.map(m => m.id);
+
+  const DAYS = [
+    { n: 1, date: "2026-10-03", w: "六", color: "#F39700" },
+    { n: 2, date: "2026-10-04", w: "日", color: "#E60012" },
+    { n: 3, date: "2026-10-05", w: "一", color: "#009944" },
+    { n: 4, date: "2026-10-06", w: "二", color: "#00A7DB" },
+    { n: 5, date: "2026-10-07", w: "三", color: "#9B7CB6" },
+    { n: 6, date: "2026-10-08", w: "四", color: "#B6007A" },
+  ];
+
+  /* 航班節點固定釘在時間軸上,不可刪 */
+  const ANCHORS = {
+    "2026-10-03": [
+      { time: "08:00", title: "桃園機場 第一航廈 報到", place: "樂桃 MM626 · 建議起飛前 2.5 小時", note: "託運行李每人 1 件" },
+      { time: "10:50", title: "MM626 起飛", place: "TPE 桃園 T1" },
+      { time: "15:20", title: "抵達成田機場 第一航廈", place: "NRT 成田 T1", note: "入境 + 領行李 + 進市區約 2 小時" },
+    ],
+    "2026-10-08": [
+      { time: "18:00", title: "最晚出發前往成田機場", place: "都心 → NRT 約 60–90 分鐘", note: "起飛前 2 小時到 T1" },
+      { time: "21:50", title: "MM631 起飛", place: "NRT 成田 T1" },
+      { time: "00:40", title: "抵達桃園機場(10/09 五)", place: "TPE 桃園 T1", note: "深夜班機,先安排好回家的車" },
+    ],
+  };
+
+  const CATS = [
+    { id: "transport", name: "交通",  color: "#00A7DB" },
+    { id: "stay",      name: "住宿",  color: "#9B7CB6" },
+    { id: "food",      name: "餐飲",  color: "#F39700" },
+    { id: "sight",     name: "景點",  color: "#009944" },
+    { id: "shop",      name: "購物",  color: "#E60012" },
+    { id: "other",     name: "其他",  color: "#7E8796" },
+  ];
+  const catOf = id => CATS.find(c => c.id === id) || CATS[5];
+
+  /* 第一次開啟時的初始內容 */
+  const SEED = {
+    rate: 0.21,
+    names: {},
+    expenses: [{
+      id: "seed-peach",
+      date: "2026-09-15",
+      title: "樂桃來回機票 MM626／MM631",
+      category: "transport",
+      amount: 61100,
+      currency: "TWD",
+      payerId: "hsieh_chinhui",
+      participants: IDS.slice(),
+      note: "訂單 PTETF3 · 含稅與附加費、不含保險 · 含託運行李 1 件/人",
+      createdAt: "2026-09-15T23:09:00+08:00",
+    }],
+    stops: [],
+  };
+
+  /* ================= 狀態 ================= */
+  const state = { tab: "plan", day: "2026-10-03", rate: SEED.rate, names: {}, expenses: [], stops: [] };
+  const nameOf = id => state.names[id] || (MEMBERS.find(m => m.id === id) || {}).def || id;
+  const colorOf = id => (MEMBERS.find(m => m.id === id) || {}).color || "#7E8796";
+
+  const twd = n => "NT$" + Math.round(n).toLocaleString("en-US");
+  const toTWD = e => e.currency === "JPY" ? e.amount * state.rate : e.amount;
+  const el = id => document.getElementById(id);
+  const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+
+  /* ================= 儲存 ================= */
+  const LS = "tokyo5-v1";
+  let storageOK = true;
+
+  function load() {
+    let raw = null;
+    try { raw = localStorage.getItem(LS); } catch (_) { storageOK = false; }
+    let d = null;
+    if (raw) { try { d = JSON.parse(raw); } catch (_) { d = null; } }
+    if (!d) d = SEED;
+    apply(d);
+    if (!raw) save();
+  }
+  function apply(d) {
+    const clone = v => JSON.parse(JSON.stringify(v));
+    state.rate = typeof d.rate === "number" && d.rate > 0 ? d.rate : SEED.rate;
+    state.names = d.names && typeof d.names === "object" ? clone(d.names) : {};
+    state.expenses = Array.isArray(d.expenses) ? clone(d.expenses) : [];
+    state.stops = Array.isArray(d.stops) ? clone(d.stops) : [];
+    sortExpenses();
+  }
+  function snapshot() {
+    return { version: 1, rate: state.rate, names: state.names, expenses: state.expenses, stops: state.stops };
+  }
+  function save() {
+    try { localStorage.setItem(LS, JSON.stringify(snapshot())); }
+    catch (_) { storageOK = false; renderSync(); }
+  }
+  function commit() { save(); render(); }
+  function sortExpenses() {
+    state.expenses.sort((a, b) => (a.date || "").localeCompare(b.date || "") || (a.createdAt || "").localeCompare(b.createdAt || ""));
+  }
+  function flash(msg) {
+    el("sync").textContent = msg;
+    setTimeout(renderSync, 2600);
+  }
+
+  /* ================= 分帳計算 ================= */
+  function ledger() {
+    const book = {};
+    IDS.forEach(id => book[id] = { paid: 0, owed: 0 });
+    let unassigned = 0;
+    state.expenses.forEach(e => {
+      const v = toTWD(e);
+      if (e.payerId && book[e.payerId]) book[e.payerId].paid += v; else unassigned++;
+      const ps = (e.participants || []).filter(p => book[p]);
+      if (ps.length) { const each = v / ps.length; ps.forEach(p => book[p].owed += each); }
+    });
+    return { book, unassigned };
+  }
+  function transfers(book) {
+    const owe = [], get = [];
+    IDS.forEach(id => {
+      const net = Math.round(book[id].paid - book[id].owed);
+      if (net < 0) owe.push({ id, v: -net }); else if (net > 0) get.push({ id, v: net });
+    });
+    owe.sort((a, b) => b.v - a.v); get.sort((a, b) => b.v - a.v);
+    const out = [];
+    let i = 0, j = 0;
+    while (i < owe.length && j < get.length) {
+      const v = Math.min(owe[i].v, get[j].v);
+      if (v >= 1) out.push({ from: owe[i].id, to: get[j].id, v });
+      owe[i].v -= v; get[j].v -= v;
+      if (owe[i].v < 1) i++;
+      if (get[j].v < 1) j++;
+    }
+    return out;
+  }
+
+  /* ================= 繪製 ================= */
+  function renderCountdown() {
+    const go = new Date("2026-10-03T10:50:00+08:00");
+    const back = new Date("2026-10-09T00:40:00+08:00");
+    const now = new Date();
+    const box = el("countdown");
+    if (now > back) box.innerHTML = "<span>旅程結束</span><b>回味中</b>";
+    else if (now >= go) box.innerHTML = "<span>正在東京</span><b>第 " + Math.max(1, Math.ceil((now - go) / 86400000)) + " 天</b>";
+    else box.innerHTML = "<span>出發倒數</span><b>" + Math.ceil((go - now) / 86400000) + " 天</b>";
+  }
+
+  function renderDays() {
+    el("days").innerHTML = DAYS.map(d => {
+      const cnt = state.stops.filter(s => s.day === d.date).length + (ANCHORS[d.date] || []).length;
+      return '<button type="button" class="day" style="--dc:' + d.color + '" data-day="' + d.date +
+        '" aria-pressed="' + (d.date === state.day) + '"><span class="dn">DAY ' + d.n + '</span><span class="dd">' +
+        d.date.slice(5).replace("-", "/") + '</span><span class="dw">週' + d.w + " · " + cnt + " 項</span></button>";
+    }).join("");
+  }
+
+  function renderRoute() {
+    const d = DAYS.find(x => x.date === state.day);
+    const anchors = (ANCHORS[state.day] || []).map(a => Object.assign({ anchor: true }, a));
+    const mine = state.stops.filter(s => s.day === state.day);
+    const list = anchors.concat(mine).sort((a, b) => (a.time || "").localeCompare(b.time || ""));
+    el("day-title").textContent = "DAY " + d.n + " · " + state.day.slice(5).replace("-", "/") + " 週" + d.w;
+    const route = el("route");
+    route.style.setProperty("--dc", d.color);
+    if (!list.length) { route.innerHTML = '<div class="empty">這天還沒排。按右上角「＋ 加行程」開始。</div>'; return; }
+    route.innerHTML = list.map(s =>
+      '<div class="stop' + (s.anchor ? " anchor" : "") + '">' +
+      '<div class="t num">' + (s.time || "—") + "</div>" +
+      '<div class="b"><div class="ti">' + esc(s.title) + "</div>" +
+      (s.place ? '<div class="pl">' + esc(s.place) + "</div>" : "") +
+      (s.note ? '<div class="nt">' + esc(s.note) + "</div>" : "") + "</div>" +
+      "<div>" + (s.anchor ? "" : '<button type="button" class="btn btn-ghost btn-sm x" data-del-stop="' + s.id + '" aria-label="刪除這項">✕</button>') + "</div></div>"
+    ).join("");
+  }
+
+  const tile = (lb, vl, sb) => '<div class="stat"><div class="lb">' + lb + '</div><div class="vl">' + vl + '</div><div class="sb">' + sb + "</div></div>";
+
+  function renderCost() {
+    const total = state.expenses.reduce((s, e) => s + toTWD(e), 0);
+    const tripTotal = state.expenses.filter(e => e.date >= "2026-10-03").reduce((s, e) => s + toTWD(e), 0);
+    el("cost-stats").innerHTML = [
+      tile("總花費", twd(total), state.expenses.length + " 筆紀錄"),
+      tile("每人平均", twd(total / 5), "5 人均分"),
+      tile("行前預訂", twd(total - tripTotal), "機票、住宿等"),
+      tile("旅途中", twd(tripTotal), "10/03 起"),
+    ].join("");
+    el("tab-cost-n").textContent = state.expenses.length || "";
+    el("rate-hint").textContent = "1 JPY = " + state.rate + " TWD";
+
+    const sums = CATS.map(c => Object.assign({}, c, { v: state.expenses.filter(e => e.category === c.id).reduce((s, e) => s + toTWD(e), 0) }));
+    const shown = sums.filter(c => c.v > 0);
+    el("catbar").innerHTML = total > 0
+      ? shown.map(c => '<span style="width:' + (c.v / total * 100) + "%;background:" + c.color + '" title="' + c.name + '"></span>').join("") : "";
+    el("catlist").innerHTML = (shown.length ? shown : sums).map(c =>
+      '<div class="catrow"><span class="swatch" style="background:' + c.color + '"></span><span class="nm">' + c.name +
+      '</span><span class="vv">' + twd(c.v) + '</span><span class="pc">' + (total > 0 ? Math.round(c.v / total * 100) : 0) + "%</span></div>").join("");
+
+    const list = el("exp-list");
+    if (!state.expenses.length) { list.innerHTML = '<div class="empty">還沒有任何花費紀錄。</div>'; return; }
+    const byDate = {};
+    state.expenses.forEach(e => (byDate[e.date] = byDate[e.date] || []).push(e));
+    list.innerHTML = Object.keys(byDate).sort().reverse().map(date => {
+      const day = DAYS.find(d => d.date === date);
+      const label = day ? "DAY " + day.n + " · " + date : "行前 · " + date;
+      const sub = byDate[date].reduce((s, e) => s + toTWD(e), 0);
+      return '<div class="datehead"><span>' + label + '</span><span class="rule"></span><span class="num">' + twd(sub) + "</span></div>" +
+        byDate[date].map(expRow).join("");
+    }).join("");
+  }
+
+  function expRow(e) {
+    const c = catOf(e.category);
+    const ps = (e.participants || []).filter(p => IDS.includes(p));
+    const whoShared = ps.length === IDS.length ? "全員均分" : ps.map(nameOf).join("、") + " 均分";
+    const payer = e.payerId ? esc(nameOf(e.payerId)) + " 付" : '<span style="color:var(--warn)">未指定付款人</span>';
+    const v = toTWD(e);
+    return '<div class="exp"><div class="hd"><span class="ti">' + esc(e.title) + '</span><span class="chip cat" style="background:' + c.color + '">' + c.name + "</span></div>" +
+      '<div class="amt">' + twd(v) + (e.currency === "JPY" ? '<span class="sub">¥' + Math.round(e.amount).toLocaleString("en-US") + "</span>" : "") + "</div>" +
+      '<div class="mt"><span>' + payer + "</span><span>·</span><span>" + esc(whoShared) + "</span>" +
+      (ps.length ? '<span>·</span><span class="num">每人 ' + twd(v / ps.length) + "</span>" : "") +
+      (e.note ? "<span>·</span><span>" + esc(e.note) + "</span>" : "") + "</div>" +
+      '<div class="ops"><button type="button" class="btn btn-ghost btn-sm" data-del-exp="' + e.id + '">刪除</button></div></div>';
+  }
+
+  function renderSplit() {
+    const res = ledger();
+    el("split-warn").innerHTML = res.unassigned
+      ? '<div class="note" style="margin-bottom:18px"><span>⚠</span><span>有 ' + res.unassigned +
+        " 筆花費還沒指定付款人,這些錢算進「該付」但沒算成任何人「已付」,結算金額會不準。</span></div>" : "";
+    el("people").innerHTML = MEMBERS.map(m => {
+      const b = res.book[m.id];
+      const net = b.paid - b.owed;
+      const col = net > 0.5 ? "var(--pos)" : net < -0.5 ? "var(--neg)" : "var(--muted)";
+      const word = net > 0.5 ? "應收回" : net < -0.5 ? "要付出" : "剛好打平";
+      return '<div class="person"><div class="nm"><span class="dot" style="background:' + m.color + '"></span>' + esc(nameOf(m.id)) + "</div>" +
+        '<div class="kv"><span>已付</span><span class="num">' + twd(b.paid) + "</span></div>" +
+        '<div class="kv"><span>該付</span><span class="num">' + twd(b.owed) + "</span></div>" +
+        '<div class="net"><span>' + word + '</span><span class="v" style="color:' + col + '">' +
+        (Math.abs(net) < 0.5 ? "—" : twd(Math.abs(net))) + "</span></div></div>";
+    }).join("");
+
+    const t = transfers(res.book);
+    el("transfers").innerHTML = t.length
+      ? t.map(x => '<div class="pay"><span class="dot" style="background:' + colorOf(x.from) + '"></span><span class="who1">' + esc(nameOf(x.from)) +
+          '</span><span class="arr">→</span><span class="dot" style="background:' + colorOf(x.to) + '"></span><span class="who2">' + esc(nameOf(x.to)) +
+          '</span><span class="v">' + twd(x.v) + "</span></div>").join("")
+      : '<div class="empty">' + (state.expenses.length ? "目前所有人都打平了,不用轉帳。" : "還沒有花費紀錄,先去記一筆。") + "</div>";
+  }
+
+  function renderSync() {
+    el("sync").textContent = storageOK ? "● 紀錄已存在這台裝置" : "○ 瀏覽器不讓存檔,離開後會消失";
+  }
+
+  function render() { renderDays(); renderRoute(); renderCost(); renderSplit(); renderSync(); }
+
+  /* ================= 互動 ================= */
+  function switchTab(name) {
+    state.tab = name;
+    ["plan", "cost", "split"].forEach(t => {
+      el("tab-" + t).setAttribute("aria-selected", String(t === name));
+      el("panel-" + t).hidden = t !== name;
+    });
+  }
+  document.querySelectorAll(".tab").forEach(b => b.addEventListener("click", () => switchTab(b.dataset.tab)));
+
+  el("days").addEventListener("click", ev => {
+    const b = ev.target.closest("[data-day]");
+    if (!b) return;
+    state.day = b.dataset.day;
+    renderDays(); renderRoute();
+  });
+
+  function toggleForm(id, on) {
+    const f = el(id);
+    f.hidden = on === undefined ? !f.hidden : !on;
+    if (!f.hidden) { const first = f.querySelector("input,select"); if (first) first.focus(); }
+  }
+
+  /* --- 行程 --- */
+  el("add-stop-btn").addEventListener("click", () => toggleForm("stop-form"));
+  el("sf-cancel").addEventListener("click", () => toggleForm("stop-form", false));
+  el("stop-form").addEventListener("submit", ev => {
+    ev.preventDefault();
+    state.stops.push({
+      id: uid(), day: state.day,
+      time: el("sf-time").value,
+      title: el("sf-title").value.trim(),
+      place: el("sf-place").value.trim(),
+      note: el("sf-note").value.trim(),
+    });
+    el("stop-form").reset();
+    toggleForm("stop-form", false);
+    commit();
+  });
+  el("route").addEventListener("click", ev => {
+    const b = ev.target.closest("[data-del-stop]");
+    if (!b) return;
+    const i = state.stops.findIndex(s => s.id === b.dataset.delStop);
+    if (i > -1) { state.stops.splice(i, 1); commit(); }
+  });
+
+  /* --- 匯率 --- */
+  function ratePreview() {
+    const r = parseFloat(el("rf-rate").value) || 0;
+    el("rf-preview").textContent = "¥1,000 ≈ " + twd(1000 * r) + " · ¥10,000 ≈ " + twd(10000 * r);
+  }
+  el("rate-btn").addEventListener("click", () => { el("rf-rate").value = state.rate; ratePreview(); toggleForm("rate-form"); });
+  el("rf-rate").addEventListener("input", ratePreview);
+  el("rf-cancel").addEventListener("click", () => toggleForm("rate-form", false));
+  el("rate-form").addEventListener("submit", ev => {
+    ev.preventDefault();
+    const r = parseFloat(el("rf-rate").value);
+    if (r > 0) { state.rate = r; commit(); }
+    toggleForm("rate-form", false);
+  });
+
+  /* --- 花費 --- */
+  el("ef-cat").innerHTML = CATS.map(c => '<option value="' + c.id + '">' + c.name + "</option>").join("");
+  function fillPeopleControls() {
+    el("ef-payer").innerHTML = '<option value="">— 還不確定 —</option>' +
+      MEMBERS.map(m => '<option value="' + m.id + '">' + esc(nameOf(m.id)) + "</option>").join("");
+    el("ef-who").innerHTML = MEMBERS.map(m =>
+      '<label><input type="checkbox" id="who-' + m.id + '" value="' + m.id + '" checked>' + esc(nameOf(m.id)) + "</label>").join("");
+  }
+  function defaultDate() {
+    const t = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+    return t >= "2026-10-03" && t <= "2026-10-09" ? t : "2026-10-03";
+  }
+  el("add-exp-btn").addEventListener("click", () => {
+    fillPeopleControls();
+    if (!el("ef-date").value) el("ef-date").value = defaultDate();
+    toggleForm("exp-form");
+  });
+  el("ef-cancel").addEventListener("click", () => toggleForm("exp-form", false));
+  el("exp-form").addEventListener("submit", ev => {
+    ev.preventDefault();
+    const ps = Array.prototype.map.call(el("ef-who").querySelectorAll("input:checked"), i => i.value);
+    if (!ps.length) { flash("至少要選一個人分攤"); return; }
+    state.expenses.push({
+      id: uid(),
+      date: el("ef-date").value,
+      title: el("ef-title").value.trim(),
+      category: el("ef-cat").value,
+      amount: Math.abs(parseFloat(el("ef-amount").value) || 0),
+      currency: el("ef-cur").value,
+      payerId: el("ef-payer").value || null,
+      participants: ps,
+      note: el("ef-note").value.trim(),
+      createdAt: new Date().toISOString(),
+    });
+    sortExpenses();
+    const keep = el("ef-date").value;
+    el("exp-form").reset();
+    el("ef-date").value = keep;
+    fillPeopleControls();
+    toggleForm("exp-form", false);
+    commit();
+  });
+  el("exp-list").addEventListener("click", ev => {
+    const b = ev.target.closest("[data-del-exp]");
+    if (!b) return;
+    const i = state.expenses.findIndex(x => x.id === b.dataset.delExp);
+    if (i > -1) { state.expenses.splice(i, 1); commit(); }
+  });
+
+  /* --- 改名字 --- */
+  const renameForm = document.createElement("form");
+  renameForm.className = "form"; renameForm.id = "rename-form"; renameForm.hidden = true;
+  el("people").parentNode.insertBefore(renameForm, el("people"));
+  el("rename-btn").addEventListener("click", () => {
+    renameForm.innerHTML = '<div class="grid2">' + MEMBERS.map(m =>
+      '<div class="fld"><label for="rn-' + m.id + '">' + m.full + '</label><input type="text" id="rn-' + m.id +
+      '" value="' + esc(nameOf(m.id)) + '" maxlength="12"></div>').join("") +
+      '</div><div class="form-ops"><button type="button" class="btn btn-ghost btn-sm" id="rn-cancel">取消</button>' +
+      '<button type="submit" class="btn btn-main btn-sm">存起來</button></div>';
+    renameForm.hidden = !renameForm.hidden;
+  });
+  renameForm.addEventListener("click", ev => { if (ev.target.id === "rn-cancel") renameForm.hidden = true; });
+  renameForm.addEventListener("submit", ev => {
+    ev.preventDefault();
+    const names = {};
+    MEMBERS.forEach(m => { const v = (el("rn-" + m.id).value || "").trim(); if (v) names[m.id] = v; });
+    state.names = names;
+    renameForm.hidden = true;
+    fillPeopleControls();
+    commit();
+  });
+
+  /* --- 備份 --- */
+  el("export-btn").addEventListener("click", () => {
+    const blob = new Blob([JSON.stringify(snapshot(), null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "tokyo-trip-" + new Date().toISOString().slice(0, 10) + ".json";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  });
+  el("import-btn").addEventListener("click", () => el("import-file").click());
+  el("import-file").addEventListener("change", ev => {
+    const file = ev.target.files && ev.target.files[0];
+    if (!file) return;
+    const r = new FileReader();
+    r.onload = () => {
+      try {
+        const d = JSON.parse(r.result);
+        if (!d || typeof d !== "object") throw new Error("bad");
+        if (!confirm("匯入會覆蓋這台裝置上現有的紀錄,確定嗎?")) return;
+        apply(d); commit(); fillPeopleControls();
+        flash("已匯入 " + state.expenses.length + " 筆花費");
+      } catch (_) { flash("這個檔案讀不出來,請確認是匯出的 JSON"); }
+    };
+    r.readAsText(file);
+    ev.target.value = "";
+  });
+  el("reset-btn").addEventListener("click", () => {
+    if (!confirm("會清掉這台裝置上所有自己加的行程和花費,回到只有機票的初始狀態。確定嗎?")) return;
+    try { localStorage.removeItem(LS); } catch (_) {}
+    apply(SEED);
+    fillPeopleControls();
+    commit();
+    flash("已清除");
+  });
+
+  /* ================= 啟動 ================= */
+  load();
+  renderCountdown();
+  setInterval(renderCountdown, 60000);
+  switchTab("plan");
+  fillPeopleControls();
+  render();
+})();
+</script>
+</body>
+</html>
