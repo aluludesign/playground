@@ -965,14 +965,23 @@
   switchTab("plan");
 
   (async () => {
-    let saved = null;
-    try { saved = localStorage.getItem(KEYLS); } catch (_) {}
-    if (saved !== null) {
-      try { await tryKey(saved); return; } catch (_) {}
+    /* 先拿存過的通行碼試,沒有就試空的 —— 後端沒設通行碼時會直接放行,
+       那就不該拿一個假的登入框擋在前面。 */
+    let saved = "";
+    try { saved = localStorage.getItem(KEYLS) || ""; } catch (_) {}
+    try {
+      await tryKey(saved);
+      return;
+    } catch (e) {
+      goLocal();
+      if (e.message === "通行碼不對") {
+        el("signin-overlay").hidden = false;
+        el("si-key").focus();
+        if (saved) showSigninError("通行碼不對,再輸入一次。");
+      } else {
+        flash("連不上 Notion:" + e.message);
+      }
     }
-    goLocal();
-    el("signin-overlay").hidden = false;
-    el("si-key").focus();
   })();
 })();
 </script>
