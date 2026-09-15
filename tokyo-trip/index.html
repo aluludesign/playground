@@ -399,7 +399,7 @@
     "2026-10-08": [
       { time: "18:00", title: "最晚出發前往成田機場", place: "都心 → NRT 約 60–90 分鐘", note: "起飛前 2 小時到 T1" },
       { time: "21:50", title: "MM631 起飛", place: "NRT 成田 T1" },
-      { time: "00:40", title: "抵達桃園機場(10/09 五)", place: "TPE 桃園 T1", note: "深夜班機,先安排好回家的車" },
+      { day: "2026-10-09", time: "00:40", title: "抵達桃園機場", place: "TPE 桃園 T1", note: "深夜班機,先安排好回家的車" },
     ],
   };
 
@@ -681,25 +681,34 @@
 
   function renderDays() {
     el("days").innerHTML = DAYS.map(d => {
-      const cnt = state.stops.filter(s => s.day === d.date).length + (ANCHORS[d.date] || []).length;
+      const cnt = stopsOn(d.date).length + (online ? 0 : (ANCHORS[d.date] || []).length);
       return '<button type="button" class="day" style="--dc:' + d.color + '" data-day="' + d.date +
         '" aria-pressed="' + (d.date === state.day) + '"><span class="dn">DAY ' + d.n + '</span><span class="dd">' +
         d.date.slice(5).replace("-", "/") + '</span><span class="dw">週' + d.w + " · " + cnt + " 項</span></button>";
     }).join("");
   }
 
+  const LAST_DAY = "2026-10-08";
+  const OVERNIGHT = "2026-10-09";
+  /* 回程是紅眼班機,10/09 凌晨那段屬於最後一天的行程 */
+  function stopsOn(date) {
+    return state.stops.filter(s => s.day === date || (date === LAST_DAY && s.day === OVERNIGHT));
+  }
+
   function renderRoute() {
     const d = DAYS.find(x => x.date === state.day);
-    const anchors = (ANCHORS[state.day] || []).map(a => Object.assign({ anchor: true }, a));
-    const mine = state.stops.filter(s => s.day === state.day);
-    const list = anchors.concat(mine).sort((a, b) => (a.time || "").localeCompare(b.time || ""));
+    /* 連著 Notion 時,航班節點已經是 Notion 裡的資料,不要再畫一次寫死的 */
+    const anchors = online ? [] : (ANCHORS[state.day] || []).map(a => Object.assign({ anchor: true }, a));
+    const mine = stopsOn(state.day);
+    const key = x => (x.day || state.day) + " " + (x.time || "");
+    const list = anchors.concat(mine).sort((a, b) => key(a).localeCompare(key(b)));
     el("day-title").textContent = "DAY " + d.n + " · " + state.day.slice(5).replace("-", "/") + " 週" + d.w;
     const route = el("route");
     route.style.setProperty("--dc", d.color);
     if (!list.length) { route.innerHTML = '<div class="empty">這天還沒排。按右上角「＋ 加行程」開始。</div>'; return; }
     route.innerHTML = list.map(s =>
       '<div class="stop' + (s.anchor ? " anchor" : "") + '">' +
-      '<div class="t num">' + (s.time || "—") + "</div>" +
+      '<div class="t num">' + (s.time || "—") + (s.day === OVERNIGHT ? '<span style="color:var(--muted); font-size:10px"> +1</span>' : "") + "</div>" +
       '<div class="b"><div class="ti">' + esc(s.title) + "</div>" +
       (s.place ? '<div class="pl">' + esc(s.place) + "</div>" : "") +
       (s.note ? '<div class="nt">' + esc(s.note) + "</div>" : "") + "</div>" +
