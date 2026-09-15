@@ -80,10 +80,8 @@ function stopOut(page) {
     title: ttl(p["項目"]),
     day: dat(p["日期"]),
     time: txt(p["時間"]),
-    kind: sel(p["類型"]),
     place: txt(p["地點"]),
     note: txt(p["備註"]),
-    done: !!(p["已確認"] && p["已確認"].checkbox),
     url: (p["連結"] && p["連結"].url) || "",
   };
 }
@@ -93,10 +91,8 @@ function stopIn(b) {
     "時間": { rich_text: richText(b.time) },
     "地點": { rich_text: richText(b.place) },
     "備註": { rich_text: richText(b.note) },
-    "已確認": { checkbox: !!b.done },
   };
   if (b.day) props["日期"] = { date: { start: b.day } };
-  if (b.kind) props["類型"] = { select: { name: b.kind } };
   if (b.url) props["連結"] = { url: b.url };
   return props;
 }
