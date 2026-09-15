@@ -196,6 +196,23 @@
   .backup{display:flex; gap:7px; flex-wrap:wrap; margin-top:12px;}
   .sync{font-family:var(--font-mono); font-size:10.5px; letter-spacing:.06em;}
 
+  /* ---- cloud status + auth ---- */
+  .cloudbar{display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:9px 13px; border-radius:8px; font-size:12.5px;
+    background:var(--accent-soft); color:var(--ink-2); margin-bottom:14px; border:1px solid var(--line);}
+  .cloudbar .led{width:7px; height:7px; border-radius:50%; flex:0 0 auto; background:var(--muted);}
+  .cloudbar.on .led{background:var(--pos);}
+  .cloudbar.off .led{background:var(--warn);}
+  .cloudbar .sp{margin-left:auto; display:flex; gap:7px;}
+
+  .overlay{position:fixed; inset:0; z-index:60; display:flex; align-items:center; justify-content:center; padding:20px;
+    background:color-mix(in srgb, var(--paper) 86%, transparent); backdrop-filter:blur(6px);}
+  .signin{width:100%; max-width:380px; background:var(--surface); border:1px solid var(--line); border-radius:12px;
+    padding:24px 22px; box-shadow:var(--shadow); display:grid; gap:14px;}
+  .signin h2{font-family:var(--font-sign); font-size:19px; letter-spacing:.03em;}
+  .signin p{font-size:12.5px; color:var(--muted); line-height:1.55;}
+  .signin .err{font-size:12.5px; color:var(--neg); line-height:1.5;}
+  .signin .ops{display:grid; gap:8px;}
+
   @media (max-width:520px){
     .topbar h1{font-size:19px;}
     .countdown b{font-size:18px;}
@@ -237,6 +254,12 @@
       <div class="seats">SEAT 27A 27B 27D 27E 27F · 10/09 FRI 凌晨抵台</div>
     </div>
   </section>
+
+  <div class="cloudbar" id="cloudbar" hidden>
+    <span class="led"></span>
+    <span id="cloud-msg"></span>
+    <span class="sp" id="cloud-ops"></span>
+  </div>
 
   <nav class="tabs" role="tablist" aria-label="頁面切換">
     <button class="tab" role="tab" id="tab-plan" data-tab="plan" aria-selected="true" aria-controls="panel-plan">行程</button>
@@ -334,6 +357,23 @@
   </footer>
 </div>
 
+<div class="overlay" id="signin-overlay" hidden>
+  <form class="signin" id="signin-form">
+    <h2>東京五人行</h2>
+    <p>花費紀錄存在雲端,五個人共用同一份。用大家共用的那組帳號登入。</p>
+    <div class="fld"><label for="si-email">Email</label><input type="email" id="si-email" autocomplete="username" required></div>
+    <div class="fld"><label for="si-pass">密碼</label><input type="password" id="si-pass" autocomplete="current-password" required></div>
+    <div class="err" id="si-err" hidden></div>
+    <div class="ops">
+      <button type="submit" class="btn btn-main" id="si-submit">登入</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="si-offline">先用離線模式(只存這台裝置)</button>
+    </div>
+  </form>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+
 <script>
 (() => {
   "use strict";
@@ -411,18 +451,37 @@
   const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 
-  /* ================= 儲存 ================= */
+  /* ================= 儲存:雲端優先,沒有就退回本機 ================= */
   const LS = "tokyo5-v1";
+  const CFG = window.TRIP_CONFIG || {};
+  const TRIP = CFG.trip || "tokyo-2026";
   let storageOK = true;
+  let sb = null;        // supabase client
+  let cloud = false;    // 目前是否連著雲端
+  let channel = null;
 
-  function load() {
+  /* --- 欄位對照:資料庫用底線,程式用駝峰 --- */
+  const expFromRow = r => ({
+    id: r.id, date: r.date, title: r.title, category: r.category,
+    amount: Number(r.amount), currency: r.currency, payerId: r.payer_id,
+    participants: r.participants || [], note: r.note || "", createdAt: r.created_at,
+  });
+  const expToRow = e => ({
+    trip: TRIP, date: e.date, title: e.title, category: e.category, amount: e.amount,
+    currency: e.currency, payer_id: e.payerId, participants: e.participants,
+    note: e.note, created_at: e.createdAt,
+  });
+  const stopFromRow = r => ({ id: r.id, day: r.day, time: r.time || "", title: r.title, place: r.place || "", note: r.note || "" });
+  const stopToRow = s => ({ trip: TRIP, day: s.day, time: s.time, title: s.title, place: s.place, note: s.note });
+
+  /* --- 本機 --- */
+  function loadLocal() {
     let raw = null;
     try { raw = localStorage.getItem(LS); } catch (_) { storageOK = false; }
     let d = null;
     if (raw) { try { d = JSON.parse(raw); } catch (_) { d = null; } }
-    if (!d) d = SEED;
-    apply(d);
-    if (!raw) save();
+    apply(d || SEED);
+    if (!raw) saveLocal();
   }
   function apply(d) {
     const clone = v => JSON.parse(JSON.stringify(v));
@@ -435,17 +494,148 @@
   function snapshot() {
     return { version: 1, rate: state.rate, names: state.names, expenses: state.expenses, stops: state.stops };
   }
-  function save() {
+  function saveLocal() {
+    if (cloud) return;
     try { localStorage.setItem(LS, JSON.stringify(snapshot())); }
-    catch (_) { storageOK = false; renderSync(); }
+    catch (_) { storageOK = false; }
   }
-  function commit() { save(); render(); }
   function sortExpenses() {
     state.expenses.sort((a, b) => (a.date || "").localeCompare(b.date || "") || (a.createdAt || "").localeCompare(b.createdAt || ""));
   }
   function flash(msg) {
     el("sync").textContent = msg;
-    setTimeout(renderSync, 2600);
+    setTimeout(renderSync, 2800);
+  }
+  function cloudFail(e) {
+    console.error(e);
+    flash("雲端寫入失敗,這筆沒存到");
+  }
+
+  /* --- 寫入動作:兩種模式共用的入口 --- */
+  async function addExpense(e) {
+    state.expenses.push(e); sortExpenses(); saveLocal(); render();
+    if (!cloud) return;
+    const { data, error } = await sb.from("expenses").insert(expToRow(e)).select().single();
+    if (error) return cloudFail(error);
+    const k = state.expenses.indexOf(e);
+    if (k > -1) state.expenses[k] = expFromRow(data);
+    render();
+  }
+  async function removeExpense(id) {
+    const k = state.expenses.findIndex(x => x.id === id);
+    if (k > -1) state.expenses.splice(k, 1);
+    saveLocal(); render();
+    if (!cloud) return;
+    const { error } = await sb.from("expenses").delete().eq("id", id);
+    if (error) cloudFail(error);
+  }
+  async function addStop(o) {
+    state.stops.push(o); saveLocal(); render();
+    if (!cloud) return;
+    const { data, error } = await sb.from("stops").insert(stopToRow(o)).select().single();
+    if (error) return cloudFail(error);
+    const k = state.stops.indexOf(o);
+    if (k > -1) state.stops[k] = stopFromRow(data);
+    render();
+  }
+  async function removeStop(id) {
+    const k = state.stops.findIndex(x => x.id === id);
+    if (k > -1) state.stops.splice(k, 1);
+    saveLocal(); render();
+    if (!cloud) return;
+    const { error } = await sb.from("stops").delete().eq("id", id);
+    if (error) cloudFail(error);
+  }
+  async function putSetting(key, value) {
+    saveLocal(); render();
+    if (!cloud) return;
+    const { error } = await sb.from("settings").upsert({ key, value, updated_at: new Date().toISOString() });
+    if (error) cloudFail(error);
+  }
+
+  /* --- 雲端讀取與即時同步 --- */
+  async function pull() {
+    const [ex, st, se] = await Promise.all([
+      sb.from("expenses").select("*").eq("trip", TRIP),
+      sb.from("stops").select("*").eq("trip", TRIP),
+      sb.from("settings").select("*"),
+    ]);
+    if (ex.error || st.error || se.error) throw (ex.error || st.error || se.error);
+    state.expenses = ex.data.map(expFromRow);
+    state.stops = st.data.map(stopFromRow);
+    const bag = {};
+    (se.data || []).forEach(r => bag[r.key] = r.value);
+    state.rate = typeof bag.rate === "number" && bag.rate > 0 ? bag.rate : SEED.rate;
+    state.names = bag.names && typeof bag.names === "object" ? bag.names : {};
+    sortExpenses();
+  }
+
+  let pullTimer = null;
+  function schedulePull() {
+    clearTimeout(pullTimer);
+    pullTimer = setTimeout(() => pull().then(() => { fillPeopleControls(); render(); }).catch(() => {}), 350);
+  }
+  function listen() {
+    if (channel) return;
+    channel = sb.channel("trip-" + TRIP);
+    ["expenses", "stops", "settings"].forEach(t =>
+      channel.on("postgres_changes", { event: "*", schema: "public", table: t }, schedulePull));
+    channel.subscribe();
+  }
+
+  /* --- 模式切換 --- */
+  function renderCloudBar() {
+    const bar = el("cloudbar");
+    const configured = !!(CFG.supabaseUrl && CFG.supabaseAnonKey && window.supabase);
+    if (!configured) {
+      bar.hidden = false;
+      bar.className = "cloudbar off";
+      el("cloud-msg").textContent = "尚未接上雲端 —— 紀錄只存在這台裝置。設定方式見 README。";
+      el("cloud-ops").innerHTML = "";
+      return;
+    }
+    bar.hidden = false;
+    bar.className = "cloudbar " + (cloud ? "on" : "off");
+    el("cloud-msg").textContent = cloud ? "已連上雲端 · 五人即時同步" : "離線模式 —— 紀錄只存在這台裝置";
+    el("cloud-ops").innerHTML = cloud
+      ? '<button type="button" class="btn btn-sm btn-ghost" id="cloud-out">登出</button>'
+      : '<button type="button" class="btn btn-sm" id="cloud-in">登入同步</button>';
+    const out = el("cloud-out"), inn = el("cloud-in");
+    if (out) out.addEventListener("click", async () => { await sb.auth.signOut(); location.reload(); });
+    if (inn) inn.addEventListener("click", () => { el("signin-overlay").hidden = false; el("si-email").focus(); });
+  }
+
+  function goLocal() {
+    cloud = false;
+    el("signin-overlay").hidden = true;
+    loadLocal();
+    fillPeopleControls();
+    render();
+    renderCloudBar();
+  }
+
+  async function goCloud() {
+    try {
+      await pull();
+      cloud = true;
+      el("signin-overlay").hidden = true;
+      listen();
+      fillPeopleControls();
+      render();
+      renderCloudBar();
+      window.addEventListener("focus", schedulePull);
+    } catch (e) {
+      console.error(e);
+      showSigninError("讀不到雲端資料,請確認 supabase-setup.sql 已經跑過。");
+      goLocal();
+      el("signin-overlay").hidden = false;
+    }
+  }
+
+  function showSigninError(msg) {
+    const box = el("si-err");
+    box.textContent = msg;
+    box.hidden = !msg;
   }
 
   /* ================= 分帳計算 ================= */
@@ -594,7 +784,9 @@
   }
 
   function renderSync() {
-    el("sync").textContent = storageOK ? "● 紀錄已存在這台裝置" : "○ 瀏覽器不讓存檔,離開後會消失";
+    el("sync").textContent = cloud ? "● 雲端同步中"
+      : storageOK ? "● 紀錄存在這台裝置"
+      : "○ 瀏覽器不讓存檔,離開後會消失";
   }
 
   function render() { renderDays(); renderRoute(); renderCost(); renderSplit(); renderSync(); }
@@ -627,7 +819,7 @@
   el("sf-cancel").addEventListener("click", () => toggleForm("stop-form", false));
   el("stop-form").addEventListener("submit", ev => {
     ev.preventDefault();
-    state.stops.push({
+    addStop({
       id: uid(), day: state.day,
       time: el("sf-time").value,
       title: el("sf-title").value.trim(),
@@ -636,13 +828,10 @@
     });
     el("stop-form").reset();
     toggleForm("stop-form", false);
-    commit();
   });
   el("route").addEventListener("click", ev => {
     const b = ev.target.closest("[data-del-stop]");
-    if (!b) return;
-    const i = state.stops.findIndex(s => s.id === b.dataset.delStop);
-    if (i > -1) { state.stops.splice(i, 1); commit(); }
+    if (b) removeStop(b.dataset.delStop);
   });
 
   /* --- 匯率 --- */
@@ -656,7 +845,7 @@
   el("rate-form").addEventListener("submit", ev => {
     ev.preventDefault();
     const r = parseFloat(el("rf-rate").value);
-    if (r > 0) { state.rate = r; commit(); }
+    if (r > 0) { state.rate = r; putSetting("rate", r); }
     toggleForm("rate-form", false);
   });
 
@@ -682,7 +871,7 @@
     ev.preventDefault();
     const ps = Array.prototype.map.call(el("ef-who").querySelectorAll("input:checked"), i => i.value);
     if (!ps.length) { flash("至少要選一個人分攤"); return; }
-    state.expenses.push({
+    addExpense({
       id: uid(),
       date: el("ef-date").value,
       title: el("ef-title").value.trim(),
@@ -694,19 +883,15 @@
       note: el("ef-note").value.trim(),
       createdAt: new Date().toISOString(),
     });
-    sortExpenses();
     const keep = el("ef-date").value;
     el("exp-form").reset();
     el("ef-date").value = keep;
     fillPeopleControls();
     toggleForm("exp-form", false);
-    commit();
   });
   el("exp-list").addEventListener("click", ev => {
     const b = ev.target.closest("[data-del-exp]");
-    if (!b) return;
-    const i = state.expenses.findIndex(x => x.id === b.dataset.delExp);
-    if (i > -1) { state.expenses.splice(i, 1); commit(); }
+    if (b) removeExpense(b.dataset.delExp);
   });
 
   /* --- 改名字 --- */
@@ -729,7 +914,7 @@
     state.names = names;
     renameForm.hidden = true;
     fillPeopleControls();
-    commit();
+    putSetting("names", names);
   });
 
   /* --- 備份 --- */
@@ -750,8 +935,9 @@
       try {
         const d = JSON.parse(r.result);
         if (!d || typeof d !== "object") throw new Error("bad");
+        if (cloud) { flash("雲端模式不支援匯入,請先登出"); return; }
         if (!confirm("匯入會覆蓋這台裝置上現有的紀錄,確定嗎?")) return;
-        apply(d); commit(); fillPeopleControls();
+        apply(d); saveLocal(); render(); fillPeopleControls();
         flash("已匯入 " + state.expenses.length + " 筆花費");
       } catch (_) { flash("這個檔案讀不出來,請確認是匯出的 JSON"); }
     };
@@ -759,21 +945,51 @@
     ev.target.value = "";
   });
   el("reset-btn").addEventListener("click", () => {
+    if (cloud) { flash("雲端模式下請直接刪除個別紀錄"); return; }
     if (!confirm("會清掉這台裝置上所有自己加的行程和花費,回到只有機票的初始狀態。確定嗎?")) return;
     try { localStorage.removeItem(LS); } catch (_) {}
     apply(SEED);
     fillPeopleControls();
-    commit();
+    saveLocal();
+    render();
     flash("已清除");
   });
 
+  /* --- 登入表單 --- */
+  el("signin-form").addEventListener("submit", async ev => {
+    ev.preventDefault();
+    if (!sb) { goLocal(); return; }
+    const btn = el("si-submit");
+    btn.disabled = true; btn.textContent = "登入中…";
+    showSigninError("");
+    const { error } = await sb.auth.signInWithPassword({
+      email: el("si-email").value.trim(),
+      password: el("si-pass").value,
+    });
+    btn.disabled = false; btn.textContent = "登入";
+    if (error) { showSigninError("登入失敗:" + error.message); return; }
+    el("si-pass").value = "";
+    await goCloud();
+  });
+  el("si-offline").addEventListener("click", goLocal);
+
   /* ================= 啟動 ================= */
-  load();
   renderCountdown();
   setInterval(renderCountdown, 60000);
   switchTab("plan");
-  fillPeopleControls();
-  render();
+
+  (async () => {
+    const configured = !!(CFG.supabaseUrl && CFG.supabaseAnonKey && window.supabase);
+    if (!configured) { goLocal(); return; }
+    try {
+      sb = window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseAnonKey);
+      const { data } = await sb.auth.getSession();
+      if (data && data.session) { await goCloud(); return; }
+    } catch (e) { console.error(e); }
+    goLocal();
+    el("signin-overlay").hidden = false;
+    el("si-email").focus();
+  })();
 })();
 </script>
 </body>
