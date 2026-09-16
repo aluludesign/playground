@@ -141,14 +141,29 @@
   .stop .b .pl{font-size:12px; color:var(--muted);}
   .stop .b .nt{font-size:12.5px; color:var(--ink-2); margin-top:3px;}
   .stop .x{opacity:0; transition:opacity .15s;}
-  /* ---- 拖移排序(只有管理員看得到握把) ---- */
+  /* ---- 改內容 ---- */
   .stop .rowops{display:flex; align-items:center; gap:2px;}
-  .stop .grip{touch-action:none; cursor:grab; user-select:none; background:none; border:0; padding:6px 4px;
-    color:var(--muted); font-size:15px; line-height:1;}
-  .stop .grip:active{cursor:grabbing;}
+  .stop .pen{background:none; border:0; padding:6px 5px; color:var(--muted); font-size:14px; line-height:1;
+    cursor:pointer; border-radius:6px;}
+  .stop .pen:hover{background:var(--surface-2); color:var(--ink-2);}
+
+  /* ---- 長按時間欄拖移排序 ---- */
+  /* 能編輯時,時間欄自己吃掉手勢,長按才不會變成捲頁面 */
+  .route.can-sort .stop:not(.anchor) .t{touch-action:none; user-select:none; -webkit-user-select:none;
+    cursor:grab; border-radius:6px; transition:background .15s;}
+  .route.can-sort .stop:not(.anchor) .t:hover{background:var(--surface-2);}
   .route.sorting{user-select:none;}
-  .stop.dragging{opacity:.5; background:var(--surface-2); border-radius:8px;}
-  .stop.dragging::before{background:var(--dc,var(--muted));}
+  .route.sorting .stop .x, .route.sorting .stop .pen{visibility:hidden;}
+  /* 按住 → 整列浮起來變一張卡片 */
+  .stop.lifted{background:var(--surface); border-radius:10px; padding:12px 10px; cursor:grabbing;
+    box-shadow:0 10px 26px rgba(0,0,0,.20); position:relative; z-index:5;
+    border-top-color:transparent !important;}
+  .stop.lifted::before{background:var(--dc,var(--muted)); transform:scale(1.15);}
+  @media (prefers-reduced-motion:no-preference){
+    .stop.lifted{animation:lift .16s ease-out both;}
+    @keyframes lift{from{transform:scale(1); box-shadow:0 0 0 rgba(0,0,0,0);}
+                    to{transform:scale(1.015); box-shadow:0 10px 26px rgba(0,0,0,.20);}}
+  }
   .stop:hover .x, .stop:focus-within .x{opacity:1;}
   @media (hover:none){ .stop .x{opacity:1;} }
 
@@ -421,6 +436,21 @@
   </form>
 </div>
 
+
+<div class="overlay" id="edit-overlay" hidden>
+  <form class="signin" id="edit-form">
+    <h2>改這一項</h2>
+    <div class="fld"><label for="se-time">時間</label><input type="time" id="se-time" required></div>
+    <div class="fld"><label for="se-title">做什麼</label><input type="text" id="se-title" required></div>
+    <div class="fld"><label for="se-place">地點／車站</label><input type="text" id="se-place"></div>
+    <div class="fld"><label for="se-note">備註</label><input type="text" id="se-note"></div>
+    <div class="err" id="se-err" hidden></div>
+    <div class="ops">
+      <button type="submit" class="btn btn-main">存起來</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="se-cancel">取消</button>
+    </div>
+  </form>
+</div>
 
 <div class="overlay" id="time-overlay" hidden>
   <form class="signin" id="time-form">
@@ -819,7 +849,11 @@
     const now = new Date();
     const box = el("countdown");
     if (now > back) box.innerHTML = "<span>旅程結束</span><b>回味中</b>";
-    else if (now >= go) box.innerHTML = "<span>正在東京</span><b>第 " + Math.max(1, Math.ceil((now - go) / 86400000)) + " 天</b>";
+    else if (now >= go) {
+      /* 數日曆上的第幾天,跟上面的 DAY 幾對得起來 —— 不是從起飛算滿 24 小時 */
+      const d = DAYS.find(x => x.date === todayISO());
+      box.innerHTML = "<span>正在東京</span><b>第 " + (d ? d.n : DAYS.length) + " 天</b>";
+    }
     else box.innerHTML = "<span>出發倒數</span><b>" + Math.ceil((go - now) / 86400000) + " 天</b>";
   }
 
@@ -870,14 +904,16 @@
       return;
     }
     const movable = s => !s.anchor && editable();
+    route.classList.toggle("can-sort", editable());
     route.innerHTML = list.map(s =>
       '<div class="stop' + (s.anchor ? " anchor" : "") + '" data-stop="' + esc(s.id || "") + '">' +
-      '<div class="t num">' + (s.time || "—") + (s.day === OVERNIGHT ? '<span style="color:var(--muted); font-size:10px"> +1</span>' : "") + "</div>" +
+      '<div class="t num"' + (movable(s) ? ' title="長按可以拖著換順序"' : "") + ">" +
+      (s.time || "—") + (s.day === OVERNIGHT ? '<span style="color:var(--muted); font-size:10px"> +1</span>' : "") + "</div>" +
       '<div class="b"><div class="ti">' + esc(s.title) + "</div>" +
       (s.place ? '<div class="pl">' + esc(s.place) + "</div>" : "") +
       (s.note ? '<div class="nt">' + esc(s.note) + "</div>" : "") + "</div>" +
       '<div class="rowops">' +
-      (movable(s) ? '<button type="button" class="grip" data-grip aria-label="拖著換順序">⠿</button>' : "") +
+      (movable(s) ? '<button type="button" class="pen" data-edit-stop="' + s.id + '" aria-label="改這一項">✎</button>' : "") +
       (movable(s) ? '<button type="button" class="btn btn-ghost btn-sm x" data-del-stop="' + s.id + '" aria-label="刪除這項">✕</button>' : "") +
       "</div></div>"
     ).join("");
@@ -1128,25 +1164,49 @@
     updateStop(id, { time: t });
   });
 
+  /* 長按時間欄 → 整列浮起來變一張卡片 → 拖到要的位置 */
   (function initSorting() {
     const route = el("route");
+    const HOLD = 380;     /* 按多久才算長按 */
+    const SLOP = 10;      /* 這段距離內還算「按著沒動」,超過就當成在捲頁面 */
+    let armed = null;     /* 按下去了,還在等時間到 */
     let row = null, startIdx = 0;
 
     const rowsNow = () => Array.prototype.slice.call(route.querySelectorAll(".stop"));
 
-    route.addEventListener("pointerdown", ev => {
-      const grip = ev.target.closest("[data-grip]");
-      if (!grip || !editable()) return;
-      row = grip.closest(".stop");
-      if (!row) return;
+    function disarm() {
+      if (!armed) return;
+      clearTimeout(armed.timer);
+      armed = null;
+    }
+
+    function lift() {
+      if (!armed) return;
+      row = armed.row;
       startIdx = rowsNow().indexOf(row);
-      row.classList.add("dragging");
+      row.classList.add("lifted");
       route.classList.add("sorting");
-      try { grip.setPointerCapture(ev.pointerId); } catch (_) {}
-      ev.preventDefault();
+      try { armed.handle.setPointerCapture(armed.pointerId); } catch (_) {}
+      if (navigator.vibrate) { try { navigator.vibrate(12); } catch (_) {} }
+      armed = null;
+    }
+
+    route.addEventListener("pointerdown", ev => {
+      if (!editable() || row) return;
+      const handle = ev.target.closest(".t");
+      if (!handle) return;
+      const r = handle.closest(".stop");
+      if (!r || r.classList.contains("anchor") || !r.dataset.stop) return;
+      armed = { row: r, handle: handle, pointerId: ev.pointerId, x: ev.clientX, y: ev.clientY, timer: 0 };
+      armed.timer = setTimeout(lift, HOLD);
     });
 
     route.addEventListener("pointermove", ev => {
+      if (armed) {
+        /* 還沒浮起來就滑掉了 —— 那是要捲頁面,不是要拖 */
+        if (Math.abs(ev.clientY - armed.y) > SLOP || Math.abs(ev.clientX - armed.x) > SLOP) disarm();
+        return;
+      }
       if (!row) return;
       ev.preventDefault();
       const others = rowsNow().filter(r => r !== row);
@@ -1159,10 +1219,11 @@
     });
 
     function drop() {
+      disarm();
       if (!row) return;
       const moved = row;
       row = null;
-      moved.classList.remove("dragging");
+      moved.classList.remove("lifted");
       route.classList.remove("sorting");
       const rows = rowsNow();
       const idx = rows.indexOf(moved);
@@ -1178,7 +1239,49 @@
     }
     route.addEventListener("pointerup", drop);
     route.addEventListener("pointercancel", drop);
+    /* 捲動一開始就放棄長按,免得捲一捲東西突然浮起來 */
+    window.addEventListener("scroll", disarm, true);
   })();
+
+  /* --- 改一項行程的內容 --- */
+  let editing = null;
+  el("route").addEventListener("click", ev => {
+    const b = ev.target.closest("[data-edit-stop]");
+    if (!b) return;
+    const s = state.stops.find(x => x.id === b.dataset.editStop);
+    if (!s) return;
+    editing = s.id;
+    el("se-time").value = s.time || "";
+    el("se-title").value = s.title || "";
+    el("se-place").value = s.place || "";
+    el("se-note").value = s.note || "";
+    showEditError("");
+    el("edit-overlay").hidden = false;
+    el("se-title").focus();
+  });
+  function showEditError(msg) {
+    const box = el("se-err");
+    box.textContent = msg;
+    box.hidden = !msg;
+  }
+  el("se-cancel").addEventListener("click", () => {
+    editing = null;
+    showEditError("");
+    el("edit-overlay").hidden = true;
+  });
+  el("edit-form").addEventListener("submit", ev => {
+    ev.preventDefault();
+    if (!editing) return;
+    const title = el("se-title").value.trim();
+    if (!title) { showEditError("總要寫個名字。"); return; }
+    if (toMin(el("se-time").value) == null) { showEditError("時間格式不對。"); return; }
+    const id = editing;
+    const patch = { time: el("se-time").value, title: title, place: el("se-place").value.trim(), note: el("se-note").value.trim() };
+    editing = null;
+    showEditError("");
+    el("edit-overlay").hidden = true;
+    updateStop(id, patch);
+  });
 
   /* --- 改名字 --- */
   const renameForm = document.createElement("form");
