@@ -96,6 +96,11 @@
   .tab[aria-selected="true"]{color:var(--ink); border-bottom-color:var(--accent);}
   .tab .n{font-family:var(--font-mono); font-size:10px; color:var(--muted); margin-left:5px;}
 
+  /* ---- icon(Font Awesome Free,SVG 直接內嵌,不連外) ---- */
+  .i{width:1em; height:1em; fill:currentColor; flex:0 0 auto; vertical-align:-.115em;}
+  .tab .i{margin-right:6px; font-size:.95em;}
+  .btn .i{margin-right:6px; font-size:.9em;}
+
   /* ---- generic ---- */
   .sec{margin-bottom:28px;}
   .sec-head{display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:10px; flex-wrap:wrap;}
@@ -286,6 +291,16 @@
 </head>
 <body>
 
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <!-- Font Awesome Free 6.7.2 solid · CC BY 4.0 · https://fontawesome.com/license/free -->
+  <symbol id="i-route" viewBox="0 0 512 512"><path d="M512 96c0 50.2-59.1 125.1-84.6 155c-3.8 4.4-9.4 6.1-14.5 5L320 256c-17.7 0-32 14.3-32 32s14.3 32 32 32l96 0c53 0 96 43 96 96s-43 96-96 96l-276.4 0c8.7-9.9 19.3-22.6 30-36.8c6.3-8.4 12.8-17.6 19-27.2L416 448c17.7 0 32-14.3 32-32s-14.3-32-32-32l-96 0c-53 0-96-43-96-96s43-96 96-96l39.8 0c-21-31.5-39.8-67.7-39.8-96c0-53 43-96 96-96s96 43 96 96zM117.1 489.1c-3.8 4.3-7.2 8.1-10.1 11.3l-1.8 2-.2-.2c-6 4.6-14.6 4-20-1.8C59.8 473 0 402.5 0 352c0-53 43-96 96-96s96 43 96 96c0 30-21.1 67-43.5 97.9c-10.7 14.7-21.7 28-30.8 38.5l-.6 .7zM128 352a32 32 0 1 0 -64 0 32 32 0 1 0 64 0zM416 128a32 32 0 1 0 0-64 32 32 0 1 0 0 64z"/></symbol>
+  <symbol id="i-receipt" viewBox="0 0 384 512"><path d="M14 2.2C22.5-1.7 32.5-.3 39.6 5.8L80 40.4 120.4 5.8c9-7.7 22.3-7.7 31.2 0L192 40.4 232.4 5.8c9-7.7 22.3-7.7 31.2 0L304 40.4 344.4 5.8c7.1-6.1 17.1-7.5 25.6-3.6s14 12.4 14 21.8l0 464c0 9.4-5.5 17.9-14 21.8s-18.5 2.5-25.6-3.6L304 471.6l-40.4 34.6c-9 7.7-22.3 7.7-31.2 0L192 471.6l-40.4 34.6c-9 7.7-22.3 7.7-31.2 0L80 471.6 39.6 506.2c-7.1 6.1-17.1 7.5-25.6 3.6S0 497.4 0 488L0 24C0 14.6 5.5 6.1 14 2.2zM96 144c-8.8 0-16 7.2-16 16s7.2 16 16 16l192 0c8.8 0 16-7.2 16-16s-7.2-16-16-16L96 144zM80 352c0 8.8 7.2 16 16 16l192 0c8.8 0 16-7.2 16-16s-7.2-16-16-16L96 336c-8.8 0-16 7.2-16 16zM96 240c-8.8 0-16 7.2-16 16s7.2 16 16 16l192 0c8.8 0 16-7.2 16-16s-7.2-16-16-16L96 240z"/></symbol>
+  <symbol id="i-scale-balanced" viewBox="0 0 640 512"><path d="M384 32l128 0c17.7 0 32 14.3 32 32s-14.3 32-32 32L398.4 96c-5.2 25.8-22.9 47.1-46.4 57.3L352 448l160 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-192 0-192 0c-17.7 0-32-14.3-32-32s14.3-32 32-32l160 0 0-294.7c-23.5-10.3-41.2-31.6-46.4-57.3L128 96c-17.7 0-32-14.3-32-32s14.3-32 32-32l128 0c14.6-19.4 37.8-32 64-32s49.4 12.6 64 32zm55.6 288l144.9 0L512 195.8 439.6 320zM512 416c-62.9 0-115.2-34-126-78.9c-2.6-11 1-22.3 6.7-32.1l95.2-163.2c5-8.6 14.2-13.8 24.1-13.8s19.1 5.3 24.1 13.8l95.2 163.2c5.7 9.8 9.3 21.1 6.7 32.1C627.2 382 574.9 416 512 416zM126.8 195.8L54.4 320l144.9 0L126.8 195.8zM.9 337.1c-2.6-11 1-22.3 6.7-32.1l95.2-163.2c5-8.6 14.2-13.8 24.1-13.8s19.1 5.3 24.1 13.8l95.2 163.2c5.7 9.8 9.3 21.1 6.7 32.1C242 382 189.7 416 126.8 416S11.7 382 .9 337.1z"/></symbol>
+  <symbol id="i-pen" viewBox="0 0 512 512"><path d="M362.7 19.3L314.3 67.7 444.3 197.7l48.4-48.4c25-25 25-65.5 0-90.5L453.3 19.3c-25-25-65.5-25-90.5 0zm-71 71L58.6 323.5c-10.4 10.4-18 23.3-22.2 37.4L1 481.2C-1.5 489.7 .8 498.8 7 505s15.3 8.5 23.7 6.1l120.3-35.4c14.1-4.2 27-11.8 37.4-22.2L421.7 220.3 291.7 90.3z"/></symbol>
+  <symbol id="i-xmark" viewBox="0 0 384 512"><path d="M342.6 150.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L192 210.7 86.6 105.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L146.7 256 41.4 361.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L192 301.3 297.4 406.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L237.3 256 342.6 150.6z"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 448 512"><path d="M256 80c0-17.7-14.3-32-32-32s-32 14.3-32 32l0 144L48 224c-17.7 0-32 14.3-32 32s14.3 32 32 32l144 0 0 144c0 17.7 14.3 32 32 32s32-14.3 32-32l0-144 144 0c17.7 0 32-14.3 32-32s-14.3-32-32-32l-144 0 0-144z"/></symbol>
+</svg>
+
 <div class="wrap">
   <header class="topbar">
     <div class="brand">
@@ -329,9 +344,9 @@
   </div>
 
   <nav class="tabs" role="tablist" aria-label="頁面切換">
-    <button class="tab" role="tab" id="tab-plan" data-tab="plan" aria-selected="true" aria-controls="panel-plan">行程</button>
-    <button class="tab" role="tab" id="tab-cost" data-tab="cost" aria-selected="false" aria-controls="panel-cost">花費<span class="n" id="tab-cost-n"></span></button>
-    <button class="tab" role="tab" id="tab-split" data-tab="split" aria-selected="false" aria-controls="panel-split">分帳</button>
+    <button class="tab" role="tab" id="tab-plan" data-tab="plan" aria-selected="true" aria-controls="panel-plan"><svg class="i" aria-hidden="true"><use href="#i-route"></use></svg>行程</button>
+    <button class="tab" role="tab" id="tab-cost" data-tab="cost" aria-selected="false" aria-controls="panel-cost"><svg class="i" aria-hidden="true"><use href="#i-receipt"></use></svg>花費<span class="n" id="tab-cost-n"></span></button>
+    <button class="tab" role="tab" id="tab-split" data-tab="split" aria-selected="false" aria-controls="panel-split"><svg class="i" aria-hidden="true"><use href="#i-scale-balanced"></use></svg>分帳</button>
   </nav>
 
   <main>
@@ -339,7 +354,7 @@
       <div class="days" id="days" role="group" aria-label="選擇日期"></div>
       <div class="sec-head">
         <h2 id="day-title">當日行程</h2>
-        <button class="btn btn-sm" id="add-stop-btn" type="button">＋ 加行程</button>
+        <button class="btn btn-sm" id="add-stop-btn" type="button"><svg class="i" aria-hidden="true"><use href="#i-plus"></use></svg>加行程</button>
       </div>
       <form class="form" id="stop-form" hidden>
         <div class="grid2">
@@ -368,7 +383,7 @@
       <div class="sec">
         <div class="sec-head">
           <h2>費用明細</h2>
-          <button class="btn btn-sm btn-main" id="add-exp-btn" type="button">＋ 記一筆</button>
+          <button class="btn btn-sm btn-main" id="add-exp-btn" type="button"><svg class="i" aria-hidden="true"><use href="#i-plus"></use></svg>記一筆</button>
         </div>
         <form class="form" id="exp-form" hidden>
           <div class="grid2">
@@ -899,7 +914,7 @@
     const route = el("route");
     route.style.setProperty("--dc", d.color);
     if (!list.length) {
-      route.innerHTML = '<div class="empty">這天還沒排。' + (editable() ? "按右上角「＋ 加行程」開始。" : "") + "</div>";
+      route.innerHTML = '<div class="empty">這天還沒排。' + (editable() ? "按右上角「加行程」開始。" : "") + "</div>";
       return;
     }
     const movable = s => !s.anchor && editable();
@@ -913,8 +928,8 @@
       (s.place ? '<div class="pl">' + esc(s.place) + "</div>" : "") +
       (s.note ? '<div class="nt">' + esc(s.note) + "</div>" : "") + "</div>" +
       '<div class="rowops">' +
-      (movable(s) ? '<button type="button" class="pen" data-edit-stop="' + s.id + '" aria-label="改這一項">✎</button>' : "") +
-      (movable(s) ? '<button type="button" class="btn btn-ghost btn-sm x" data-del-stop="' + s.id + '" aria-label="刪除這項">✕</button>' : "") +
+      (movable(s) ? '<button type="button" class="pen" data-edit-stop="' + s.id + '" aria-label="改這一項"><svg class="i" aria-hidden="true"><use href="#i-pen"></use></svg></button>' : "") +
+      (movable(s) ? '<button type="button" class="btn btn-ghost btn-sm x" data-del-stop="' + s.id + '" aria-label="刪除這項"><svg class="i" aria-hidden="true"><use href="#i-xmark"></use></svg></button>' : "") +
       "</div></div>"
     ).join("");
   }
@@ -1193,7 +1208,7 @@
 
     route.addEventListener("pointerdown", ev => {
       if (!editable() || row) return;
-      if (ev.target.closest("button")) return;      /* ✎ 和 ✕ 要留給點擊 */
+      if (ev.target.closest("button")) return;      /* 鉛筆和刪除鈕要留給點擊 */
       const r = ev.target.closest(".stop");
       if (!r || r.classList.contains("anchor") || !r.dataset.stop) return;
       armed = { row: r, handle: r, pointerId: ev.pointerId, x: ev.clientX, y: ev.clientY, timer: 0 };

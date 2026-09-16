@@ -79,11 +79,20 @@ Deploy。之後每次 push 都會自動重新部署。
 
 ## 檔案
 
-- `index.html` — 網站本體(單一檔案,含樣式與邏輯)
+- `index.html` — 網站本體(單一檔案,含樣式、邏輯與 icon)
 - `api/notion.js` — Notion 代理,密鑰只存在這裡的環境變數
 - `config.js` — 匯率、API 位置
 - `vercel.json` — 部署設定
 - `data/trip.json` — 機票訂單的結構化備份,給人看的,網頁不會讀它
+
+## Icon
+
+用 [Font Awesome Free](https://fontawesome.com/license/free) 6.7.2 的 solid 圖示(CC BY 4.0),
+SVG 直接內嵌在 `index.html` 最上面的 `<symbol>` 裡,**不連 CDN** ——
+在日本用手機開不用等外部資源,離線模式也照樣有圖。
+
+要加新的 icon:去 Font Awesome 抓 solid 的 SVG,把 `viewBox` 和 `path` 複製成一個新的
+`<symbol id="i-名字">`,用的地方寫 `<svg class="i"><use href="#i-名字"></use></svg>`。
 
 ## 匯率
 
