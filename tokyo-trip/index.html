@@ -190,7 +190,14 @@
   .wish .wdel{background:none; border:0; color:var(--muted); cursor:pointer; font-size:11px; padding:2px 4px;}
   /* 管理員拖進行程時,願望也長得像一張卡片 */
   #wish-list.can-sort .wish{cursor:grab; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none;}
-  .wish.lifted{box-shadow:0 10px 26px rgba(0,0,0,.20); position:relative; z-index:5; background:var(--surface);}
+  /* 拿起來的願望卡:浮在最上層,跟著手指走。pointer-events 關掉才不會擋住底下的命中判斷 */
+  .wish.lifted{position:relative; z-index:60; background:var(--surface);
+    box-shadow:0 12px 30px rgba(0,0,0,.24); pointer-events:none; will-change:transform;
+    transform:scale(1.02); transition:box-shadow .15s;}
+  /* 會插在這裡 */
+  .dropline{height:2px; background:var(--accent); border-radius:2px; margin:5px 0; position:relative;}
+  .dropline::before{content:""; position:absolute; left:-4px; top:-3px; width:8px; height:8px;
+    border-radius:50%; background:var(--accent);}
   .wish-hint{font-size:11px; color:var(--muted); margin-bottom:10px;}
   /* 無框、置中、主色文字 —— 它是邀請,不是動作按鈕 */
   #add-wish-btn{display:flex; align-items:center; justify-content:center; gap:0;
@@ -1730,24 +1737,41 @@
     const box = el("wish-list");
     const route = el("route");
     const HOLD = 380, SLOP = 10;
-    let armed = null, row = null, over = false;
+    let armed = null, row = null, from = null, line = null;
 
     function disarm() { if (armed) { clearTimeout(armed.timer); armed = null; } }
     function lift() {
       if (!armed) return;
       row = armed.row;
+      from = { x: armed.x, y: armed.y };
       row.classList.add("lifted");
       try { armed.row.setPointerCapture(armed.pointerId); } catch (_) {}
       if (navigator.vibrate) { try { navigator.vibrate(12); } catch (_) {} }
       armed = null;
     }
+    /* 卡片跟著手指走 */
+    function follow(ev) {
+      if (!row || !from) return;
+      row.style.transform = "translate(" + (ev.clientX - from.x) + "px," + (ev.clientY - from.y) + "px) scale(1.02)";
+    }
+    /* 時間軸上畫一條線,標出放開會插在哪 */
+    function mark(spot) {
+      if (!spot) { if (line) { line.remove(); line = null; } return; }
+      if (!line) { line = document.createElement("div"); line.className = "dropline"; }
+      const at = spot.rows[spot.idx];
+      if (at) route.insertBefore(line, at);
+      else route.appendChild(line);
+    }
     function clear() {
-      if (row) row.classList.remove("lifted");
+      if (row) { row.classList.remove("lifted"); row.style.transform = ""; }
       route.classList.remove("dropzone");
-      row = null; over = false;
+      mark(null);
+      row = null; from = null;
     }
     /* 指標落在時間軸上嗎;是的話該插在第幾格 */
     function hit(y, x) {
+      /* 量之前先把指示線拿掉 —— 它會把下面的格子往下推,量到的索引就會來回跳 */
+      if (line && line.parentNode) line.remove();
       const r = route.getBoundingClientRect();
       const pad = 40;   /* 空的時候那塊很矮,放寬一點才好放得進去 */
       if (x < r.left - pad || x > r.right + pad || y < r.top - pad || y > r.bottom + pad) return null;
@@ -1776,8 +1800,10 @@
       }
       if (!row) return;
       ev.preventDefault();
-      over = !!hit(ev.clientY, ev.clientX);
-      route.classList.toggle("dropzone", over);
+      follow(ev);
+      const spot = hit(ev.clientY, ev.clientX);
+      route.classList.toggle("dropzone", !!spot);
+      mark(spot);
     });
     box.addEventListener("touchmove", ev => { if (row) ev.preventDefault(); }, { passive: false });
 
