@@ -217,6 +217,7 @@
   .signin p{font-size:12.5px; color:var(--muted); line-height:1.55;}
   .signin .err{font-size:12.5px; color:var(--neg); line-height:1.5;}
   .signin .ops{display:grid; gap:8px;}
+  .signin #si-adminbox{display:grid; gap:14px;}
 
   @media (max-width:640px){
     .topbar h1{font-size:19px;}
@@ -392,12 +393,18 @@
 <div class="overlay" id="signin-overlay" hidden>
   <form class="signin" id="signin-form">
     <h2>東京五人行</h2>
-    <p>行程和花費存在大家共用的 Notion 裡。輸入通行碼就能開始記帳。</p>
-    <div class="fld"><label for="si-key">通行碼</label><input type="password" id="si-key" autocomplete="current-password" required></div>
-    <div class="err" id="si-err" hidden></div>
-    <div class="ops">
-      <button type="submit" class="btn btn-main" id="si-submit">進入</button>
-      <button type="button" class="btn btn-ghost btn-sm" id="si-offline">先用離線模式(只存這台裝置)</button>
+    <p id="si-intro">行程和花費存在大家共用的 Notion 裡。看不需要通行碼,要新增或刪除才需要。</p>
+    <div class="ops" id="si-choose">
+      <button type="button" class="btn btn-main" id="si-read">直接進入(只能看)</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="si-admin">我是管理員</button>
+    </div>
+    <div id="si-adminbox" hidden>
+      <div class="fld"><label for="si-key">通行碼</label><input type="password" id="si-key" autocomplete="current-password"></div>
+      <div class="err" id="si-err" hidden></div>
+      <div class="ops">
+        <button type="submit" class="btn btn-main" id="si-submit">登入</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="si-back">返回</button>
+      </div>
     </div>
   </form>
 </div>
@@ -490,6 +497,9 @@
   let storageOK = true;
   let online = false;
   let tripKey = "";
+  /* 連著 Notion 時,沒通行碼就只能看。離線模式動的是自己的瀏覽器,不必擋。 */
+  let canEdit = false;
+  const editable = () => !online || canEdit;
 
   /* 分類在 Notion 用中文,程式內部用代號 */
   const CAT_TO_NOTION = { transport: "交通", stay: "住宿", food: "餐飲", sight: "景點", shop: "購物", other: "其他" };
@@ -561,7 +571,14 @@
   }
 
   /* --- 寫入:兩種模式共用的入口 --- */
+  /* 唯讀時按鈕本來就藏起來了,這層是防手動戳 DOM 或 console */
+  function mayEdit() {
+    if (editable()) return true;
+    flash("唯讀模式 —— 要編輯請先用通行碼登入");
+    return false;
+  }
   async function addExpense(e) {
+    if (!mayEdit()) return;
     state.expenses.push(e); sortExpenses(); saveLocal(); render();
     if (!online) return;
     try {
@@ -572,6 +589,7 @@
     } catch (err) { failed(e, err); }
   }
   async function removeExpense(id) {
+    if (!mayEdit()) return;
     const k = state.expenses.findIndex(x => x.id === id);
     const gone = k > -1 ? state.expenses.splice(k, 1)[0] : null;
     saveLocal(); render();
@@ -580,6 +598,7 @@
     catch (err) { state.expenses.push(gone); sortExpenses(); render(); flash("刪不掉:" + err.message); }
   }
   async function addStop(o) {
+    if (!mayEdit()) return;
     state.stops.push(o); saveLocal(); render();
     if (!online) return;
     try {
@@ -590,6 +609,7 @@
     } catch (err) { failStop(o, err); }
   }
   async function removeStop(id) {
+    if (!mayEdit()) return;
     const k = state.stops.findIndex(x => x.id === id);
     const gone = k > -1 ? state.stops.splice(k, 1)[0] : null;
     saveLocal(); render();
@@ -630,41 +650,66 @@
   }
 
   /* --- 模式 --- */
+  /* 唯讀時把所有會改資料的入口收起來 */
+  function renderEditAbility() {
+    const on = editable();
+    ["add-stop-btn", "add-exp-btn", "rename-btn", "import-btn", "reset-btn"].forEach(id => {
+      const b = el(id);
+      if (b) b.hidden = !on;
+    });
+    if (!on) {
+      ["stop-form", "exp-form"].forEach(id => { const f = el(id); if (f) f.hidden = true; });
+      const rn = el("rename-form");
+      if (rn) rn.hidden = true;
+    }
+  }
+
   function renderCloudBar() {
     const bar = el("cloudbar");
     bar.hidden = false;
     bar.className = "cloudbar " + (online ? "on" : "off");
-    el("cloud-msg").textContent = online
-      ? "已連上 Notion · 五個人共用同一份紀錄"
-      : "離線模式 —— 紀錄只存在這台裝置";
+    el("cloud-msg").textContent = !online
+      ? "離線模式 —— 紀錄只存在這台裝置"
+      : canEdit
+        ? "已連上 Notion · 管理員 · 五個人共用同一份紀錄"
+        : "已連上 Notion · 唯讀 —— 要記帳請用通行碼登入";
     el("cloud-ops").innerHTML = online
       ? '<button type="button" class="btn btn-sm btn-ghost" id="cloud-sync">重新整理</button>' +
-        '<button type="button" class="btn btn-sm btn-ghost" id="cloud-out">登出</button>'
+        (canEdit
+          ? '<button type="button" class="btn btn-sm btn-ghost" id="cloud-out">登出</button>'
+          : '<button type="button" class="btn btn-sm" id="cloud-admin">管理員登入</button>')
       : '<button type="button" class="btn btn-sm" id="cloud-in">連上 Notion</button>';
-    const sync = el("cloud-sync"), out = el("cloud-out"), inn = el("cloud-in");
+    const sync = el("cloud-sync"), out = el("cloud-out"), inn = el("cloud-in"), adm = el("cloud-admin");
     if (sync) sync.addEventListener("click", () => pull().then(render).then(() => flash("已更新")).catch(e => flash(e.message)));
     if (out) out.addEventListener("click", () => {
       try { localStorage.removeItem(KEYLS); } catch (_) {}
       location.reload();
     });
-    if (inn) inn.addEventListener("click", () => { el("signin-overlay").hidden = false; el("si-key").focus(); });
+    if (inn) inn.addEventListener("click", async () => {
+      try { await goOnline(); flash("已連上 Notion"); }
+      catch (e) { flash("還是連不上:" + e.message); }
+    });
+    if (adm) adm.addEventListener("click", () => openSignin(true));
   }
 
   function goLocal() {
     online = false;
+    canEdit = false;
     el("signin-overlay").hidden = true;
     loadLocal();
     fillPeopleControls();
     render();
+    renderEditAbility();
     renderCloudBar();
   }
 
+  /* 讀是公開的,所以先進得來再說,能不能編輯之後才決定 */
   async function goOnline() {
     await pull();
     online = true;
-    el("signin-overlay").hidden = true;
     fillPeopleControls();
     render();
+    renderEditAbility();
     renderCloudBar();
     window.addEventListener("focus", schedulePull);
   }
@@ -673,6 +718,18 @@
     const box = el("si-err");
     box.textContent = msg;
     box.hidden = !msg;
+  }
+
+  /* open=true 直接展開通行碼欄位,給「管理員登入」按鈕用 */
+  function openSignin(open) {
+    el("signin-overlay").hidden = false;
+    showSigninError("");
+    showAdminBox(!!open);
+  }
+  function showAdminBox(open) {
+    el("si-choose").hidden = open;
+    el("si-adminbox").hidden = !open;
+    if (open) el("si-key").focus();
   }
 
   /* ================= 分帳計算 ================= */
@@ -744,14 +801,17 @@
     el("day-title").textContent = "DAY " + d.n + " · " + state.day.slice(5).replace("-", "/") + " 週" + d.w;
     const route = el("route");
     route.style.setProperty("--dc", d.color);
-    if (!list.length) { route.innerHTML = '<div class="empty">這天還沒排。按右上角「＋ 加行程」開始。</div>'; return; }
+    if (!list.length) {
+      route.innerHTML = '<div class="empty">這天還沒排。' + (editable() ? "按右上角「＋ 加行程」開始。" : "") + "</div>";
+      return;
+    }
     route.innerHTML = list.map(s =>
       '<div class="stop' + (s.anchor ? " anchor" : "") + '">' +
       '<div class="t num">' + (s.time || "—") + (s.day === OVERNIGHT ? '<span style="color:var(--muted); font-size:10px"> +1</span>' : "") + "</div>" +
       '<div class="b"><div class="ti">' + esc(s.title) + "</div>" +
       (s.place ? '<div class="pl">' + esc(s.place) + "</div>" : "") +
       (s.note ? '<div class="nt">' + esc(s.note) + "</div>" : "") + "</div>" +
-      "<div>" + (s.anchor ? "" : '<button type="button" class="btn btn-ghost btn-sm x" data-del-stop="' + s.id + '" aria-label="刪除這項">✕</button>') + "</div></div>"
+      "<div>" + (s.anchor || !editable() ? "" : '<button type="button" class="btn btn-ghost btn-sm x" data-del-stop="' + s.id + '" aria-label="刪除這項">✕</button>') + "</div></div>"
     ).join("");
   }
 
@@ -801,7 +861,7 @@
       '<div class="mt"><span>' + payer + "</span><span>·</span><span>" + esc(whoShared) + "</span>" +
       (ps.length ? '<span>·</span><span class="num">每人 ' + twd(v / ps.length) + "</span>" : "") +
       (e.note ? "<span>·</span><span>" + esc(e.note) + "</span>" : "") + "</div>" +
-      '<div class="ops"><button type="button" class="btn btn-ghost btn-sm" data-del-exp="' + e.id + '">刪除</button></div></div>';
+      (editable() ? '<div class="ops"><button type="button" class="btn btn-ghost btn-sm" data-del-exp="' + e.id + '">刪除</button></div>' : "") + "</div>";
   }
 
   function renderSplit() {
@@ -826,7 +886,7 @@
       ? t.map(x => '<div class="pay"><span class="dot" style="background:' + colorOf(x.from) + '"></span><span class="who1">' + esc(nameOf(x.from)) +
           '</span><span class="arr">→</span><span class="dot" style="background:' + colorOf(x.to) + '"></span><span class="who2">' + esc(nameOf(x.to)) +
           '</span><span class="v">' + twd(x.v) + "</span></div>").join("")
-      : '<div class="empty">' + (state.expenses.length ? "目前所有人都打平了,不用轉帳。" : "還沒有花費紀錄,先去記一筆。") + "</div>";
+      : '<div class="empty">' + (state.expenses.length ? "目前所有人都打平了,不用轉帳。" : (editable() ? "還沒有花費紀錄,先去記一筆。" : "還沒有花費紀錄。")) + "</div>";
   }
 
   function renderSync() {
@@ -987,25 +1047,44 @@
   });
 
   /* --- 通行碼 --- */
+  /* 只驗證,不碰資料 —— 對就升級成可編輯 */
   async function tryKey(key) {
     tripKey = key;
-    await goOnline();
+    try {
+      await api("?resource=auth");
+    } catch (e) {
+      tripKey = "";
+      throw e;
+    }
+    canEdit = true;
     try { localStorage.setItem(KEYLS, key); } catch (_) {}
+    if (!online) { await goOnline(); return; }
+    render();
+    renderEditAbility();
+    renderCloudBar();
   }
+
+  el("si-read").addEventListener("click", () => { el("signin-overlay").hidden = true; });
+  el("si-admin").addEventListener("click", () => showAdminBox(true));
+  el("si-back").addEventListener("click", () => { showSigninError(""); showAdminBox(false); });
   el("signin-form").addEventListener("submit", async ev => {
     ev.preventDefault();
+    if (el("si-adminbox").hidden) return;
+    const key = el("si-key").value;
+    if (!key) { showSigninError("請輸入通行碼。"); return; }
     const btn = el("si-submit");
-    btn.disabled = true; btn.textContent = "連線中…";
+    btn.disabled = true; btn.textContent = "驗證中…";
     showSigninError("");
     try {
-      await tryKey(el("si-key").value);
+      await tryKey(key);
       el("si-key").value = "";
+      el("signin-overlay").hidden = true;
+      flash("管理員模式 —— 可以編輯了");
     } catch (e) {
-      showSigninError(e.message === "通行碼不對" ? "通行碼不對,再試一次。" : "連不上 Notion:" + e.message);
+      showSigninError(e.message === "通行碼不對" ? "通行碼不對,再試一次。" : e.message);
     }
-    btn.disabled = false; btn.textContent = "進入";
+    btn.disabled = false; btn.textContent = "登入";
   });
-  el("si-offline").addEventListener("click", goLocal);
 
   /* ================= 啟動 ================= */
   /* 手機上收起航班看板,免得每次都要滑過半個螢幕 */
@@ -1017,23 +1096,27 @@
   switchTab("plan");
 
   (async () => {
-    /* 先拿存過的通行碼試,沒有就試空的 —— 後端沒設通行碼時會直接放行,
-       那就不該拿一個假的登入框擋在前面。 */
-    let saved = "";
-    try { saved = localStorage.getItem(KEYLS) || ""; } catch (_) {}
+    /* 讀不需要通行碼,所以先把資料撈進來;能不能編輯是下一步的事。 */
     try {
-      await tryKey(saved);
-      return;
+      await goOnline();
     } catch (e) {
       goLocal();
-      if (e.message === "通行碼不對") {
-        el("signin-overlay").hidden = false;
-        el("si-key").focus();
-        if (saved) showSigninError("通行碼不對,再輸入一次。");
-      } else {
-        flash("連不上 Notion:" + e.message);
+      flash("連不上 Notion:" + e.message);
+      return;
+    }
+
+    /* 上次登入過就直接回到管理員模式,不用再問一次 */
+    let saved = "";
+    try { saved = localStorage.getItem(KEYLS) || ""; } catch (_) {}
+    if (saved) {
+      try {
+        await tryKey(saved);
+        return;
+      } catch (_) {
+        try { localStorage.removeItem(KEYLS); } catch (__) {}
       }
     }
+    openSignin(false);
   })();
 })();
 </script>

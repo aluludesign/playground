@@ -124,11 +124,37 @@ module.exports = async (req, res) => {
   if (!process.env.NOTION_TOKEN) {
     return res.status(500).json({ error: "伺服器還沒設定 NOTION_TOKEN" });
   }
-  if (process.env.TRIP_KEY && req.headers["x-trip-key"] !== process.env.TRIP_KEY) {
-    return res.status(401).json({ error: "通行碼不對" });
+
+  /* 讀(GET)開放給所有人,寫(POST/DELETE)一定要通行碼。
+     TRIP_KEY 沒設的時候一律擋掉寫入 —— 沒設定不等於不設防。 */
+  const writing = req.method === "POST" || req.method === "DELETE";
+  const hasKey = !!process.env.TRIP_KEY;
+  const keyOK = hasKey && req.headers["x-trip-key"] === process.env.TRIP_KEY;
+
+  function denyWrite() {
+    if (!hasKey) return { status: 503, error: "伺服器還沒設定 TRIP_KEY,目前不開放編輯" };
+    if (!keyOK) return { status: 401, error: "通行碼不對" };
+    return null;
   }
 
   const resource = (req.query && req.query.resource) || "";
+
+  /* 管理員登入用:只驗通行碼,不碰 Notion */
+  if (resource === "auth") {
+    if (req.method !== "GET") {
+      res.setHeader("Allow", "GET");
+      return res.status(405).json({ error: "不支援的方法" });
+    }
+    const no = denyWrite();
+    if (no) return res.status(no.status).json({ error: no.error });
+    return res.status(200).json({ ok: true });
+  }
+
+  if (writing) {
+    const no = denyWrite();
+    if (no) return res.status(no.status).json({ error: no.error });
+  }
+
   const shape = SHAPES[resource];
   if (!shape) return res.status(400).json({ error: "不認識的資料表:" + resource });
 
