@@ -97,9 +97,55 @@ function stopIn(b) {
   return props;
 }
 
+/* ---------- 許願 ----------
+   跟行程共用同一個資料庫:沒填「日期」的那一列就是還沒排進去的願望。
+   +1 的票數沒有專屬欄位(不想為了這個改 Notion 的結構),
+   所以夾在「備註」後面用一個標記存,讀出來的時候拆掉。 */
+const VOTE_TAG = /\s*\[\+1:([^\]]*)\]\s*$/;
+function splitNote(raw) {
+  const m = VOTE_TAG.exec(raw || "");
+  if (!m) return { note: (raw || "").trim(), votes: [] };
+  return {
+    note: raw.slice(0, m.index).trim(),
+    votes: m[1].split(",").map(s => s.trim()).filter(Boolean),
+  };
+}
+function joinNote(note, votes) {
+  const v = (votes || []).map(s => String(s).replace(/[,\]]/g, "").trim()).filter(Boolean);
+  return (note || "").trim() + (v.length ? " [+1:" + v.join(",") + "]" : "");
+}
+
+function wishOut(page) {
+  const p = page.properties;
+  const parts = splitNote(txt(p["備註"]));
+  return {
+    id: page.id,
+    title: ttl(p["項目"]),
+    place: txt(p["地點"]),
+    note: parts.note,
+    votes: parts.votes,
+    by: txt(p["時間"]),          /* 許願的人記在沒用到的「時間」欄 */
+    createdAt: page.created_time,
+  };
+}
+function wishIn(b) {
+  /* 絕對不寫「日期」—— 一寫上去它就變成行程,而排行程是管理員的事 */
+  return {
+    "項目": { title: richText(b.title || "想去的地方") },
+    "地點": { rich_text: richText(b.place) },
+    "備註": { rich_text: richText(joinNote(b.note, b.votes)) },
+    "時間": { rich_text: richText(b.by) },
+  };
+}
+
 const SHAPES = {
   expenses: { db: DB.expenses, out: expenseOut, in: expenseIn, sort: [{ property: "日期", direction: "ascending" }] },
   itinerary: { db: DB.itinerary, out: stopOut, in: stopIn, sort: [{ property: "日期", direction: "ascending" }] },
+  wishes: {
+    db: DB.itinerary, out: wishOut, in: wishIn, open: true,
+    filter: { property: "日期", date: { is_empty: true } },   /* 沒排進行程的才算願望 */
+    sort: [{ timestamp: "created_time", direction: "ascending" }],
+  },
 };
 
 /* ---------- 讀出全部(處理分頁) ---------- */
@@ -109,7 +155,7 @@ async function listAll(shape) {
   do {
     const page = await notion("/databases/" + shape.db + "/query", {
       method: "POST",
-      body: JSON.stringify({ page_size: 100, sorts: shape.sort, start_cursor: cursor }),
+      body: JSON.stringify({ page_size: 100, sorts: shape.sort, filter: shape.filter, start_cursor: cursor }),
     });
     page.results.forEach(r => rows.push(shape.out(r)));
     cursor = page.has_more ? page.next_cursor : null;
@@ -150,13 +196,16 @@ module.exports = async (req, res) => {
     return res.status(200).json({ ok: true });
   }
 
-  if (writing) {
+  const shape = SHAPES[resource];
+  if (!shape) return res.status(400).json({ error: "不認識的資料表:" + resource });
+
+  /* 許願是開放的:誰都能許、誰都能 +1(POST/PATCH),
+     但刪掉別人的願望還是管理員的事(DELETE),排進行程也是(走 itinerary)。 */
+  const openWrite = shape.open && (req.method === "POST" || req.method === "PATCH");
+  if (writing && !openWrite) {
     const no = denyWrite();
     if (no) return res.status(no.status).json({ error: no.error });
   }
-
-  const shape = SHAPES[resource];
-  if (!shape) return res.status(400).json({ error: "不認識的資料表:" + resource });
 
   try {
     if (req.method === "GET") {
@@ -176,7 +225,12 @@ module.exports = async (req, res) => {
     if (req.method === "PATCH") {
       const id = req.query && req.query.id;
       if (!id) return res.status(400).json({ error: "缺少 id" });
-      const body = typeof req.body === "string" ? JSON.parse(req.body || "{}") : (req.body || {});
+      let body = typeof req.body === "string" ? JSON.parse(req.body || "{}") : (req.body || {});
+      /* 沒通行碼的人只能按 +1,不能改掉別人願望的內容 */
+      if (shape.open && !keyOK) {
+        const now = shape.out(await notion("/pages/" + id));
+        body = { title: now.title, place: now.place, note: now.note, by: now.by, votes: body.votes };
+      }
       const page = await notion("/pages/" + id, {
         method: "PATCH",
         body: JSON.stringify({ properties: shape.in(body) }),

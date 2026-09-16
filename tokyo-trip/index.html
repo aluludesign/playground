@@ -162,6 +162,38 @@
   .stop .b .pl{font-size:12px; color:var(--muted);}
   .stop .b .nt{font-size:12.5px; color:var(--ink-2); margin-top:3px;}
   .stop .x{opacity:0; transition:opacity .15s;}
+  /* ---- 許願 ---- */
+  .wishbox{margin-top:22px; border:1px solid var(--line); border-radius:11px; background:var(--surface); padding:0;}
+  .wish-head{list-style:none; cursor:pointer; display:flex; align-items:center; gap:8px; padding:13px 15px;
+    font-family:var(--font-sign); font-size:14px; font-weight:600;}
+  .wish-head::-webkit-details-marker{display:none;}
+  .wish-head .i:first-child{color:var(--warn);}
+  .wish-n{font-family:var(--font-mono); font-size:11px; color:var(--muted); font-weight:400;}
+  .wish-caret{margin-left:auto; color:var(--muted); font-size:12px; transition:transform .18s;}
+  .wishbox[open] .wish-caret{transform:rotate(180deg);}
+  .wishbox > *:not(summary){margin:0 15px;}
+  .wishbox > *:last-child{margin-bottom:15px;}
+  .wish-intro{font-size:12px; color:var(--muted); line-height:1.6; margin-bottom:12px;}
+  #wish-list{display:grid; gap:7px; margin-bottom:12px;}
+  .wish{display:grid; grid-template-columns:1fr auto; align-items:center; gap:3px 10px;
+    border:1px solid var(--line); border-radius:9px; padding:10px 12px; background:var(--paper);}
+  .wish.mine{border-color:var(--accent);}
+  .wish .wt{font-family:var(--font-sign); font-size:14px; font-weight:500;}
+  .wish .wm{grid-column:1/2; font-size:11.5px; color:var(--muted); display:flex; flex-wrap:wrap; gap:4px 7px;}
+  .wish .wm .by{color:var(--wc,var(--muted));}
+  .wish .vote{grid-row:1/3; grid-column:2/3; display:flex; align-items:center; gap:5px; align-self:center;
+    border:1px solid var(--line); border-radius:99px; padding:5px 11px; background:var(--surface);
+    font-family:var(--font-mono); font-size:12px; cursor:pointer; color:var(--ink-2);}
+  .wish .vote:hover{background:var(--surface-2);}
+  .wish .vote.on{border-color:var(--accent); color:var(--accent); background:var(--accent-soft);}
+  .wish .vote .i{font-size:11px; margin:0;}
+  .wish .wdel{background:none; border:0; color:var(--muted); cursor:pointer; font-size:11px; padding:2px 4px;}
+  /* 管理員拖進行程時,願望也長得像一張卡片 */
+  #wish-list.can-sort .wish{cursor:grab; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none;}
+  .wish.lifted{box-shadow:0 10px 26px rgba(0,0,0,.20); position:relative; z-index:5; background:var(--surface);}
+  .wish-hint{font-size:11px; color:var(--muted); margin-bottom:10px;}
+  .route.dropzone{outline:2px dashed var(--accent); outline-offset:6px; border-radius:8px;}
+
   /* ---- 改內容 ---- */
   .stop .rowops{display:flex; align-items:center; gap:2px;}
   .stop .pen{background:none; border:0; padding:6px 5px; color:var(--muted); font-size:14px; line-height:1;
@@ -336,6 +368,8 @@
   <symbol id="i-scale-balanced" viewBox="0 0 640 512"><path d="M384 32l128 0c17.7 0 32 14.3 32 32s-14.3 32-32 32L398.4 96c-5.2 25.8-22.9 47.1-46.4 57.3L352 448l160 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-192 0-192 0c-17.7 0-32-14.3-32-32s14.3-32 32-32l160 0 0-294.7c-23.5-10.3-41.2-31.6-46.4-57.3L128 96c-17.7 0-32-14.3-32-32s14.3-32 32-32l128 0c14.6-19.4 37.8-32 64-32s49.4 12.6 64 32zm55.6 288l144.9 0L512 195.8 439.6 320zM512 416c-62.9 0-115.2-34-126-78.9c-2.6-11 1-22.3 6.7-32.1l95.2-163.2c5-8.6 14.2-13.8 24.1-13.8s19.1 5.3 24.1 13.8l95.2 163.2c5.7 9.8 9.3 21.1 6.7 32.1C627.2 382 574.9 416 512 416zM126.8 195.8L54.4 320l144.9 0L126.8 195.8zM.9 337.1c-2.6-11 1-22.3 6.7-32.1l95.2-163.2c5-8.6 14.2-13.8 24.1-13.8s19.1 5.3 24.1 13.8l95.2 163.2c5.7 9.8 9.3 21.1 6.7 32.1C242 382 189.7 416 126.8 416S11.7 382 .9 337.1z"/></symbol>
   <symbol id="i-pen" viewBox="0 0 512 512"><path d="M362.7 19.3L314.3 67.7 444.3 197.7l48.4-48.4c25-25 25-65.5 0-90.5L453.3 19.3c-25-25-65.5-25-90.5 0zm-71 71L58.6 323.5c-10.4 10.4-18 23.3-22.2 37.4L1 481.2C-1.5 489.7 .8 498.8 7 505s15.3 8.5 23.7 6.1l120.3-35.4c14.1-4.2 27-11.8 37.4-22.2L421.7 220.3 291.7 90.3z"/></symbol>
   <symbol id="i-xmark" viewBox="0 0 384 512"><path d="M342.6 150.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L192 210.7 86.6 105.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L146.7 256 41.4 361.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L192 301.3 297.4 406.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L237.3 256 342.6 150.6z"/></symbol>
+<symbol id="i-star" viewBox="0 0 576 512"><path d="M316.9 18C311.6 7 300.4 0 288.1 0s-23.4 7-28.8 18L195 150.3 51.4 171.5c-12 1.8-22 10.2-25.7 21.7s-.7 24.2 7.9 32.7L137.8 329 113.2 474.7c-2 12 3 24.2 12.9 31.3s23 8 33.8 2.3l128.3-68.5 128.3 68.5c10.8 5.7 23.9 4.9 33.8-2.3s14.9-19.3 12.9-31.3L438.5 329 542.7 225.9c8.6-8.5 11.7-21.2 7.9-32.7s-13.7-19.9-25.7-21.7L381.2 150.3 316.9 18z"/></symbol>
+  <symbol id="i-thumbs-up" viewBox="0 0 512 512"><path d="M313.4 32.9c26 5.2 42.9 30.5 37.7 56.5l-2.3 11.4c-5.3 26.7-15.1 52.1-28.8 75.2l144 0c26.5 0 48 21.5 48 48c0 18.5-10.5 34.6-25.9 42.6C497 275.4 504 288.9 504 304c0 23.4-16.8 42.9-38.9 47.1c4.4 7.3 6.9 15.8 6.9 24.9c0 21.3-13.9 39.4-33.1 45.6c.7 3.3 1.1 6.8 1.1 10.4c0 26.5-21.5 48-48 48l-97.5 0c-19 0-37.5-5.6-53.3-16.1l-38.5-25.7C176 420.4 160 390.4 160 358.3l0-38.3 0-48 0-24.9c0-29.2 13.3-56.7 36-75l7.4-5.9c26.5-21.2 44.6-51 51.2-84.2l2.3-11.4c5.2-26 30.5-42.9 56.5-37.7zM32 192l64 0c17.7 0 32 14.3 32 32l0 224c0 17.7-14.3 32-32 32l-64 0c-17.7 0-32-14.3-32-32L0 224c0-17.7 14.3-32 32-32z"/></symbol>
   <symbol id="i-spinner" viewBox="0 0 512 512"><path d="M304 48a48 48 0 1 0 -96 0 48 48 0 1 0 96 0zm0 416a48 48 0 1 0 -96 0 48 48 0 1 0 96 0zM48 304a48 48 0 1 0 0-96 48 48 0 1 0 0 96zm464-48a48 48 0 1 0 -96 0 48 48 0 1 0 96 0zM142.9 437A48 48 0 1 0 75 369.1 48 48 0 1 0 142.9 437zm0-294.2A48 48 0 1 0 75 75a48 48 0 1 0 67.9 67.9zM369.1 437A48 48 0 1 0 437 369.1 48 48 0 1 0 369.1 437z"/></symbol>
   <symbol id="i-plane" viewBox="0 0 576 512"><path d="M482.3 192c34.2 0 93.7 29 93.7 64c0 36-59.5 64-93.7 64l-116.6 0L265.2 495.9c-5.7 10-16.3 16.1-27.8 16.1l-56.2 0c-10.6 0-18.3-10.2-15.4-20.4l49-171.6L112 320 68.8 377.6c-3 4-7.8 6.4-12.8 6.4l-42 0c-7.8 0-14-6.3-14-14c0-1.3 .2-2.6 .5-3.9L32 256 .5 145.9c-.4-1.3-.5-2.6-.5-3.9c0-7.8 6.3-14 14-14l42 0c5 0 9.8 2.4 12.8 6.4L112 192l102.9 0-49-171.6C162.9 10.2 170.6 0 181.2 0l56.2 0c11.5 0 22.1 6.2 27.8 16.1L365.7 192l116.6 0z"/></symbol>
   <symbol id="i-chevron-down" viewBox="0 0 512 512"><path d="M233.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L256 338.7 86.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z"/></symbol>
@@ -412,6 +446,33 @@
         </div>
       </form>
       <div class="route" id="route"></div>
+
+      <details class="wishbox" id="wishbox">
+        <summary class="wish-head">
+          <svg class="i" aria-hidden="true"><use href="#i-star"></use></svg>
+          <span>大家的許願</span>
+          <span class="wish-n" id="wish-n"></span>
+          <svg class="i wish-caret" aria-hidden="true"><use href="#i-chevron-down"></use></svg>
+        </summary>
+        <p class="wish-intro">想去哪裡先丟進來,不用等排好。誰都可以許願、可以幫別人的願望 +1。</p>
+        <form class="form" id="wish-form" hidden>
+          <div class="grid2">
+            <div class="fld"><label for="wf-title">想去哪</label><input type="text" id="wf-title" placeholder="teamLab" required></div>
+            <div class="fld"><label for="wf-place">地點／車站</label><input type="text" id="wf-place" placeholder="豐洲"></div>
+          </div>
+          <div class="fld"><label for="wf-by">你是誰</label><select id="wf-by"></select></div>
+          <div class="fld"><label for="wf-note">想說的</label><input type="text" id="wf-note" placeholder="可留白"></div>
+          <div class="err" id="wf-err" hidden></div>
+          <div class="form-ops">
+            <button type="button" class="btn btn-ghost btn-sm" id="wf-cancel">取消</button>
+            <button type="submit" class="btn btn-main btn-sm" id="wf-submit">許下去</button>
+          </div>
+        </form>
+        <div id="wish-list"></div>
+        <button class="btn btn-sm" id="add-wish-btn" type="button">
+          <svg class="i" aria-hidden="true"><use href="#i-star"></use></svg>許願地點
+        </button>
+      </details>
     </section>
 
     <section class="panel" id="panel-cost" role="tabpanel" aria-labelledby="tab-cost" hidden>
@@ -629,7 +690,7 @@
 
   /* ================= 狀態 ================= */
   const state = { tab: "plan", day: "2026-10-03", rate: (window.TRIP_CONFIG || {}).rate || SEED.rate,
-    kitty: Number((window.TRIP_CONFIG || {}).kitty) || 30000, names: {}, expenses: [], stops: [] };
+    kitty: Number((window.TRIP_CONFIG || {}).kitty) || 30000, names: {}, expenses: [], stops: [], wishes: [] };
   const nameOf = id => state.names[id] || (MEMBERS.find(m => m.id === id) || {}).def || id;
   const colorOf = id => (MEMBERS.find(m => m.id === id) || {}).color || "#7E8796";
 
@@ -705,10 +766,11 @@
     state.names = d.names && typeof d.names === "object" ? clone(d.names) : {};
     state.expenses = Array.isArray(d.expenses) ? clone(d.expenses) : [];
     state.stops = Array.isArray(d.stops) ? clone(d.stops) : [];
+    state.wishes = Array.isArray(d.wishes) ? clone(d.wishes) : [];
     sortExpenses();
   }
   function snapshot() {
-    return { version: 2, rate: state.rate, names: state.names, expenses: state.expenses, stops: state.stops };
+    return { version: 3, rate: state.rate, names: state.names, expenses: state.expenses, stops: state.stops, wishes: state.wishes };
   }
   function saveLocal() {
     if (online) return;
@@ -831,14 +893,92 @@
   }
   function putSetting() { saveLocal(); render(); }
 
+  /* --- 許願 --- */
+  /* 願望跟行程住同一個 Notion 資料庫,差別只在有沒有填日期。
+     +1 不需要通行碼,所以非管理員也動得了 —— 後端對 wishes 開了這個口。 */
+  async function addWish(w) {
+    state.wishes.push(w); renderWishes();
+    if (!online) { saveLocal(); return; }
+    try {
+      const { row } = await api("?resource=wishes", { method: "POST", body: JSON.stringify(w) });
+      const k = state.wishes.indexOf(w);
+      if (k > -1) state.wishes[k] = row;
+      renderWishes();
+    } catch (err) {
+      const k = state.wishes.indexOf(w);
+      if (k > -1) state.wishes.splice(k, 1);
+      renderWishes();
+      flash("許願沒成功:" + err.message);
+    }
+  }
+  async function toggleVote(id) {
+    const w = state.wishes.find(x => x.id === id);
+    if (!w) return;
+    const me = myName();
+    if (!me) { flash("先在許願表單選一下你是誰"); return; }
+    const had = (w.votes || []).indexOf(me);
+    const before = (w.votes || []).slice();
+    w.votes = had > -1 ? w.votes.filter(v => v !== me) : (w.votes || []).concat(me);
+    renderWishes();
+    if (!online) { saveLocal(); return; }
+    try {
+      const { row } = await api("?resource=wishes&id=" + encodeURIComponent(id), {
+        method: "PATCH", body: JSON.stringify({ votes: w.votes }),
+      });
+      const k = state.wishes.findIndex(x => x.id === id);
+      if (k > -1) state.wishes[k] = row;
+      renderWishes();
+    } catch (err) {
+      w.votes = before;
+      renderWishes();
+      flash("+1 沒成功:" + err.message);
+    }
+  }
+  async function removeWish(id) {
+    if (!mayEdit()) return;
+    const k = state.wishes.findIndex(x => x.id === id);
+    const gone = k > -1 ? state.wishes.splice(k, 1)[0] : null;
+    renderWishes();
+    if (!online || !gone) { saveLocal(); return; }
+    try { await api("?resource=wishes&id=" + encodeURIComponent(id), { method: "DELETE" }); }
+    catch (err) { state.wishes.push(gone); renderWishes(); flash("刪不掉:" + err.message); }
+  }
+  /* 許願排進行程 = 幫那一列補上日期和時間,它就從願望清單消失、出現在時間軸上 */
+  async function promoteWish(id, day, time) {
+    if (!mayEdit()) return;
+    const k = state.wishes.findIndex(x => x.id === id);
+    if (k < 0) return;
+    const w = state.wishes.splice(k, 1)[0];
+    const stop = { id: w.id, day: day, time: time, title: w.title, place: w.place || "", note: w.note || "" };
+    state.stops.push(stop);
+    renderWishes(); render();
+    if (!online) { saveLocal(); return; }
+    try {
+      const { row } = await api("?resource=itinerary&id=" + encodeURIComponent(id), {
+        method: "PATCH", body: JSON.stringify(stopToRow(stop)),
+      });
+      const j = state.stops.findIndex(x => x.id === id);
+      if (j > -1) state.stops[j] = stopFromRow(row);
+      render();
+      flash("「" + w.title + "」排進 " + day.slice(5).replace("-", "/") + " 了");
+    } catch (err) {
+      state.stops = state.stops.filter(x => x.id !== id);
+      state.wishes.splice(k, 0, w);
+      renderWishes(); render();
+      flash("排不進去:" + err.message);
+    }
+  }
+
   /* --- 從 Notion 讀 --- */
   async function pull() {
-    const [ex, st] = await Promise.all([
+    const [ex, st, wi] = await Promise.all([
       api("?resource=expenses"),
       api("?resource=itinerary"),
+      api("?resource=wishes"),
     ]);
     state.expenses = ex.rows.map(expFromRow);
     state.stops = st.rows.filter(r => r.day).map(stopFromRow);
+    state.wishes = wi.rows;
     sortExpenses();
   }
 
@@ -1094,6 +1234,54 @@
     ).join("");
   }
 
+  /* 「我是誰」記在這台裝置上,+1 要靠它判斷是不是自己投的 */
+  const MELS = "tokyo5-me";
+  function myName() {
+    try { return localStorage.getItem(MELS) || ""; } catch (_) { return ""; }
+  }
+  function setMe(id) {
+    try { localStorage.setItem(MELS, id); } catch (_) {}
+  }
+
+  function renderWishes() {
+    const list = state.wishes.slice().sort((a, b) =>
+      (b.votes || []).length - (a.votes || []).length ||
+      (a.createdAt || "").localeCompare(b.createdAt || ""));
+    const me = myName();
+
+    el("wish-n").textContent = list.length ? list.length + " 個" : "";
+    el("wish-list").classList.toggle("can-sort", editable() && list.length > 0);
+    el("add-wish-btn").hidden = false;
+
+    if (!list.length) {
+      el("wish-list").innerHTML = '<div class="empty">還沒有人許願。</div>';
+      return;
+    }
+    el("wish-list").innerHTML =
+      (editable() ? '<div class="wish-hint">長按一個願望,拖到上面的時間軸就排進當天行程。</div>' : "") +
+      list.map(w => {
+        const votes = w.votes || [];
+        const voted = me && votes.indexOf(me) > -1;
+        const who = MEMBERS.find(m => m.id === w.by);
+        const by = who ? '<span class="by" style="--wc:' + who.color + '">' + esc(nameOf(who.id)) + " 許的</span>" : "";
+        const names = votes.map(v => {
+          const m = MEMBERS.find(x => x.id === v);
+          return m ? nameOf(m.id) : v;
+        });
+        return '<div class="wish' + (w.by === me ? " mine" : "") + '" data-wish="' + esc(w.id || "") + '">' +
+          '<div class="wt">' + esc(w.title) + "</div>" +
+          '<div class="wm">' + by +
+          (w.place ? "<span>" + esc(w.place) + "</span>" : "") +
+          (w.note ? "<span>" + esc(w.note) + "</span>" : "") +
+          (names.length ? "<span>" + esc(names.join("、")) + " +1</span>" : "") +
+          (editable() ? '<button type="button" class="wdel" data-del-wish="' + esc(w.id || "") + '">刪掉</button>' : "") +
+          "</div>" +
+          '<button type="button" class="vote' + (voted ? " on" : "") + '" data-vote="' + esc(w.id || "") + '">' +
+          '<svg class="i" aria-hidden="true"><use href="#i-thumbs-up"></use></svg>' + votes.length + "</button>" +
+          "</div>";
+      }).join("");
+  }
+
   const tile = (lb, vl, sb) => '<div class="stat"><div class="lb">' + lb + '</div><div class="vl">' + vl + '</div><div class="sb">' + sb + "</div></div>";
 
   function renderCost() {
@@ -1215,7 +1403,7 @@
       : "○ 瀏覽器不讓存檔,離開後會消失";
   }
 
-  function render() { renderSeats(); renderDays(); renderRoute(); renderCost(); renderFund(); renderSplit(); renderSync(); }
+  function render() { renderSeats(); renderDays(); renderRoute(); renderWishes(); renderCost(); renderFund(); renderSplit(); renderSync(); }
 
   /* ================= 互動 ================= */
   function switchTab(name) {
@@ -1374,18 +1562,23 @@
   /* 紅眼班機那段掛在隔天,排序時要排到當天所有行程之後 */
   const slotOf = s => { const v = toMin(s && s.time); return v == null ? null : v + (s.day === OVERNIGHT ? 1440 : 0); };
 
+  function rowAt(rows, k) {
+    const r = rows[k];
+    if (!r) return null;
+    const id = r.dataset.stop;
+    const s = id && state.stops.find(x => x.id === id);
+    if (s) return s;
+    /* 航班節點不在 state.stops 裡,從畫面把時間讀回來 —— 它一樣要擋住順序 */
+    const t = r.querySelector(".t"), ti = r.querySelector(".ti");
+    return { time: t ? (t.textContent || "").trim().slice(0, 5) : "", title: ti ? ti.textContent : "", day: state.day };
+  }
+  /* 拖動的那一列已經在 rows[i],所以鄰居是 i-1 和 i+1 */
   function neighboursOf(rows, i) {
-    const at = k => {
-      const r = rows[k];
-      if (!r) return null;
-      const id = r.dataset.stop;
-      const s = id && state.stops.find(x => x.id === id);
-      if (s) return s;
-      /* 航班節點不在 state.stops 裡,從畫面把時間讀回來 —— 它一樣要擋住順序 */
-      const t = r.querySelector(".t"), ti = r.querySelector(".ti");
-      return { time: t ? (t.textContent || "").trim().slice(0, 5) : "", title: ti ? ti.textContent : "", day: state.day };
-    };
-    return { prev: at(i - 1), next: at(i + 1) };
+    return { prev: rowAt(rows, i - 1), next: rowAt(rows, i + 1) };
+  }
+  /* 要插進 rows 的第 i 格(還不在 rows 裡),所以鄰居是 i-1 和 i */
+  function neighboursForInsert(rows, i) {
+    return { prev: rowAt(rows, i - 1), next: rowAt(rows, i) };
   }
 
   /* 想塞進 prev 和 next 中間的話,幾點比較合理 */
@@ -1399,15 +1592,17 @@
 
   let pending = null;   /* 等著改時間的那一筆 */
 
-  function askTime(stop, prev, next) {
+  /* apply(時間字串) 決定存下去要做什麼 —— 拖行程是改時間,拖願望是排進行程 */
+  function askTime(item, prev, next, apply) {
     const s = suggestSlot(prev, next);
-    pending = { id: stop.id, prev: prev, next: next };
+    pending = { item: item, prev: prev, next: next, apply: apply };
     const span = [];
     if (prev) span.push("「" + prev.title + "」" + (prev.time || "—") + " 之後");
     if (next) span.push("「" + next.title + "」" + (next.time || "—") + " 之前");
-    el("tf-why").textContent = "「" + stop.title + "」原本是 " + (stop.time || "沒寫時間") +
-      ",放到這個位置要排在 " + span.join("、") + "。";
-    el("tf-time").value = s == null ? (stop.time || "") : toHHMM(((s % 1440) + 1440) % 1440);
+    el("tf-why").textContent = "「" + item.title + "」" +
+      (item.time ? "原本是 " + item.time + "," : "") +
+      (span.length ? "放到這個位置要排在 " + span.join("、") + "。" : "這天還沒有別的行程,幾點都行。");
+    el("tf-time").value = s == null ? (item.time || "12:00") : toHHMM(((s % 1440) + 1440) % 1440);
     showTimeError("");
     el("time-overlay").hidden = false;
     el("tf-time").focus();
@@ -1421,7 +1616,7 @@
     pending = null;
     showTimeError("");
     el("time-overlay").hidden = true;
-    if (restore) renderRoute();
+    if (restore) { renderRoute(); renderWishes(); }
   }
   el("tf-cancel").addEventListener("click", () => closeTime(true));
   el("time-form").addEventListener("submit", ev => {
@@ -1429,16 +1624,14 @@
     if (!pending) return;
     const v = toMin(el("tf-time").value);
     if (v == null) { showTimeError("時間格式不對。"); return; }
-    const stop = state.stops.find(x => x.id === pending.id);
-    if (!stop) { closeTime(true); return; }
-    const mine = v + (stop.day === OVERNIGHT ? 1440 : 0);
+    const mine = v + (pending.item.day === OVERNIGHT ? 1440 : 0);
     const a = slotOf(pending.prev), b = slotOf(pending.next);
     if (a != null && mine <= a) { showTimeError("要晚於「" + pending.prev.title + "」的 " + pending.prev.time + "。"); return; }
     if (b != null && mine >= b) { showTimeError("要早於「" + pending.next.title + "」的 " + pending.next.time + "。"); return; }
-    const id = pending.id;
+    const apply = pending.apply;
     const t = el("tf-time").value;
     closeTime(false);
-    updateStop(id, { time: t });
+    apply(t);
   });
 
   /* 長按時間欄 → 整列浮起來變一張卡片 → 拖到要的位置 */
@@ -1511,7 +1704,7 @@
       const mine = slotOf(stop), a = slotOf(nb.prev), b = slotOf(nb.next);
       const fits = mine != null && (a == null || mine > a) && (b == null || mine < b);
       if (fits) { renderRoute(); return; }          /* 時間本來就對,不用問 */
-      askTime(stop, nb.prev, nb.next);
+      askTime(stop, nb.prev, nb.next, t => updateStop(stop.id, { time: t }));
     }
     route.addEventListener("pointerup", drop);
     route.addEventListener("pointercancel", drop);
@@ -1523,6 +1716,80 @@
     route.addEventListener("touchmove", ev => {
       if (row) ev.preventDefault();
     }, { passive: false });
+  })();
+
+  /* 管理員把願望拖進時間軸 —— 跟行程排序同一套手勢,只是終點在另一個容器 */
+  (function initWishDrag() {
+    const box = el("wish-list");
+    const route = el("route");
+    const HOLD = 380, SLOP = 10;
+    let armed = null, row = null, over = false;
+
+    function disarm() { if (armed) { clearTimeout(armed.timer); armed = null; } }
+    function lift() {
+      if (!armed) return;
+      row = armed.row;
+      row.classList.add("lifted");
+      try { armed.row.setPointerCapture(armed.pointerId); } catch (_) {}
+      if (navigator.vibrate) { try { navigator.vibrate(12); } catch (_) {} }
+      armed = null;
+    }
+    function clear() {
+      if (row) row.classList.remove("lifted");
+      route.classList.remove("dropzone");
+      row = null; over = false;
+    }
+    /* 指標落在時間軸上嗎;是的話該插在第幾格 */
+    function hit(y, x) {
+      const r = route.getBoundingClientRect();
+      const pad = 40;   /* 空的時候那塊很矮,放寬一點才好放得進去 */
+      if (x < r.left - pad || x > r.right + pad || y < r.top - pad || y > r.bottom + pad) return null;
+      const rows = Array.prototype.slice.call(route.querySelectorAll(".stop"));
+      let i = rows.length;
+      rows.some((el2, k) => {
+        const b = el2.getBoundingClientRect();
+        if (y < b.top + b.height / 2) { i = k; return true; }
+        return false;
+      });
+      return { rows: rows, idx: i };
+    }
+
+    box.addEventListener("pointerdown", ev => {
+      if (!editable() || row) return;
+      if (ev.target.closest("button")) return;
+      const r = ev.target.closest(".wish");
+      if (!r || !r.dataset.wish) return;
+      armed = { row: r, pointerId: ev.pointerId, x: ev.clientX, y: ev.clientY, timer: 0 };
+      armed.timer = setTimeout(lift, HOLD);
+    });
+    box.addEventListener("pointermove", ev => {
+      if (armed) {
+        if (Math.abs(ev.clientY - armed.y) > SLOP || Math.abs(ev.clientX - armed.x) > SLOP) disarm();
+        return;
+      }
+      if (!row) return;
+      ev.preventDefault();
+      over = !!hit(ev.clientY, ev.clientX);
+      route.classList.toggle("dropzone", over);
+    });
+    box.addEventListener("touchmove", ev => { if (row) ev.preventDefault(); }, { passive: false });
+
+    function drop(ev) {
+      disarm();
+      if (!row) return;
+      const id = row.dataset.wish;
+      const spot = hit(ev.clientY, ev.clientX);
+      clear();
+      if (!spot) { renderWishes(); return; }        /* 沒放在時間軸上,當作沒事 */
+      const w = state.wishes.find(x => x.id === id);
+      if (!w) { renderWishes(); return; }
+      const nb = neighboursForInsert(spot.rows, spot.idx);
+      askTime({ id: w.id, title: w.title, time: "", day: state.day }, nb.prev, nb.next,
+        t => promoteWish(w.id, state.day, t));
+    }
+    box.addEventListener("pointerup", drop);
+    box.addEventListener("pointercancel", () => { disarm(); clear(); renderWishes(); });
+    window.addEventListener("scroll", disarm, true);
   })();
 
   /* --- 改一項行程的內容 --- */
@@ -1563,6 +1830,48 @@
     showEditError("");
     el("edit-overlay").hidden = true;
     updateStop(id, patch);
+  });
+
+  /* --- 許願表單 --- */
+  function fillWishWho() {
+    const me = myName();
+    el("wf-by").innerHTML = '<option value="">— 選一下 —</option>' +
+      MEMBERS.map(m => '<option value="' + m.id + '"' + (m.id === me ? " selected" : "") + ">" + esc(nameOf(m.id)) + "</option>").join("");
+  }
+  function showWishError(msg) {
+    const box = el("wf-err");
+    box.textContent = msg;
+    box.hidden = !msg;
+  }
+  el("add-wish-btn").addEventListener("click", () => {
+    fillWishWho();
+    showWishError("");
+    const f = el("wish-form");
+    f.hidden = !f.hidden;
+    if (!f.hidden) el("wf-title").focus();
+  });
+  el("wf-cancel").addEventListener("click", () => { el("wish-form").hidden = true; showWishError(""); });
+  el("wish-form").addEventListener("submit", ev => {
+    ev.preventDefault();
+    const title = el("wf-title").value.trim();
+    if (!title) { showWishError("總要寫個地方。"); return; }
+    const by = el("wf-by").value;
+    if (!by) { showWishError("選一下你是誰,不然沒人知道這是誰許的。"); return; }
+    setMe(by);
+    addWish({
+      id: uid(), title: title, place: el("wf-place").value.trim(),
+      note: el("wf-note").value.trim(), by: by, votes: [by],
+      createdAt: new Date().toISOString(),
+    });
+    el("wish-form").reset();
+    el("wish-form").hidden = true;
+    showWishError("");
+  });
+  el("wish-list").addEventListener("click", ev => {
+    const v = ev.target.closest("[data-vote]");
+    if (v) { toggleVote(v.dataset.vote); return; }
+    const d = ev.target.closest("[data-del-wish]");
+    if (d) removeWish(d.dataset.delWish);
   });
 
   /* --- 改名字 --- */
