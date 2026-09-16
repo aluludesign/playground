@@ -147,12 +147,11 @@
     cursor:pointer; border-radius:6px;}
   .stop .pen:hover{background:var(--surface-2); color:var(--ink-2);}
 
-  /* ---- 長按時間欄拖移排序 ---- */
-  /* 能編輯時,時間欄自己吃掉手勢,長按才不會變成捲頁面 */
-  .route.can-sort .stop:not(.anchor) .t{touch-action:none; user-select:none; -webkit-user-select:none;
-    cursor:grab; border-radius:6px; transition:background .15s;}
-  .route.can-sort .stop:not(.anchor) .t:hover{background:var(--surface-2);}
-  .route.sorting{user-select:none;}
+  /* ---- 長按整列拖移排序 ---- */
+  /* 捲動照常,長按成立之後才在 touchmove 裡擋掉捲動(見 initSorting) */
+  .route.can-sort .stop:not(.anchor){cursor:grab; user-select:none; -webkit-user-select:none;
+    -webkit-touch-callout:none;}
+  .route.sorting{user-select:none; touch-action:none;}
   .route.sorting .stop .x, .route.sorting .stop .pen{visibility:hidden;}
   /* 按住 → 整列浮起來變一張卡片 */
   .stop.lifted{background:var(--surface); border-radius:10px; padding:12px 10px; cursor:grabbing;
@@ -906,9 +905,10 @@
     const movable = s => !s.anchor && editable();
     route.classList.toggle("can-sort", editable());
     route.innerHTML = list.map(s =>
-      '<div class="stop' + (s.anchor ? " anchor" : "") + '" data-stop="' + esc(s.id || "") + '">' +
-      '<div class="t num"' + (movable(s) ? ' title="長按可以拖著換順序"' : "") + ">" +
-      (s.time || "—") + (s.day === OVERNIGHT ? '<span style="color:var(--muted); font-size:10px"> +1</span>' : "") + "</div>" +
+      '<div class="stop' + (s.anchor ? " anchor" : "") + '" data-stop="' + esc(s.id || "") + '"' +
+      (movable(s) ? ' title="長按可以拖著換順序"' : "") + ">" +
+      '<div class="t num">' + (s.time || "—") +
+      (s.day === OVERNIGHT ? '<span style="color:var(--muted); font-size:10px"> +1</span>' : "") + "</div>" +
       '<div class="b"><div class="ti">' + esc(s.title) + "</div>" +
       (s.place ? '<div class="pl">' + esc(s.place) + "</div>" : "") +
       (s.note ? '<div class="nt">' + esc(s.note) + "</div>" : "") + "</div>" +
@@ -1193,11 +1193,10 @@
 
     route.addEventListener("pointerdown", ev => {
       if (!editable() || row) return;
-      const handle = ev.target.closest(".t");
-      if (!handle) return;
-      const r = handle.closest(".stop");
+      if (ev.target.closest("button")) return;      /* ✎ 和 ✕ 要留給點擊 */
+      const r = ev.target.closest(".stop");
       if (!r || r.classList.contains("anchor") || !r.dataset.stop) return;
-      armed = { row: r, handle: handle, pointerId: ev.pointerId, x: ev.clientX, y: ev.clientY, timer: 0 };
+      armed = { row: r, handle: r, pointerId: ev.pointerId, x: ev.clientX, y: ev.clientY, timer: 0 };
       armed.timer = setTimeout(lift, HOLD);
     });
 
@@ -1241,6 +1240,12 @@
     route.addEventListener("pointercancel", drop);
     /* 捲動一開始就放棄長按,免得捲一捲東西突然浮起來 */
     window.addEventListener("scroll", disarm, true);
+
+    /* 手機:整列都能長按,所以不能靠 CSS 的 touch-action 把捲動關掉 ——
+       那會讓整段行程滑不動。改成浮起來之後才在這裡擋,擋之前捲動完全正常。 */
+    route.addEventListener("touchmove", ev => {
+      if (row) ev.preventDefault();
+    }, { passive: false });
   })();
 
   /* --- 改一項行程的內容 --- */
