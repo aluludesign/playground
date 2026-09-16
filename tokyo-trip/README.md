@@ -6,8 +6,8 @@
 
 看不需要通行碼,要動資料才需要(見「誰能改」)。
 
-- Notion 頁面:<https://natural-darkness-9f1.notion.site/tokyotrip>
-- 網站:部署到 Vercel 後就有網址(見下方設定)
+網站部署到 Vercel 後就有網址(見下方設定)。Notion 那邊不用開公開分享 ——
+網站是靠 integration 的 Connections 權限讀寫的,兩者無關。
 
 ## 為什麼需要後端
 
