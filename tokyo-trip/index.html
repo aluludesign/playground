@@ -112,6 +112,10 @@
   .i{width:1em; height:1em; fill:currentColor; flex:0 0 auto; vertical-align:-.115em;}
   .tab .i{margin-right:6px; font-size:.95em;}
   .btn .i{margin-right:6px; font-size:.9em;}
+  /* 讀取中的轉圈 —— 按鈕寬度鎖住,文字換成它,不要讓版面跳動 */
+  .btn .i.spin{margin:0; animation:spin .8s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  @media (prefers-reduced-motion:reduce){ .i.spin{animation-duration:2s;} }
 
   /* ---- generic ---- */
   .sec{margin-bottom:28px;}
@@ -310,6 +314,7 @@
   <symbol id="i-scale-balanced" viewBox="0 0 640 512"><path d="M384 32l128 0c17.7 0 32 14.3 32 32s-14.3 32-32 32L398.4 96c-5.2 25.8-22.9 47.1-46.4 57.3L352 448l160 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-192 0-192 0c-17.7 0-32-14.3-32-32s14.3-32 32-32l160 0 0-294.7c-23.5-10.3-41.2-31.6-46.4-57.3L128 96c-17.7 0-32-14.3-32-32s14.3-32 32-32l128 0c14.6-19.4 37.8-32 64-32s49.4 12.6 64 32zm55.6 288l144.9 0L512 195.8 439.6 320zM512 416c-62.9 0-115.2-34-126-78.9c-2.6-11 1-22.3 6.7-32.1l95.2-163.2c5-8.6 14.2-13.8 24.1-13.8s19.1 5.3 24.1 13.8l95.2 163.2c5.7 9.8 9.3 21.1 6.7 32.1C627.2 382 574.9 416 512 416zM126.8 195.8L54.4 320l144.9 0L126.8 195.8zM.9 337.1c-2.6-11 1-22.3 6.7-32.1l95.2-163.2c5-8.6 14.2-13.8 24.1-13.8s19.1 5.3 24.1 13.8l95.2 163.2c5.7 9.8 9.3 21.1 6.7 32.1C242 382 189.7 416 126.8 416S11.7 382 .9 337.1z"/></symbol>
   <symbol id="i-pen" viewBox="0 0 512 512"><path d="M362.7 19.3L314.3 67.7 444.3 197.7l48.4-48.4c25-25 25-65.5 0-90.5L453.3 19.3c-25-25-65.5-25-90.5 0zm-71 71L58.6 323.5c-10.4 10.4-18 23.3-22.2 37.4L1 481.2C-1.5 489.7 .8 498.8 7 505s15.3 8.5 23.7 6.1l120.3-35.4c14.1-4.2 27-11.8 37.4-22.2L421.7 220.3 291.7 90.3z"/></symbol>
   <symbol id="i-xmark" viewBox="0 0 384 512"><path d="M342.6 150.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L192 210.7 86.6 105.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L146.7 256 41.4 361.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L192 301.3 297.4 406.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L237.3 256 342.6 150.6z"/></symbol>
+  <symbol id="i-spinner" viewBox="0 0 512 512"><path d="M304 48a48 48 0 1 0 -96 0 48 48 0 1 0 96 0zm0 416a48 48 0 1 0 -96 0 48 48 0 1 0 96 0zM48 304a48 48 0 1 0 0-96 48 48 0 1 0 0 96zm464-48a48 48 0 1 0 -96 0 48 48 0 1 0 96 0zM142.9 437A48 48 0 1 0 75 369.1 48 48 0 1 0 142.9 437zm0-294.2A48 48 0 1 0 75 75a48 48 0 1 0 67.9 67.9zM369.1 437A48 48 0 1 0 437 369.1 48 48 0 1 0 369.1 437z"/></symbol>
   <symbol id="i-plane" viewBox="0 0 576 512"><path d="M482.3 192c34.2 0 93.7 29 93.7 64c0 36-59.5 64-93.7 64l-116.6 0L265.2 495.9c-5.7 10-16.3 16.1-27.8 16.1l-56.2 0c-10.6 0-18.3-10.2-15.4-20.4l49-171.6L112 320 68.8 377.6c-3 4-7.8 6.4-12.8 6.4l-42 0c-7.8 0-14-6.3-14-14c0-1.3 .2-2.6 .5-3.9L32 256 .5 145.9c-.4-1.3-.5-2.6-.5-3.9c0-7.8 6.3-14 14-14l42 0c5 0 9.8 2.4 12.8 6.4L112 192l102.9 0-49-171.6C162.9 10.2 170.6 0 181.2 0l56.2 0c11.5 0 22.1 6.2 27.8 16.1L365.7 192l116.6 0z"/></symbol>
   <symbol id="i-chevron-down" viewBox="0 0 512 512"><path d="M233.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L256 338.7 86.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z"/></symbol>
   <symbol id="i-plus" viewBox="0 0 448 512"><path d="M256 80c0-17.7-14.3-32-32-32s-32 14.3-32 32l0 144L48 224c-17.7 0-32 14.3-32 32s14.3 32 32 32l144 0 0 144c0 17.7 14.3 32 32 32s32-14.3 32-32l0-144 144 0c17.7 0 32-14.3 32-32s-14.3-32-32-32l-144 0 0-144z"/></symbol>
@@ -503,11 +508,13 @@
 
   /* ================= 固定資料:從機票訂單來的事實 ================= */
   const MEMBERS = [
-    { id: "hsieh_chinhui", def: "Chinhui", full: "HSIEH CHINHUI", color: "#E60012" },
-    { id: "chang_chiayu",  def: "Chiayu",  full: "CHANG CHIAYU",  color: "#F39700" },
-    { id: "chang_chihwei", def: "Chihwei", full: "CHANG CHIHWEI", color: "#009944" },
-    { id: "chang_yalun",   def: "Yalun",   full: "CHANG YALUN",   color: "#00A7DB" },
-    { id: "chen_suchih",   def: "Suchih",  full: "CHEN SUCHIH",   color: "#9B7CB6" },
+    /* def 是畫面上顯示的名字,key 是 Notion「付款人／分攤者」select 的選項字串。
+       兩個分開才能改中文名而不用去動 Notion 既有的每一筆紀錄。 */
+    { id: "hsieh_chinhui", def: "阿輝", key: "Chinhui", full: "HSIEH CHINHUI", color: "#E60012" },
+    { id: "chang_chiayu",  def: "佳瑜", key: "Chiayu",  full: "CHANG CHIAYU",  color: "#F39700" },
+    { id: "chang_chihwei", def: "志偉", key: "Chihwei", full: "CHANG CHIHWEI", color: "#009944" },
+    { id: "chang_yalun",   def: "雅倫", key: "Yalun",   full: "CHANG YALUN",   color: "#00A7DB" },
+    { id: "chen_suchih",   def: "媽",   key: "Suchih",  full: "CHEN SUCHIH",   color: "#9B7CB6" },
   ];
   const IDS = MEMBERS.map(m => m.id);
 
@@ -600,8 +607,11 @@
   Object.keys(CAT_TO_NOTION).forEach(k => CAT_FROM_NOTION[CAT_TO_NOTION[k]] = k);
   /* 人名在 Notion 用暱稱,程式內部用 id */
   const idByName = {};
-  MEMBERS.forEach(m => idByName[m.def] = m.id);
-  const nameById = id => (MEMBERS.find(m => m.id === id) || {}).def || null;
+  /* 讀 Notion 時兩種都認:正式的 key,以及顯示名 —— 萬一哪天有人在 Notion
+     直接把選項改成中文,舊紀錄也不會突然變成「未指定付款人」。 */
+  MEMBERS.forEach(m => { idByName[m.key] = m.id; idByName[m.def] = m.id; });
+  /* 寫回 Notion 一律用 key,不要在那邊長出第二組選項 */
+  const nameById = id => (MEMBERS.find(m => m.id === id) || {}).key || null;
 
   async function api(path, init) {
     const res = await fetch(API + path, {
@@ -765,6 +775,32 @@
     pullTimer = setTimeout(() => pull().then(render).catch(() => {}), 400);
   }
 
+  /* 按鈕原地轉圈,文字先收起來。寬高先鎖住,不然按下去整排會抽動一下。
+     太快回來的話轉一下就消失,看起來像壞掉,所以至少轉滿 SPIN_MIN。 */
+  const SPIN_MIN = 450;
+  async function withSpinner(btn, job) {
+    if (btn.dataset.busy) return;
+    const box = btn.getBoundingClientRect();
+    const was = btn.innerHTML;
+    btn.dataset.busy = "1";
+    btn.disabled = true;
+    btn.style.width = box.width + "px";
+    btn.style.height = box.height + "px";
+    btn.innerHTML = '<svg class="i spin" aria-hidden="true"><use href="#i-spinner"></use></svg>';
+    const started = Date.now();
+    try { await job(); }
+    catch (e) { flash(e.message); }
+    const left = SPIN_MIN - (Date.now() - started);
+    if (left > 0) await new Promise(r => setTimeout(r, left));
+    /* 轉圈期間可能重新整理過版面,那顆按鈕就不是原本那顆了 */
+    if (btn.isConnected) {
+      btn.innerHTML = was;
+      btn.style.width = btn.style.height = "";
+      btn.disabled = false;
+    }
+    delete btn.dataset.busy;
+  }
+
   /* --- 模式 --- */
   /* 唯讀時把所有會改資料的入口收起來 */
   function renderEditAbility() {
@@ -796,7 +832,11 @@
           : '<button type="button" class="btn btn-sm" id="cloud-admin">管理員登入</button>')
       : '<button type="button" class="btn btn-sm" id="cloud-in">連上 Notion</button>';
     const sync = el("cloud-sync"), out = el("cloud-out"), inn = el("cloud-in"), adm = el("cloud-admin");
-    if (sync) sync.addEventListener("click", () => pull().then(render).then(() => flash("已更新")).catch(e => flash(e.message)));
+    if (sync) sync.addEventListener("click", () => withSpinner(sync, async () => {
+      await pull();
+      render();
+      flash("已更新");
+    }));
     if (out) out.addEventListener("click", () => {
       try { localStorage.removeItem(KEYLS); } catch (_) {}
       location.reload();

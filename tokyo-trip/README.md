@@ -94,6 +94,23 @@ SVG 直接內嵌在 `index.html` 最上面的 `<symbol>` 裡,**不連 CDN** —�
 要加新的 icon:去 Font Awesome 抓 solid 的 SVG,把 `viewBox` 和 `path` 複製成一個新的
 `<symbol id="i-名字">`,用的地方寫 `<svg class="i"><use href="#i-名字"></use></svg>`。
 
+## 名字
+
+`index.html` 的 `MEMBERS` 每個人有兩個名字:
+
+| 欄位 | 用途 |
+| --- | --- |
+| `def` | 畫面上顯示的(阿輝、佳瑜、志偉、雅倫、媽) |
+| `key` | Notion「付款人／分攤者」select 的選項字串(Chinhui、Chiayu…) |
+
+分開的原因:要改顯示名就只改 `def`,Notion 完全不用動。
+如果把兩個混成一個,改名等於要去 Notion 把 select 選項和每一筆既有紀錄重設一遍。
+
+讀回來的時候兩種都認,所以就算哪天真的在 Notion 把選項改成中文,舊紀錄也不會變成「未指定付款人」。
+寫出去一律用 `key`,免得 Notion 長出第二組選項。
+
+> Notion 裡的「同行五人」表網站不會讀 —— 那是給人看的,改那裡不會影響網站。
+
 ## 匯率
 
 預設 **1 JPY = 0.21 TWD**,寫在 `config.js`。這是五個人共用的版本,
