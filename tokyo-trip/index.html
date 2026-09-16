@@ -215,7 +215,7 @@
   .exp .amt{text-align:right; font-family:var(--font-mono); font-variant-numeric:tabular-nums; font-size:15px; font-weight:600; white-space:nowrap;}
   .exp .amt .sub{display:block; font-size:10.5px; font-weight:400; color:var(--muted);}
   .exp .mt{grid-column:1/2; font-size:12px; color:var(--muted); display:flex; gap:6px; flex-wrap:wrap; align-items:center;}
-  .exp .ops{grid-column:2/3; text-align:right;}
+  .exp .ops{grid-column:2/3; display:flex; justify-content:flex-end; gap:6px;}
 
   /* ---- forms ---- */
   .form{display:grid; gap:12px; padding:16px; border:1px dashed var(--line); border-radius:10px; background:var(--surface-2); margin-bottom:16px;}
@@ -286,6 +286,8 @@
   .signin .err{font-size:12.5px; color:var(--neg); line-height:1.5;}
   .signin .ops{display:grid; gap:8px;}
   .signin #si-adminbox{display:grid; gap:14px;}
+  /* 花費那張表欄位多,要寬一點,而且手機上高度會爆,所以讓它自己捲 */
+  .signin.wide{max-width:440px; max-height:calc(100vh - 40px); overflow-y:auto; gap:12px;}
 
   @media (max-width:640px){
     .topbar h1{font-size:19px;}
@@ -495,6 +497,29 @@
   </form>
 </div>
 
+
+<div class="overlay" id="exp-edit-overlay" hidden>
+  <form class="signin wide" id="exp-edit-form">
+    <h2>改這一筆</h2>
+    <div class="grid2">
+      <div class="fld"><label for="xe-date">日期</label><input type="date" id="xe-date" required></div>
+      <div class="fld"><label for="xe-title">項目</label><input type="text" id="xe-title" required></div>
+      <div class="fld"><label for="xe-cat">分類</label><select id="xe-cat"></select></div>
+    </div>
+    <div class="grid2">
+      <div class="fld"><label for="xe-amount">金額</label><input type="number" id="xe-amount" step="1" min="0" required></div>
+      <div class="fld"><label for="xe-cur">幣別</label><select id="xe-cur"><option value="JPY">JPY 日圓</option><option value="TWD">TWD 台幣</option></select></div>
+      <div class="fld"><label for="xe-payer">誰付的</label><select id="xe-payer"></select></div>
+    </div>
+    <div class="fld"><label>誰分攤</label><div class="who" id="xe-who"></div></div>
+    <div class="fld"><label for="xe-note">備註</label><input type="text" id="xe-note" placeholder="可留白"></div>
+    <div class="err" id="xe-err" hidden></div>
+    <div class="ops">
+      <button type="submit" class="btn btn-main">存起來</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="xe-cancel">取消</button>
+    </div>
+  </form>
+</div>
 
 <div class="overlay" id="edit-overlay" hidden>
   <form class="signin" id="edit-form">
@@ -745,6 +770,30 @@
     try { await api("?resource=itinerary&id=" + encodeURIComponent(id), { method: "DELETE" }); }
     catch (err) { state.stops.push(gone); render(); flash("刪不掉:" + err.message); }
   }
+  async function updateExpense(id, patch) {
+    if (!mayEdit()) return;
+    const k = state.expenses.findIndex(x => x.id === id);
+    if (k < 0) return;
+    const before = Object.assign({}, state.expenses[k]);
+    Object.assign(state.expenses[k], patch);
+    sortExpenses(); saveLocal(); render();
+    if (!online) return;
+    try {
+      const cur = state.expenses.find(x => x.id === id);
+      const { row } = await api("?resource=expenses&id=" + encodeURIComponent(id), {
+        method: "PATCH", body: JSON.stringify(expToRow(cur)),
+      });
+      const j = state.expenses.findIndex(x => x.id === id);
+      if (j > -1) state.expenses[j] = expFromRow(row);
+      sortExpenses(); render();
+    } catch (err) {
+      const j = state.expenses.findIndex(x => x.id === id);
+      if (j > -1) state.expenses[j] = before;
+      sortExpenses(); render();
+      flash("改不動:" + err.message);
+    }
+  }
+
   async function updateStop(id, patch) {
     if (!mayEdit()) return;
     const k = state.stops.findIndex(x => x.id === id);
@@ -1095,7 +1144,10 @@
       '<div class="mt"><span>' + payer + "</span><span>·</span><span>" + esc(whoShared) + "</span>" +
       (ps.length ? '<span>·</span><span class="num">每人 ' + twd(v / ps.length) + "</span>" : "") +
       (e.note ? "<span>·</span><span>" + esc(e.note) + "</span>" : "") + "</div>" +
-      (editable() ? '<div class="ops"><button type="button" class="btn btn-ghost btn-sm" data-del-exp="' + e.id + '">刪除</button></div>' : "") + "</div>";
+      (editable() ? '<div class="ops">' +
+        '<button type="button" class="btn btn-ghost btn-sm" data-edit-exp="' + e.id + '">' +
+        '<svg class="i" aria-hidden="true"><use href="#i-pen"></use></svg>改</button>' +
+        '<button type="button" class="btn btn-ghost btn-sm" data-del-exp="' + e.id + '">刪除</button></div>' : "") + "</div>";
   }
 
   /* 共同基金:每人先拿 kitty 元進來,分攤到的錢就從自己那份扣。
@@ -1250,7 +1302,68 @@
   });
   el("exp-list").addEventListener("click", ev => {
     const b = ev.target.closest("[data-del-exp]");
-    if (b) removeExpense(b.dataset.delExp);
+    if (b) { removeExpense(b.dataset.delExp); return; }
+    const p = ev.target.closest("[data-edit-exp]");
+    if (p) openExpEdit(p.dataset.editExp);
+  });
+
+  /* --- 改一筆花費 --- */
+  let editingExp = null;
+  el("xe-cat").innerHTML = CATS.map(c => '<option value="' + c.id + '">' + c.name + "</option>").join("");
+
+  function fillExpPeople(payerId, participants) {
+    el("xe-payer").innerHTML = '<option value="">— 還不確定 —</option>' +
+      MEMBERS.map(m => '<option value="' + m.id + '"' + (m.id === payerId ? " selected" : "") + ">" + esc(nameOf(m.id)) + "</option>").join("");
+    el("xe-who").innerHTML = MEMBERS.map(m =>
+      '<label><input type="checkbox" value="' + m.id + '"' + (participants.includes(m.id) ? " checked" : "") + ">" + esc(nameOf(m.id)) + "</label>").join("");
+  }
+  function showExpError(msg) {
+    const box = el("xe-err");
+    box.textContent = msg;
+    box.hidden = !msg;
+  }
+  function openExpEdit(id) {
+    const e = state.expenses.find(x => x.id === id);
+    if (!e) return;
+    editingExp = id;
+    el("xe-date").value = e.date || "";
+    el("xe-title").value = e.title || "";
+    el("xe-cat").value = e.category || "other";
+    el("xe-amount").value = e.amount || 0;
+    el("xe-cur").value = e.currency === "TWD" ? "TWD" : "JPY";
+    fillExpPeople(e.payerId, (e.participants || []).filter(p => IDS.includes(p)));
+    el("xe-note").value = e.note || "";
+    showExpError("");
+    el("exp-edit-overlay").hidden = false;
+    el("xe-title").focus();
+  }
+  function closeExpEdit() {
+    editingExp = null;
+    showExpError("");
+    el("exp-edit-overlay").hidden = true;
+  }
+  el("xe-cancel").addEventListener("click", closeExpEdit);
+  el("exp-edit-form").addEventListener("submit", ev => {
+    ev.preventDefault();
+    if (!editingExp) return;
+    const title = el("xe-title").value.trim();
+    if (!title) { showExpError("總要寫個名字。"); return; }
+    if (!el("xe-date").value) { showExpError("要有日期。"); return; }
+    const ps = Array.prototype.map.call(el("xe-who").querySelectorAll("input:checked"), i => i.value);
+    if (!ps.length) { showExpError("至少要選一個人分攤。"); return; }
+    const id = editingExp;
+    const patch = {
+      date: el("xe-date").value,
+      title: title,
+      category: el("xe-cat").value,
+      amount: Math.abs(parseFloat(el("xe-amount").value) || 0),
+      currency: el("xe-cur").value,
+      payerId: el("xe-payer").value || null,
+      participants: ps,
+      note: el("xe-note").value.trim(),
+    };
+    closeExpEdit();
+    updateExpense(id, patch);
   });
 
   /* ================= 拖移排序 =================
