@@ -127,7 +127,7 @@ module.exports = async (req, res) => {
 
   /* 讀(GET)開放給所有人,寫(POST/DELETE)一定要通行碼。
      TRIP_KEY 沒設的時候一律擋掉寫入 —— 沒設定不等於不設防。 */
-  const writing = req.method === "POST" || req.method === "DELETE";
+  const writing = req.method === "POST" || req.method === "PATCH" || req.method === "DELETE";
   const hasKey = !!process.env.TRIP_KEY;
   const keyOK = hasKey && req.headers["x-trip-key"] === process.env.TRIP_KEY;
 
@@ -172,6 +172,18 @@ module.exports = async (req, res) => {
       return res.status(200).json({ row: shape.out(page) });
     }
 
+    /* 改既有的一筆(拖移排序改時間會用到) */
+    if (req.method === "PATCH") {
+      const id = req.query && req.query.id;
+      if (!id) return res.status(400).json({ error: "缺少 id" });
+      const body = typeof req.body === "string" ? JSON.parse(req.body || "{}") : (req.body || {});
+      const page = await notion("/pages/" + id, {
+        method: "PATCH",
+        body: JSON.stringify({ properties: shape.in(body) }),
+      });
+      return res.status(200).json({ row: shape.out(page) });
+    }
+
     if (req.method === "DELETE") {
       const id = req.query && req.query.id;
       if (!id) return res.status(400).json({ error: "缺少 id" });
@@ -179,7 +191,7 @@ module.exports = async (req, res) => {
       return res.status(200).json({ ok: true });
     }
 
-    res.setHeader("Allow", "GET, POST, DELETE");
+    res.setHeader("Allow", "GET, POST, PATCH, DELETE");
     return res.status(405).json({ error: "不支援的方法" });
   } catch (e) {
     return res.status(e.status || 500).json({ error: e.message || "伺服器錯誤" });
