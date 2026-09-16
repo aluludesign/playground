@@ -230,6 +230,26 @@
   .form-ops{display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap;}
 
   /* ---- settle ---- */
+  /* ---- 共同基金 ---- */
+  .fund{background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:15px 15px 13px;}
+  .fund-top{display:flex; align-items:baseline; justify-content:space-between; gap:12px; flex-wrap:wrap;}
+  .fund-top .used{font-family:var(--font-sign); font-size:21px; font-weight:700; letter-spacing:.01em;}
+  .fund-top .left{font-size:12.5px; color:var(--muted);}
+  .fund-top .left b{font-family:var(--font-sign); font-size:15px; font-weight:700; color:var(--pos);}
+  .fund-bar{height:8px; border-radius:99px; background:var(--surface-2); border:1px solid var(--line);
+    overflow:hidden; margin:11px 0 3px; display:flex;}
+  .fund-bar i{display:block; height:100%; background:var(--accent); transition:width .3s;}
+  .fund-bar.over i{background:var(--neg);}
+  .fund-note{font-size:11px; color:var(--muted);}
+  .fund-people{margin-top:14px; padding-top:13px; border-top:1px solid var(--line-soft); display:grid; gap:9px;}
+  .fp{display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:10px;}
+  .fp .nm{display:flex; align-items:center; gap:6px; font-size:13px; min-width:52px;}
+  .fp .track{height:6px; border-radius:99px; background:var(--surface-2); overflow:hidden;}
+  .fp .track i{display:block; height:100%; background:var(--fc,var(--accent));}
+  .fp .amt{font-family:var(--font-mono); font-size:11.5px; color:var(--muted); letter-spacing:.02em; text-align:right;}
+  .fp .amt b{color:var(--ink); font-weight:600;}
+  .fp.over .amt b{color:var(--neg);}
+
   .people{display:grid; grid-template-columns:repeat(auto-fit,minmax(168px,1fr)); gap:10px;}
   .person{background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:13px 14px;}
   .person .nm{display:flex; align-items:center; gap:7px; font-family:var(--font-sign); font-size:15px; font-weight:500; margin-bottom:9px;}
@@ -428,6 +448,10 @@
     <section class="panel" id="panel-split" role="tabpanel" aria-labelledby="tab-split" hidden>
       <div id="split-warn"></div>
       <div class="sec">
+        <div class="sec-head"><h2>共同基金</h2><span class="hint" id="fund-sub"></span></div>
+        <div class="fund" id="fund"></div>
+      </div>
+      <div class="sec">
         <div class="sec-head"><h2>每個人的帳</h2><button class="btn btn-sm btn-ghost" id="rename-btn" type="button">改名字</button></div>
         <div class="people" id="people"></div>
       </div>
@@ -579,7 +603,8 @@
   };
 
   /* ================= 狀態 ================= */
-  const state = { tab: "plan", day: "2026-10-03", rate: (window.TRIP_CONFIG || {}).rate || SEED.rate, names: {}, expenses: [], stops: [] };
+  const state = { tab: "plan", day: "2026-10-03", rate: (window.TRIP_CONFIG || {}).rate || SEED.rate,
+    kitty: Number((window.TRIP_CONFIG || {}).kitty) || 30000, names: {}, expenses: [], stops: [] };
   const nameOf = id => state.names[id] || (MEMBERS.find(m => m.id === id) || {}).def || id;
   const colorOf = id => (MEMBERS.find(m => m.id === id) || {}).color || "#7E8796";
 
@@ -1025,9 +1050,13 @@
   function renderCost() {
     const total = state.expenses.reduce((s, e) => s + toTWD(e), 0);
     const tripTotal = state.expenses.filter(e => e.date >= "2026-10-03").reduce((s, e) => s + toTWD(e), 0);
+    /* 記完一筆最想馬上知道的是基金還剩多少,所以擺在第一格 */
+    const pot = state.kitty * IDS.length;
+    const used = IDS.reduce((s, id) => s + ledger().book[id].owed, 0);
+    const left = pot - used;
     el("cost-stats").innerHTML = [
+      tile("基金剩餘", twd(Math.abs(left)), left < 0 ? "已經超支" : "每人約 " + twd(left / IDS.length)),
       tile("總花費", twd(total), state.expenses.length + " 筆紀錄"),
-      tile("每人平均", twd(total / 5), "5 人均分"),
       tile("行前預訂", twd(total - tripTotal), "機票、住宿等"),
       tile("旅途中", twd(tripTotal), "10/03 起"),
     ].join("");
@@ -1069,6 +1098,40 @@
       (editable() ? '<div class="ops"><button type="button" class="btn btn-ghost btn-sm" data-del-exp="' + e.id + '">刪除</button></div>' : "") + "</div>";
   }
 
+  /* 共同基金:每人先拿 kitty 元進來,分攤到的錢就從自己那份扣。
+     這裡看的是「花掉多少」,不是「誰先墊的」 —— 墊款是下面「每個人的帳」在管。 */
+  function renderFund() {
+    const per = state.kitty;
+    const pot = per * IDS.length;
+    const res = ledger();
+    const used = IDS.reduce((s, id) => s + res.book[id].owed, 0);
+    const left = pot - used;
+    const pct = pot > 0 ? Math.min(100, used / pot * 100) : 0;
+
+    el("fund-sub").textContent = "每人 " + twd(per) + " · 共 " + twd(pot);
+
+    /* 行前的花費(機票之類)如果也記進來了,要講出來,不然這個數字會被誤讀 */
+    const pre = state.expenses.filter(e => e.date < "2026-10-03").reduce((s, e) => s + toTWD(e), 0);
+
+    const rows = MEMBERS.map(m => {
+      const u = res.book[m.id].owed;
+      const rest = per - u;
+      const p = per > 0 ? Math.min(100, u / per * 100) : 0;
+      return '<div class="fp' + (rest < 0 ? " over" : "") + '" style="--fc:' + m.color + '">' +
+        '<span class="nm"><span class="dot" style="background:' + m.color + '"></span>' + esc(nameOf(m.id)) + "</span>" +
+        '<span class="track"><i style="width:' + p + '%"></i></span>' +
+        '<span class="amt">用 <b>' + twd(u) + "</b> · " + (rest < 0 ? "超支 " : "剩 ") + twd(Math.abs(rest)) + "</span></div>";
+    }).join("");
+
+    el("fund").innerHTML =
+      '<div class="fund-top"><span class="used">已用 ' + twd(used) + "</span>" +
+      '<span class="left">' + (left < 0 ? "超出 <b style=\"color:var(--neg)\">" + twd(-left) + "</b>" : "還剩 <b>" + twd(left) + "</b>") + "</span></div>" +
+      '<div class="fund-bar' + (left < 0 ? " over" : "") + '"><i style="width:' + pct + '%"></i></div>' +
+      '<div class="fund-note">' + Math.round(pct) + "% 用掉了" +
+      (pre > 0 ? " · 其中 " + twd(pre) + " 是行前記的" : "") + "</div>" +
+      '<div class="fund-people">' + rows + "</div>";
+  }
+
   function renderSplit() {
     const res = ledger();
     el("split-warn").innerHTML = res.unassigned
@@ -1100,7 +1163,7 @@
       : "○ 瀏覽器不讓存檔,離開後會消失";
   }
 
-  function render() { renderSeats(); renderDays(); renderRoute(); renderCost(); renderSplit(); renderSync(); }
+  function render() { renderSeats(); renderDays(); renderRoute(); renderCost(); renderFund(); renderSplit(); renderSync(); }
 
   /* ================= 互動 ================= */
   function switchTab(name) {
