@@ -1064,7 +1064,8 @@
       : '<button type="button" class="btn btn-sm" id="cloud-in">連上 Notion</button>';
     const sync = el("cloud-sync"), out = el("cloud-out"), inn = el("cloud-in"), adm = el("cloud-admin");
     if (sync) sync.addEventListener("click", () => withSpinner(sync, async () => {
-      await pull();
+      /* 天氣抓不到不擋 Notion 那邊 —— refreshWeather 自己吞掉錯誤,不會讓這裡失敗 */
+      await Promise.all([pull(), refreshWeather()]);
       render();
       flash("已更新");
     }));
@@ -1233,11 +1234,12 @@
   const wxKey = (lat, lon) => lat.toFixed(2) + "," + lon.toFixed(2);
   const saveWx = () => { try { localStorage.setItem(WXLS, JSON.stringify(wxCache)); } catch (_) {} };
 
-  async function fetchWx(lat, lon) {
+  async function fetchWx(lat, lon, force) {
     const k = wxKey(lat, lon);
     const c = wxCache[k];
-    /* 三小時內抓過就不再打。切分頁、重整都不該變成一次請求。 */
-    if (c && Date.now() - c.at < WX_TTL) return;
+    /* 三小時內抓過就不再打。切分頁、重整都不該變成一次請求。
+       force 是「重新整理」按下去的時候用的 —— 那是明確要最新的。 */
+    if (!force && c && Date.now() - c.at < WX_TTL) return;
     try {
       const res = await fetch("https://api.open-meteo.com/v1/forecast?latitude=" + lat + "&longitude=" + lon +
         "&daily=precipitation_probability_max,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=16");
@@ -1306,6 +1308,19 @@
   async function loadWeather() {
     const rev = wxRev;
     await fetchWx(TOKYO.lat, TOKYO.lon);
+    if (wxRev !== rev) { renderDays(); renderRoute(); }
+  }
+
+  /* 狀態列那顆「重新整理」按下去,天氣跟著一起重抓 —— 不然按了以為全部更新,
+     其實天氣還是三小時前那份。查過的座標全部重抓,一趟不會超過幾個。 */
+  async function refreshWeather() {
+    const rev = wxRev;
+    const keys = Object.keys(wxCache);
+    if (!keys.length) keys.push(wxKey(TOKYO.lat, TOKYO.lon));
+    for (const k of keys) {
+      const p = k.split(",");
+      await fetchWx(Number(p[0]), Number(p[1]), true);
+    }
     if (wxRev !== rev) { renderDays(); renderRoute(); }
   }
 
