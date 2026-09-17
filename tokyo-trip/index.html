@@ -177,6 +177,23 @@
   .wishbox > *:not(summary){margin:0 15px;}
   .wishbox > *:last-child{margin-bottom:15px;}
   .wish-intro{font-size:12px; color:var(--muted); line-height:1.6; margin-bottom:12px;}
+
+  /* ---- map ---- */
+  /* 圖磚是絕對定位排出來的,容器要蓋掉溢出的部分 */
+  .map{position:relative; height:260px; overflow:hidden; border-radius:9px;
+    border:1px solid var(--line); background:var(--surface-2);}
+  .map .tile{position:absolute; width:256px; height:256px; pointer-events:none; user-select:none;}
+  /* 編號跟時間軸的順序一樣,才看得出一天怎麼走 */
+  .map .pin{position:absolute; transform:translate(-50%,-50%); z-index:2;
+    min-width:21px; height:21px; padding:0 5px; border-radius:11px; border:1.5px solid #fff;
+    background:var(--dc,var(--ink)); color:#fff; box-shadow:0 1px 4px rgba(0,0,0,.35);
+    font-family:var(--font-mono); font-size:11px; font-weight:700; text-decoration:none;
+    display:flex; align-items:center; justify-content:center;}
+  .map .attr{position:absolute; right:0; bottom:0; z-index:3; font-size:9px; line-height:1.5;
+    padding:0 4px; background:rgba(255,255,255,.78); color:#333; border-radius:4px 0 0 0;}
+  .map .attr a{color:inherit;}
+  .map-note{font-size:11.5px; color:var(--muted); line-height:1.6; margin-top:8px;}
+  .map-note a{color:var(--ink-2);}
   #wish-list{display:grid; gap:7px; margin-bottom:12px;}
   .wish{display:grid; grid-template-columns:1fr auto; align-items:center; gap:3px 10px;
     border:1px solid var(--line); border-radius:9px; padding:10px 12px; background:var(--paper);}
@@ -463,6 +480,17 @@
         </div>
       </form>
       <div class="route" id="route"></div>
+
+      <details class="wishbox" id="mapbox">
+        <summary class="wish-head">
+          <svg class="i" aria-hidden="true"><use href="#i-route"></use></svg>
+          <span>這天的地圖</span>
+          <span class="wish-n" id="map-n"></span>
+          <svg class="i wish-caret" aria-hidden="true"><use href="#i-chevron-down"></use></svg>
+        </summary>
+        <div class="map" id="map"></div>
+        <div class="map-note" id="map-note"></div>
+      </details>
 
       <details class="wishbox" id="wishbox">
         <summary class="wish-head">
@@ -1350,6 +1378,156 @@
     return wxLine(hit ? { lat: hit.lat, lon: hit.lon } : geoCache[place], date);
   }
 
+  /* ================= 地圖 ================= */
+  /* 目的只是看各點的相對位置好排行程,不是導航 —— 所以不引地圖函式庫,
+     直接排 OpenStreetMap 的圖磚、投影自己算。要真的帶路就點編號跳 Google 地圖。
+     收起來時什麼都不抓,展開才載入。
+
+     座標問 Nominatim(OSM 的地名查詢,免費、不用金鑰)。它認繁體:「淺草寺」
+     「豐洲市場」「阿美橫町」都查得到,比天氣用的那個準很多。但也會亂給 ——
+     「晴空塔」會給雲南的一個村子 —— 所以回來的座標一樣要落在關東範圍才算數。 */
+  const PINLS = "tokyo5-pin";
+  /* 大東京。bounded=1 是硬界線,不是加權 —— 沒有這條,「TPE 桃園 T1」會查到
+     靜岡縣一個也叫桃園的地方,「晴空塔」會查到埼玉縣的青空広場,標出去的點
+     看起來很正常但整張圖的比例就毀了。出東京的地方走下面那份對照表。 */
+  const PIN_VIEW = "139.0,36.25,140.35,35.15";
+  const TILE = 256;
+
+  let pins = {};
+  try { pins = JSON.parse(localStorage.getItem(PINLS) || "{}"); } catch (_) {}
+
+  const gmap = p => "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(p);
+  const projX = (lo, z) => (lo + 180) / 360 * Math.pow(2, z);
+  const projY = (la, z) => {
+    const r = la * Math.PI / 180;
+    return (1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * Math.pow(2, z);
+  };
+
+  /* Nominatim 規定每秒最多一次,所以排隊送,不要一次噴出去 */
+  let pinQ = Promise.resolve();
+  function queued(job) {
+    const run = pinQ.then(job, job);
+    const wait = () => new Promise(r => setTimeout(r, 1100));
+    pinQ = run.then(wait, wait);
+    return run;
+  }
+
+  async function pinFor(place) {
+    if (place in pins) return pins[place];
+
+    /* 出東京的地方用天氣那份人工確認過的表,線上查詢對它們最不準 */
+    const up = place.toUpperCase();
+    const known = OUTSIDE.find(o => o.keys.some(k => up.indexOf(k.toUpperCase()) >= 0));
+    if (known) {
+      pins[place] = { la: known.lat, lo: known.lon };
+      try { localStorage.setItem(PINLS, JSON.stringify(pins)); } catch (_) {}
+      return pins[place];
+    }
+
+    /* 整串查不到,就去掉前面那截再試一次 —— 「銀座線 淺草站」要的是「淺草站」,
+       「teamLab 澀谷 SKY」要的是「澀谷 SKY」。只拆這一層:再拆下去會拿
+       「小時」之類的碎片去查,然後查到某個真的叫那個名字的地方。 */
+    const parts = place.replace(/[·・]/g, " ").split(/\s+/).filter(Boolean);
+    const tries = parts.length > 1 ? [place, parts.slice(1).join(" ")] : [place];
+    let found = null;
+    for (const t of tries) {
+      try {
+        const res = await queued(() => fetch("https://nominatim.openstreetmap.org/search?format=json" +
+          "&limit=1&countrycodes=jp&accept-language=zh-TW&bounded=1&viewbox=" + PIN_VIEW +
+          "&q=" + encodeURIComponent(t)).then(r => r.json()));
+        if (res && res[0]) { found = { la: +res[0].lat, lo: +res[0].lon }; break; }
+      } catch (_) { break; }
+    }
+    pins[place] = found;   /* 查不到也記下來,不要每次重畫都再問一次 */
+    try { localStorage.setItem(PINLS, JSON.stringify(pins)); } catch (_) {}
+    return found;
+  }
+
+  function drawMap(pts) {
+    const box = el("map");
+    const w = box.clientWidth, h = box.clientHeight;
+    if (!w || !h) return;
+    if (!pts.length) { box.innerHTML = ""; return; }
+
+    /* 塞得下全部點的最大縮放。只有一個點時直接給街區級。 */
+    let z = 16;
+    if (pts.length > 1) {
+      for (; z > 7; z--) {
+        const xs = pts.map(p => projX(p.lo, z)), ys = pts.map(p => projY(p.la, z));
+        if ((Math.max.apply(null, xs) - Math.min.apply(null, xs)) * TILE < w - 70 &&
+            (Math.max.apply(null, ys) - Math.min.apply(null, ys)) * TILE < h - 70) break;
+      }
+    }
+    const xs = pts.map(p => projX(p.lo, z)), ys = pts.map(p => projY(p.la, z));
+    const cx = (Math.max.apply(null, xs) + Math.min.apply(null, xs)) / 2;
+    const cy = (Math.max.apply(null, ys) + Math.min.apply(null, ys)) / 2;
+    const left = w / 2 - cx * TILE, top = h / 2 - cy * TILE;
+
+    const n = Math.pow(2, z);
+    let html = "";
+    for (let tx = Math.floor(cx - w / 2 / TILE); tx <= Math.floor(cx + w / 2 / TILE); tx++) {
+      for (let ty = Math.floor(cy - h / 2 / TILE); ty <= Math.floor(cy + h / 2 / TILE); ty++) {
+        if (ty < 0 || ty >= n) continue;
+        html += '<img class="tile" alt="" loading="lazy" src="https://tile.openstreetmap.org/' +
+          z + "/" + (((tx % n) + n) % n) + "/" + ty + '.png" style="left:' +
+          Math.round(left + tx * TILE) + "px; top:" + Math.round(top + ty * TILE) + 'px">';
+      }
+    }
+    pts.forEach(p => {
+      html += '<a class="pin" href="' + gmap(p.place) + '" target="_blank" rel="noopener" style="left:' +
+        Math.round(left + projX(p.lo, z) * TILE) + "px; top:" + Math.round(top + projY(p.la, z) * TILE) +
+        'px" title="' + esc(p.n + ". " + p.title + " · " + p.place) + '">' + p.n + "</a>";
+    });
+    /* OSM 的圖磚要求標示出處 */
+    html += '<span class="attr">© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a></span>';
+    box.innerHTML = html;
+  }
+
+  /* 展開時重畫,換日子重畫,行程被加／改／刪也要重畫 —— 所以比對的是
+     「哪一天 + 那天有哪些地點」,不是只看日期。管理員加完一筆,地圖就跟著長出來。 */
+  let mapKey = null;
+  async function loadMap(force) {
+    const open = el("mapbox").open;
+    el("map-n").textContent = "";
+    if (!open) { mapKey = null; return; }
+    const day = state.day;
+
+    const list = stopsOn(day).concat(online ? [] : (ANCHORS[day] || []))
+      .filter(s => s.place)
+      .sort((a, b) => ((a.day || day) + " " + (a.time || "")).localeCompare((b.day || day) + " " + (b.time || "")));
+
+    const key = day + "|" + list.map(s => s.place).join("|");
+    if (!force && mapKey === key) return;
+    mapKey = key;
+
+    const draw = () => {
+      if (mapKey !== key) return;   /* 中途換日子或又改了行程,就不要畫舊的 */
+      const pts = [];
+      list.forEach((s, i) => {
+        const at = pins[s.place];
+        /* 日本境內才標。出發日的桃園機場也查得到,但一張圖同時要裝下台灣和
+           成田,就得縮到看見鹿兒島,兩個點都擠到邊上 —— 那張圖排行程用不到。 */
+        if (at && at.la > 30 && at.la < 46 && at.lo > 128 && at.lo < 146) {
+          pts.push({ la: at.la, lo: at.lo, place: s.place, title: s.title, n: i + 1 });
+        }
+      });
+      drawMap(pts);
+      const miss = list.length - pts.length;
+      el("map-n").textContent = list.length ? pts.length + "／" + list.length + " 個" : "";
+      el("map-note").innerHTML = !list.length
+        ? "這天的行程還沒填地點。填了才標得出來。"
+        : "數字是當天的順序,點一下用 Google 地圖打開。" +
+          (miss ? " 有 " + miss + " 個地點沒標上去(查不到,或不在日本境內)。" : "");
+    };
+
+    draw();
+    for (const s of list) {
+      if (s.place in pins) continue;
+      await pinFor(s.place);
+      draw();
+    }
+  }
+
   function renderDays() {
     const t = todayISO();
     el("days").innerHTML = DAYS.map(d => {
@@ -1393,6 +1571,8 @@
     el("day-title").textContent = "DAY " + d.n + " · " + state.day.slice(5).replace("-", "/") + " 週" + d.w;
     const route = el("route");
     route.style.setProperty("--dc", d.color);
+    el("mapbox").style.setProperty("--dc", d.color);
+    loadMap();
     if (!list.length) {
       route.innerHTML = '<div class="empty">這天還沒排。' + (editable() ? "按右上角「加行程」開始。" : "") + "</div>";
       return;
@@ -2182,6 +2362,9 @@
 
   renderCountdown();
   setInterval(renderCountdown, 60000);
+  /* 收著就完全不動,展開才去查座標、抓圖磚 */
+  el("mapbox").addEventListener("toggle", () => loadMap(true));
+
   state.day = initialDay();
   switchTab("plan");
   loadWeather();   /* 跟 Notion 無關,離線模式也照抓 */
