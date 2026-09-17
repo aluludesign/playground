@@ -201,23 +201,18 @@
   .wish .wt{font-family:var(--font-sign); font-size:14px; font-weight:500;}
   .wish .wm{grid-column:1/2; font-size:11.5px; color:var(--muted); display:flex; flex-wrap:wrap; gap:4px 7px;}
   .wish .wm .by{color:var(--wc,var(--muted));}
-  .wish .vote{grid-row:1/3; grid-column:2/3; display:flex; align-items:center; gap:5px; align-self:center;
+  .wish .wops{grid-row:1/3; grid-column:2/3; align-self:center; display:flex; align-items:center; gap:6px;}
+  .wish .vote{display:flex; align-items:center; gap:5px;
     border:1px solid var(--line); border-radius:99px; padding:5px 11px; background:var(--surface);
     font-family:var(--font-mono); font-size:12px; cursor:pointer; color:var(--ink-2);}
   .wish .vote:hover{background:var(--surface-2);}
   .wish .vote.on{border-color:var(--accent); color:var(--accent); background:var(--accent-soft);}
   .wish .vote .i{font-size:11px; margin:0;}
+  .wish .wadd{border:1px solid var(--accent); border-radius:99px; padding:5px 12px; cursor:pointer;
+    background:var(--accent-soft); color:var(--accent);
+    font-family:var(--font-sign); font-size:12px; font-weight:600; white-space:nowrap;}
+  .wish .wadd:hover{background:var(--accent); color:#fff;}
   .wish .wdel{background:none; border:0; color:var(--muted); cursor:pointer; font-size:11px; padding:2px 4px;}
-  /* 管理員拖進行程時,願望也長得像一張卡片 */
-  #wish-list.can-sort .wish{cursor:grab; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none;}
-  /* 拿起來的願望卡:浮在最上層,跟著手指走。pointer-events 關掉才不會擋住底下的命中判斷 */
-  .wish.lifted{position:relative; z-index:60; background:var(--surface);
-    box-shadow:0 12px 30px rgba(0,0,0,.24); pointer-events:none; will-change:transform;
-    transform:scale(1.02); transition:box-shadow .15s;}
-  /* 會插在這裡 */
-  .dropline{height:2px; background:var(--accent); border-radius:2px; margin:5px 0; position:relative;}
-  .dropline::before{content:""; position:absolute; left:-4px; top:-3px; width:8px; height:8px;
-    border-radius:50%; background:var(--accent);}
   .wish-hint{font-size:11px; color:var(--muted); margin-bottom:10px;}
   /* 無框、置中、主色文字 —— 它是邀請,不是動作按鈕 */
   #add-wish-btn{display:flex; align-items:center; justify-content:center; gap:0;
@@ -1621,7 +1616,6 @@
     const me = myName();
 
     el("wish-n").textContent = list.length ? list.length + " 個" : "";
-    el("wish-list").classList.toggle("can-sort", editable() && list.length > 0);
     el("add-wish-btn").hidden = false;
 
     if (!list.length) {
@@ -1629,7 +1623,7 @@
       return;
     }
     el("wish-list").innerHTML =
-      (editable() ? '<div class="wish-hint">長按一個願望,拖到上面的時間軸就排進當天行程。</div>' : "") +
+      (editable() ? '<div class="wish-hint">按「加入」就排進你現在看的那一天,會先問你幾點。</div>' : "") +
       list.map(w => {
         const votes = w.votes || [];
         const voted = me && votes.indexOf(me) > -1;
@@ -1647,9 +1641,11 @@
           (names.length ? "<span>" + esc(names.join("、")) + " +1</span>" : "") +
           (editable() ? '<button type="button" class="wdel" data-del-wish="' + esc(w.id || "") + '">刪掉</button>' : "") +
           "</div>" +
+          '<div class="wops">' +
           '<button type="button" class="vote' + (voted ? " on" : "") + '" data-vote="' + esc(w.id || "") + '">' +
           '<svg class="i" aria-hidden="true"><use href="#i-thumbs-up"></use></svg>' + votes.length + "</button>" +
-          "</div>";
+          (editable() ? '<button type="button" class="wadd" data-add-wish="' + esc(w.id || "") + '">加入</button>' : "") +
+          "</div></div>";
       }).join("");
   }
 
@@ -1949,10 +1945,6 @@
   function neighboursOf(rows, i) {
     return { prev: rowAt(rows, i - 1), next: rowAt(rows, i + 1) };
   }
-  /* 要插進 rows 的第 i 格(還不在 rows 裡),所以鄰居是 i-1 和 i */
-  function neighboursForInsert(rows, i) {
-    return { prev: rowAt(rows, i - 1), next: rowAt(rows, i) };
-  }
 
   /* 想塞進 prev 和 next 中間的話,幾點比較合理 */
   function suggestSlot(prev, next) {
@@ -1965,16 +1957,17 @@
 
   let pending = null;   /* 等著改時間的那一筆 */
 
-  /* apply(時間字串) 決定存下去要做什麼 —— 拖行程是改時間,拖願望是排進行程 */
-  function askTime(item, prev, next, apply) {
+  /* apply(時間字串) 決定存下去要做什麼 —— 拖行程是改時間,按「加入」是排進行程。
+     why 給得出來就用它:那種情況不是「插在某兩筆中間」,預設那句話會說錯。 */
+  function askTime(item, prev, next, apply, why) {
     const s = suggestSlot(prev, next);
     pending = { item: item, prev: prev, next: next, apply: apply };
     const span = [];
     if (prev) span.push("「" + prev.title + "」" + (prev.time || "—") + " 之後");
     if (next) span.push("「" + next.title + "」" + (next.time || "—") + " 之前");
-    el("tf-why").textContent = "「" + item.title + "」" +
+    el("tf-why").textContent = why || ("「" + item.title + "」" +
       (item.time ? "原本是 " + item.time + "," : "") +
-      (span.length ? "放到這個位置要排在 " + span.join("、") + "。" : "這天還沒有別的行程,幾點都行。");
+      (span.length ? "放到這個位置要排在 " + span.join("、") + "。" : "這天還沒有別的行程,幾點都行。"));
     el("tf-time").value = s == null ? (item.time || "12:00") : toHHMM(((s % 1440) + 1440) % 1440);
     showTimeError("");
     el("time-overlay").hidden = false;
@@ -2091,99 +2084,6 @@
     }, { passive: false });
   })();
 
-  /* 管理員把願望拖進時間軸 —— 跟行程排序同一套手勢,只是終點在另一個容器 */
-  (function initWishDrag() {
-    const box = el("wish-list");
-    const route = el("route");
-    const HOLD = 380, SLOP = 10;
-    let armed = null, row = null, from = null, line = null;
-
-    function disarm() { if (armed) { clearTimeout(armed.timer); armed = null; } }
-    function lift() {
-      if (!armed) return;
-      row = armed.row;
-      from = { x: armed.x, y: armed.y };
-      row.classList.add("lifted");
-      try { armed.row.setPointerCapture(armed.pointerId); } catch (_) {}
-      if (navigator.vibrate) { try { navigator.vibrate(12); } catch (_) {} }
-      armed = null;
-    }
-    /* 卡片跟著手指走 */
-    function follow(ev) {
-      if (!row || !from) return;
-      row.style.transform = "translate(" + (ev.clientX - from.x) + "px," + (ev.clientY - from.y) + "px) scale(1.02)";
-    }
-    /* 時間軸上畫一條線,標出放開會插在哪 */
-    function mark(spot) {
-      if (!spot) { if (line) { line.remove(); line = null; } return; }
-      if (!line) { line = document.createElement("div"); line.className = "dropline"; }
-      const at = spot.rows[spot.idx];
-      if (at) route.insertBefore(line, at);
-      else route.appendChild(line);
-    }
-    function clear() {
-      if (row) { row.classList.remove("lifted"); row.style.transform = ""; }
-      route.classList.remove("dropzone");
-      mark(null);
-      row = null; from = null;
-    }
-    /* 指標落在時間軸上嗎;是的話該插在第幾格 */
-    function hit(y, x) {
-      /* 量之前先把指示線拿掉 —— 它會把下面的格子往下推,量到的索引就會來回跳 */
-      if (line && line.parentNode) line.remove();
-      const r = route.getBoundingClientRect();
-      const pad = 40;   /* 空的時候那塊很矮,放寬一點才好放得進去 */
-      if (x < r.left - pad || x > r.right + pad || y < r.top - pad || y > r.bottom + pad) return null;
-      const rows = Array.prototype.slice.call(route.querySelectorAll(".stop"));
-      let i = rows.length;
-      rows.some((el2, k) => {
-        const b = el2.getBoundingClientRect();
-        if (y < b.top + b.height / 2) { i = k; return true; }
-        return false;
-      });
-      return { rows: rows, idx: i };
-    }
-
-    box.addEventListener("pointerdown", ev => {
-      if (!editable() || row) return;
-      if (ev.target.closest("button")) return;
-      const r = ev.target.closest(".wish");
-      if (!r || !r.dataset.wish) return;
-      armed = { row: r, pointerId: ev.pointerId, x: ev.clientX, y: ev.clientY, timer: 0 };
-      armed.timer = setTimeout(lift, HOLD);
-    });
-    box.addEventListener("pointermove", ev => {
-      if (armed) {
-        if (Math.abs(ev.clientY - armed.y) > SLOP || Math.abs(ev.clientX - armed.x) > SLOP) disarm();
-        return;
-      }
-      if (!row) return;
-      ev.preventDefault();
-      follow(ev);
-      const spot = hit(ev.clientY, ev.clientX);
-      route.classList.toggle("dropzone", !!spot);
-      mark(spot);
-    });
-    box.addEventListener("touchmove", ev => { if (row) ev.preventDefault(); }, { passive: false });
-
-    function drop(ev) {
-      disarm();
-      if (!row) return;
-      const id = row.dataset.wish;
-      const spot = hit(ev.clientY, ev.clientX);
-      clear();
-      if (!spot) { renderWishes(); return; }        /* 沒放在時間軸上,當作沒事 */
-      const w = state.wishes.find(x => x.id === id);
-      if (!w) { renderWishes(); return; }
-      const nb = neighboursForInsert(spot.rows, spot.idx);
-      askTime({ id: w.id, title: w.title, time: "", day: state.day }, nb.prev, nb.next,
-        t => promoteWish(w.id, state.day, t));
-    }
-    box.addEventListener("pointerup", drop);
-    box.addEventListener("pointercancel", () => { disarm(); clear(); renderWishes(); });
-    window.addEventListener("scroll", disarm, true);
-  })();
-
   /* --- 改一項行程的內容 --- */
   let editing = null;
   el("route").addEventListener("click", ev => {
@@ -2263,9 +2163,27 @@
   el("wish-list").addEventListener("click", ev => {
     const v = ev.target.closest("[data-vote]");
     if (v) { toggleVote(v.dataset.vote); return; }
+    const a = ev.target.closest("[data-add-wish]");
+    if (a) { addWishToDay(a.dataset.addWish); return; }
     const d = ev.target.closest("[data-del-wish]");
     if (d) removeWish(d.dataset.delWish);
   });
+
+  /* 「加入」→ 排進現在看的那一天。不綁在某兩筆行程中間,所以不設時間上下限,
+     幾點都收 —— 時間軸本來就照時間排,晚了早了都會自己歸位。 */
+  function addWishToDay(id) {
+    if (!mayEdit()) return;
+    const w = state.wishes.find(x => x.id === id);
+    if (!w) return;
+    const d = DAYS.find(x => x.date === state.day);
+    const last = stopsOn(state.day).slice().sort((a, b) =>
+      (a.time || "").localeCompare(b.time || "")).pop();
+    const suggest = last && last.time ? toHHMM(Math.min(1439, toMin(last.time) + 30)) : "12:00";
+    askTime({ id: w.id, title: w.title, time: suggest, day: state.day }, null, null,
+      t => promoteWish(w.id, state.day, t),
+      "「" + w.title + "」要排進 DAY " + (d ? d.n : "?") + " · " +
+      state.day.slice(5).replace("-", "/") + ",幾點?");
+  }
 
   /* --- 改名字 --- */
   const renameForm = document.createElement("form");
