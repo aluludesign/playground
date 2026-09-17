@@ -144,6 +144,9 @@
   .day .dn{font-family:var(--font-mono); font-size:10px; letter-spacing:.12em; opacity:.8;}
   .day .dd{font-family:var(--font-sign); font-size:15px; font-weight:700; letter-spacing:.02em;}
   .day .dw{font-size:10.5px; opacity:.75;}
+  /* 天氣只在抓得到預報時才長出來,抓不到就整行不存在,不留佔位的破折號 */
+  .wx{font-size:10.5px; opacity:.85; white-space:nowrap; letter-spacing:.02em;}
+  .stop .b .pl .wx{margin-left:6px;}
   /* 過去的日子退成灰的,但照樣點得進去 */
   .day.past{border-left-color:var(--line); background:var(--surface-2); color:var(--muted);}
   .day.past:hover{background:var(--surface);}
@@ -1185,6 +1188,153 @@
       : "";
   }
 
+  /* ================= 天氣 ================= */
+  /* Open-Meteo:免費、不用金鑰、瀏覽器直接打得到,所以不必經過 api/notion.js。
+     只取下雨機率和氣溫兩項。Day 的方形 tab 一律顯示東京都;行程列只有
+     離開東京都的地點才顯示 —— 都內的數字跟 tab 上一模一樣,每列重印一次
+     只是噪音。
+
+     預報只到今天之後 16 天。出發前太早看,行程那幾天還沒有資料,那幾格就
+     不顯示 —— 寧可空白,也不要拿鄰近日期的數字混充。 */
+  const TOKYO = { lat: 35.6762, lon: 139.6503 };
+  const WXLS = "tokyo5-wx";     /* 座標 → 每日預報 */
+  const GEOLS = "tokyo5-geo";   /* 地點字串 → 座標(查不到就記 null,不再問第二次) */
+  const WX_TTL = 3 * 3600e3;
+
+  /* 東京都以外、當天來回得了的地方。
+     線上地名查詢對日文地名很不可靠 —— 實測「日光」給熊本縣的日光、「横浜」給
+     青森縣的横浜、「箱根」「輕井澤」直接查無。拿那種座標抓回來的天氣看起來
+     很正常,其實是九百公里外的數字,比空白還糟。所以常去的先寫死。
+     繁體和日文漢字都收:在 Notion 打的是繁體,查詢服務只認日文漢字。 */
+  const OUTSIDE = [
+    { keys: ["箱根"],                   lat: 35.232, lon: 139.107 },
+    { keys: ["日光"],                   lat: 36.720, lon: 139.698 },
+    { keys: ["鎌倉", "鐮倉"],            lat: 35.319, lon: 139.547 },
+    { keys: ["江之島", "江ノ島", "江島"],  lat: 35.300, lon: 139.481 },
+    { keys: ["橫濱", "横浜", "橫浜"],     lat: 35.444, lon: 139.638 },
+    { keys: ["川越"],                   lat: 35.925, lon: 139.486 },
+    { keys: ["輕井澤", "軽井沢"],         lat: 36.342, lon: 138.629 },
+    { keys: ["河口湖", "富士"],           lat: 35.517, lon: 138.753 },
+    { keys: ["熱海"],                   lat: 35.096, lon: 139.072 },
+    { keys: ["草津"],                   lat: 36.620, lon: 138.597 },
+    { keys: ["迪士尼", "舞濱", "舞浜"],    lat: 35.633, lon: 139.880 },
+    { keys: ["成田", "NRT"],             lat: 35.772, lon: 140.393 },
+    { keys: ["桃園", "TPE"],             lat: 25.080, lon: 121.234 },
+  ];
+
+  let wxCache = {};
+  let geoCache = {};
+  try { wxCache = JSON.parse(localStorage.getItem(WXLS) || "{}"); } catch (_) {}
+  try { geoCache = JSON.parse(localStorage.getItem(GEOLS) || "{}"); } catch (_) {}
+  /* 每寫一次快取就 +1。抓天氣和查地點是同時在跑的,共用一個 true/false
+     旗標會互相蓋掉 —— 比對版本號才不會漏掉該重畫的那次。 */
+  let wxRev = 0;
+
+  const wxKey = (lat, lon) => lat.toFixed(2) + "," + lon.toFixed(2);
+  const saveWx = () => { try { localStorage.setItem(WXLS, JSON.stringify(wxCache)); } catch (_) {} };
+
+  async function fetchWx(lat, lon) {
+    const k = wxKey(lat, lon);
+    const c = wxCache[k];
+    /* 三小時內抓過就不再打。切分頁、重整都不該變成一次請求。 */
+    if (c && Date.now() - c.at < WX_TTL) return;
+    try {
+      const res = await fetch("https://api.open-meteo.com/v1/forecast?latitude=" + lat + "&longitude=" + lon +
+        "&daily=precipitation_probability_max,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=16");
+      const d = (await res.json()).daily;
+      if (!d || !d.time) return;
+      const days = {};
+      d.time.forEach((date, i) => {
+        const pop = d.precipitation_probability_max[i];
+        const hi = d.temperature_2m_max[i];
+        const lo = d.temperature_2m_min[i];
+        if (pop == null && hi == null) return;   /* 超出預報範圍的那幾天不要記 */
+        days[date] = [pop, hi, lo];
+      });
+      wxCache[k] = { at: Date.now(), days: days };
+      saveWx();
+      wxRev++;
+    } catch (_) {
+      /* 天氣抓不到不是大事 —— 行程、記帳、分帳都不靠它,安靜跳過 */
+    }
+  }
+
+  /* 查詢服務回來的東西要驗過才敢用:得落在關東到中部這個範圍,而且不是東京都。
+     驗不過就當作查無 —— 拿不準的地方寧可不顯示。 */
+  function plausible(r) {
+    return r && r.latitude > 34.5 && r.latitude < 37.5 &&
+      r.longitude > 137.5 && r.longitude < 141.2 && (r.admin1 || "") !== "東京都";
+  }
+
+  /* 地點字串 → 座標。表裡有就用表的,沒有才問線上,兩邊都沒有就回 null。
+     之後手動加的地點走的是同一條路,不必回來改程式。 */
+  async function resolvePlace(place) {
+    const up = place.toUpperCase();
+    const hit = OUTSIDE.find(o => o.keys.some(k => up.indexOf(k.toUpperCase()) >= 0));
+    if (hit) return { lat: hit.lat, lon: hit.lon };
+    if (place in geoCache) return geoCache[place];   /* null 也是答案,不再問一次 */
+
+    let found = null;
+    try {
+      /* 「都心 → NRT 約 60–90 分鐘」這種要先切掉後面的說明,只留前面那截 */
+      const q = place.split(/[·・→(（,、]/)[0].trim().slice(0, 20);
+      if (q) {
+        const res = await fetch("https://geocoding-api.open-meteo.com/v1/search?count=5&language=ja&countryCode=JP&name=" +
+          encodeURIComponent(q));
+        const ok = ((await res.json()).results || []).find(plausible);
+        if (ok) found = { lat: ok.latitude, lon: ok.longitude };
+      }
+    } catch (_) {}
+    geoCache[place] = found;
+    try { localStorage.setItem(GEOLS, JSON.stringify(geoCache)); } catch (_) {}
+    wxRev++;
+    return found;
+  }
+
+  /* 白天最高溫。最低溫有存下來(d[2]),想一起顯示就接在後面 —— 但方形 tab
+     的寬度是擠出來的,多一個「/19」六格就少看到一格,所以只印一個數字。 */
+  function wxLine(at, date) {
+    const c = at && wxCache[wxKey(at.lat, at.lon)];
+    const d = c && c.days[date];
+    if (!d) return "";
+    const bits = [];
+    if (d[0] != null) bits.push("☔ " + Math.round(d[0]) + "%");
+    if (d[1] != null) bits.push("🌡 " + Math.round(d[1]) + "°");
+    return bits.length ? '<span class="wx">' + bits.join("  ") + "</span>" : "";
+  }
+
+  async function loadWeather() {
+    const rev = wxRev;
+    await fetchWx(TOKYO.lat, TOKYO.lon);
+    if (wxRev !== rev) { renderDays(); renderRoute(); }
+  }
+
+  /* 行程列的天氣。查地點、抓預報都是慢的,所以畫面先出來,有結果再補上。 */
+  let wxBusy = false;
+  async function loadStopWeather(list) {
+    if (wxBusy) return;
+    wxBusy = true;
+    const rev = wxRev;
+    try {
+      for (const s of list) {
+        if (!s.place) continue;
+        const at = await resolvePlace(s.place);
+        if (at) await fetchWx(at.lat, at.lon);
+      }
+    } finally {
+      wxBusy = false;
+    }
+    if (wxRev !== rev) renderRoute();
+  }
+
+  /* 已經查過的地點才拿得到座標。renderRoute 是同步的,查不到就這輪先不畫。 */
+  function stopWx(place, date) {
+    if (!place) return "";
+    const up = place.toUpperCase();
+    const hit = OUTSIDE.find(o => o.keys.some(k => up.indexOf(k.toUpperCase()) >= 0));
+    return wxLine(hit ? { lat: hit.lat, lon: hit.lon } : geoCache[place], date);
+  }
+
   function renderDays() {
     const t = todayISO();
     el("days").innerHTML = DAYS.map(d => {
@@ -1192,7 +1342,8 @@
       const mark = d.date < t ? " past" : d.date === t ? " today" : "";
       return '<button type="button" class="day' + mark + '" style="--dc:' + d.color + '" data-day="' + d.date +
         '" aria-pressed="' + (d.date === state.day) + '"><span class="dn">DAY ' + d.n + '</span><span class="dd">' +
-        d.date.slice(5).replace("-", "/") + '</span><span class="dw">週' + d.w + " · " + cnt + " 項</span></button>";
+        d.date.slice(5).replace("-", "/") + '</span><span class="dw">週' + d.w + " · " + cnt + " 項</span>" +
+        wxLine(TOKYO, d.date) + "</button>";
     }).join("");
     const cur = el("days").querySelector('[aria-pressed="true"]');
     if (cur && cur.scrollIntoView) cur.scrollIntoView({ block: "nearest", inline: "center" });
@@ -1239,13 +1390,14 @@
       '<div class="t num">' + (s.time || "—") +
       (s.day === OVERNIGHT ? '<span style="color:var(--muted); font-size:10px"> +1</span>' : "") + "</div>" +
       '<div class="b"><div class="ti">' + esc(s.title) + "</div>" +
-      (s.place ? '<div class="pl">' + esc(s.place) + "</div>" : "") +
+      (s.place ? '<div class="pl">' + esc(s.place) + stopWx(s.place, s.day || state.day) + "</div>" : "") +
       (s.note ? '<div class="nt">' + esc(s.note) + "</div>" : "") + "</div>" +
       '<div class="rowops">' +
       (movable(s) ? '<button type="button" class="pen" data-edit-stop="' + s.id + '" aria-label="改這一項"><svg class="i" aria-hidden="true"><use href="#i-pen"></use></svg></button>' : "") +
       (movable(s) ? '<button type="button" class="btn btn-ghost btn-sm x" data-del-stop="' + s.id + '" aria-label="刪除這項"><svg class="i" aria-hidden="true"><use href="#i-xmark"></use></svg></button>' : "") +
       "</div></div>"
     ).join("");
+    loadStopWeather(list);
   }
 
   /* 「我是誰」記在這台裝置上,+1 要靠它判斷是不是自己投的 */
@@ -2017,6 +2169,7 @@
   setInterval(renderCountdown, 60000);
   state.day = initialDay();
   switchTab("plan");
+  loadWeather();   /* 跟 Notion 無關,離線模式也照抓 */
 
   (async () => {
     /* 讀不需要通行碼,所以先把資料撈進來;能不能編輯是下一步的事。 */
