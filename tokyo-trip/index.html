@@ -194,11 +194,36 @@
   .map .attr a{color:inherit;}
   .map-note{font-size:11.5px; color:var(--muted); line-height:1.6; margin-top:8px;}
   .map-note a{color:var(--ink-2);}
+
+  /* ---- bottom sheet ---- */
+  /* 許願池的地圖從下面滑上來。它是「看一下就收起來」的東西,不該長期佔著清單的位置。 */
+  .sheet{position:fixed; inset:0; z-index:70; display:flex; align-items:flex-end;
+    background:rgba(0,0,0,.42); backdrop-filter:blur(2px);}
+  .sheet[hidden]{display:none;}
+  .sheet-in{width:100%; background:var(--surface); border-top:1px solid var(--line);
+    border-radius:16px 16px 0 0; box-shadow:0 -10px 34px rgba(0,0,0,.28);
+    padding:10px 15px calc(16px + env(safe-area-inset-bottom));
+    animation:sheetup .22s cubic-bezier(.2,.8,.3,1);}
+  @keyframes sheetup{from{transform:translateY(100%)} to{transform:translateY(0)}}
+  @media (prefers-reduced-motion:reduce){ .sheet-in{animation:none;} }
+  /* 一看就知道可以往下收的那條把手 */
+  .sheet-grab{width:38px; height:4px; border-radius:2px; background:var(--line); margin:0 auto 12px;}
+  .sheet-head{display:flex; align-items:center; gap:8px; margin-bottom:10px;
+    font-family:var(--font-sign); font-size:14px; font-weight:600;}
+  .sheet-head .i{color:var(--accent);}
+  .sheet-head .n{font-family:var(--font-mono); font-size:11px; color:var(--muted); font-weight:400;}
+  .sheet-x{margin-left:auto; background:none; border:0; color:var(--muted); cursor:pointer; padding:4px 6px;}
+  /* 這裡空間比行程頁大方一點,圖也給高一些 */
+  #wish-map{--dc:var(--accent); height:46vh; min-height:240px;}
   #wish-list{display:grid; gap:7px; margin-bottom:12px;}
   .wish{display:grid; grid-template-columns:1fr auto; align-items:center; gap:3px 10px;
     border:1px solid var(--line); border-radius:9px; padding:10px 12px; background:var(--paper);}
   .wish.mine{border-color:var(--accent);}
   .wish .wt{font-family:var(--font-sign); font-size:14px; font-weight:500;}
+  /* 跟上面地圖上的編號對應。沒填地點的願望標不出來,也就沒有編號。 */
+  .wish .wnum{display:inline-flex; align-items:center; justify-content:center; min-width:18px; height:18px;
+    margin-right:7px; border-radius:9px; background:var(--accent-soft); color:var(--accent);
+    font-family:var(--font-mono); font-size:10.5px; font-weight:700;}
   .wish .wm{grid-column:1/2; font-size:11.5px; color:var(--muted); display:flex; flex-wrap:wrap; gap:4px 7px;}
   .wish .wm .by{color:var(--wc,var(--muted));}
   .wish .wops{grid-row:1/3; grid-column:2/3; align-self:center; display:flex; align-items:center; gap:6px;}
@@ -215,12 +240,12 @@
   .wish .wdel{background:none; border:0; color:var(--muted); cursor:pointer; font-size:11px; padding:2px 4px;}
   .wish-hint{font-size:11px; color:var(--muted); margin-bottom:10px;}
   /* 無框、置中、主色文字 —— 它是邀請,不是動作按鈕 */
-  #add-wish-btn{display:flex; align-items:center; justify-content:center; gap:0;
+  #add-wish-btn,#wish-map-btn{display:flex; align-items:center; justify-content:center; gap:0;
     margin:0 auto 15px; padding:9px 14px; min-height:0;
     background:none; border:0; border-radius:8px; cursor:pointer;
     color:var(--accent); font-weight:600; font-size:13px;}
-  #add-wish-btn:hover{background:var(--accent-soft);}
-  #add-wish-btn .i{color:var(--accent);}
+  #add-wish-btn:hover,#wish-map-btn:hover{background:var(--accent-soft);}
+  #add-wish-btn .i,#wish-map-btn .i{color:var(--accent);}
   .route.dropzone{outline:2px dashed var(--accent); outline-offset:6px; border-radius:8px;}
 
   /* ---- 改內容 ---- */
@@ -495,6 +520,9 @@
           <svg class="i wish-caret" aria-hidden="true"><use href="#i-chevron-down"></use></svg>
         </summary>
         <p class="wish-intro">想去哪裡先丟進來,不用等排好。誰都可以許願、可以幫別人的願望 +1。</p>
+        <button class="btn btn-sm" id="wish-map-btn" type="button">
+          <svg class="i" aria-hidden="true"><use href="#i-route"></use></svg>看它們在地圖上哪裡
+        </button>
         <form class="form" id="wish-form" hidden>
           <div class="grid2">
             <div class="fld"><label for="wf-title">想去哪</label><input type="text" id="wf-title" placeholder="teamLab" required></div>
@@ -636,6 +664,22 @@
       <button type="button" class="btn btn-ghost btn-sm" id="se-cancel">取消</button>
     </div>
   </form>
+</div>
+
+<div class="sheet" id="wish-sheet" hidden>
+  <div class="sheet-in" role="dialog" aria-label="許願地點的地圖">
+    <div class="sheet-grab"></div>
+    <div class="sheet-head">
+      <svg class="i" aria-hidden="true"><use href="#i-route"></use></svg>
+      <span>大家想去的地方</span>
+      <span class="n" id="wish-map-n"></span>
+      <button type="button" class="sheet-x" id="wish-sheet-x" aria-label="收起來">
+        <svg class="i" aria-hidden="true"><use href="#i-xmark"></use></svg>
+      </button>
+    </div>
+    <div class="map" id="wish-map"></div>
+    <div class="map-note" id="wish-map-note"></div>
+  </div>
 </div>
 
 <div class="overlay" id="time-overlay" hidden>
@@ -1367,6 +1411,40 @@
     if (wxRev !== rev) renderRoute();
   }
 
+  /* 願望池的地圖:所有填了地點的願望一起標出來,看得出哪幾個擠在一起,
+     就知道哪幾個可以排同一天。編號對應下面清單上的編號。 */
+  let wishMapKey = null;
+  async function loadWishMap(force) {
+    if (el("wish-sheet").hidden) { wishMapKey = null; return; }
+    const list = wishOrder().filter(w => w.place);
+    const key = list.map(w => w.place).join("|");
+    if (!force && wishMapKey === key) return;
+    wishMapKey = key;
+
+    const draw = () => {
+      if (wishMapKey !== key) return;
+      const pts = [];
+      list.forEach((w, i) => {
+        const at = pins[w.place];
+        if (inJapan(at)) pts.push({ la: at.la, lo: at.lo, place: w.place, title: w.title, n: i + 1 });
+      });
+      drawMap(el("wish-map"), pts);
+      const miss = list.length - pts.length;
+      el("wish-map-n").textContent = list.length ? pts.length + "／" + list.length + " 個" : "";
+      el("wish-map-note").innerHTML = !list.length
+        ? "許願時填了地點才標得出來。"
+        : "編號對應清單上的編號。擠在一起的幾個,排同一天比較省車錢。" +
+          (miss ? " 有 " + miss + " 個沒標上去(查不到,或不在日本境內)。" : "");
+    };
+
+    draw();
+    for (const w of list) {
+      if (w.place in pins) continue;
+      await pinFor(w.place);
+      draw();
+    }
+  }
+
   /* 已經查過的地點才拿得到座標。renderRoute 是同步的,查不到就這輪先不畫。 */
   function stopWx(place, date) {
     if (!place) return "";
@@ -1453,8 +1531,7 @@
     else if (!inJapan(at)) flash("「" + place + "」不在日本境內,地圖上不會顯示");
   }
 
-  function drawMap(pts) {
-    const box = el("map");
+  function drawMap(box, pts) {
     const w = box.clientWidth, h = box.clientHeight;
     if (!w || !h) return;
     if (!pts.length) { box.innerHTML = ""; return; }
@@ -1517,7 +1594,7 @@
         const at = pins[s.place];
         if (inJapan(at)) pts.push({ la: at.la, lo: at.lo, place: s.place, title: s.title, n: i + 1 });
       });
-      drawMap(pts);
+      drawMap(el("map"), pts);
       const miss = list.length - pts.length;
       el("map-n").textContent = list.length ? pts.length + "／" + list.length + " 個" : "";
       el("map-note").innerHTML = !list.length
@@ -1610,11 +1687,19 @@
     try { localStorage.setItem(MELS, id); } catch (_) {}
   }
 
+  /* 票多的在前面。地圖上的編號要跟清單對得起來,所以兩邊共用這個排序。 */
+  const wishOrder = () => state.wishes.slice().sort((a, b) =>
+    (b.votes || []).length - (a.votes || []).length ||
+    (a.createdAt || "").localeCompare(b.createdAt || ""));
+
   function renderWishes() {
-    const list = state.wishes.slice().sort((a, b) =>
-      (b.votes || []).length - (a.votes || []).length ||
-      (a.createdAt || "").localeCompare(b.createdAt || ""));
+    const list = wishOrder();
     const me = myName();
+    /* 沒填地點的標不到地圖上,就不給編號 —— 不然編號會跳號,對不起來 */
+    const num = {};
+    let k = 0;
+    list.forEach(w => { if (w.place) num[w.id] = ++k; });
+    loadWishMap();
 
     el("wish-n").textContent = list.length ? list.length + " 個" : "";
     el("add-wish-btn").hidden = false;
@@ -1635,7 +1720,8 @@
           return m ? nameOf(m.id) : v;
         });
         return '<div class="wish' + (w.by === me ? " mine" : "") + '" data-wish="' + esc(w.id || "") + '">' +
-          '<div class="wt">' + esc(w.title) + "</div>" +
+          '<div class="wt">' + (num[w.id] ? '<span class="wnum">' + num[w.id] + "</span>" : "") +
+          esc(w.title) + "</div>" +
           '<div class="wm">' + by +
           (w.place ? "<span>" + esc(w.place) + "</span>" : "") +
           (w.note ? "<span>" + esc(w.note) + "</span>" : "") +
@@ -2313,6 +2399,24 @@
   setInterval(renderCountdown, 60000);
   /* 收著就完全不動,展開才去查座標、抓圖磚 */
   el("mapbox").addEventListener("toggle", () => loadMap(true));
+
+  /* 許願池的地圖:從下面滑上來的那張 */
+  function closeWishSheet() {
+    el("wish-sheet").hidden = true;
+    wishMapKey = null;
+  }
+  el("wish-map-btn").addEventListener("click", () => {
+    el("wish-sheet").hidden = false;
+    loadWishMap(true);
+  });
+  el("wish-sheet-x").addEventListener("click", closeWishSheet);
+  /* 點外面那層灰的就收起來,點到卡片本身不算 */
+  el("wish-sheet").addEventListener("click", ev => {
+    if (ev.target === el("wish-sheet")) closeWishSheet();
+  });
+  document.addEventListener("keydown", ev => {
+    if (ev.key === "Escape" && !el("wish-sheet").hidden) closeWishSheet();
+  });
 
   state.day = initialDay();
   switchTab("plan");
