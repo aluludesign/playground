@@ -997,7 +997,7 @@
     const stop = { id: w.id, day: day, time: time, title: w.title, place: w.place || "", note: w.note || "" };
     state.stops.push(stop);
     renderWishes(); render();
-    if (!online) { saveLocal(); return; }
+    if (!online) { saveLocal(); checkPlace(stop.place); return; }
     try {
       const { row } = await api("?resource=itinerary&id=" + encodeURIComponent(id), {
         method: "PATCH", body: JSON.stringify(stopToRow(stop)),
@@ -1006,6 +1006,7 @@
       if (j > -1) state.stops[j] = stopFromRow(row);
       render();
       flash("「" + w.title + "」排進 " + day.slice(5).replace("-", "/") + " 了");
+      checkPlace(stop.place);   /* 有問題才會蓋掉上面那句 */
     } catch (err) {
       state.stops = state.stops.filter(x => x.id !== id);
       state.wishes.splice(k, 0, w);
@@ -1443,6 +1444,19 @@
     return found;
   }
 
+  /* 日本境內。出發日的桃園機場查得到,但一張圖同時要裝下台灣和成田,就得縮到
+     看得見鹿兒島,兩個點都擠到邊上 —— 那張圖排行程用不到,所以不標。 */
+  const inJapan = at => !!at && at.la > 30 && at.la < 46 && at.lo > 128 && at.lo < 146;
+
+  /* 存下去的當下就查一次。不然要等你打開地圖才發現少一個點,
+     那時候已經想不起來是哪一筆打錯了。 */
+  async function checkPlace(place) {
+    if (!place) return;
+    const at = await pinFor(place);
+    if (!at) flash("「" + place + "」查不到,地圖上不會顯示 —— 試試把地名打完整");
+    else if (!inJapan(at)) flash("「" + place + "」不在日本境內,地圖上不會顯示");
+  }
+
   function drawMap(pts) {
     const box = el("map");
     const w = box.clientWidth, h = box.clientHeight;
@@ -1505,11 +1519,7 @@
       const pts = [];
       list.forEach((s, i) => {
         const at = pins[s.place];
-        /* 日本境內才標。出發日的桃園機場也查得到,但一張圖同時要裝下台灣和
-           成田,就得縮到看見鹿兒島,兩個點都擠到邊上 —— 那張圖排行程用不到。 */
-        if (at && at.la > 30 && at.la < 46 && at.lo > 128 && at.lo < 146) {
-          pts.push({ la: at.la, lo: at.lo, place: s.place, title: s.title, n: i + 1 });
-        }
+        if (inJapan(at)) pts.push({ la: at.la, lo: at.lo, place: s.place, title: s.title, n: i + 1 });
       });
       drawMap(pts);
       const miss = list.length - pts.length;
@@ -1794,13 +1804,15 @@
   el("sf-cancel").addEventListener("click", () => toggleForm("stop-form", false));
   el("stop-form").addEventListener("submit", ev => {
     ev.preventDefault();
+    const place = el("sf-place").value.trim();
     addStop({
       id: uid(), day: state.day,
       time: el("sf-time").value,
       title: el("sf-title").value.trim(),
-      place: el("sf-place").value.trim(),
+      place: place,
       note: el("sf-note").value.trim(),
     });
+    checkPlace(place);
     el("stop-form").reset();
     toggleForm("stop-form", false);
   });
@@ -2210,6 +2222,7 @@
     showEditError("");
     el("edit-overlay").hidden = true;
     updateStop(id, patch);
+    checkPlace(patch.place);
   });
 
   /* --- 許願表單 --- */
