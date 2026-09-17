@@ -625,6 +625,7 @@
 <div class="overlay" id="edit-overlay" hidden>
   <form class="signin" id="edit-form">
     <h2>改這一項</h2>
+    <div class="fld"><label for="se-day">哪一天</label><select id="se-day"></select></div>
     <div class="fld"><label for="se-time">時間</label><input type="time" id="se-time" required></div>
     <div class="fld"><label for="se-title">做什麼</label><input type="text" id="se-title" required></div>
     <div class="fld"><label for="se-place">地點／車站</label><input type="text" id="se-place"></div>
@@ -2092,6 +2093,12 @@
     const s = state.stops.find(x => x.id === b.dataset.editStop);
     if (!s) return;
     editing = s.id;
+    /* 回程是紅眼班機,10/09 凌晨那段掛在最後一天底下,所以多給一個選項 */
+    el("se-day").innerHTML = DAYS.map(d =>
+      '<option value="' + d.date + '">DAY ' + d.n + " · " +
+      d.date.slice(5).replace("-", "/") + " 週" + d.w + "</option>").join("") +
+      '<option value="' + OVERNIGHT + '">' + OVERNIGHT.slice(5).replace("-", "/") + " 凌晨(回程班機落地)</option>";
+    el("se-day").value = s.day || state.day;
     el("se-time").value = s.time || "";
     el("se-title").value = s.title || "";
     el("se-place").value = s.place || "";
@@ -2117,12 +2124,23 @@
     if (!title) { showEditError("總要寫個名字。"); return; }
     if (toMin(el("se-time").value) == null) { showEditError("時間格式不對。"); return; }
     const id = editing;
-    const patch = { time: el("se-time").value, title: title, place: el("se-place").value.trim(), note: el("se-note").value.trim() };
+    /* updateStop 是就地改的,存完再比就晚了 —— 先把舊日期抄成字串 */
+    const older = (state.stops.find(x => x.id === id) || {}).day;
+    const day = el("se-day").value;
+    const patch = { day: day, time: el("se-time").value, title: title,
+      place: el("se-place").value.trim(), note: el("se-note").value.trim() };
     editing = null;
     showEditError("");
     el("edit-overlay").hidden = true;
     updateStop(id, patch);
     checkPlace(patch.place);
+    /* 換了日子它就從眼前這一天消失了。不自己跳過去 —— 你可能還在整理這一天 ——
+       但總要講一聲它去了哪,不然看起來像被刪掉。 */
+    if (older && older !== day) {
+      const d = DAYS.find(x => x.date === day);
+      flash("「" + title + "」移到 " + (d ? "DAY " + d.n + " · " : "") +
+        day.slice(5).replace("-", "/") + " 了");
+    }
   });
 
   /* --- 許願表單 --- */
