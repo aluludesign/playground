@@ -1599,16 +1599,20 @@
      開關決定哪一層看得到。兩層畫得一樣明顯,靠顏色分 —— 行程用當天的顏色,願望用主色。 */
   function sheetPoints() {
     const out = [];
+    /* 顏色由「它是什麼」決定,不是由「你在看哪張圖」決定 ——
+       願望永遠是主色,行程永遠是它那一天的顏色。每個點都寫死自己的顏色,
+       不要讓它去繼承容器的 --dc,不然同一個願望在行程地圖裡會變成那天的顏色。 */
     if (layers.wish) {
       wishOrder().forEach((w, i) => out.push({
-        item: w, k: "w" + i, n: i + 1,
+        item: w, k: "w" + i, n: i + 1, color: "var(--accent)",
         tip: (i + 1) + ". " + w.title + (w.place ? " \u00b7 " + w.place : ""),
       }));
     }
     if (layers.plan) {
       if (sheetMode === "day") {
+        const today = DAYS.find(x => x.date === state.day);
         dayList(state.day).forEach((x, i) => out.push({
-          item: x, k: "d" + i, n: i + 1, cls: "plan",
+          item: x, k: "d" + i, n: i + 1, cls: "plan", color: today ? today.color : "",
           tip: (i + 1) + ". " + x.title + (x.place ? " \u00b7 " + x.place : ""),
         }));
       } else {
