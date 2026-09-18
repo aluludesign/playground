@@ -1692,13 +1692,29 @@
   /* 大東京。bounded=1 是硬界線,不是加權 —— 沒有這條,「TPE 桃園 T1」會查到
      靜岡縣一個也叫桃園的地方,「晴空塔」會查到埼玉縣的青空広場,標出去的點
      看起來很正常但整張圖的比例就毀了。出東京的地方走下面那份對照表。 */
-  const PIN_VIEW = "139.0,36.25,140.35,35.15";
+  /* 這趟在哪裡,看網頁標題決定。標題改成別的城市,查詢範圍跟著換,不用改別的地方。
+     認不出來就當東京。cc 是國家代碼,view 是地名查詢偏重的範圍(lon,lat,lon,lat)。 */
+  const REGIONS = [
+    { key: ["東京", "東京"], cc: "jp", view: "139.0,36.25,140.35,35.15" },
+    { key: ["大阪", "京都", "關西", "関西"], cc: "jp", view: "134.9,35.35,136.2,34.3" },
+    { key: ["北海道", "札幌"], cc: "jp", view: "140.5,43.4,142.0,42.6" },
+    { key: ["沖繩", "沖縄"], cc: "jp", view: "127.5,26.9,128.4,26.0" },
+    { key: ["首爾", "서울", "韓國"], cc: "kr", view: "126.7,37.75,127.25,37.35" },
+    { key: ["曼谷", "泰國"], cc: "th", view: "100.3,13.95,100.75,13.55" },
+  ];
+  const TRIP_REGION = REGIONS.find(r => r.key.some(k => document.title.indexOf(k) >= 0)) || REGIONS[0];
+  const PIN_VIEW = TRIP_REGION.view;
   const TILE = 256;
 
   let pins = {};
   try { pins = JSON.parse(localStorage.getItem(PINLS) || "{}"); } catch (_) {}
 
-  const gmap = p => "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(p);
+  /* 光丟名字過去,Google 會用「你人在哪」來猜 —— 點「輕井澤」跑出一堆台灣的火鍋店。
+     但座標我們早就查到了,把地圖中心一起帶過去,它就只會在那附近找。 */
+  const gmap = (p, at) => at
+    ? "https://www.google.com/maps/search/" + encodeURIComponent(p) +
+      "/@" + at.la.toFixed(5) + "," + at.lo.toFixed(5) + ",14z"
+    : "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(p);
   const projX = (lo, z) => (lo + 180) / 360 * Math.pow(2, z);
   const projY = (la, z) => {
     const r = la * Math.PI / 180;
@@ -1735,7 +1751,7 @@
     for (const t of tries) {
       try {
         const res = await queued(() => fetch("https://nominatim.openstreetmap.org/search?format=json" +
-          "&limit=1&countrycodes=jp&accept-language=zh-TW&bounded=1&viewbox=" + PIN_VIEW +
+          "&limit=1&countrycodes=" + TRIP_REGION.cc + "&accept-language=zh-TW&bounded=1&viewbox=" + PIN_VIEW +
           "&q=" + encodeURIComponent(t)).then(r => r.json()));
         if (res && res[0]) { found = { la: +res[0].lat, lo: +res[0].lon }; break; }
       } catch (_) { break; }
@@ -1817,7 +1833,7 @@
     pts.slice().sort((a, b) => (a.cls === "plan" ? 0 : 1) - (b.cls === "plan" ? 0 : 1)).forEach(p => {
       html += '<a class="pin' + (p.cls ? " " + p.cls : "") + (p.k === box._focus ? " on" : "") +
         '" data-k="' + esc(p.k) +
-        '" href="' + gmap(p.place) + '" target="_blank" rel="noopener" style="left:' +
+        '" href="' + gmap(p.place, p) + '" target="_blank" rel="noopener" style="left:' +
         Math.round(left + projX(p.lo, v.z) * TILE) + "px; top:" + Math.round(top + projY(p.la, v.z) * TILE) +
         "px" + (p.color ? "; background:" + p.color : "") +
         '" title="' + esc(p.tip) + '">' + esc(p.n) +
