@@ -1697,20 +1697,21 @@
 
      座標問 Nominatim(OSM 的地名查詢,免費、不用金鑰)。它認繁體:「淺草寺」
      「豐洲市場」「阿美橫町」都查得到,比天氣用的那個準很多。但也會亂給 ——
-     「晴空塔」會給雲南的一個村子 —— 所以限定在這趟的國家裡找。 */
-  /* 換過 key:之前鎖在東京框裡查,存下來的座標有一批是錯的,舊的不能再用。 */
-  const PINLS = "tokyo5-pin2";
+     「晴空塔」會給雲南的一個村子 —— 所以限定在一塊範圍裡找。 */
+  /* 換過 key 兩次:查詢範圍的規則改過,存下來的座標有好幾批是錯的,舊的不能再用。 */
+  const PINLS = "tokyo5-pin3";
   /* 這趟在哪裡,看網頁標題決定。標題改成別的城市,查詢範圍跟著換,不用改別的地方。
      認不出來就當東京。cc 是國家代碼,view 是地名查詢偏重的範圍(lon,lat,lon,lat)。
 
-     view 只加權,不設界線。這裡本來加了 bounded=1 當硬界線,以為這樣才擋得住
-     亂給的結果 —— 但硬界線的意思是「框外的一律不算」,Nominatim 只好從框內硬挑
-     一個最像的交差:查「京都車站」給東京車站大飯店,查「伏見稻荷」給荒川區一個
-     同名小社,查「金閣寺」給埼玉的日立金屬熊谷工場。名字對不上也照給,而且每筆
-     挑到的還不一樣,看起來就像地圖壞了。它連原本要擋的都沒擋住 —— 「晴空塔」
-     在框內也查得到埼玉的青空広場。
-     所以只留加權:同名的優先給這趟附近的(查「清水寺」在東京行會給橫濱那間,
-     要京都的就打「京都 清水寺」),真的在外地的地名也還回得來。 */
+     view 配 bounded=1 是硬界線:框外的一律不算。這條要留著 —— 沒有它,不是地名的
+     字串在全日本一定找得到「某個」東西:「泡溫泉」會給鳥取的吉方温泉通り,
+     「港灣未來」會給福井的勝山丸岡線。標出去看起來很正常,其實差了四百公里。
+
+     但界線不該一律用這趟的城市。鎖死在東京框裡,Nominatim 只好從框內硬挑一個最像的
+     交差:「京都車站」給東京車站大飯店,「伏見稻荷」給荒川區一個同名小社,
+     「金閣寺」給埼玉的日立金屬熊谷工場 —— 每筆挑到的還不一樣,看起來就像地圖壞了。
+
+     所以框還在,只是換成看字串自己講的是哪裡,見下面的 regionFor。 */
   const REGIONS = [
     { key: ["東京", "東京"], cc: "jp", view: "139.0,36.25,140.35,35.15" },
     { key: ["大阪", "京都", "關西", "関西"], cc: "jp", view: "134.9,35.35,136.2,34.3" },
@@ -1720,7 +1721,11 @@
     { key: ["曼谷", "泰國"], cc: "th", view: "100.3,13.95,100.75,13.55" },
   ];
   const TRIP_REGION = REGIONS.find(r => r.key.some(k => document.title.indexOf(k) >= 0)) || REGIONS[0];
-  const PIN_VIEW = TRIP_REGION.view;
+
+  /* 這個字串要在哪一塊裡查。講了別的地方就去那一塊,沒講就用這趟的 —— 所以東京行
+     裡的「新宿」還是在東京找,「京都車站」會去關西找。上面那份 REGIONS 的順序有
+     意義:東京排第一,「東京都廳」才不會被中間那兩個字拐去京都。 */
+  const regionFor = s => REGIONS.find(r => r.key.some(k => s.indexOf(k) >= 0)) || TRIP_REGION;
   const TILE = 256;
 
   let pins = {};
@@ -1766,9 +1771,10 @@
     const tries = parts.length > 1 ? [place, parts.slice(1).join(" ")] : [place];
     let found = null;
     for (const t of tries) {
+      const rg = regionFor(t);
       try {
         const res = await queued(() => fetch("https://nominatim.openstreetmap.org/search?format=json" +
-          "&limit=1&countrycodes=" + TRIP_REGION.cc + "&accept-language=zh-TW&viewbox=" + PIN_VIEW +
+          "&limit=1&countrycodes=" + rg.cc + "&accept-language=zh-TW&bounded=1&viewbox=" + rg.view +
           "&q=" + encodeURIComponent(t)).then(r => r.json()));
         if (res && res[0]) { found = { la: +res[0].lat, lo: +res[0].lon }; break; }
       } catch (_) { break; }
