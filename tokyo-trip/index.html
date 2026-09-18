@@ -56,6 +56,15 @@
 
   .wrap{max-width:880px; margin:0 auto; padding-inline:16px; padding-block:0 56px;}
 
+  /* 版面最寬就是螢幕,不准橫向捲。
+     使用者打進來的東西不受控 —— 長網址、一整串日文地址、貼進來的一行字 —— 都要斷得掉。
+     grid/flex 的子項預設 min-width:auto,不加這條它們不肯縮到比內容窄,就會把整列撐出去。 */
+  .ti,.pl,.nt,.wt,.wm,.exp .ti,.exp .meta,.lnk{overflow-wrap:anywhere;}
+  .stop .b,.stop .t,.wish .wt,.wish .wm,.exp .hd{min-width:0;}
+  /* 真的還是有東西撐出去時的最後一道。用 clip 不用 hidden ——
+     hidden 會讓 body 變成捲動容器,頂上那條 sticky 的標題列會跟著壞掉。 */
+  body{overflow-x:clip;}
+
   /* ---- top bar ---- */
   .topbar{position:sticky; top:env(safe-area-inset-top,0px); z-index:20; display:flex; align-items:flex-end; justify-content:space-between; gap:16px;
     padding-block:18px 14px; background:var(--paper); border-bottom:1px solid var(--line-soft);}
