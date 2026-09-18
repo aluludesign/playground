@@ -169,444 +169,452 @@
   color-scheme: light;
 }
 
-/* ── Base ─────────────────────────────────────────────────────────── */
+/* 以下全部包進 @layer components。
+   沒有 layer 的 CSS 在階層上永遠贏過 @layer utilities —— 少了這層，
+   .rm-card 的圓角會蓋掉 rounded-arch，而「utility 蓋得過組件 class」
+   正是這套系統答應過的事。v3 時期靠的是 CDN 把 utility 插在後面，
+   那是順序運氣；layer 是明講的。 */
+@layer components {
 
-.rm-base {
-  background-color: var(--color-paper);
-  color: var(--color-ink);
-  font-family: var(--font-sans);
-  /* 使用者打進來的東西不受控（長網址、日文地址），要斷得掉 */
-  overflow-wrap: anywhere;
-}
+  /* ── Base ─────────────────────────────────────────────────────────── */
 
-/* grid / flex 的子項預設 min-width:auto，「不肯縮到比內容窄」——
-   少了這條，一條長網址就把整列連同整頁撐出去。 */
-.rm-base :where(.rm-card, .rm-row, .rm-stack) > * { min-width: 0; }
+  .rm-base {
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    /* 使用者打進來的東西不受控（長網址、日文地址），要斷得掉 */
+    overflow-wrap: anywhere;
+  }
 
-.rm-base ::selection {
-  background: var(--color-accent);
-  color: var(--color-accent-ink);
-}
+  /* grid / flex 的子項預設 min-width:auto，「不肯縮到比內容窄」——
+     少了這條，一條長網址就把整列連同整頁撐出去。 */
+  .rm-base :where(.rm-card, .rm-row, .rm-stack) > * { min-width: 0; }
 
-/* ── 金屬材質 ─────────────────────────────────────────────────────── */
+  .rm-base ::selection {
+    background: var(--color-accent);
+    color: var(--color-accent-ink);
+  }
 
-/* Version A：原版柔霧不鏽鋼。高漫射絲緞質感，預設就用這個。 */
-.gradient-matte-steel {
-  background: linear-gradient(135deg, #F0F2F5 0%, #D8DCE1 24%, #B2B9C0 52%, #CBD0D6 76%, #889098 100%);
-  box-shadow: inset 0 1.5px 0.5px rgba(255, 255, 255, 0.75), inset 0 -1.5px 1px rgba(83, 68, 61, 0.25);
-}
-.gradient-matte-steel-subtle {
-  background: linear-gradient(140deg, #F4F6F8 0%, #DEE2E6 32%, #C2C8CF 68%, #A4ACB5 100%);
-}
+  /* ── 金屬材質 ─────────────────────────────────────────────────────── */
 
-/* Version B：均衡微亮鋼質。比 A 更凝聚、更有精神的冷灰階。 */
-.gradient-crisp-steel {
-  background: linear-gradient(135deg, #F1F4F8 0%, #C8D0DA 22%, #9EA7B4 50%, #B4BDC8 74%, #727C88 100%);
-  box-shadow: inset 0 1.5px 1px rgba(255, 255, 255, 0.8), inset 0 -2px 1.5px rgba(45, 50, 58, 0.25);
-}
+  /* Version A：原版柔霧不鏽鋼。高漫射絲緞質感，預設就用這個。 */
+  .gradient-matte-steel {
+    background: linear-gradient(135deg, #F0F2F5 0%, #D8DCE1 24%, #B2B9C0 52%, #CBD0D6 76%, #889098 100%);
+    box-shadow: inset 0 1.5px 0.5px rgba(255, 255, 255, 0.75), inset 0 -1.5px 1px rgba(83, 68, 61, 0.25);
+  }
+  .gradient-matte-steel-subtle {
+    background: linear-gradient(140deg, #F4F6F8 0%, #DEE2E6 32%, #C2C8CF 68%, #A4ACB5 100%);
+  }
 
-/* Version C：高亮微虹光。明亮鋼面上的天青淡紫與香檳金薄膜光澤。 */
-.gradient-iridescent-steel {
-  background: linear-gradient(135deg, #F6F8FB 0%, #E0E5F0 16%, #B8CBD8 36%, #B2B6C6 52%, #D8CDC2 70%, #C3CBD2 84%, #88919A 100%);
-  box-shadow: inset 0 1.5px 1px rgba(255, 255, 255, 0.85), inset 0 -2px 1.5px rgba(42, 48, 56, 0.28);
-}
+  /* Version B：均衡微亮鋼質。比 A 更凝聚、更有精神的冷灰階。 */
+  .gradient-crisp-steel {
+    background: linear-gradient(135deg, #F1F4F8 0%, #C8D0DA 22%, #9EA7B4 50%, #B4BDC8 74%, #727C88 100%);
+    box-shadow: inset 0 1.5px 1px rgba(255, 255, 255, 0.8), inset 0 -2px 1.5px rgba(45, 50, 58, 0.25);
+  }
 
-/* 拉絲紋理。疊在漸層上當 overlay，自己不帶底色。 */
-.texture-brushed-metal {
-  background-image: repeating-linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0.07) 0px,
-    rgba(255, 255, 255, 0.07) 1px,
-    transparent 1px,
-    transparent 3px
-  );
-}
+  /* Version C：高亮微虹光。明亮鋼面上的天青淡紫與香檳金薄膜光澤。 */
+  .gradient-iridescent-steel {
+    background: linear-gradient(135deg, #F6F8FB 0%, #E0E5F0 16%, #B8CBD8 36%, #B2B6C6 52%, #D8CDC2 70%, #C3CBD2 84%, #88919A 100%);
+    box-shadow: inset 0 1.5px 1px rgba(255, 255, 255, 0.85), inset 0 -2px 1.5px rgba(42, 48, 56, 0.28);
+  }
 
-/* 大級字專用的實體刻印。只給 display / h1 / h2，
-   小字套下去筆畫會糊掉，反而更難讀。 */
-.text-steel-engraved {
-  color: #382C26;
-  text-shadow: 0 1.5px 0.5px rgba(255, 255, 255, 0.55), 0 -1px 0.5px rgba(0, 0, 0, 0.28);
-}
-
-/* ── 動態反光 ─────────────────────────────────────────────────────── */
-
-/* 傾斜手機、移動滑鼠或捲動頁面時，金屬面上的高光會跟著跑。
-   兩層都壓在 z-index 2/3，文字一律在 10——反光絕不洗白文字。 */
-.steel-sheen-surface {
-  position: relative;
-  overflow: hidden;
-  transition: box-shadow 0.15s ease-out, transform 0.15s ease-out;
-}
-
-/* 主高光：一顆跟著游標的鏡面亮點 + 一道掃過表面的帶狀反射。
-   inset:-50% 讓漸層錨點可以跑到元件外，邊界才不會出現生硬白邊。 */
-.steel-sheen-surface::before {
-  content: '';
-  position: absolute;
-  inset: -50%;
-  pointer-events: none;
-  z-index: 2;
-  background:
-    radial-gradient(
-      circle 220px at var(--sheen-x) var(--sheen-y),
-      rgba(255, 255, 255, calc(var(--sheen-specular) * 0.7)) 0%,
-      rgba(255, 255, 255, calc(var(--sheen-specular) * 0.3)) 35%,
-      rgba(255, 255, 255, 0) 70%
-    ),
-    linear-gradient(
-      var(--sheen-angle),
-      rgba(255, 255, 255, 0) 0%,
-      rgba(255, 255, 255, 0) calc(var(--sheen-x) - 30%),
-      rgba(255, 255, 255, calc(var(--sheen-intensity) * 0.35)) calc(var(--sheen-x) - 12%),
-      rgba(255, 255, 255, calc(var(--sheen-intensity) * 0.7)) var(--sheen-x),
-      rgba(255, 255, 255, calc(var(--sheen-intensity) * 0.35)) calc(var(--sheen-x) + 12%),
-      rgba(255, 255, 255, 0) calc(var(--sheen-x) + 30%),
-      rgba(255, 255, 255, 0) 100%
+  /* 拉絲紋理。疊在漸層上當 overlay，自己不帶底色。 */
+  .texture-brushed-metal {
+    background-image: repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.07) 0px,
+      rgba(255, 255, 255, 0.07) 1px,
+      transparent 1px,
+      transparent 3px
     );
-  mix-blend-mode: overlay;
-  opacity: 0.85;
-  filter: contrast(105%);
-}
+  }
 
-/* 副反射環：與主高光垂直的各向異性光帶，拉絲金屬才有的那道。 */
-.steel-sheen-surface::after {
-  content: '';
-  position: absolute;
-  inset: -50%;
-  pointer-events: none;
-  z-index: 3;
-  background: linear-gradient(
-    calc(var(--sheen-angle) + 90deg),
-    transparent 0%,
-    transparent 36%,
-    rgba(255, 255, 255, 0.25) 50%,
-    transparent 64%,
-    transparent 100%
-  );
-  mix-blend-mode: overlay;
-  opacity: calc(var(--sheen-intensity) * 0.6);
-}
+  /* 大級字專用的實體刻印。只給 display / h1 / h2，
+     小字套下去筆畫會糊掉，反而更難讀。 */
+  .text-steel-engraved {
+    color: #382C26;
+    text-shadow: 0 1.5px 0.5px rgba(255, 255, 255, 0.55), 0 -1px 0.5px rgba(0, 0, 0, 0.28);
+  }
 
-/* Version C 專屬：光學薄膜的微虹光。 */
-.steel-sheen-surface.sheen-iridescent::before {
-  background:
-    radial-gradient(
-      circle 220px at var(--sheen-x) var(--sheen-y),
-      rgba(255, 255, 255, calc(var(--sheen-specular) * 0.75)) 0%,
-      rgba(255, 255, 255, calc(var(--sheen-specular) * 0.3)) 30%,
-      rgba(255, 255, 255, 0) 70%
-    ),
-    linear-gradient(
-      var(--sheen-angle),
-      rgba(255, 255, 255, 0) 0%,
-      rgba(155, 185, 225, 0.25) calc(var(--sheen-x) - 22%),
-      rgba(215, 175, 220, 0.30) calc(var(--sheen-x) - 10%),
-      rgba(255, 255, 255, calc(var(--sheen-intensity) * 0.8)) var(--sheen-x),
-      rgba(235, 210, 165, 0.32) calc(var(--sheen-x) + 10%),
-      rgba(165, 215, 195, 0.22) calc(var(--sheen-x) + 22%),
-      rgba(255, 255, 255, 0) 100%
+  /* ── 動態反光 ─────────────────────────────────────────────────────── */
+
+  /* 傾斜手機、移動滑鼠或捲動頁面時，金屬面上的高光會跟著跑。
+     兩層都壓在 z-index 2/3，文字一律在 10——反光絕不洗白文字。 */
+  .steel-sheen-surface {
+    position: relative;
+    overflow: hidden;
+    transition: box-shadow 0.15s ease-out, transform 0.15s ease-out;
+  }
+
+  /* 主高光：一顆跟著游標的鏡面亮點 + 一道掃過表面的帶狀反射。
+     inset:-50% 讓漸層錨點可以跑到元件外，邊界才不會出現生硬白邊。 */
+  .steel-sheen-surface::before {
+    content: '';
+    position: absolute;
+    inset: -50%;
+    pointer-events: none;
+    z-index: 2;
+    background:
+      radial-gradient(
+        circle 220px at var(--sheen-x) var(--sheen-y),
+        rgba(255, 255, 255, calc(var(--sheen-specular) * 0.7)) 0%,
+        rgba(255, 255, 255, calc(var(--sheen-specular) * 0.3)) 35%,
+        rgba(255, 255, 255, 0) 70%
+      ),
+      linear-gradient(
+        var(--sheen-angle),
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0) calc(var(--sheen-x) - 30%),
+        rgba(255, 255, 255, calc(var(--sheen-intensity) * 0.35)) calc(var(--sheen-x) - 12%),
+        rgba(255, 255, 255, calc(var(--sheen-intensity) * 0.7)) var(--sheen-x),
+        rgba(255, 255, 255, calc(var(--sheen-intensity) * 0.35)) calc(var(--sheen-x) + 12%),
+        rgba(255, 255, 255, 0) calc(var(--sheen-x) + 30%),
+        rgba(255, 255, 255, 0) 100%
+      );
+    mix-blend-mode: overlay;
+    opacity: 0.85;
+    filter: contrast(105%);
+  }
+
+  /* 副反射環：與主高光垂直的各向異性光帶，拉絲金屬才有的那道。 */
+  .steel-sheen-surface::after {
+    content: '';
+    position: absolute;
+    inset: -50%;
+    pointer-events: none;
+    z-index: 3;
+    background: linear-gradient(
+      calc(var(--sheen-angle) + 90deg),
+      transparent 0%,
+      transparent 36%,
+      rgba(255, 255, 255, 0.25) 50%,
+      transparent 64%,
+      transparent 100%
     );
-}
+    mix-blend-mode: overlay;
+    opacity: calc(var(--sheen-intensity) * 0.6);
+  }
 
-/* 內容一律騎在反光之上 */
-.steel-sheen-surface > * { position: relative; z-index: 10; }
-.steel-content-layer { position: relative; z-index: 10; }
+  /* Version C 專屬：光學薄膜的微虹光。 */
+  .steel-sheen-surface.sheen-iridescent::before {
+    background:
+      radial-gradient(
+        circle 220px at var(--sheen-x) var(--sheen-y),
+        rgba(255, 255, 255, calc(var(--sheen-specular) * 0.75)) 0%,
+        rgba(255, 255, 255, calc(var(--sheen-specular) * 0.3)) 30%,
+        rgba(255, 255, 255, 0) 70%
+      ),
+      linear-gradient(
+        var(--sheen-angle),
+        rgba(255, 255, 255, 0) 0%,
+        rgba(155, 185, 225, 0.25) calc(var(--sheen-x) - 22%),
+        rgba(215, 175, 220, 0.30) calc(var(--sheen-x) - 10%),
+        rgba(255, 255, 255, calc(var(--sheen-intensity) * 0.8)) var(--sheen-x),
+        rgba(235, 210, 165, 0.32) calc(var(--sheen-x) + 10%),
+        rgba(165, 215, 195, 0.22) calc(var(--sheen-x) + 22%),
+        rgba(255, 255, 255, 0) 100%
+      );
+  }
 
-/* 按壓時的物理微光回饋 */
-.steel-press-flash { animation: rm-press-pulse 0.3s var(--ease-tactile) forwards; }
-@keyframes rm-press-pulse {
-  0%   { transform: scale(1);     filter: brightness(1) contrast(100%); }
-  35%  { transform: scale(0.965); filter: brightness(1.22) contrast(108%) drop-shadow(0 0 6px rgba(255, 255, 255, 0.85)); }
-  75%  { transform: scale(0.985); filter: brightness(1.08) contrast(102%); }
-  100% { transform: scale(1);     filter: brightness(1) contrast(100%); }
-}
+  /* 內容一律騎在反光之上 */
+  .steel-sheen-surface > * { position: relative; z-index: 10; }
+  .steel-content-layer { position: relative; z-index: 10; }
 
-/* 晃動手機時整片金屬的閃耀 */
-.sheen-flare { animation: rm-shimmer-burst 0.75s ease-out forwards; }
-@keyframes rm-shimmer-burst {
-  0%   { filter: brightness(1); }
-  35%  { filter: brightness(1.22) drop-shadow(0 0 10px rgba(255, 255, 255, 0.5)); }
-  100% { filter: brightness(1); }
-}
+  /* 按壓時的物理微光回饋 */
+  .steel-press-flash { animation: rm-press-pulse 0.3s var(--ease-tactile) forwards; }
+  @keyframes rm-press-pulse {
+    0%   { transform: scale(1);     filter: brightness(1) contrast(100%); }
+    35%  { transform: scale(0.965); filter: brightness(1.22) contrast(108%) drop-shadow(0 0 6px rgba(255, 255, 255, 0.85)); }
+    75%  { transform: scale(0.985); filter: brightness(1.08) contrast(102%); }
+    100% { transform: scale(1);     filter: brightness(1) contrast(100%); }
+  }
 
-/* ── 復古紋理 ─────────────────────────────────────────────────────── */
+  /* 晃動手機時整片金屬的閃耀 */
+  .sheen-flare { animation: rm-shimmer-burst 0.75s ease-out forwards; }
+  @keyframes rm-shimmer-burst {
+    0%   { filter: brightness(1); }
+    35%  { filter: brightness(1.22) drop-shadow(0 0 10px rgba(255, 255, 255, 0.5)); }
+    100% { filter: brightness(1); }
+  }
 
-.pattern-checker {
-  background-size: 24px 24px;
-  background-image:
-    linear-gradient(45deg, var(--color-foundation-sandstone) 25%, transparent 25%),
-    linear-gradient(-45deg, var(--color-foundation-sandstone) 25%, transparent 25%),
-    linear-gradient(45deg, transparent 75%, var(--color-foundation-sandstone) 75%),
-    linear-gradient(-45deg, transparent 75%, var(--color-foundation-sandstone) 75%);
-  background-position: 0 0, 0 12px, 12px -12px, -12px 0px;
-}
+  /* ── 復古紋理 ─────────────────────────────────────────────────────── */
 
-.pattern-stripes {
-  background: repeating-linear-gradient(
-    -45deg,
-    var(--color-foundation-linen), var(--color-foundation-linen) 10px,
-    var(--color-foundation-sandstone) 10px, var(--color-foundation-sandstone) 20px
-  );
-}
+  .pattern-checker {
+    background-size: 24px 24px;
+    background-image:
+      linear-gradient(45deg, var(--color-foundation-sandstone) 25%, transparent 25%),
+      linear-gradient(-45deg, var(--color-foundation-sandstone) 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, var(--color-foundation-sandstone) 75%),
+      linear-gradient(-45deg, transparent 75%, var(--color-foundation-sandstone) 75%);
+    background-position: 0 0, 0 12px, 12px -12px, -12px 0px;
+  }
 
-/* 參數化的方格引擎。四個變數在行內給值就好，不必為每種配色各寫一個 class。
-   變數名沿用規格書原稿（沒有 rm- 前綴），那份 HTML 的 markup 可以直接貼過來。 */
-.pattern-grid {
-  --grid-size: 20px;
-  --grid-border-width: 1px;
-  --grid-border-color: rgba(83, 68, 61, 0.08);
-  --grid-fill-color: transparent;
+  .pattern-stripes {
+    background: repeating-linear-gradient(
+      -45deg,
+      var(--color-foundation-linen), var(--color-foundation-linen) 10px,
+      var(--color-foundation-sandstone) 10px, var(--color-foundation-sandstone) 20px
+    );
+  }
 
-  background-color: var(--grid-fill-color);
-  background-size: var(--grid-size) var(--grid-size);
-  background-image:
-    linear-gradient(to right, var(--grid-border-color) var(--grid-border-width), transparent var(--grid-border-width)),
-    linear-gradient(to bottom, var(--grid-border-color) var(--grid-border-width), transparent var(--grid-border-width));
-}
+  /* 參數化的方格引擎。四個變數在行內給值就好，不必為每種配色各寫一個 class。
+     變數名沿用規格書原稿（沒有 rm- 前綴），那份 HTML 的 markup 可以直接貼過來。 */
+  .pattern-grid {
+    --grid-size: 20px;
+    --grid-border-width: 1px;
+    --grid-border-color: rgba(83, 68, 61, 0.08);
+    --grid-fill-color: transparent;
 
-/* ── 組件 ─────────────────────────────────────────────────────────── */
-/* 單一 class 的低特異度，Tailwind utility 蓋得過去。 */
+    background-color: var(--grid-fill-color);
+    background-size: var(--grid-size) var(--grid-size);
+    background-image:
+      linear-gradient(to right, var(--grid-border-color) var(--grid-border-width), transparent var(--grid-border-width)),
+      linear-gradient(to bottom, var(--grid-border-color) var(--grid-border-width), transparent var(--grid-border-width));
+  }
 
-/* Buttons */
-.rm-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.5rem;
-  border: 2px solid var(--color-foundation-clove);
-  border-radius: var(--radius-pill);
-  font-family: var(--font-sans);
-  font-size: 0.8125rem;
-  font-weight: 700;
-  line-height: 1;
-  cursor: pointer;
-  background: var(--color-foundation-muslin);
-  color: var(--color-ink);
-  box-shadow: var(--shadow-soft);
-  transition: background-color 0.18s ease, transform 0.18s var(--ease-tactile), box-shadow 0.18s ease;
-}
-.rm-btn:hover { background: var(--color-foundation-sandstone); }
-.rm-btn:active { transform: translateY(1px); }
-.rm-btn:focus-visible { outline: 3px solid var(--color-accent); outline-offset: 2px; }
-.rm-btn[disabled] { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
+  /* ── 組件 ─────────────────────────────────────────────────────────── */
+  /* 單一 class 的低特異度，Tailwind utility 蓋得過去。 */
 
-/* CTA：全站最重的那一顆，一個畫面只該有一個 */
-.rm-btn--cta {
-  background: var(--color-accent);
-  color: var(--color-accent-ink);
-  box-shadow: var(--shadow-hard-sm);
-}
-.rm-btn--cta:hover { background: var(--color-accent-hover); transform: translateY(-2px); }
-.rm-btn--cta:active { transform: translateY(1px); }
+  /* Buttons */
+  .rm-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    border: 2px solid var(--color-foundation-clove);
+    border-radius: var(--radius-pill);
+    font-family: var(--font-sans);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    background: var(--color-foundation-muslin);
+    color: var(--color-ink);
+    box-shadow: var(--shadow-soft);
+    transition: background-color 0.18s ease, transform 0.18s var(--ease-tactile), box-shadow 0.18s ease;
+  }
+  .rm-btn:hover { background: var(--color-foundation-sandstone); }
+  .rm-btn:active { transform: translateY(1px); }
+  .rm-btn:focus-visible { outline: 3px solid var(--color-accent); outline-offset: 2px; }
+  .rm-btn[disabled] { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
 
-.rm-btn--action { background: var(--color-earth-terracotta); color: var(--color-foundation-muslin); }
-.rm-btn--action:hover { background: var(--color-earth-cork); }
+  /* CTA：全站最重的那一顆，一個畫面只該有一個 */
+  .rm-btn--cta {
+    background: var(--color-accent);
+    color: var(--color-accent-ink);
+    box-shadow: var(--shadow-hard-sm);
+  }
+  .rm-btn--cta:hover { background: var(--color-accent-hover); transform: translateY(-2px); }
+  .rm-btn--cta:active { transform: translateY(1px); }
 
-.rm-btn--secondary { background: var(--color-sky-chambray); color: var(--color-foundation-muslin); }
-.rm-btn--secondary:hover { background: var(--color-sky-play-blue); }
+  .rm-btn--action { background: var(--color-earth-terracotta); color: var(--color-foundation-muslin); }
+  .rm-btn--action:hover { background: var(--color-earth-cork); }
 
-.rm-btn--ghost { background: transparent; box-shadow: none; }
-.rm-btn--ghost:hover { background: var(--color-foundation-sandstone); }
+  .rm-btn--secondary { background: var(--color-sky-chambray); color: var(--color-foundation-muslin); }
+  .rm-btn--secondary:hover { background: var(--color-sky-play-blue); }
 
-/* 不鏽鋼按鈕。搭 .steel-sheen-surface 才有動態反光。 */
-.rm-btn--steel {
-  background: linear-gradient(135deg, #F0F2F5 0%, #D8DCE1 24%, #B2B9C0 52%, #CBD0D6 76%, #889098 100%);
-  color: var(--color-ink);
-}
-.rm-btn--steel:hover { filter: brightness(1.04); }
+  .rm-btn--ghost { background: transparent; box-shadow: none; }
+  .rm-btn--ghost:hover { background: var(--color-foundation-sandstone); }
 
-.rm-btn--sm { padding: 0.5rem 1rem; font-size: 0.75rem; }
-.rm-btn--lg { padding: 0.9375rem 2rem; font-size: 0.9375rem; }
+  /* 不鏽鋼按鈕。搭 .steel-sheen-surface 才有動態反光。 */
+  .rm-btn--steel {
+    background: linear-gradient(135deg, #F0F2F5 0%, #D8DCE1 24%, #B2B9C0 52%, #CBD0D6 76%, #889098 100%);
+    color: var(--color-ink);
+  }
+  .rm-btn--steel:hover { filter: brightness(1.04); }
 
-/* 混合不鏽鋼按鈕：平時 Version B 冷鋼，hover 浮現 Version C 虹光，點擊才閃白光。
-   三種狀態各自獨立 —— hover 完全沒有白光掃掠或呼吸亮度，只有薄膜虹彩淡入；
-   白光嚴格保留給點擊，這樣「有回應」和「被按下」才不會混成同一件事。
-   用法：class="rm-btn btn-steel-hybrid steel-sheen-surface"，裡面放一個
-   <span class="steel-iridescent-overlay"></span> 當交叉淡入層。 */
-.btn-steel-hybrid,
-.btn-steel-hybrid:hover,
-.btn-steel-hybrid:focus-visible {
-  /* hover 這條是必要的：.rm-btn:hover 的特異度跟它一樣，
-     少了它底色會在 hover 時被換成砂岩色 */
-  background: linear-gradient(135deg, #F1F4F8 0%, #C8D0DA 22%, #9EA7B4 50%, #B4BDC8 74%, #727C88 100%);
-}
-.btn-steel-hybrid {
-  position: relative;
-  overflow: hidden;
-  color: var(--color-ink);
-  /* 不要陰影：none 是必要的，不是省略 —— 只把這行刪掉的話，
-     .rm-btn 的 --rm-shadow-soft 會補上來，反而多一層外投影。 */
-  box-shadow: none;
-  transition: transform 0.15s var(--ease-tactile);
-}
+  .rm-btn--sm { padding: 0.5rem 1rem; font-size: 0.75rem; }
+  .rm-btn--lg { padding: 0.9375rem 2rem; font-size: 0.9375rem; }
 
-/* Version C 的交叉淡入層。z-index 4：蓋得住反光層（2、3），壓不到文字（10）。 */
-.btn-steel-hybrid .steel-iridescent-overlay {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 4;
-  background: linear-gradient(135deg, #F6F8FB 0%, #E0E5F0 16%, #B8CBD8 36%, #B2B6C6 52%, #D8CDC2 70%, #C3CBD2 84%, #88919A 100%);
-  opacity: 0;
-  transition: opacity 0.3s ease-out;
-}
+  /* 混合不鏽鋼按鈕：平時 Version B 冷鋼，hover 浮現 Version C 虹光，點擊才閃白光。
+     三種狀態各自獨立 —— hover 完全沒有白光掃掠或呼吸亮度，只有薄膜虹彩淡入；
+     白光嚴格保留給點擊，這樣「有回應」和「被按下」才不會混成同一件事。
+     用法：class="rm-btn btn-steel-hybrid steel-sheen-surface"，裡面放一個
+     <span class="steel-iridescent-overlay"></span> 當交叉淡入層。 */
+  .btn-steel-hybrid,
+  .btn-steel-hybrid:hover,
+  .btn-steel-hybrid:focus-visible {
+    /* hover 這條是必要的：.rm-btn:hover 的特異度跟它一樣，
+       少了它底色會在 hover 時被換成砂岩色 */
+    background: linear-gradient(135deg, #F1F4F8 0%, #C8D0DA 22%, #9EA7B4 50%, #B4BDC8 74%, #727C88 100%);
+  }
+  .btn-steel-hybrid {
+    position: relative;
+    overflow: hidden;
+    color: var(--color-ink);
+    /* 不要陰影：none 是必要的，不是省略 —— 只把這行刪掉的話，
+       .rm-btn 的 --rm-shadow-soft 會補上來，反而多一層外投影。 */
+    box-shadow: none;
+    transition: transform 0.15s var(--ease-tactile);
+  }
 
-/* 純光譜色相，沒有白色光條 —— 天青、淡紫、香檳金、薄荷綠 */
-.btn-steel-hybrid .steel-iridescent-overlay::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: linear-gradient(
-    125deg,
-    rgba(155, 185, 225, 0.28) 0%,
-    rgba(215, 175, 220, 0.32) 32%,
-    rgba(235, 210, 165, 0.32) 68%,
-    rgba(165, 215, 195, 0.26) 100%
-  );
-  mix-blend-mode: overlay;
-  opacity: 0;
-  transition: opacity 0.3s ease-out;
-}
+  /* Version C 的交叉淡入層。z-index 4：蓋得住反光層（2、3），壓不到文字（10）。 */
+  .btn-steel-hybrid .steel-iridescent-overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 4;
+    background: linear-gradient(135deg, #F6F8FB 0%, #E0E5F0 16%, #B8CBD8 36%, #B2B6C6 52%, #D8CDC2 70%, #C3CBD2 84%, #88919A 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease-out;
+  }
 
-/* 只在真的有指標的裝置上掛 hover。手機點一下之後 :hover 會黏住不放，
-   虹光就永遠亮著、再也回不去 Version B —— 那不是這個效果的用意。 */
-@media (hover: hover) {
-  .btn-steel-hybrid:hover .steel-iridescent-overlay,
-  .btn-steel-hybrid:hover .steel-iridescent-overlay::after { opacity: 1; }
-}
-/* 鍵盤操作不分裝置，所以 focus-visible 放在 media query 外面 */
-.btn-steel-hybrid:focus-visible .steel-iridescent-overlay,
-.btn-steel-hybrid:focus-visible .steel-iridescent-overlay::after { opacity: 1; }
+  /* 純光譜色相，沒有白色光條 —— 天青、淡紫、香檳金、薄荷綠 */
+  .btn-steel-hybrid .steel-iridescent-overlay::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(
+      125deg,
+      rgba(155, 185, 225, 0.28) 0%,
+      rgba(215, 175, 220, 0.32) 32%,
+      rgba(235, 210, 165, 0.32) 68%,
+      rgba(165, 215, 195, 0.26) 100%
+    );
+    mix-blend-mode: overlay;
+    opacity: 0;
+    transition: opacity 0.3s ease-out;
+  }
 
-/* Cards —— 80% 中性底蘊 */
-.rm-card {
-  background: var(--color-foundation-muslin);
-  border: 2px solid var(--color-foundation-clove);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-soft);
-  padding: 1.5rem;
-}
-.rm-card--surface { background: var(--color-foundation-linen); }
-/* 20% 表現力：關鍵通知、推薦方塊才用 */
-.rm-card--expressive {
-  background: var(--color-earth-terracotta);
-  color: var(--color-foundation-muslin);
-  box-shadow: var(--shadow-hard-md);
-}
-.rm-card--raised { box-shadow: var(--shadow-hard-md); }
-.rm-card--arch { border-radius: var(--radius-arch); }
+  /* 只在真的有指標的裝置上掛 hover。手機點一下之後 :hover 會黏住不放，
+     虹光就永遠亮著、再也回不去 Version B —— 那不是這個效果的用意。 */
+  @media (hover: hover) {
+    .btn-steel-hybrid:hover .steel-iridescent-overlay,
+    .btn-steel-hybrid:hover .steel-iridescent-overlay::after { opacity: 1; }
+  }
+  /* 鍵盤操作不分裝置，所以 focus-visible 放在 media query 外面 */
+  .btn-steel-hybrid:focus-visible .steel-iridescent-overlay,
+  .btn-steel-hybrid:focus-visible .steel-iridescent-overlay::after { opacity: 1; }
 
-/* Chip / Badge */
-.rm-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-  padding: 0.25rem 0.75rem;
-  border: 1px solid var(--color-foundation-clove);
-  border-radius: var(--radius-pill);
-  background: var(--color-foundation-linen);
-  color: var(--color-ink);
-  font-family: var(--font-mono);
-  font-size: 0.6875rem;
-  font-weight: 700;
-}
-.rm-chip--solid { background: var(--color-foundation-clove); color: var(--color-foundation-muslin); }
-.rm-chip--accent { background: var(--color-accent); color: var(--color-accent-ink); border-color: var(--color-foundation-clove); }
+  /* Cards —— 80% 中性底蘊 */
+  .rm-card {
+    background: var(--color-foundation-muslin);
+    border: 2px solid var(--color-foundation-clove);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-soft);
+    padding: 1.5rem;
+  }
+  .rm-card--surface { background: var(--color-foundation-linen); }
+  /* 20% 表現力：關鍵通知、推薦方塊才用 */
+  .rm-card--expressive {
+    background: var(--color-earth-terracotta);
+    color: var(--color-foundation-muslin);
+    box-shadow: var(--shadow-hard-md);
+  }
+  .rm-card--raised { box-shadow: var(--shadow-hard-md); }
+  .rm-card--arch { border-radius: var(--radius-arch); }
 
-/* Overline：小標題上方那行全大寫的 mono 標記 */
-.rm-overline {
-  font-family: var(--font-mono);
-  font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--color-ink-muted);
-}
+  /* Chip / Badge */
+  .rm-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.25rem 0.75rem;
+    border: 1px solid var(--color-foundation-clove);
+    border-radius: var(--radius-pill);
+    background: var(--color-foundation-linen);
+    color: var(--color-ink);
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    font-weight: 700;
+  }
+  .rm-chip--solid { background: var(--color-foundation-clove); color: var(--color-foundation-muslin); }
+  .rm-chip--accent { background: var(--color-accent); color: var(--color-accent-ink); border-color: var(--color-foundation-clove); }
 
-/* Form */
-.rm-input {
-  width: 100%;
-  padding: 0.625rem 0.875rem;
-  border: 2px solid var(--color-foundation-clove);
-  border-radius: var(--radius-sm);
-  background: var(--color-foundation-muslin);
-  color: var(--color-ink);
-  font-family: var(--font-sans);
-  font-size: 0.9375rem;
-  /* iOS 在 <16px 的輸入框上會自動放大整頁，所以 body 級距不要再往下掉 */
-}
-.rm-input::placeholder { color: var(--color-ink-muted); }
-.rm-input:focus-visible { outline: 3px solid var(--color-accent); outline-offset: 1px; }
+  /* Overline：小標題上方那行全大寫的 mono 標記 */
+  .rm-overline {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-ink-muted);
+  }
 
-.rm-label {
-  display: block;
-  margin-bottom: 0.375rem;
-  font-size: 0.8125rem;
-  font-weight: 700;
-  color: var(--color-ink);
-}
+  /* Form */
+  .rm-input {
+    width: 100%;
+    padding: 0.625rem 0.875rem;
+    border: 2px solid var(--color-foundation-clove);
+    border-radius: var(--radius-sm);
+    background: var(--color-foundation-muslin);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: 0.9375rem;
+    /* iOS 在 <16px 的輸入框上會自動放大整頁，所以 body 級距不要再往下掉 */
+  }
+  .rm-input::placeholder { color: var(--color-ink-muted); }
+  .rm-input:focus-visible { outline: 3px solid var(--color-accent); outline-offset: 1px; }
 
-/* Day 標記。行程網站的時間軸號碼牌與地圖圖釘用同一個樣式，
-   兩邊才看得出來是同一個東西。--rm-dc 由呼叫端指定當天的顏色。 */
-.rm-day-pin {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 1.75rem;
-  height: 1.75rem;
-  padding: 0 0.375rem;
-  border: 2px solid var(--color-foundation-clove);
-  border-radius: var(--radius-pill);
-  background: var(--rm-dc, var(--color-accent));
-  color: var(--color-foundation-muslin);
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  font-weight: 700;
-  /* 數字是必要的，不是裝飾：day 色對底色的對比不足以單獨承載身分 */
-}
+  .rm-label {
+    display: block;
+    margin-bottom: 0.375rem;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--color-ink);
+  }
 
-/* 分隔線 */
-.rm-divider { border: 0; border-top: 2px solid var(--color-line); }
-.rm-divider--dashed { border-top-style: dashed; }
+  /* Day 標記。行程網站的時間軸號碼牌與地圖圖釘用同一個樣式，
+     兩邊才看得出來是同一個東西。--rm-dc 由呼叫端指定當天的顏色。 */
+  .rm-day-pin {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.75rem;
+    height: 1.75rem;
+    padding: 0 0.375rem;
+    border: 2px solid var(--color-foundation-clove);
+    border-radius: var(--radius-pill);
+    background: var(--rm-dc, var(--color-accent));
+    color: var(--color-foundation-muslin);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 700;
+    /* 數字是必要的，不是裝飾：day 色對底色的對比不足以單獨承載身分 */
+  }
 
-/* Toast */
-.rm-toast {
-  position: fixed;
-  right: 1.5rem;
-  bottom: 1.5rem;
-  z-index: 50;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem 1.25rem;
-  border: 2px solid var(--color-foundation-muslin);
-  border-radius: var(--radius-md);
-  background: var(--color-foundation-clove);
-  color: var(--color-foundation-muslin);
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  font-weight: 700;
-  box-shadow: var(--shadow-floating);
-  pointer-events: none;
-  opacity: 0;
-  transform: translateY(6rem);
-  transition: opacity 0.3s var(--ease-overshoot), transform 0.3s var(--ease-overshoot);
-}
-.rm-toast.is-open { opacity: 1; transform: translateY(0); }
+  /* 分隔線 */
+  .rm-divider { border: 0; border-top: 2px solid var(--color-line); }
+  .rm-divider--dashed { border-top-style: dashed; }
 
-/* ── 減少動態 ─────────────────────────────────────────────────────── */
-/* 反光引擎在 JS 那邊也會自己停掉 rAF；這裡是沒載 JS 時的保險。 */
-@media (prefers-reduced-motion: reduce) {
-  .steel-sheen-surface::before,
-  .steel-sheen-surface::after { transition: none; }
-  .steel-press-flash,
-  .sheen-flare { animation: none; }
-  .rm-btn,
-  .rm-toast { transition: none; }
-  .btn-steel-hybrid .steel-iridescent-overlay,
-  .btn-steel-hybrid .steel-iridescent-overlay::after { transition: none; }
-  .rm-btn--cta:hover { transform: none; }
+  /* Toast */
+  .rm-toast {
+    position: fixed;
+    right: 1.5rem;
+    bottom: 1.5rem;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1.25rem;
+    border: 2px solid var(--color-foundation-muslin);
+    border-radius: var(--radius-md);
+    background: var(--color-foundation-clove);
+    color: var(--color-foundation-muslin);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 700;
+    box-shadow: var(--shadow-floating);
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(6rem);
+    transition: opacity 0.3s var(--ease-overshoot), transform 0.3s var(--ease-overshoot);
+  }
+  .rm-toast.is-open { opacity: 1; transform: translateY(0); }
+
+  /* ── 減少動態 ─────────────────────────────────────────────────────── */
+  /* 反光引擎在 JS 那邊也會自己停掉 rAF；這裡是沒載 JS 時的保險。 */
+  @media (prefers-reduced-motion: reduce) {
+    .steel-sheen-surface::before,
+    .steel-sheen-surface::after { transition: none; }
+    .steel-press-flash,
+    .sheen-flare { animation: none; }
+    .rm-btn,
+    .rm-toast { transition: none; }
+    .btn-steel-hybrid .steel-iridescent-overlay,
+    .btn-steel-hybrid .steel-iridescent-overlay::after { transition: none; }
+    .rm-btn--cta:hover { transform: none; }
+  }
 }
