@@ -26,4 +26,35 @@ OUT="${2:-demo.css}"
 
 ./node_modules/.bin/tailwindcss -i "$IN" -o "$OUT" --minify
 
-echo "→ $OUT ($(wc -c < "$OUT") bytes)"
+# 明確宣告 layer 順序。層的優先序由「第一次出現的順序」決定，不是由名字——
+# 所以不宣告的話，utilities 排在最後只是剛好，任何人在前面插一層就翻盤。
+# 寫在原始碼裡沒用：--minify 會把 @layer a,b,c; 這種宣告拿掉，所以在這裡補。
+# 名單從產出本身推導，Tailwind 之後多一層也不會漏掉。
+node -e '
+  const fs = require("fs"), f = process.argv[1];
+  let css = fs.readFileSync(f, "utf8");
+  const names = [];
+  for (const m of css.matchAll(/@layer ([a-z-]+)\s*\{/g))
+    if (!names.includes(m[1])) names.push(m[1]);
+  if (!names.length) process.exit(0);
+  const decl = "@layer " + names.join(",") + ";";
+  /* 接在開頭那行 banner 註解之後，一定要在第一個 @layer 區塊之前 */
+  const i = css.indexOf("*/");
+  css = i === -1 ? decl + css : css.slice(0, i + 2) + "\n" + decl + css.slice(i + 2);
+  fs.writeFileSync(f, css);
+  console.error("  layer 順序: " + names.join(" → "));
+' "$OUT"
+
+# 在產出尾巴蓋一枚原始碼的指紋。demo.html 會自己比對，發現對不上就跳警告——
+# 產生檔進了版控就有走鐘的可能：有人改了 retro-modern.css 忘了重編，
+# git 裡的 demo 就開始說謊，而那正是這套系統被審閱的方式。
+STAMP=$(node -e '
+  const fs = require("fs");
+  const t = fs.readFileSync(process.argv[1], "utf8");
+  let h = 2166136261;                        /* FNV-1a，夠用又不必動到 crypto */
+  for (let i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); }
+  process.stdout.write((h >>> 0).toString(36));
+' "$IN")
+printf '\n/*src:%s*/' "$STAMP" >> "$OUT"
+
+echo "→ $OUT ($(wc -c < "$OUT") bytes, src:$STAMP)"
