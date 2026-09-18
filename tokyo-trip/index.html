@@ -120,7 +120,7 @@
   /* ---- generic ---- */
   .sec{margin-bottom:28px;}
   .sec-head{display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:10px; flex-wrap:wrap;}
-  .sec-head h2{font-family:var(--font-sign); font-size:14px; letter-spacing:.1em; font-weight:500; color:var(--ink-2);}
+  .sec-head h2{font-family:var(--font-sign); font-size:14px; letter-spacing:.1em; font-weight:500; color:var(--ink-2); margin-right:auto;}
   .sec-head .hint{font-size:11px; color:var(--muted);}
   .card{background:var(--surface); border:1px solid var(--line); border-radius:10px;}
   .btn{appearance:none; border:1px solid var(--line); background:var(--surface); border-radius:7px; padding:7px 13px; font-size:13px; font-weight:500; cursor:pointer;
@@ -211,8 +211,6 @@
   .map .attr{position:absolute; right:0; bottom:0; z-index:3; font-size:9px; line-height:1.5;
     padding:0 4px; background:rgba(255,255,255,.78); color:#333; border-radius:4px 0 0 0;}
   .map .attr a{color:inherit;}
-  .map-note{font-size:11.5px; color:var(--muted); line-height:1.6; margin-top:8px;}
-  .map-note a{color:var(--ink-2);}
 
   /* ---- bottom sheet ---- */
   /* 許願池的地圖從下面滑上來。它是「看一下就收起來」的東西,不該長期佔著清單的位置。
@@ -243,7 +241,7 @@
     @keyframes drawerin{from{transform:translateX(100%)} to{transform:translateX(0)}}
     /* 往下拉收起來的把手是手機的比喻,抽屜用不到 */
     .sheet .sheet-grab{display:none;}
-    .sheet #wish-map{flex:1; height:auto; min-height:0;}
+    .sheet #map{flex:1; height:auto; min-height:0;}
 
     .sheet-grip{display:flex; position:absolute; left:0; top:0; bottom:0; width:14px; z-index:5;
       align-items:center; justify-content:center; cursor:col-resize; touch-action:none;}
@@ -262,8 +260,8 @@
   .sheet-head .i{color:var(--accent);}
   .sheet-head .n{font-family:var(--font-mono); font-size:11px; color:var(--muted); font-weight:400;}
   .sheet-x{margin-left:auto; background:none; border:0; color:var(--muted); cursor:pointer; padding:4px 6px;}
-  /* 這裡空間比行程頁大方一點,圖也給高一些 */
-  #wish-map{--dc:var(--accent); height:46vh; min-height:240px;}
+  /* 手機上 sheet 只佔下半部,給地圖將近半個螢幕高 */
+  #map{height:46vh; min-height:240px;}
   #wish-list{display:grid; gap:7px; margin-bottom:12px;}
   .wish{display:grid; grid-template-columns:1fr auto; align-items:center; gap:3px 10px;
     border:1px solid var(--line); border-radius:9px; padding:10px 12px; background:var(--paper);}
@@ -291,6 +289,10 @@
     background:var(--accent-soft); color:var(--accent);
     font-family:var(--font-sign); font-size:12px; font-weight:600; white-space:nowrap;}
   .wish .wadd:hover{background:var(--accent); color:#fff;}
+  /* 使用者打進來的網址。底下虛線表示「這是連結」,顏色跟著本文不搶戲。 */
+  .lnk{color:inherit; text-decoration:underline; text-decoration-style:dotted;
+    text-decoration-thickness:1px; text-underline-offset:2.5px;}
+  .lnk:hover{color:var(--accent); text-decoration-style:solid;}
   .wish .wdel{background:none; border:0; color:var(--muted); cursor:pointer; font-size:11px; padding:2px 4px;}
   .wish-hint{font-size:11px; color:var(--muted); margin-bottom:10px;}
   /* 無框、置中、主色文字 —— 它是邀請,不是動作按鈕 */
@@ -301,6 +303,12 @@
   #add-wish-btn:hover,#wish-map-btn:hover{background:var(--accent-soft);}
   #add-wish-btn .i,#wish-map-btn .i{color:var(--accent);}
   .route.dropzone{outline:2px dashed var(--accent); outline-offset:6px; border-radius:8px;}
+  /* DAY 標題那一排最右邊的地圖入口 —— 每天都在同一個位置 */
+  .iconbtn{display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px;
+    padding:0; border:1px solid var(--line); border-radius:8px; background:var(--surface);
+    color:var(--ink-2); cursor:pointer;}
+  .iconbtn:hover{background:var(--surface-2); color:var(--accent); border-color:var(--accent);}
+  .iconbtn .i{margin:0;}
 
   /* ---- 改內容 ---- */
   .stop .rowops{display:flex; align-items:center; gap:2px;}
@@ -540,6 +548,7 @@
       <div class="sec-head">
         <h2 id="day-title">當日行程</h2>
         <button class="btn btn-sm" id="add-stop-btn" type="button"><svg class="i" aria-hidden="true"><use href="#i-plus"></use></svg>加行程</button>
+        <button class="iconbtn" id="day-map-btn" type="button" aria-label="這天的地圖" title="這天的地圖"><svg class="i" aria-hidden="true"><use href="#i-route"></use></svg></button>
       </div>
       <form class="form" id="stop-form" hidden>
         <div class="grid2">
@@ -554,17 +563,6 @@
         </div>
       </form>
       <div class="route" id="route"></div>
-
-      <details class="wishbox" id="mapbox">
-        <summary class="wish-head">
-          <svg class="i" aria-hidden="true"><use href="#i-route"></use></svg>
-          <span>這天的地圖</span>
-          <span class="wish-n" id="map-n"></span>
-          <svg class="i wish-caret" aria-hidden="true"><use href="#i-chevron-down"></use></svg>
-        </summary>
-        <div class="map" id="map"></div>
-        <div class="map-note" id="map-note"></div>
-      </details>
 
       <details class="wishbox" id="wishbox">
         <summary class="wish-head">
@@ -720,20 +718,20 @@
   </form>
 </div>
 
-<div class="sheet" id="wish-sheet" hidden>
-  <div class="sheet-in" role="dialog" aria-label="許願地點的地圖">
-    <div class="sheet-grip" id="wish-grip" title="拉寬縮窭"></div>
+<!-- 行程的地圖和許願的地圖是同一張,只是換內容 -->
+<div class="sheet" id="map-sheet" hidden>
+  <div class="sheet-in" role="dialog" aria-label="地圖">
+    <div class="sheet-grip" id="map-grip" title="拉寬縮窄"></div>
     <div class="sheet-grab"></div>
     <div class="sheet-head">
       <svg class="i" aria-hidden="true"><use href="#i-route"></use></svg>
-      <span>大家想去的地方</span>
-      <span class="n" id="wish-map-n"></span>
-      <button type="button" class="sheet-x" id="wish-sheet-x" aria-label="收起來">
+      <span id="map-title">地圖</span>
+      <span class="n" id="map-n"></span>
+      <button type="button" class="sheet-x" id="map-sheet-x" aria-label="收起來">
         <svg class="i" aria-hidden="true"><use href="#i-xmark"></use></svg>
       </button>
     </div>
-    <div class="map" id="wish-map"></div>
-    <div class="map-note" id="wish-map-note"></div>
+    <div class="map" id="map"></div>
   </div>
 </div>
 
@@ -838,6 +836,24 @@
   const toTWD = e => e.currency === "JPY" ? e.amount * state.rate : e.amount;
   const el = id => document.getElementById(id);
   const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+  /* 有人會把網址打進備註或名稱。找出來變成可以點的連結,底下畫虛線表示它是連結。
+     先切段再各自 esc —— 反過來的話 & 已經變成 &amp;,網址就對不回去了。
+     結尾的標點不算網址的一部分:「詳見 https://x.com/a。」那個句號是中文的。 */
+  function linkify(s) {
+    const str = String(s == null ? "" : s);
+    const re = /https?:\/\/[^\s<>"']+/g;
+    let out = "", last = 0, m;
+    while ((m = re.exec(str))) {
+      const u = m[0].replace(/[.,;:)\]}、。,;:)】》]+$/, "");
+      if (!u) continue;
+      out += esc(str.slice(last, m.index)) +
+        '<a class="lnk" href="' + esc(u) + '" target="_blank" rel="noopener">' + esc(u) + "</a>";
+      last = m.index + u.length;
+      re.lastIndex = last;
+    }
+    return out + esc(str.slice(last));
+  }
   const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 
   /* ================= 儲存:Notion 優先,連不上就退回本機 ================= */
@@ -1472,40 +1488,37 @@
     if (wxRev !== rev) renderRoute();
   }
 
-  /* 願望池的地圖:全部的願望標在同一張圖上,看得出哪幾個擠在一起,
-     就知道哪幾個可以排同一天。編號對應下面清單上的編號。
+  /* 行程的地圖和許願的地圖是同一張,只換內容:
+       day  —— 當天的行程,編號 = 時間軸上的順序,顏色跟著當天的 Day 顏色
+       wish —— 全部的願望,編號 = 清單上的編號,顏色用主色
+     沒填地點的也留著 —— 標題往往本身就是地名(淺草寺、合羽橋道具街、
+     夢の島熱帯植物館),pinForItem 會拿它再試一次。標不出來的就是缺號。 */
+  let sheetMode = null, sheetKey = null;
+  const sheetItems = () => sheetMode === "wish" ? wishOrder() : dayList(state.day);
 
-     沒填地點的也留著 —— 願望的「想去哪」本身通常就是地名(淺草寺、合羽橋道具街、
-     夢の島熱帯植物館),pinForItem 會拿它再試一次。編號照清單順序給,
-     標不出來的就是缺號,下面那行會說少了幾個。 */
-  let wishMapKey = null;
-  async function loadWishMap(force) {
-    if (el("wish-sheet").hidden) { wishMapKey = null; return; }
-    const list = wishOrder();
-    const key = list.map(w => w.place + "\u0001" + w.title).join("|");
-    if (!force && wishMapKey === key) return;
-    wishMapKey = key;
+  async function loadSheetMap(force) {
+    if (el("map-sheet").hidden || !sheetMode) { sheetKey = null; return; }
+    const list = sheetItems();
+    const key = sheetMode + "|" + (sheetMode === "day" ? state.day : "") + "|" +
+      list.map(x => x.place + "\u0001" + x.title).join("|");
+    if (!force && sheetKey === key) return;
+    sheetKey = key;
 
     const draw = () => {
-      if (wishMapKey !== key) return;
+      if (sheetKey !== key) return;   /* 中途換了一天或換了模式,就不要畫舊的 */
       const pts = [];
-      list.forEach((w, i) => {
-        const at = pinOf(w);
-        if (inJapan(at)) pts.push({ la: at.la, lo: at.lo, place: w.place || w.title, title: w.title, n: i + 1 });
+      list.forEach((x, i) => {
+        const at = pinOf(x);
+        if (inJapan(at)) pts.push({ la: at.la, lo: at.lo, place: x.place || x.title, title: x.title, n: i + 1 });
       });
-      const far = drawMap(el("wish-map"), pts);
-      const miss = list.length - pts.length;
-      el("wish-map-n").textContent = list.length ? pts.length + "／" + list.length + " 個" : "";
-      el("wish-map-note").innerHTML = !list.length
-        ? "還沒有人許願。"
-        : "可以拖、可以捏合放大。編號對應清單上的編號,擠在一起的幾個排同一天比較省車錢。" + farNote(far) +
-          (miss ? " 有 " + miss + " 個沒標上去（像「泡溫泉」這種不是地名的）。" : "");
+      drawMap(el("map"), pts);
+      el("map-n").textContent = list.length ? pts.length + "／" + list.length + " 個" : "";
     };
 
     draw();
-    for (const w of list) {
-      if (pinOf(w)) continue;
-      await pinForItem(w);
+    for (const x of list) {
+      if (pinOf(x)) continue;
+      await pinForItem(x);
       draw();
     }
   }
@@ -1796,17 +1809,10 @@
     }, { passive: false });
   }
 
-  /* 離群的點照樣畫,但通常落在畫面外 —— 說明裡點名,不然看起來像漏掉 */
-  function farNote(far) {
-    if (!far || !far.length) return "";
-    return " " + far.map(f => f.n + " " + f.title + "(約 " + f.km + " 公里外)").join("、") +
-      " 離得遠,要拖出去才看得到。";
-  }
-
   function drawMap(box, pts) {
     const w = box.clientWidth, h = box.clientHeight;
-    if (!w || !h) return [];
-    if (!pts.length) { box.innerHTML = ""; box._v = null; return []; }
+    if (!w || !h) return;
+    if (!pts.length) { box.innerHTML = ""; box._v = null; return; }
 
     const split = coreOf(pts);
     const fit = split.core;
@@ -1829,51 +1835,8 @@
     paintMap(box);
     initMapGestures(box);
 
-    /* 算一下離群的點離這區中心多遠,說明裡要講 */
-    const c = { la: (fit.reduce((s, p) => s + p.la, 0)) / fit.length,
-                lo: (fit.reduce((s, p) => s + p.lo, 0)) / fit.length };
-    return split.far.map(p => ({ n: p.n, title: p.title, km: Math.round(km(c, p)) }));
   }
 
-  /* 展開時重畫,換日子重畫,行程被加／改／刪也要重畫 —— 所以比對的是
-     「哪一天 + 那天有哪些地點」,不是只看日期。管理員加完一筆,地圖就跟著長出來。 */
-  let mapKey = null;
-  async function loadMap(force) {
-    const open = el("mapbox").open;
-    el("map-n").textContent = "";
-    if (!open) { mapKey = null; return; }
-    const day = state.day;
-
-    /* 沒填地點的也留著 —— 標題可能就是地名。編號跟時間軸同一組。 */
-    const list = dayList(day);
-
-    const key = day + "|" + list.map(s => s.place + "" + s.title).join("|");
-    if (!force && mapKey === key) return;
-    mapKey = key;
-
-    const draw = () => {
-      if (mapKey !== key) return;   /* 中途換日子或又改了行程,就不要畫舊的 */
-      const pts = [];
-      list.forEach((s, i) => {
-        const at = pinOf(s);
-        if (inJapan(at)) pts.push({ la: at.la, lo: at.lo, place: s.place || s.title, title: s.title, n: i + 1 });
-      });
-      const far = drawMap(el("map"), pts);
-      const miss = list.length - pts.length;
-      el("map-n").textContent = list.length ? pts.length + "／" + list.length + " 個" : "";
-      el("map-note").innerHTML = !list.length
-        ? "這天還沒排行程。"
-        : "可以拖、可以捏合放大。數字是當天的順序,點一下用 Google 地圖打開。" + farNote(far) +
-          (miss ? " 有 " + miss + " 個沒標上去（查不到,或不在日本境內）。" : "");
-    };
-
-    draw();
-    for (const s of list) {
-      if (pinOf(s)) continue;
-      await pinForItem(s);
-      draw();
-    }
-  }
 
   function renderDays() {
     const t = todayISO();
@@ -1923,8 +1886,7 @@
     el("day-title").textContent = "DAY " + d.n + " · " + state.day.slice(5).replace("-", "/") + " 週" + d.w;
     const route = el("route");
     route.style.setProperty("--dc", d.color);
-    el("mapbox").style.setProperty("--dc", d.color);
-    loadMap();
+    if (sheetMode === "day") loadSheetMap();
     if (!list.length) {
       route.innerHTML = '<div class="empty">這天還沒排。' + (editable() ? "按右上角「加行程」開始。" : "") + "</div>";
       return;
@@ -1937,9 +1899,9 @@
       (movable(s) ? ' title="長按可以拖著換順序"' : "") + ">" +
       '<div class="t num">' + (s.time || "—") +
       (s.day === OVERNIGHT ? '<span style="color:var(--muted); font-size:10px"> +1</span>' : "") + "</div>" +
-      '<div class="b"><div class="ti">' + esc(s.title) + "</div>" +
-      (s.place ? '<div class="pl">' + esc(s.place) + stopWx(s.place, s.day || state.day) + "</div>" : "") +
-      (s.note ? '<div class="nt">' + esc(s.note) + "</div>" : "") + "</div>" +
+      '<div class="b"><div class="ti">' + linkify(s.title) + "</div>" +
+      (s.place ? '<div class="pl">' + linkify(s.place) + stopWx(s.place, s.day || state.day) + "</div>" : "") +
+      (s.note ? '<div class="nt">' + linkify(s.note) + "</div>" : "") + "</div>" +
       '<div class="rowops">' +
       (movable(s) ? '<button type="button" class="pen" data-edit-stop="' + s.id + '" aria-label="改這一項"><svg class="i" aria-hidden="true"><use href="#i-pen"></use></svg></button>' : "") +
       (movable(s) ? '<button type="button" class="btn btn-ghost btn-sm x" data-del-stop="' + s.id + '" aria-label="刪除這項"><svg class="i" aria-hidden="true"><use href="#i-xmark"></use></svg></button>' : "") +
@@ -1969,7 +1931,7 @@
        比起「跳過不編號」,缺號配上「有 N 個沒標上去」比較好對。 */
     const num = {};
     list.forEach((w, i) => { num[w.id] = i + 1; });
-    loadWishMap();
+    if (sheetMode === "wish") loadSheetMap();
 
     el("wish-n").textContent = list.length ? list.length + " 個" : "";
     el("add-wish-btn").hidden = false;
@@ -1991,10 +1953,10 @@
         });
         return '<div class="wish' + (w.by === me ? " mine" : "") + '" data-wish="' + esc(w.id || "") + '">' +
           '<div class="wt">' + (num[w.id] ? '<span class="wnum">' + num[w.id] + "</span>" : "") +
-          esc(w.title) + "</div>" +
+          linkify(w.title) + "</div>" +
           '<div class="wm">' + by +
-          (w.place ? "<span>" + esc(w.place) + "</span>" : "") +
-          (w.note ? "<span>" + esc(w.note) + "</span>" : "") +
+          (w.place ? "<span>" + linkify(w.place) + "</span>" : "") +
+          (w.note ? "<span>" + linkify(w.note) + "</span>" : "") +
           (names.length ? "<span>" + esc(names.join("、")) + " +1</span>" : "") +
           (editable() ? '<button type="button" class="wdel" data-del-wish="' + esc(w.id || "") + '">刪掉</button>' : "") +
           "</div>" +
@@ -2051,11 +2013,11 @@
     const whoShared = ps.length === IDS.length ? "全員均分" : ps.map(nameOf).join("、") + " 均分";
     const payer = e.payerId ? esc(nameOf(e.payerId)) + " 付" : '<span style="color:var(--warn)">未指定付款人</span>';
     const v = toTWD(e);
-    return '<div class="exp"><div class="hd"><span class="ti">' + esc(e.title) + '</span><span class="chip cat" style="background:' + c.color + '">' + c.name + "</span></div>" +
+    return '<div class="exp"><div class="hd"><span class="ti">' + linkify(e.title) + '</span><span class="chip cat" style="background:' + c.color + '">' + c.name + "</span></div>" +
       '<div class="amt">' + twd(v) + (e.currency === "JPY" ? '<span class="sub">¥' + Math.round(e.amount).toLocaleString("en-US") + "</span>" : "") + "</div>" +
       '<div class="mt"><span>' + payer + "</span><span>·</span><span>" + esc(whoShared) + "</span>" +
       (ps.length ? '<span>·</span><span class="num">每人 ' + twd(v / ps.length) + "</span>" : "") +
-      (e.note ? "<span>·</span><span>" + esc(e.note) + "</span>" : "") + "</div>" +
+      (e.note ? "<span>·</span><span>" + linkify(e.note) + "</span>" : "") + "</div>" +
       (editable() ? '<div class="ops">' +
         '<button type="button" class="btn btn-ghost btn-sm" data-edit-exp="' + e.id + '">' +
         '<svg class="i" aria-hidden="true"><use href="#i-pen"></use></svg>改</button>' +
@@ -2442,7 +2404,7 @@
   })();
 
   /* 點行程那一列(避開按鈕)→ 打開地圖並移到那個點。
-     第一次點的時候座標可能還沒查過(地圖沒開過就不會去查),所以要等 loadMap 跑完。 */
+     第一次點的時候座標可能還沒查過(地圖沒開過就不會去查),所以要等它跑完。 */
   el("route").addEventListener("click", async ev => {
     if (ev.target.closest("button") || ev.target.closest("a")) return;
     const row = ev.target.closest(".stop");
@@ -2450,13 +2412,12 @@
     const n = +row.dataset.n;
     const item = dayList(state.day)[n - 1];
     if (!item) return;
-    if (!el("mapbox").open) { skipMapToggle = true; el("mapbox").open = true; }
-    await loadMap(true);
+    openMapSheet("day");
+    await loadSheetMap(true);
     const at = pinOf(item);
     if (!at || !inJapan(at)) { flash("「" + item.title + "」在地圖上沒有位置"); return; }
     if (focusPin(el("map"), at, n)) {
       [].forEach.call(el("route").children, r => r.classList.toggle("on", r === row));
-      el("mapbox").scrollIntoView({ block: "nearest", behavior: "smooth" });
     }
   });
 
@@ -2571,11 +2532,11 @@
     const list = wishOrder();
     const i = list.findIndex(w => w.id === id);
     if (i < 0) return;
-    openWishSheet();
-    await loadWishMap(true);
+    openMapSheet("wish");
+    await loadSheetMap(true);
     const at = pinOf(list[i]);
     if (!at || !inJapan(at)) { flash("「" + list[i].title + "」在地圖上沒有位置"); return; }
-    if (focusPin(el("wish-map"), at, i + 1)) {
+    if (focusPin(el("map"), at, i + 1)) {
       [].forEach.call(el("wish-list").querySelectorAll("[data-wish]"),
         r => r.classList.toggle("on", r.dataset.wish === id));
     }
@@ -2705,16 +2666,8 @@
 
   renderCountdown();
   setInterval(renderCountdown, 60000);
-  /* 收著就完全不動,展開才去查座標、抓圖磚。
-     toggle 是非同步派送的 —— 程式自己打開(點行程列聚焦)時要擋掉這一次,
-     不然它會晚一步再畫一次,把剛聚焦好的視角重設回預設取景。 */
-  let skipMapToggle = false;
-  el("mapbox").addEventListener("toggle", () => {
-    if (skipMapToggle) { skipMapToggle = false; return; }
-    loadMap(true);
-  });
 
-  /* 許願池的地圖:手機從下面滑上來,桌機從右邊推進來變抽屜 */
+  /* 地圖:手機從下面滑上來,桌機從右邊推進來變抽屜。行程和許願共用這一張。 */
 
   /* 抽屜寬度只有四檔:螢幕的 1/4、2/4、3/4、4/4。存的是「第幾檔」不是像素 ——
      換一台螢幕、轉個方向,同一檔還是同一個比例。 */
@@ -2735,34 +2688,47 @@
     applyDrawer(drawK * quarter());
     try { localStorage.setItem(DRAWLS, String(drawK)); } catch (_) {}
     /* 寬度動畫跑完再重畫,不然量到的還是舊寬度 */
-    setTimeout(repaintWishMap, 220);
+    setTimeout(repaintMap, 220);
   }
   /* 抽屜寬度一變,地圖容器也變寬變窄 —— 要重畫才補得滿圖磚 */
-  const repaintWishMap = () => { if (!el("wish-sheet").hidden) paintMap(el("wish-map")); };
+  const repaintMap = () => { if (!el("map-sheet").hidden) paintMap(el("map")); };
   window.addEventListener("resize", () => {
     if (drawK) applyDrawer(drawK * quarter());
-    repaintWishMap();
+    repaintMap();
   });
 
-  function closeWishSheet() {
-    el("wish-sheet").hidden = true;
+  function closeMapSheet() {
+    el("map-sheet").hidden = true;
     document.body.classList.remove("drawer-open");
-    wishMapKey = null;
+    sheetKey = null;
+    sheetMode = null;
   }
-  function openWishSheet() {
+  /* mode 只有 "day" 和 "wish"。換模式等於換內容,得重畫。 */
+  function openMapSheet(mode) {
+    if (sheetMode !== mode) sheetKey = null;
+    sheetMode = mode;
+    const d = DAYS.find(x => x.date === state.day);
+    el("map-title").textContent = mode === "wish" ? "大家想去的地方"
+      : "DAY " + (d ? d.n : "") + " · " + state.day.slice(5).replace("-", "/");
+    /* 標記顏色:當天行程跟著 Day 顏色,許願一律主色 */
+    el("map-sheet").style.setProperty("--dc", mode === "wish" ? "var(--accent)" : (d ? d.color : ""));
     if (!drawK) drawK = readDrawK();
     applyDrawer(drawK * quarter());
-    el("wish-sheet").hidden = false;
+    el("map-sheet").hidden = false;
     document.body.classList.add("drawer-open");
   }
+  el("day-map-btn").addEventListener("click", () => {
+    openMapSheet("day");
+    loadSheetMap(true);
+  });
   el("wish-map-btn").addEventListener("click", () => {
-    openWishSheet();
-    loadWishMap(true);
+    openMapSheet("wish");
+    loadSheetMap(true);
   });
 
   /* 拉寬:拖的時候即時跟著手指,放開才吸到最近那一檔 */
   (function initGrip() {
-    const grip = el("wish-grip"), sheet = el("wish-sheet");
+    const grip = el("map-grip"), sheet = el("map-sheet");
     let dragging = false;
     grip.addEventListener("pointerdown", ev => {
       dragging = true;
@@ -2774,7 +2740,7 @@
     grip.addEventListener("pointermove", ev => {
       if (!dragging) return;
       applyDrawer(Math.max(quarter() * 0.6, Math.min(window.innerWidth, window.innerWidth - ev.clientX)));
-      repaintWishMap();
+      repaintMap();
     });
     function stop(ev) {
       if (!dragging) return;
@@ -2786,10 +2752,10 @@
     grip.addEventListener("pointerup", stop);
     grip.addEventListener("pointercancel", stop);
   })();
-  el("wish-sheet-x").addEventListener("click", closeWishSheet);
+  el("map-sheet-x").addEventListener("click", closeMapSheet);
   /* 沒有背景那層可以點了(背景要留給使用者操作),所以收起來只剩 ✕ 和 Esc */
   document.addEventListener("keydown", ev => {
-    if (ev.key === "Escape" && !el("wish-sheet").hidden) closeWishSheet();
+    if (ev.key === "Escape" && !el("map-sheet").hidden) closeMapSheet();
   });
 
   state.day = initialDay();
