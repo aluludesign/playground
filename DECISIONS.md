@@ -51,6 +51,17 @@ commit 之後回來把 hash 補上。還沒 commit 的先寫 `未進版控`。
 
 ## 2026-09-19
 
+### 拿掉深色模式 · `TBD`
+
+- **決定**：移除 `@media (prefers-color-scheme: dark)` 和 `:root[data-theme="dark"]` 兩塊 token 覆寫，`color-scheme` 從 `light dark` 改成 `light`。
+- **為什麼**：要接 `design-system/`，而它刻意只做淺色（`7390406`）。不是「深色用不到」——是接上去之後沒有深色可言：`dist/retro-modern.tailwind.css` 把顏色烘成字面值（`.bg-surface` 編出 `rgb(249 232 212/…)`，整份輸出 `var(--rm-` 出現 **0** 次），所以 markup 一旦改用那些 class，就沒有變數可以重新指向，深色救不回來。先移除是讓這件事變成明講的決定，而不是接線那天才發現的副作用。
+- **`color-scheme` 不是順手改的，是必要的**。它管的是**瀏覽器原生控制項**——日期/時間選擇器、捲軸、表單預設底色。留著 `light dark` 的話，使用者系統是深色時，那些原生元件仍然自己畫成深色，貼在淺色版面上。下一個人最容易漏的就是這層：CSS token 全改成淺色了，畫面看起來卻還是有東西是深的，而且怎麼翻樣式表都找不到。這剛好打到 `9d915eb` 才修過的時間欄位。
+- **`--board-*` 沒有動**。那組（深底琥珀字的航班板）是**淺色模式裡的深色元件**，不是深色模式的一部分；只有深色覆寫區塊裡的 `--board-bg`、`--board-line` 兩行跟著走。
+- **順帶清掉死碼**：`[data-theme]` 全檔只出現在那兩個選擇器自己的條件裡，程式沒有任何地方會去設它，所以手動切換主題從來沒有接上過。
+- **代價**：在深色系統上這個站從此是亮的。已驗證（Chrome `--force-dark-mode`）：`prefers-color-scheme` 為 dark 時 `color-scheme` 仍解析成 `light`，`--paper`／`--ink` 維持淺色值，`--board-bg` 保留 `#12141A`。
+- **套用前的基準點**：`pre-design-system` 這個 annotated tag 指著 `2b773b7`，也就是這次改動的前一狀態 —— 單檔內嵌樣式、281 處 `var(--*)`、完整深色模式、未引用 design-system。要比對套用前後的樣式層就跟它比（`git diff pre-design-system -- tokyo-trip/index.html`）。
+- **還沒發生的**：這只是移除深色，**還沒有接上 design-system**。token 改存通道值（決定以後還有沒有機會重建深色）已經定案要做，而且排在套用之前 —— 順序是:移除深色 → token 改存通道值 → build → 換引用。
+
 ### 地名查詢的範圍只加權，不設界線 · `57473b5`
 
 兩個京都的願望落在東京兩個不相干的位置上。
