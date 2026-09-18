@@ -11,98 +11,89 @@
 
 | 檔案 | 做什麼 |
 | --- | --- |
-| `tailwind.preset.js` | 全部的 token：色彩、字族、字級、圓角、陰影、漸層、緩動曲線 |
-| `retro-modern.css` | 金屬材質、反光層、復古紋理、組件 class，以及同一組 token 的 CSS 變數 |
+| `retro-modern.css` | **原始碼** —— `@theme` 的全部 token、金屬材質、反光層、復古紋理、組件 class |
+| `demo.css` | `retro-modern.css` 編出來的成品，`demo.html` 引的就是它 |
 | `retro-modern.js` | 動態反光引擎、按壓回饋、toast、複製到剪貼簿（可選） |
 | `demo.html` | 可以直接開的展示頁，也是活的使用範例 |
-| `build.sh` | 把 preset 編成靜態 CSS，正式上線用（不必掛 CDN） |
+| `build.sh` | 編譯 —— 給 demo 用的那份，或給某個網站用的那份 |
 
-三支檔案是分開的，因為需求層次不同：只要配色就引 preset，
-要金屬質感才加 CSS，要高光會跟著手機轉才加 JS。
+token 和用到 token 的 CSS 現在在同一支檔案裡 —— Tailwind v4 是 CSS-first 的，
+沒有 config 檔。JS 仍然是可選的：不引也不會壞，高光只是不會動。
 
 ## 接進一個新網站
 
+`retro-modern.css` 是原始碼，不能直接 `<link>` —— 它開頭是 `@import "tailwindcss"`
+和 `@theme`，瀏覽器讀不懂。每個網站編自己的那一份。
+
+寫一支一行的入口：
+
+```css
+/* my-trip/app.css */
+@import "../design-system/retro-modern.css";
+```
+
+編出來：
+
+```sh
+cd design-system
+./build.sh ../my-trip/app.css ../my-trip/style.css
+```
+
+HTML 只要兩件事 —— 字型和那支編好的 CSS：
+
 ```html
-<!-- 1. 字型。CSS 刻意不做 @import，那會多一次往返並擋住渲染 -->
-<link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Fraunces:opsz,wght@9..144,600;9..144,700;9..144,800&family=JetBrains+Mono:wght@400;600&family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@700&display=swap">
 
-<!-- 2. Tailwind + preset -->
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="../design-system/tailwind.preset.js"></script>
-<script>tailwind.config = { presets: [retroModern] }</script>
+<link rel="stylesheet" href="./style.css">
 
-<!-- 3. 材質與組件 -->
-<link rel="stylesheet" href="../design-system/retro-modern.css">
-
-<!-- 4. 動態反光（可選，不引也不會壞，高光只是不會動） -->
+<!-- 動態反光，可選 -->
 <script src="../design-system/retro-modern.js"></script>
 
 <body class="rm-base">
 ```
 
-有 build step 的話 preset 也吃得動：
+沒有 CDN、沒有執行期編譯、沒有 config 檔。
 
-```js
-// tailwind.config.js
-module.exports = {
-  presets: [require('./design-system/tailwind.preset')],
-  content: ['./**/*.html'],
-};
+**掃哪些檔案不用指定** —— v4 會掃入口 CSS 所在資料夾底下的原始碼（跳過
+`.gitignore` 的）。所以入口放在網站自己的資料夾裡，設計系統就不必知道誰在用它。
+
+**改了 token 或新寫了 class 都要重編。** Tailwind 只產出你真的寫在 HTML 裡的
+utility，沒重編的新 class 等於不存在。
+
+## 瀏覽器需求
+
+v4 產出會用到 `@property`、`color-mix()`、`@layer`，所以下限是
+**iOS Safari 16.4+ / Chrome 111+ / Firefox 128+**（Safari 16.4 是 2023 年 3 月，
+iPhone 8 以後的機型都支援）。
+
+低於這條線不是整個壞掉，但壞法要知道：
+
+- **顏色照常**。`var(--color-ink)` 是十年前就有的語法
+- **`bg-paper/50` 這類半透明會整條宣告失效**，背景直接不上色 —— 它編成
+  `color-mix()`，而且連 `@supports` 裡的後備也是。這是安靜失效，不是退化成難看
+- 陰影和 ring 靠 `@property` 的 `initial-value`，行為不保證
+
+## token 就是 CSS 變數
+
+`@theme` 裡每一個 token 都會被輸出成真正的 CSS 變數，手寫 CSS 直接用：
+
+```css
+color: var(--color-ink);
+background: var(--color-surface);
+border: 2px solid var(--color-foundation-clove);
 ```
 
-## 正式上線前要換掉 CDN
+**它們是完整的顏色，不是三個數字。** devtools 也照常顯示色塊。
 
-上面那段用的是 `cdn.tailwindcss.com`，開起來 console 會出現：
+| 命名空間 | 例 |
+| --- | --- |
+| `--color-*` | `--color-ink`、`--color-day-3`、`--color-earth-tangelo` |
+| `--radius-*` | `--radius-arch` |
+| `--shadow-*` | `--shadow-hard-md` |
+| `--font-*` `--text-*` `--ease-*` | `--font-serif`、`--text-h2`、`--ease-tactile` |
 
-> cdn.tailwindcss.com should not be used in production.
-
-**這個警告是對的，而且是刻意的。** CDN 版會把整個 Tailwind 編譯器
-（約 120KB 的 JS）送到瀏覽器，在使用者的裝置上即時算出樣式 ——
-打草稿很方便，正式網站不該這樣。行程網站是在國外用手機開的，這點差很多。
-
-正式上線前跑一次 `build.sh`，把 preset 編成一支靜態 CSS：
-
-```sh
-./build.sh '../tokyo-trip/index.html'
-# → dist/retro-modern.tailwind.css
-```
-
-然後把 HTML 裡這兩行
-
-```html
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="../design-system/tailwind.preset.js"></script>
-<script>tailwind.config = { presets: [retroModern] }</script>
-```
-
-換成一行：
-
-```html
-<link rel="stylesheet" href="../design-system/dist/retro-modern.tailwind.css">
-```
-
-沒有 JS，沒有 CDN，沒有執行期編譯。`demo.html` 整頁編出來是 14KB（minified）。
-
-> **一定要指定掃描哪些檔案。** Tailwind 是 content-driven 的 ——
-> 它只產出你真的寫在 HTML 裡的 class。所以沒有「全部 utility 的預編版本」
-> 可以直接拿來用（那會是好幾 MB），每個網站要編自己的那一份。
-> 也因此 `dist/` 沒有進版控。
-
-## 為什麼 demo.html 會說「preset 沒有載入」
-
-`demo.html` 要和 `tailwind.preset.js`、`retro-modern.css`、`retro-modern.js`
-**放在同一層一起開**。單獨把它拖進預覽窗格或 artifact 檢視器，
-那些相對路徑的兄弟檔案抓不到，token 就不會生效。
-
-碰到這個狀況頁面最上面會出現一條紅色提示。以前是直接丟
-`ReferenceError: retroModern is not defined` 然後整段 script 停掉 ——
-現在會把話講完，頁面其餘部分照樣運作。
-
-`.rm-base` 負責底色、文字色、字族，以及**讓長字串斷得掉**
-（`overflow-wrap:anywhere`）—— 行程網站的欄位是使用者打的，
-一條 Google 地圖長網址或一整串日文地址進來，沒有它就會把整頁撐出去。
+語意別名是扁平的（`--color-ink`），顏料是分組的（`--color-foundation-clove`）。
 
 ## 色彩
 
@@ -118,7 +109,7 @@ module.exports = {
 | `bg-accent` `text-accent-ink` | `bg-earth-tangelo` | 主要行動 |
 | `text-positive` `text-negative` `text-caution` `text-info` | olive / tomato / mustard / chambray | 狀態 |
 
-之後要調色票，改 preset 裡的別名一行就好，不用全站搜尋 `foundation-linen`。
+之後要調色票，改 `@theme` 裡的別名一行就好，不用全站搜尋 `foundation-linen`。
 顏料名（`foundation-*`、`earth-*`、`sky-*`、`sun-*`、`botanical-*`）留給
 真的需要指名某個色相的場合，例如裝飾線、圖表。
 
@@ -326,13 +317,13 @@ RetroModern.copy('#D54C15', 'accent');     // 複製並跳 toast
 | `.rm-day-pin` | 行程號碼牌／地圖圖釘 |
 | `.rm-overline` `.rm-divider` `.rm-toast` | 小零件 |
 
-都是單一 class 的低特異度，Tailwind utility 蓋得過去 ——
+全部包在 `@layer components` 裡，所以 Tailwind utility 一定蓋得過去 ——
 `class="rm-btn bg-info"` 會如你所想。
 
 ## 深色模式
 
 **沒有，刻意的。** 這套系統的靈魂是溫潤的奶油底色與暖色光影，
-翻成深色等於重新設計一套色票。之後真的要做，就在 preset 裡新增一組
+翻成深色等於重新設計一套色票。之後真的要做，就在 `@theme` 裡新增一組
 深色 token，不要用濾鏡反轉 —— 那會把 70s 的暖調變成髒的藍灰。
 
 ## 沒有納入的東西

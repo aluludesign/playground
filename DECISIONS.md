@@ -43,6 +43,7 @@ commit 之後回來把 hash 補上。還沒 commit 的先寫 `未進版控`。
 | **航班節點** | 寫死在程式裡 `85c041f` → 只當離線備援 `4d857ff` |
 | **沒設通行碼的時候** | 跳過檢查，寫入全開 `35e099c` → 一律擋下寫入 `db1eca0` |
 | **出東京的地點怎麼認** | 線上查詢服務 → 寫死對照表 `OUTSIDE`，查詢只當補漏 `275da9b` |
+| **設計系統的 token 存哪** | Tailwind v3 preset 餵 hex `7390406` → 改存通道值 `channel-tokens-not-taken`（做完又拆掉）→ v4 `@theme` `5f8227d` |
 | **icon 從哪來** | 手邊順眼的字元（`＋` `✕` `✎` `▾` `✈`）→ Font Awesome 內嵌 `e4a7fa7` |
 
 ---
@@ -382,7 +383,34 @@ Connections 授權才是）、
 
 ## 2026-09-19
 
-### 方格紋理改成參數化，不為每種配色各寫一個 class · `未進版控`
+### 走 Tailwind v4，token 搬進 CSS · `5f8227d` `135a8a4` `458291b` `e1737cb`
+
+- **決定**：升到 Tailwind v4，token 從 `tailwind.preset.js` 搬進 `retro-modern.css` 的 `@theme`。三支檔案變兩支，`build.sh` 砍掉產生暫時 config 那整段。
+- **為什麼**：v4 的 `@theme` 同時做兩件事 —— 產生 utility，以及把每個 token 輸出成**真正的** CSS 變數。所以 `bg-paper` 編成 `background-color: var(--color-paper)`（保留變數，可以重新指向），而手寫 CSS 照樣可以寫 `color: var(--color-ink)` 拿到顏色。v3 只能二選一，見下一則。
+- **順帶消失的**：不再有 config 檔；要掃哪些檔案也不用指定（v4 掃入口 CSS 所在資料夾）。消費端自己寫一支一行的入口 `@import`，設計系統就不必知道誰在用它。
+- **代價一：多了 node_modules。** v4 的 CLI 必須解析得到 `tailwindcss` 套件，`npx` 從任意目錄做不到，所以變成本機 devDependency。這個 repo 本來一個 node 相依都沒有。
+- **代價二：產出從 14KB 變 34KB**（minified）。多出來的是 `@theme` 輸出的全部 token 變數和 `@property` 宣告 —— 那正是「token 還活著」的體積，不是浪費。
+- **代價三：瀏覽器下限拉到 iOS Safari 16.4 / Chrome 111 / Firefox 128**（`@property`）。低於這條線顏色照常，但 `bg-paper/50` 這類半透明會**整條宣告失效**（編成 `color-mix()`，連 `@supports` 後備也是）—— 安靜失效，不是退化成難看。這道關卡真正咬人的時間點是 tokyo-trip 改引設計系統那一刻，在那之前只影響 `demo.html`。
+- **`retro-modern.css` 從此是原始碼，不是成品**：開頭是 `@import "tailwindcss"`，瀏覽器讀不懂，一定要編。`demo.css` 因此進版控（demo 是這套系統被審閱的方式，要先 build 才看得到的展示頁比一個產生檔進 git 更糟）；`dist/` 維持不進版控，那是各網站自己的產出。
+
+### 沒走的那條路：token 存成通道值 · tag `channel-tokens-not-taken`
+
+做完、提交、然後整個拆掉。**留下 tag 才找得回來** —— `git show channel-tokens-not-taken`。
+
+- **當初的問題**：v3 餵 hex 會把顏色烘死進每一個 utility（`bg-surface` 編成 `rgb(249 232 212 / …)`），輸出裡一個 token 變數都不剩，執行期沒辦法重新指向。
+- **當時的解法**：token 改存空格分隔的通道值（`--rm-surface: 249 232 212`），preset 餵 `rgb(var(--rm-x) / <alpha-value>)`。有效，判準也都過了（輸出從 0 個變數變成 27 個）。
+- **為什麼拆掉**：v4 不必付這個代價就拿到同樣結果。通道值的代價是 **CSS 變數不再是能直接用的顏色** —— `var(--rm-ink)` 變成三個數字，丟進顏色欄位會被瀏覽器安靜丟掉，元素變透明而且不報錯。光是 `retro-modern.css` 裡就有 90 處要改寫成 `rgb(var(--rm-x))`，devtools 也不再顯示色塊。而我們的消費端正是 tokyo-trip 那種手寫 CSS 的單檔網站。
+- **為什麼可以安心來回**：兩種存法編出來的 **utility class 名稱完全相同**，所以 markup 一個字都不用動 —— 沒有單向門，晚改不會比較貴。這個判斷是實測的（改 preset 的值重編，`.bg-paper` 就變，probe 的 markup 沒動）。
+- **為什麼刻意不推上遠端**：沒推過的 commit `git reset` 就沒了，遠端歷史裡看不到這輪來回；推出去就只能 revert，疤留著。所以它在本機待到 v4 拍板才拆。
+- **順手學到的**：`grep -c` 在 minified 檔上會騙人（整份壓成一行，不管幾個都回 1）。要數就用 `grep -o | wc -l`。
+
+### 三組不鏽鋼色階維持字面色碼，不走 token · `5f8227d`
+
+- **決定**：`steel`、`steel-deep`、`steel-iri` 共 17 個色維持寫死的十六進位，不進 `@theme` 的語意 token。
+- **為什麼**：它們是三條固定漸層上的停點，不是有人會想重新指向的語意角色。而那三條漸層本身就是寫死的 —— 只讓色階可變會讓 utility 跟漸層對不上，看起來像壞掉。
+- **代價**：下一個人只會看到「有 17 個色沒走 token」而看不出是刻意的。這一則就是為了那個人寫的。
+
+### 方格紋理改成參數化，不為每種配色各寫一個 class · `2b49093`
 
 - **決定**：`.pattern-grid` 由四個 CSS 變數驅動 —— `--grid-fill-color`（預設透明）、`--grid-border-color`（預設 8% 丁香褐）、`--grid-border-width`（`1px`）、`--grid-size`（`20px`）。行內給值就好。
 - **為什麼**：方格的變化維度是連續的（格寬、線粗、兩個顏色），不是離散的幾種款式。寫成 `pattern-grid--sky-sun`、`pattern-grid--earth-tide` 這種具名變體，每多一種配色就多一個 class，而且命名會愈來愈難取 —— 「這個叫什麼」本身就是設計在抗議這個做法。
