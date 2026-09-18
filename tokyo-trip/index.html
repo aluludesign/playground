@@ -231,9 +231,9 @@
     background:var(--surface); color:var(--ink); border:1px solid var(--line);
     box-shadow:0 1px 3px rgba(0,0,0,.18);
     font-family:var(--font-sign); font-size:10px; font-weight:500; letter-spacing:0;}
-  /* 已排進行程的那些只在滑過或被聚焦時才給標籤 —— 十幾個一起掛著會糊成一片 */
-  .map .pin.plan .lab{display:none;}
-  .map .pin.plan.hot .lab,.map .pin.plan.on .lab{display:block;}
+  /* 已排的也掛著,但小一號、淡一點 —— 願望還是主角 */
+  .map .pin.plan .lab{font-size:9px; padding:0 4px; opacity:.82; max-width:96px;}
+  .map .pin.plan.hot .lab{opacity:1;}
   .map .pin.hot .lab{border-color:var(--accent); color:var(--accent);}
   .map .pin.hot{opacity:1; z-index:4; transform:translate(-50%,-50%) scale(1.25);
     box-shadow:0 0 0 3px var(--accent-soft), 0 2px 8px rgba(0,0,0,.4);}
@@ -297,6 +297,8 @@
     border:1px solid var(--line); border-radius:9px; padding:10px 12px; background:var(--paper);}
   .wish.mine{border-color:var(--accent);}
   .wish.on{box-shadow:0 0 0 3px var(--accent-soft);}
+  /* 滑過地圖上的標記時,清單對應那一列也亮起來 */
+  .wish.hot,.stop.hot{background:var(--accent-soft); border-radius:8px;}
   /* 點列會把地圖移過去,所以整列是可點的 */
   .wish{cursor:pointer;}
   .stop{cursor:pointer;}
@@ -1586,8 +1588,18 @@
     return out;
   }
 
+  /* 標題和標記顏色要跟著當下的模式／日期走。原本只在打開 sheet 時設一次,
+     所以開著的時候切到別天,標記還留著上一天的顏色。 */
+  function syncSheetChrome() {
+    const d = DAYS.find(x => x.date === state.day);
+    el("map-title").textContent = sheetMode === "wish" ? "大家想去的地方"
+      : "DAY " + (d ? d.n : "") + " · " + state.day.slice(5).replace("-", "/");
+    el("map-sheet").style.setProperty("--dc", sheetMode === "wish" ? "var(--accent)" : (d ? d.color : ""));
+  }
+
   async function loadSheetMap(force) {
     if (el("map-sheet").hidden || !sheetMode) { sheetKey = null; return; }
+    syncSheetChrome();
     const rows = sheetPoints();
     const key = sheetMode + "|" + (sheetMode === "day" ? state.day : "") + "|" +
       rows.map(r => r.k + r.item.place + "\u0001" + r.item.title).join("|");
@@ -1815,7 +1827,34 @@
     const pin = box.querySelector('.pin[data-k="' + key + '"]');
     if (pin) pin.classList.add("hot");
   }
+  /* 反過來:滑過地圖上的標記,清單那一列也亮。key 反查得回是哪一列。 */
+  function hotRow(key) {
+    [].forEach.call(document.querySelectorAll(".stop.hot,.wish.hot"), e => e.classList.remove("hot"));
+    if (!key) return;
+    let row = null;
+    if (key[0] === "d") {
+      row = el("route").querySelector('.stop[data-n="' + (+key.slice(1) + 1) + '"]');
+    } else if (key[0] === "w") {
+      const w = wishOrder()[+key.slice(1)];
+      if (w) row = el("wish-list").querySelector('[data-wish="' + w.id + '"]');
+    } else if (key[0] === "p") {
+      /* p<日期>-<第幾筆>:只有正在看那一天時,清單上才有對應的列 */
+      const cut = key.lastIndexOf("-");
+      if (key.slice(1, cut) === state.day) {
+        row = el("route").querySelector('.stop[data-n="' + (+key.slice(cut + 1) + 1) + '"]');
+      }
+    }
+    if (row) row.classList.add("hot");
+  }
+
   if (canHover) {
+    el("map").addEventListener("mouseover", ev => {
+      const pin = ev.target.closest(".pin");
+      const k = pin ? pin.dataset.k : null;
+      hotPin(k);
+      hotRow(k);
+    });
+    el("map").addEventListener("mouseleave", () => { hotPin(null); hotRow(null); });
     el("route").addEventListener("mouseover", ev => {
       const row = ev.target.closest(".stop");
       hotPin(row && row.dataset.n ? stopKey(state.day, +row.dataset.n - 1) : null);
@@ -1956,8 +1995,9 @@
     const split = coreOf(stars.length ? stars : pts);
     const fit = split.core;
 
-    /* 塞得下那一區的最大縮放。只有一個點時直接給街區級。 */
-    let z = 16;
+    /* 塞得下那一區的最大縮放。只有一個點時不要貼到街區級 ——
+       周圍已排的點全被推到畫面外,就看不出它跟什麼東西近。 */
+    let z = fit.length > 1 ? 16 : 14;
     if (fit.length > 1) {
       for (; z > Z_MIN; z--) {
         const xs = fit.map(p => projX(p.lo, z)), ys = fit.map(p => projY(p.la, z));
@@ -2846,11 +2886,7 @@
   function openMapSheet(mode) {
     if (sheetMode !== mode) sheetKey = null;
     sheetMode = mode;
-    const d = DAYS.find(x => x.date === state.day);
-    el("map-title").textContent = mode === "wish" ? "大家想去的地方"
-      : "DAY " + (d ? d.n : "") + " · " + state.day.slice(5).replace("-", "/");
-    /* 標記顏色:當天行程跟著 Day 顏色,許願一律主色 */
-    el("map-sheet").style.setProperty("--dc", mode === "wish" ? "var(--accent)" : (d ? d.color : ""));
+    syncSheetChrome();
     if (!drawK) drawK = readDrawK();
     applyDrawer(drawK * quarter());
     el("map-sheet").hidden = false;
