@@ -23,491 +23,499 @@
     color-scheme:light;
   }
 
+  
+
+  /* 組件全部收進 components 層。無層級的 CSS 贏過 @layer utilities,
+     不收的話逐塊換 utility 時,舊樣式會安靜蓋掉新的。
+     層的先後由 design-system 宣告,這裡不寫,免得兩邊搶。
+     :root 留在外面 —— 自訂屬性進了層就會輸給任何無層級的 :root。 */
+  @layer components {
   *,*::before,*::after{box-sizing:border-box;}
-  html{padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);}
-  body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--font-body); font-size:14px; line-height:1.6; -webkit-font-smoothing:antialiased;}
-  img{max-width:100%;}
-  [hidden]{display:none!important;}
-  h1,h2,h3{margin:0; text-wrap:balance; font-weight:700; line-height:1.25;}
-  p{margin:0;}
-  button,input,select,textarea{font:inherit; color:inherit;}
-  :focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:4px;}
-  @media (prefers-reduced-motion: reduce){ *{animation:none!important; transition:none!important;} }
+    html{padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);}
+    body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--font-body); font-size:14px; line-height:1.6; -webkit-font-smoothing:antialiased;}
+    img{max-width:100%;}
+    [hidden]{display:none!important;}
+    h1,h2,h3{margin:0; text-wrap:balance; font-weight:700; line-height:1.25;}
+    p{margin:0;}
+    button,input,select,textarea{font:inherit; color:inherit;}
+    :focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:4px;}
+    @media (prefers-reduced-motion: reduce){ *{animation:none!important; transition:none!important;} }
 
-  .wrap{max-width:880px; margin:0 auto; padding-inline:16px; padding-block:0 56px;}
+    .wrap{max-width:880px; margin:0 auto; padding-inline:16px; padding-block:0 56px;}
 
-  /* 版面最寬就是螢幕,不准橫向捲。
-     使用者打進來的東西不受控 —— 長網址、一整串日文地址、貼進來的一行字 —— 都要斷得掉。
-     grid/flex 的子項預設 min-width:auto,不加這條它們不肯縮到比內容窄,就會把整列撐出去。 */
-  .ti,.pl,.nt,.wt,.wm,.exp .ti,.exp .meta,.lnk{overflow-wrap:anywhere;}
-  .stop .b,.stop .t,.wish .wt,.wish .wm,.exp .hd{min-width:0;}
-  /* 真的還是有東西撐出去時的最後一道。用 clip 不用 hidden ——
-     hidden 會讓 body 變成捲動容器,頂上那條 sticky 的標題列會跟著壞掉。 */
-  body{overflow-x:clip;}
+    /* 版面最寬就是螢幕,不准橫向捲。
+       使用者打進來的東西不受控 —— 長網址、一整串日文地址、貼進來的一行字 —— 都要斷得掉。
+       grid/flex 的子項預設 min-width:auto,不加這條它們不肯縮到比內容窄,就會把整列撐出去。 */
+    .ti,.pl,.nt,.wt,.wm,.exp .ti,.exp .meta,.lnk{overflow-wrap:anywhere;}
+    .stop .b,.stop .t,.wish .wt,.wish .wm,.exp .hd{min-width:0;}
+    /* 真的還是有東西撐出去時的最後一道。用 clip 不用 hidden ——
+       hidden 會讓 body 變成捲動容器,頂上那條 sticky 的標題列會跟著壞掉。 */
+    body{overflow-x:clip;}
 
-  /* ---- top bar ---- */
-  .topbar{position:sticky; top:env(safe-area-inset-top,0px); z-index:20; display:flex; align-items:flex-end; justify-content:space-between; gap:16px;
-    padding-block:18px 14px; background:var(--paper); border-bottom:1px solid var(--line-soft);}
-  .kicker{display:block; font-family:var(--font-mono); font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:var(--muted);}
-  .topbar h1{font-family:var(--font-sign); font-size:22px; letter-spacing:.04em;}
-  .countdown{text-align:right; font-family:var(--font-mono); font-size:11px; color:var(--muted); letter-spacing:.04em; white-space:nowrap;}
-  .countdown b{display:block; font-size:21px; font-weight:600; color:var(--ink); letter-spacing:0;}
+    /* ---- top bar ---- */
+    .topbar{position:sticky; top:env(safe-area-inset-top,0px); z-index:20; display:flex; align-items:flex-end; justify-content:space-between; gap:16px;
+      padding-block:18px 14px; background:var(--paper); border-bottom:1px solid var(--line-soft);}
+    .kicker{display:block; font-family:var(--font-mono); font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:var(--muted);}
+    .topbar h1{font-family:var(--font-sign); font-size:22px; letter-spacing:.04em;}
+    .countdown{text-align:right; font-family:var(--font-mono); font-size:11px; color:var(--muted); letter-spacing:.04em; white-space:nowrap;}
+    .countdown b{display:block; font-size:21px; font-weight:600; color:var(--ink); letter-spacing:0;}
 
-  /* ---- flight board ---- */
-  .board summary{list-style:none; cursor:pointer;}
-  .board summary::-webkit-details-marker{display:none;}
-  .bh-brief{display:none; font-family:var(--font-mono); color:var(--board-ink); letter-spacing:.06em;}
-  .bh-caret{color:var(--board-muted); transition:transform .18s; font-size:15px;}
-  .board[open] .bh-caret{transform:rotate(180deg);}
-  .board{background:var(--board-bg); border-radius:10px; overflow:hidden; margin-block:16px; box-shadow:var(--shadow);}
-  .board-head{display:flex; justify-content:space-between; align-items:center; gap:12px; padding:10px 16px; border-bottom:1px solid var(--board-line);
-    font-family:var(--font-mono); font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:var(--board-muted);}
-  .board-head .live{color:var(--board-amber);}
-  .leg{display:grid; grid-template-columns:auto 1fr auto; gap:6px 14px; align-items:center; padding:14px 16px; border-bottom:1px solid var(--board-line);}
-  .leg:last-child{border-bottom:0;}
-  .leg-tag{font-family:var(--font-mono); font-size:11px; font-weight:600; color:var(--board-amber); letter-spacing:.1em;}
-  .leg-no{font-family:var(--font-mono); font-size:11px; color:var(--board-muted); letter-spacing:.1em; text-align:right;}
-  .leg-route{grid-column:1/-1; display:flex; align-items:center; gap:12px; flex-wrap:wrap;}
-  .port{display:flex; flex-direction:column; gap:1px; min-width:104px;}
-  .port .code{font-family:var(--font-mono); font-size:22px; font-weight:600; color:var(--board-ink); letter-spacing:.06em; line-height:1.1;}
-  .port .sub{font-size:11px; color:var(--board-muted);}
-  .port .time{font-family:var(--font-mono); font-size:13px; color:var(--board-ink); letter-spacing:.04em;}
-  .port .time .next{color:var(--board-amber); font-size:10px;}
-  .dash{flex:1; min-width:40px; height:1px; background:linear-gradient(90deg,var(--board-line),var(--board-muted),var(--board-line)); position:relative;}
-  .dash .i{position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:13px;
-    color:var(--board-muted); background:var(--board-bg); padding:0 7px; box-sizing:content-box;}
-  .seats{grid-column:1/-1; font-family:var(--font-mono); font-size:11px; color:var(--board-muted); letter-spacing:.06em;}
-  /* ---- 誰坐哪 ---- */
-  .seatmap{grid-column:1/-1; display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-top:2px;}
-  .seat{display:inline-flex; align-items:baseline; gap:4px; padding:3px 7px; border-radius:6px;
-    background:rgba(255,255,255,.045); border:1px solid var(--board-line);}
-  .seat b{font-family:var(--font-mono); font-size:11px; font-weight:600; letter-spacing:.04em; color:var(--board-ink);}
-  .seat span{font-size:11px; color:var(--sc,var(--board-muted));}
-  .seat.moved{border-color:var(--board-amber);}
-  .seat.moved b{color:var(--board-amber);}
-  /* 走道 —— 手機上塞不下六個東西,用一條細線就夠了 */
-  .aisle{width:1px; height:16px; background:var(--board-line); font-size:0; overflow:hidden;
-    margin:0 2px; flex:0 0 auto;}
+    /* ---- flight board ---- */
+    .board summary{list-style:none; cursor:pointer;}
+    .board summary::-webkit-details-marker{display:none;}
+    .bh-brief{display:none; font-family:var(--font-mono); color:var(--board-ink); letter-spacing:.06em;}
+    .bh-caret{color:var(--board-muted); transition:transform .18s; font-size:15px;}
+    .board[open] .bh-caret{transform:rotate(180deg);}
+    .board{background:var(--board-bg); border-radius:10px; overflow:hidden; margin-block:16px; box-shadow:var(--shadow);}
+    .board-head{display:flex; justify-content:space-between; align-items:center; gap:12px; padding:10px 16px; border-bottom:1px solid var(--board-line);
+      font-family:var(--font-mono); font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:var(--board-muted);}
+    .board-head .live{color:var(--board-amber);}
+    .leg{display:grid; grid-template-columns:auto 1fr auto; gap:6px 14px; align-items:center; padding:14px 16px; border-bottom:1px solid var(--board-line);}
+    .leg:last-child{border-bottom:0;}
+    .leg-tag{font-family:var(--font-mono); font-size:11px; font-weight:600; color:var(--board-amber); letter-spacing:.1em;}
+    .leg-no{font-family:var(--font-mono); font-size:11px; color:var(--board-muted); letter-spacing:.1em; text-align:right;}
+    .leg-route{grid-column:1/-1; display:flex; align-items:center; gap:12px; flex-wrap:wrap;}
+    .port{display:flex; flex-direction:column; gap:1px; min-width:104px;}
+    .port .code{font-family:var(--font-mono); font-size:22px; font-weight:600; color:var(--board-ink); letter-spacing:.06em; line-height:1.1;}
+    .port .sub{font-size:11px; color:var(--board-muted);}
+    .port .time{font-family:var(--font-mono); font-size:13px; color:var(--board-ink); letter-spacing:.04em;}
+    .port .time .next{color:var(--board-amber); font-size:10px;}
+    .dash{flex:1; min-width:40px; height:1px; background:linear-gradient(90deg,var(--board-line),var(--board-muted),var(--board-line)); position:relative;}
+    .dash .i{position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:13px;
+      color:var(--board-muted); background:var(--board-bg); padding:0 7px; box-sizing:content-box;}
+    .seats{grid-column:1/-1; font-family:var(--font-mono); font-size:11px; color:var(--board-muted); letter-spacing:.06em;}
+    /* ---- 誰坐哪 ---- */
+    .seatmap{grid-column:1/-1; display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-top:2px;}
+    .seat{display:inline-flex; align-items:baseline; gap:4px; padding:3px 7px; border-radius:6px;
+      background:rgba(255,255,255,.045); border:1px solid var(--board-line);}
+    .seat b{font-family:var(--font-mono); font-size:11px; font-weight:600; letter-spacing:.04em; color:var(--board-ink);}
+    .seat span{font-size:11px; color:var(--sc,var(--board-muted));}
+    .seat.moved{border-color:var(--board-amber);}
+    .seat.moved b{color:var(--board-amber);}
+    /* 走道 —— 手機上塞不下六個東西,用一條細線就夠了 */
+    .aisle{width:1px; height:16px; background:var(--board-line); font-size:0; overflow:hidden;
+      margin:0 2px; flex:0 0 auto;}
 
-  /* ---- tabs ---- */
-  .tabs{display:flex; gap:6px; margin-block:4px 18px; border-bottom:1px solid var(--line);}
-  .tab{appearance:none; background:none; border:0; border-bottom:2px solid transparent; padding:9px 14px 10px; cursor:pointer;
-    font-family:var(--font-sign); font-size:15px; font-weight:500; color:var(--muted); letter-spacing:.06em; transition:color .15s, border-color .15s;}
-  .tab:hover{color:var(--ink-2);}
-  .tab[aria-selected="true"]{color:var(--ink); border-bottom-color:var(--accent);}
-  .tab .n{font-family:var(--font-mono); font-size:10px; color:var(--muted); margin-left:5px;}
+    /* ---- tabs ---- */
+    .tabs{display:flex; gap:6px; margin-block:4px 18px; border-bottom:1px solid var(--line);}
+    .tab{appearance:none; background:none; border:0; border-bottom:2px solid transparent; padding:9px 14px 10px; cursor:pointer;
+      font-family:var(--font-sign); font-size:15px; font-weight:500; color:var(--muted); letter-spacing:.06em; transition:color .15s, border-color .15s;}
+    .tab:hover{color:var(--ink-2);}
+    .tab[aria-selected="true"]{color:var(--ink); border-bottom-color:var(--accent);}
+    .tab .n{font-family:var(--font-mono); font-size:10px; color:var(--muted); margin-left:5px;}
 
-  /* ---- icon(Font Awesome Free,SVG 直接內嵌,不連外) ---- */
-  .i{width:1em; height:1em; fill:currentColor; flex:0 0 auto; vertical-align:-.115em;}
-  .tab .i{margin-right:6px; font-size:.95em;}
-  .btn .i{margin-right:6px; font-size:.9em;}
-  /* 讀取中的轉圈 —— 按鈕寬度鎖住,文字換成它,不要讓版面跳動 */
-  .btn .i.spin{margin:0; animation:spin .8s linear infinite;}
-  @keyframes spin{to{transform:rotate(360deg);}}
-  @media (prefers-reduced-motion:reduce){ .i.spin{animation-duration:2s;} }
+    /* ---- icon(Font Awesome Free,SVG 直接內嵌,不連外) ---- */
+    .i{width:1em; height:1em; fill:currentColor; flex:0 0 auto; vertical-align:-.115em;}
+    .tab .i{margin-right:6px; font-size:.95em;}
+    .btn .i{margin-right:6px; font-size:.9em;}
+    /* 讀取中的轉圈 —— 按鈕寬度鎖住,文字換成它,不要讓版面跳動 */
+    .btn .i.spin{margin:0; animation:spin .8s linear infinite;}
+    @keyframes spin{to{transform:rotate(360deg);}}
+    @media (prefers-reduced-motion:reduce){ .i.spin{animation-duration:2s;} }
 
-  /* ---- generic ---- */
-  .sec{margin-bottom:28px;}
-  .sec-head{display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:10px; flex-wrap:wrap;}
-  .sec-head h2{font-family:var(--font-sign); font-size:14px; letter-spacing:.1em; font-weight:500; color:var(--ink-2); margin-right:auto;}
-  .sec-head .hint{font-size:11px; color:var(--muted);}
-  .card{background:var(--surface); border:1px solid var(--line); border-radius:10px;}
-  .btn{appearance:none; border:1px solid var(--line); background:var(--surface); border-radius:7px; padding:7px 13px; font-size:13px; font-weight:500; cursor:pointer;
-    transition:background .15s, border-color .15s;}
-  .btn:hover{background:var(--surface-2); border-color:var(--muted);}
-  .btn-main{background:var(--accent); border-color:var(--accent); color:var(--accent-ink);}
-  .btn-main:hover{background:var(--accent); border-color:var(--accent); filter:brightness(1.08);}
-  .btn-sm{padding:4px 9px; font-size:12px;}
-  .btn-ghost{border-color:transparent; background:none; color:var(--muted);}
-  .btn-ghost:hover{background:var(--surface-2); color:var(--ink); border-color:transparent;}
-  .empty{padding:26px 18px; text-align:center; color:var(--muted); font-size:13px;}
-  .note{display:flex; gap:9px; align-items:flex-start; padding:10px 13px; border-radius:8px; background:var(--warn-soft); color:var(--warn); font-size:12.5px; line-height:1.5;}
-  .num{font-family:var(--font-mono); font-variant-numeric:tabular-nums;}
+    /* ---- generic ---- */
+    .sec{margin-bottom:28px;}
+    .sec-head{display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:10px; flex-wrap:wrap;}
+    .sec-head h2{font-family:var(--font-sign); font-size:14px; letter-spacing:.1em; font-weight:500; color:var(--ink-2); margin-right:auto;}
+    .sec-head .hint{font-size:11px; color:var(--muted);}
+    .card{background:var(--surface); border:1px solid var(--line); border-radius:10px;}
+    .btn{appearance:none; border:1px solid var(--line); background:var(--surface); border-radius:7px; padding:7px 13px; font-size:13px; font-weight:500; cursor:pointer;
+      transition:background .15s, border-color .15s;}
+    .btn:hover{background:var(--surface-2); border-color:var(--muted);}
+    .btn-main{background:var(--accent); border-color:var(--accent); color:var(--accent-ink);}
+    .btn-main:hover{background:var(--accent); border-color:var(--accent); filter:brightness(1.08);}
+    .btn-sm{padding:4px 9px; font-size:12px;}
+    .btn-ghost{border-color:transparent; background:none; color:var(--muted);}
+    .btn-ghost:hover{background:var(--surface-2); color:var(--ink); border-color:transparent;}
+    .empty{padding:26px 18px; text-align:center; color:var(--muted); font-size:13px;}
+    .note{display:flex; gap:9px; align-items:flex-start; padding:10px 13px; border-radius:8px; background:var(--warn-soft); color:var(--warn); font-size:12.5px; line-height:1.5;}
+    .num{font-family:var(--font-mono); font-variant-numeric:tabular-nums;}
 
-  /* ---- day rail ---- */
-  .days{display:flex; gap:7px; overflow-x:auto; padding-bottom:6px; margin-bottom:16px; scrollbar-width:thin;}
-  .day{flex:0 0 auto; display:flex; flex-direction:column; gap:2px; align-items:flex-start; padding:8px 12px 9px; border-radius:8px; cursor:pointer;
-    background:var(--surface); border:1px solid var(--line); border-left:4px solid var(--dc,var(--muted)); min-width:84px; transition:background .15s;}
-  .day:hover{background:var(--surface-2);}
-  .day[aria-pressed="true"]{background:var(--dc); border-color:var(--dc); color:#fff;}
-  .day .dn{font-family:var(--font-mono); font-size:10px; letter-spacing:.12em; opacity:.8;}
-  .day .dd{font-family:var(--font-sign); font-size:15px; font-weight:700; letter-spacing:.02em;}
-  .day .dw{font-size:10.5px; opacity:.75;}
-  /* 天氣只在抓得到預報時才長出來,抓不到就整行不存在,不留佔位的破折號 */
-  .wx{font-size:10.5px; opacity:.85; white-space:nowrap; letter-spacing:.02em;}
-  .stop .b .pl .wx{margin-left:6px;}
-  /* 過去的日子退成灰的,但照樣點得進去 */
-  .day.past{border-left-color:var(--line); background:var(--surface-2); color:var(--muted);}
-  .day.past:hover{background:var(--surface);}
-  .day.past[aria-pressed="true"]{background:var(--muted); border-color:var(--muted); color:#fff;}
-  .day.today .dn::after{content:" ·今天"; letter-spacing:0;}
+    /* ---- day rail ---- */
+    .days{display:flex; gap:7px; overflow-x:auto; padding-bottom:6px; margin-bottom:16px; scrollbar-width:thin;}
+    .day{flex:0 0 auto; display:flex; flex-direction:column; gap:2px; align-items:flex-start; padding:8px 12px 9px; border-radius:8px; cursor:pointer;
+      background:var(--surface); border:1px solid var(--line); border-left:4px solid var(--dc,var(--muted)); min-width:84px; transition:background .15s;}
+    .day:hover{background:var(--surface-2);}
+    .day[aria-pressed="true"]{background:var(--dc); border-color:var(--dc); color:#fff;}
+    .day .dn{font-family:var(--font-mono); font-size:10px; letter-spacing:.12em; opacity:.8;}
+    .day .dd{font-family:var(--font-sign); font-size:15px; font-weight:700; letter-spacing:.02em;}
+    .day .dw{font-size:10.5px; opacity:.75;}
+    /* 天氣只在抓得到預報時才長出來,抓不到就整行不存在,不留佔位的破折號 */
+    .wx{font-size:10.5px; opacity:.85; white-space:nowrap; letter-spacing:.02em;}
+    .stop .b .pl .wx{margin-left:6px;}
+    /* 過去的日子退成灰的,但照樣點得進去 */
+    .day.past{border-left-color:var(--line); background:var(--surface-2); color:var(--muted);}
+    .day.past:hover{background:var(--surface);}
+    .day.past[aria-pressed="true"]{background:var(--muted); border-color:var(--muted); color:#fff;}
+    .day.today .dn::after{content:" ·今天"; letter-spacing:0;}
 
-  /* ---- route timeline ---- */
-  .route{position:relative; padding-left:34px;}
-  .route::before{content:""; position:absolute; left:10px; top:14px; bottom:14px; width:2px; background:var(--dc,var(--line)); opacity:.35; border-radius:2px;}
-  .stop{position:relative; display:grid; grid-template-columns:54px 1fr auto; gap:4px 12px; align-items:start; padding:12px 0;}
-  .stop + .stop{border-top:1px solid var(--line-soft);}
-  /* 時間軸的號碼牌長得跟地圖上的標記一樣 —— 它們是同一個編號,看起來就該是同一個東西 */
-  .stop::before{content:attr(data-n); position:absolute; left:-34px; top:14px;
-    min-width:22px; height:22px; border-radius:11px; border:1.5px solid var(--paper);
-    background:var(--dc,var(--ink)); color:#fff; box-shadow:0 1px 4px rgba(0,0,0,.28);
-    font-family:var(--font-mono); font-size:11px; font-weight:700;
-    display:flex; align-items:center; justify-content:center;}
-  /* 這一列在地圖上被聚焦時,兩邊一起亮起來 */
-  .stop.on::before{box-shadow:0 0 0 4px var(--accent-soft), 0 1px 4px rgba(0,0,0,.28);}
-  .stop .t{font-family:var(--font-mono); font-size:12.5px; color:var(--muted); padding-top:1px; letter-spacing:.02em;}
-  .stop .b .ti{font-family:var(--font-sign); font-size:15px; font-weight:500;}
-  .stop .b .pl{font-size:12px; color:var(--muted);}
-  .stop .b .nt{font-size:12.5px; color:var(--ink-2); margin-top:3px;}
-  .stop .x{opacity:0; transition:opacity .15s;}
-  /* ---- 許願 ---- */
-  .wishbox{margin-top:22px; border:1px solid var(--line); border-radius:11px; background:var(--surface); padding:0;}
-  .wish-head{list-style:none; cursor:pointer; display:flex; align-items:center; gap:8px; padding:13px 15px;
-    font-family:var(--font-sign); font-size:14px; font-weight:600;}
-  .wish-head::-webkit-details-marker{display:none;}
-  .wish-head .i:first-child{color:var(--warn);}
-  .wish-n{font-family:var(--font-mono); font-size:11px; color:var(--muted); font-weight:400;}
-  .wish-caret{color:var(--muted); font-size:12px; transition:transform .18s;}
-  /* 摺疊列裡的地圖入口:靠右,箭頭跟在它後面 */
-  .wish-head .iconbtn{margin-left:auto;}
-  .iconbtn.sm{width:27px; height:27px; border-radius:7px;}
-  .wishbox[open] .wish-caret{transform:rotate(180deg);}
-  .wishbox > *:not(summary){margin:0 15px;}
-  .wishbox > *:last-child{margin-bottom:15px;}
-  .wish-intro{font-size:12px; color:var(--muted); line-height:1.6; margin-bottom:12px;}
+    /* ---- route timeline ---- */
+    .route{position:relative; padding-left:34px;}
+    .route::before{content:""; position:absolute; left:10px; top:14px; bottom:14px; width:2px; background:var(--dc,var(--line)); opacity:.35; border-radius:2px;}
+    .stop{position:relative; display:grid; grid-template-columns:54px 1fr auto; gap:4px 12px; align-items:start; padding:12px 0;}
+    .stop + .stop{border-top:1px solid var(--line-soft);}
+    /* 時間軸的號碼牌長得跟地圖上的標記一樣 —— 它們是同一個編號,看起來就該是同一個東西 */
+    .stop::before{content:attr(data-n); position:absolute; left:-34px; top:14px;
+      min-width:22px; height:22px; border-radius:11px; border:1.5px solid var(--paper);
+      background:var(--dc,var(--ink)); color:#fff; box-shadow:0 1px 4px rgba(0,0,0,.28);
+      font-family:var(--font-mono); font-size:11px; font-weight:700;
+      display:flex; align-items:center; justify-content:center;}
+    /* 這一列在地圖上被聚焦時,兩邊一起亮起來 */
+    .stop.on::before{box-shadow:0 0 0 4px var(--accent-soft), 0 1px 4px rgba(0,0,0,.28);}
+    .stop .t{font-family:var(--font-mono); font-size:12.5px; color:var(--muted); padding-top:1px; letter-spacing:.02em;}
+    .stop .b .ti{font-family:var(--font-sign); font-size:15px; font-weight:500;}
+    .stop .b .pl{font-size:12px; color:var(--muted);}
+    .stop .b .nt{font-size:12.5px; color:var(--ink-2); margin-top:3px;}
+    .stop .x{opacity:0; transition:opacity .15s;}
+    /* ---- 許願 ---- */
+    .wishbox{margin-top:22px; border:1px solid var(--line); border-radius:11px; background:var(--surface); padding:0;}
+    .wish-head{list-style:none; cursor:pointer; display:flex; align-items:center; gap:8px; padding:13px 15px;
+      font-family:var(--font-sign); font-size:14px; font-weight:600;}
+    .wish-head::-webkit-details-marker{display:none;}
+    .wish-head .i:first-child{color:var(--warn);}
+    .wish-n{font-family:var(--font-mono); font-size:11px; color:var(--muted); font-weight:400;}
+    .wish-caret{color:var(--muted); font-size:12px; transition:transform .18s;}
+    /* 摺疊列裡的地圖入口:靠右,箭頭跟在它後面 */
+    .wish-head .iconbtn{margin-left:auto;}
+    .iconbtn.sm{width:27px; height:27px; border-radius:7px;}
+    .wishbox[open] .wish-caret{transform:rotate(180deg);}
+    .wishbox > *:not(summary){margin:0 15px;}
+    .wishbox > *:last-child{margin-bottom:15px;}
+    .wish-intro{font-size:12px; color:var(--muted); line-height:1.6; margin-bottom:12px;}
 
-  /* ---- map ---- */
-  /* 圖磚是絕對定位排出來的,容器要蓋掉溢出的部分 */
-  /* touch-action:none 才收得到雙指捏合 —— 不然瀏覽器先把手勢拿去捲頁面了 */
-  .map{position:relative; height:260px; overflow:hidden; border-radius:9px; touch-action:none;
-    border:1px solid var(--line); background:var(--surface-2); cursor:grab;}
-  .map:active{cursor:grabbing;}
-  /* 拖曳／捏合時只動這一層的 transform,不重畫,圖磚才不會閃 */
-  .map .layer{position:absolute; inset:0; transform-origin:0 0;}
-  .map .tile{position:absolute; width:256px; height:256px; pointer-events:none; user-select:none;
-    -webkit-user-drag:none;}
-  .map .mapzoom{position:absolute; right:8px; top:8px; z-index:4; display:flex; flex-direction:column; gap:1px;}
-  .map .mapzoom button{width:30px; height:30px; border:1px solid var(--line); background:var(--surface);
-    color:var(--ink); font-size:17px; line-height:1; cursor:pointer; padding:0;}
-  .map .mapzoom button:first-child{border-radius:7px 7px 0 0;}
-  .map .mapzoom button:last-child{border-radius:0 0 7px 7px; border-top:0;}
-  .map .mapzoom button:hover{background:var(--surface-2);}
-  /* 編號跟時間軸的順序一樣,才看得出一天怎麼走 */
-  .map .pin{position:absolute; transform:translate(-50%,-50%); z-index:2;
-    min-width:21px; height:21px; padding:0 5px; border-radius:11px; border:1.5px solid #fff;
-    background:var(--dc,var(--ink)); color:#fff; box-shadow:0 1px 4px rgba(0,0,0,.35);
-    font-family:var(--font-mono); font-size:11px; font-weight:700; text-decoration:none;
-    display:flex; align-items:center; justify-content:center;}
-  /* 被聚焦的那個標記:外面套一圈光暈,跟清單那一列同時亮 */
-  /* 滑鼠滑過清單那一列時,對應的標記跳出來。比 .on 輕一點 —— 它是路過,不是選定。 */
-  /* 標記正上方的名稱,就是「做什麼／想去哪」那欄填的字。
-     pointer-events:none —— 它只是標籤,不能擋住拖地圖。
-     .pin 本身有 transform,hover 放大時標籤跟著一起放大。 */
-  .map .pin .lab{position:absolute; bottom:calc(100% + 5px); left:50%; transform:translateX(-50%);
-    max-width:116px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-    padding:1px 5px; border-radius:5px; pointer-events:none;
-    background:var(--surface); color:var(--ink); border:1px solid var(--line);
-    box-shadow:0 1px 3px rgba(0,0,0,.18);
-    font-family:var(--font-sign); font-size:10px; font-weight:500; letter-spacing:0;}
-  /* 兩個圖層的開關。關掉的那個變灰,開著的用它自己的顏色。 */
-  .maplayers{display:flex; gap:6px; margin-bottom:9px;}
-  .lay{display:inline-flex; align-items:center; gap:6px; cursor:pointer;
-    border:1px solid var(--line); border-radius:99px; padding:4px 11px 4px 9px;
-    background:var(--surface); color:var(--muted);
-    font-family:var(--font-sign); font-size:11.5px; font-weight:500;}
-  .lay::before{content:""; width:9px; height:9px; border-radius:50%;
-    background:var(--line); border:1px solid var(--line);}
-  .lay[aria-pressed="true"]{color:var(--ink); border-color:var(--ink-2);}
-  #lay-plan[aria-pressed="true"]::before{background:var(--dc,var(--ink)); border-color:var(--dc,var(--ink));}
-  #lay-wish[aria-pressed="true"]::before{background:var(--accent); border-color:var(--accent);}
-  /* 許願模式下行程那層是六天六種顏色,點一個顏色代表不了,用中性色 */
-  #map-sheet[data-mode="wish"] #lay-plan[aria-pressed="true"]::before{background:var(--ink-2); border-color:var(--ink-2);}
-  .lay:hover{background:var(--surface-2);}
+    /* ---- map ---- */
+    /* 圖磚是絕對定位排出來的,容器要蓋掉溢出的部分 */
+    /* touch-action:none 才收得到雙指捏合 —— 不然瀏覽器先把手勢拿去捲頁面了 */
+    .map{position:relative; height:260px; overflow:hidden; border-radius:9px; touch-action:none;
+      border:1px solid var(--line); background:var(--surface-2); cursor:grab;}
+    .map:active{cursor:grabbing;}
+    /* 拖曳／捏合時只動這一層的 transform,不重畫,圖磚才不會閃 */
+    .map .layer{position:absolute; inset:0; transform-origin:0 0;}
+    .map .tile{position:absolute; width:256px; height:256px; pointer-events:none; user-select:none;
+      -webkit-user-drag:none;}
+    .map .mapzoom{position:absolute; right:8px; top:8px; z-index:4; display:flex; flex-direction:column; gap:1px;}
+    .map .mapzoom button{width:30px; height:30px; border:1px solid var(--line); background:var(--surface);
+      color:var(--ink); font-size:17px; line-height:1; cursor:pointer; padding:0;}
+    .map .mapzoom button:first-child{border-radius:7px 7px 0 0;}
+    .map .mapzoom button:last-child{border-radius:0 0 7px 7px; border-top:0;}
+    .map .mapzoom button:hover{background:var(--surface-2);}
+    /* 編號跟時間軸的順序一樣,才看得出一天怎麼走 */
+    .map .pin{position:absolute; transform:translate(-50%,-50%); z-index:2;
+      min-width:21px; height:21px; padding:0 5px; border-radius:11px; border:1.5px solid #fff;
+      background:var(--dc,var(--ink)); color:#fff; box-shadow:0 1px 4px rgba(0,0,0,.35);
+      font-family:var(--font-mono); font-size:11px; font-weight:700; text-decoration:none;
+      display:flex; align-items:center; justify-content:center;}
+    /* 被聚焦的那個標記:外面套一圈光暈,跟清單那一列同時亮 */
+    /* 滑鼠滑過清單那一列時,對應的標記跳出來。比 .on 輕一點 —— 它是路過,不是選定。 */
+    /* 標記正上方的名稱,就是「做什麼／想去哪」那欄填的字。
+       pointer-events:none —— 它只是標籤,不能擋住拖地圖。
+       .pin 本身有 transform,hover 放大時標籤跟著一起放大。 */
+    .map .pin .lab{position:absolute; bottom:calc(100% + 5px); left:50%; transform:translateX(-50%);
+      max-width:116px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+      padding:1px 5px; border-radius:5px; pointer-events:none;
+      background:var(--surface); color:var(--ink); border:1px solid var(--line);
+      box-shadow:0 1px 3px rgba(0,0,0,.18);
+      font-family:var(--font-sign); font-size:10px; font-weight:500; letter-spacing:0;}
+    /* 兩個圖層的開關。關掉的那個變灰,開著的用它自己的顏色。 */
+    .maplayers{display:flex; gap:6px; margin-bottom:9px;}
+    .lay{display:inline-flex; align-items:center; gap:6px; cursor:pointer;
+      border:1px solid var(--line); border-radius:99px; padding:4px 11px 4px 9px;
+      background:var(--surface); color:var(--muted);
+      font-family:var(--font-sign); font-size:11.5px; font-weight:500;}
+    .lay::before{content:""; width:9px; height:9px; border-radius:50%;
+      background:var(--line); border:1px solid var(--line);}
+    .lay[aria-pressed="true"]{color:var(--ink); border-color:var(--ink-2);}
+    #lay-plan[aria-pressed="true"]::before{background:var(--dc,var(--ink)); border-color:var(--dc,var(--ink));}
+    #lay-wish[aria-pressed="true"]::before{background:var(--accent); border-color:var(--accent);}
+    /* 許願模式下行程那層是六天六種顏色,點一個顏色代表不了,用中性色 */
+    #map-sheet[data-mode="wish"] #lay-plan[aria-pressed="true"]::before{background:var(--ink-2); border-color:var(--ink-2);}
+    .lay:hover{background:var(--surface-2);}
 
-  /* 擠不下的讓位:先試標記下面,再擠不下就先藏起來,滑過／聚焦時照樣冒出來 */
-  .map .pin .lab.below{bottom:auto; top:calc(100% + 5px);}
-  .map .pin .lab.hide{display:none;}
-  .map .pin.hot .lab.hide,.map .pin.on .lab.hide{display:block;}
-  .map .pin.hot .lab{border-color:var(--accent); color:var(--accent);}
-  .map .pin.hot{opacity:1; z-index:4; transform:translate(-50%,-50%) scale(1.25);
-    box-shadow:0 0 0 3px var(--accent-soft), 0 2px 8px rgba(0,0,0,.4);}
-  .map .pin.on{box-shadow:0 0 0 5px var(--accent-soft), 0 1px 6px rgba(0,0,0,.4); z-index:3;}
-  .map .attr{position:absolute; right:0; bottom:0; z-index:3; font-size:9px; line-height:1.5;
-    padding:0 4px; background:rgba(255,255,255,.78); color:#333; border-radius:4px 0 0 0;}
-  .map .attr a{color:inherit;}
+    /* 擠不下的讓位:先試標記下面,再擠不下就先藏起來,滑過／聚焦時照樣冒出來 */
+    .map .pin .lab.below{bottom:auto; top:calc(100% + 5px);}
+    .map .pin .lab.hide{display:none;}
+    .map .pin.hot .lab.hide,.map .pin.on .lab.hide{display:block;}
+    .map .pin.hot .lab{border-color:var(--accent); color:var(--accent);}
+    .map .pin.hot{opacity:1; z-index:4; transform:translate(-50%,-50%) scale(1.25);
+      box-shadow:0 0 0 3px var(--accent-soft), 0 2px 8px rgba(0,0,0,.4);}
+    .map .pin.on{box-shadow:0 0 0 5px var(--accent-soft), 0 1px 6px rgba(0,0,0,.4); z-index:3;}
+    .map .attr{position:absolute; right:0; bottom:0; z-index:3; font-size:9px; line-height:1.5;
+      padding:0 4px; background:rgba(255,255,255,.78); color:#333; border-radius:4px 0 0 0;}
+    .map .attr a{color:inherit;}
 
-  /* ---- bottom sheet ---- */
-  /* 許願池的地圖從下面滑上來。它是「看一下就收起來」的東西,不該長期佔著清單的位置。
+    /* ---- bottom sheet ---- */
+    /* 許願池的地圖從下面滑上來。它是「看一下就收起來」的東西,不該長期佔著清單的位置。
 
-     背景不蓋、不糊,底下照樣點得到 —— 開著地圖還要能捲願望清單來對照,
-     那才是它存在的理由。所以容器只佔底下那條,而且自己不吃事件,只有卡片吃。 */
-  .sheet{position:fixed; left:0; right:0; bottom:0; z-index:70; display:flex;
-    align-items:flex-end; pointer-events:none;}
-  .sheet[hidden]{display:none;}
-  .sheet-in{width:100%; pointer-events:auto; background:var(--surface);
-    border-top:1px solid var(--line); border-radius:16px 16px 0 0;
-    box-shadow:0 -10px 34px rgba(0,0,0,.28);
-    padding:10px 15px calc(16px + env(safe-area-inset-bottom));
-    animation:sheetup .22s cubic-bezier(.2,.8,.3,1);}
-  @keyframes sheetup{from{transform:translateY(100%)} to{transform:translateY(0)}}
-  @media (prefers-reduced-motion:reduce){ .sheet-in{animation:none;} }
+       背景不蓋、不糊,底下照樣點得到 —— 開著地圖還要能捲願望清單來對照,
+       那才是它存在的理由。所以容器只佔底下那條,而且自己不吃事件,只有卡片吃。 */
+    .sheet{position:fixed; left:0; right:0; bottom:0; z-index:70; display:flex;
+      align-items:flex-end; pointer-events:none;}
+    .sheet[hidden]{display:none;}
+    .sheet-in{width:100%; pointer-events:auto; background:var(--surface);
+      border-top:1px solid var(--line); border-radius:16px 16px 0 0;
+      box-shadow:0 -10px 34px rgba(0,0,0,.28);
+      padding:10px 15px calc(16px + env(safe-area-inset-bottom));
+      animation:sheetup .22s cubic-bezier(.2,.8,.3,1);}
+    @keyframes sheetup{from{transform:translateY(100%)} to{transform:translateY(0)}}
+    @media (prefers-reduced-motion:reduce){ .sheet-in{animation:none;} }
 
-  /* 桌機橫向空間夠,改成從右邊滑進來的抽屜:地圖佔滿高度,左邊那片版面照常用,
-     清單和地圖真的並排看得到。 */
-  /* 拉寬用的握把。手機上抽屜本來就滿版,用不到。 */
-  .sheet-grip{display:none;}
-  @media (min-width:641px){
-    .sheet{top:0; left:auto; width:var(--drawer,440px);}
-    .sheet-in{position:relative; height:100%; display:flex; flex-direction:column;
-      border-top:0; border-left:1px solid var(--line); border-radius:16px 0 0 16px;
-      box-shadow:-10px 0 34px rgba(0,0,0,.26); padding:16px 16px 16px 22px;
-      animation-name:drawerin;}
-    @keyframes drawerin{from{transform:translateX(100%)} to{transform:translateX(0)}}
-    /* 往下拉收起來的把手是手機的比喻,抽屜用不到 */
-    .sheet .sheet-grab{display:none;}
-    .sheet #map{flex:1; height:auto; min-height:0;}
+    /* 桌機橫向空間夠,改成從右邊滑進來的抽屜:地圖佔滿高度,左邊那片版面照常用,
+       清單和地圖真的並排看得到。 */
+    /* 拉寬用的握把。手機上抽屜本來就滿版,用不到。 */
+    .sheet-grip{display:none;}
+    @media (min-width:641px){
+      .sheet{top:0; left:auto; width:var(--drawer,440px);}
+      .sheet-in{position:relative; height:100%; display:flex; flex-direction:column;
+        border-top:0; border-left:1px solid var(--line); border-radius:16px 0 0 16px;
+        box-shadow:-10px 0 34px rgba(0,0,0,.26); padding:16px 16px 16px 22px;
+        animation-name:drawerin;}
+      @keyframes drawerin{from{transform:translateX(100%)} to{transform:translateX(0)}}
+      /* 往下拉收起來的把手是手機的比喻,抽屜用不到 */
+      .sheet .sheet-grab{display:none;}
+      .sheet #map{flex:1; height:auto; min-height:0;}
 
-    .sheet-grip{display:flex; position:absolute; left:0; top:0; bottom:0; width:14px; z-index:5;
-      align-items:center; justify-content:center; cursor:col-resize; touch-action:none;}
-    .sheet-grip::before{content:""; width:4px; height:42px; border-radius:2px; background:var(--line);}
-    .sheet-grip:hover::before,.sheet.sizing .sheet-grip::before{background:var(--accent);}
+      .sheet-grip{display:flex; position:absolute; left:0; top:0; bottom:0; width:14px; z-index:5;
+        align-items:center; justify-content:center; cursor:col-resize; touch-action:none;}
+      .sheet-grip::before{content:""; width:4px; height:42px; border-radius:2px; background:var(--line);}
+      .sheet-grip:hover::before,.sheet.sizing .sheet-grip::before{background:var(--accent);}
 
-    /* 抽屜一開,底下的版面就縮到剩下的寬度重排 —— 不是被蓋住,是真的變窄 */
-    body.drawer-open{padding-right:var(--drawer,440px);}
-    body.drawer-open:not(.sizing-now){transition:padding-right .18s ease;}
-    .sheet:not(.sizing){transition:width .18s ease;}
-  }
-  /* 一看就知道可以往下收的那條把手 */
-  .sheet-grab{width:38px; height:4px; border-radius:2px; background:var(--line); margin:0 auto 12px;}
-  .sheet-head{display:flex; align-items:center; gap:8px; margin-bottom:10px;
-    font-family:var(--font-sign); font-size:14px; font-weight:600;}
-  .sheet-head .i{color:var(--accent);}
-  .sheet-head .n{font-family:var(--font-mono); font-size:11px; color:var(--muted); font-weight:400;}
-  .sheet-x{margin-left:auto; background:none; border:0; color:var(--muted); cursor:pointer; padding:4px 6px;}
-  /* 手機上 sheet 只佔下半部,給地圖將近半個螢幕高 */
-  #map{height:46vh; min-height:240px;}
-  #wish-list{display:grid; gap:7px; margin-bottom:12px;}
-  .wish{display:grid; grid-template-columns:1fr auto; align-items:center; gap:3px 10px;
-    border:1px solid var(--line); border-radius:9px; padding:10px 12px; background:var(--paper);}
-  .wish.mine{border-color:var(--accent);}
-  .wish.on{box-shadow:0 0 0 3px var(--accent-soft);}
-  /* 滑過地圖上的標記時,清單對應那一列也亮起來 */
-  .wish.hot,.stop.hot{background:var(--accent-soft); border-radius:8px;}
-  /* 點列會把地圖移過去,所以整列是可點的 */
-  .wish{cursor:pointer;}
-  .stop{cursor:pointer;}
-  .stop .rowops,.wish .wops,.wish .wdel{cursor:auto;}
-  .wish .wt{font-family:var(--font-sign); font-size:14px; font-weight:500;}
-  /* 跟上面地圖上的編號對應。沒填地點的願望標不出來,也就沒有編號。 */
-  .wish .wnum{display:inline-flex; align-items:center; justify-content:center; min-width:18px; height:18px;
-    margin-right:7px; border-radius:9px; background:var(--accent-soft); color:var(--accent);
-    font-family:var(--font-mono); font-size:10.5px; font-weight:700;}
-  .wish .wm{grid-column:1/2; font-size:11.5px; color:var(--muted); display:flex; flex-wrap:wrap; gap:4px 7px;}
-  .wish .wm .by{color:var(--wc,var(--muted));}
-  .wish .wops{grid-row:1/3; grid-column:2/3; align-self:center; display:flex; align-items:center; gap:6px;}
-  .wish .vote{display:flex; align-items:center; gap:5px;
-    border:1px solid var(--line); border-radius:99px; padding:5px 11px; background:var(--surface);
-    font-family:var(--font-mono); font-size:12px; cursor:pointer; color:var(--ink-2);}
-  .wish .vote:hover{background:var(--surface-2);}
-  .wish .vote.on{border-color:var(--accent); color:var(--accent); background:var(--accent-soft);}
-  .wish .vote .i{font-size:11px; margin:0;}
-  .wish .wadd{border:1px solid var(--accent); border-radius:99px; padding:5px 12px; cursor:pointer;
-    background:var(--accent-soft); color:var(--accent);
-    font-family:var(--font-sign); font-size:12px; font-weight:600; white-space:nowrap;}
-  .wish .wadd:hover{background:var(--accent); color:#fff;}
-  /* 使用者打進來的網址。底下虛線表示「這是連結」,顏色跟著本文不搶戲。 */
-  .lnk{color:inherit; text-decoration:underline; text-decoration-style:dotted;
-    text-decoration-thickness:1px; text-underline-offset:2.5px;}
-  .lnk:hover{color:var(--accent); text-decoration-style:solid;}
-  .wish .wdel{background:none; border:0; color:var(--muted); cursor:pointer; font-size:11px; padding:2px 4px;}
-  .wish-hint{font-size:11px; color:var(--muted); margin-bottom:10px;}
-  /* 無框、置中、主色文字 —— 它是邀請,不是動作按鈕 */
-  #add-wish-btn{display:flex; align-items:center; justify-content:center; gap:0;
-    margin:0 auto 15px; padding:9px 14px; min-height:0;
-    background:none; border:0; border-radius:8px; cursor:pointer;
-    color:var(--accent); font-weight:600; font-size:13px;}
-  #add-wish-btn:hover{background:var(--accent-soft);}
-  #add-wish-btn .i{color:var(--accent);}
-  .route.dropzone{outline:2px dashed var(--accent); outline-offset:6px; border-radius:8px;}
-  /* DAY 標題那一排最右邊的地圖入口 —— 每天都在同一個位置 */
-  .iconbtn{display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px;
-    padding:0; border:1px solid var(--line); border-radius:8px; background:var(--surface);
-    color:var(--ink-2); cursor:pointer;}
-  .iconbtn:hover{background:var(--surface-2); color:var(--accent); border-color:var(--accent);}
-  .iconbtn .i{margin:0;}
+      /* 抽屜一開,底下的版面就縮到剩下的寬度重排 —— 不是被蓋住,是真的變窄 */
+      body.drawer-open{padding-right:var(--drawer,440px);}
+      body.drawer-open:not(.sizing-now){transition:padding-right .18s ease;}
+      .sheet:not(.sizing){transition:width .18s ease;}
+    }
+    /* 一看就知道可以往下收的那條把手 */
+    .sheet-grab{width:38px; height:4px; border-radius:2px; background:var(--line); margin:0 auto 12px;}
+    .sheet-head{display:flex; align-items:center; gap:8px; margin-bottom:10px;
+      font-family:var(--font-sign); font-size:14px; font-weight:600;}
+    .sheet-head .i{color:var(--accent);}
+    .sheet-head .n{font-family:var(--font-mono); font-size:11px; color:var(--muted); font-weight:400;}
+    .sheet-x{margin-left:auto; background:none; border:0; color:var(--muted); cursor:pointer; padding:4px 6px;}
+    /* 手機上 sheet 只佔下半部,給地圖將近半個螢幕高 */
+    #map{height:46vh; min-height:240px;}
+    #wish-list{display:grid; gap:7px; margin-bottom:12px;}
+    .wish{display:grid; grid-template-columns:1fr auto; align-items:center; gap:3px 10px;
+      border:1px solid var(--line); border-radius:9px; padding:10px 12px; background:var(--paper);}
+    .wish.mine{border-color:var(--accent);}
+    .wish.on{box-shadow:0 0 0 3px var(--accent-soft);}
+    /* 滑過地圖上的標記時,清單對應那一列也亮起來 */
+    .wish.hot,.stop.hot{background:var(--accent-soft); border-radius:8px;}
+    /* 點列會把地圖移過去,所以整列是可點的 */
+    .wish{cursor:pointer;}
+    .stop{cursor:pointer;}
+    .stop .rowops,.wish .wops,.wish .wdel{cursor:auto;}
+    .wish .wt{font-family:var(--font-sign); font-size:14px; font-weight:500;}
+    /* 跟上面地圖上的編號對應。沒填地點的願望標不出來,也就沒有編號。 */
+    .wish .wnum{display:inline-flex; align-items:center; justify-content:center; min-width:18px; height:18px;
+      margin-right:7px; border-radius:9px; background:var(--accent-soft); color:var(--accent);
+      font-family:var(--font-mono); font-size:10.5px; font-weight:700;}
+    .wish .wm{grid-column:1/2; font-size:11.5px; color:var(--muted); display:flex; flex-wrap:wrap; gap:4px 7px;}
+    .wish .wm .by{color:var(--wc,var(--muted));}
+    .wish .wops{grid-row:1/3; grid-column:2/3; align-self:center; display:flex; align-items:center; gap:6px;}
+    .wish .vote{display:flex; align-items:center; gap:5px;
+      border:1px solid var(--line); border-radius:99px; padding:5px 11px; background:var(--surface);
+      font-family:var(--font-mono); font-size:12px; cursor:pointer; color:var(--ink-2);}
+    .wish .vote:hover{background:var(--surface-2);}
+    .wish .vote.on{border-color:var(--accent); color:var(--accent); background:var(--accent-soft);}
+    .wish .vote .i{font-size:11px; margin:0;}
+    .wish .wadd{border:1px solid var(--accent); border-radius:99px; padding:5px 12px; cursor:pointer;
+      background:var(--accent-soft); color:var(--accent);
+      font-family:var(--font-sign); font-size:12px; font-weight:600; white-space:nowrap;}
+    .wish .wadd:hover{background:var(--accent); color:#fff;}
+    /* 使用者打進來的網址。底下虛線表示「這是連結」,顏色跟著本文不搶戲。 */
+    .lnk{color:inherit; text-decoration:underline; text-decoration-style:dotted;
+      text-decoration-thickness:1px; text-underline-offset:2.5px;}
+    .lnk:hover{color:var(--accent); text-decoration-style:solid;}
+    .wish .wdel{background:none; border:0; color:var(--muted); cursor:pointer; font-size:11px; padding:2px 4px;}
+    .wish-hint{font-size:11px; color:var(--muted); margin-bottom:10px;}
+    /* 無框、置中、主色文字 —— 它是邀請,不是動作按鈕 */
+    #add-wish-btn{display:flex; align-items:center; justify-content:center; gap:0;
+      margin:0 auto 15px; padding:9px 14px; min-height:0;
+      background:none; border:0; border-radius:8px; cursor:pointer;
+      color:var(--accent); font-weight:600; font-size:13px;}
+    #add-wish-btn:hover{background:var(--accent-soft);}
+    #add-wish-btn .i{color:var(--accent);}
+    .route.dropzone{outline:2px dashed var(--accent); outline-offset:6px; border-radius:8px;}
+    /* DAY 標題那一排最右邊的地圖入口 —— 每天都在同一個位置 */
+    .iconbtn{display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px;
+      padding:0; border:1px solid var(--line); border-radius:8px; background:var(--surface);
+      color:var(--ink-2); cursor:pointer;}
+    .iconbtn:hover{background:var(--surface-2); color:var(--accent); border-color:var(--accent);}
+    .iconbtn .i{margin:0;}
 
-  /* ---- 改內容 ---- */
-  .stop .rowops{display:flex; align-items:center; gap:2px;}
-  .stop .pen{background:none; border:0; padding:6px 5px; color:var(--muted); font-size:14px; line-height:1;
-    cursor:pointer; border-radius:6px;}
-  .stop .pen:hover{background:var(--surface-2); color:var(--ink-2);}
+    /* ---- 改內容 ---- */
+    .stop .rowops{display:flex; align-items:center; gap:2px;}
+    .stop .pen{background:none; border:0; padding:6px 5px; color:var(--muted); font-size:14px; line-height:1;
+      cursor:pointer; border-radius:6px;}
+    .stop .pen:hover{background:var(--surface-2); color:var(--ink-2);}
 
-  /* ---- 長按整列拖移排序 ---- */
-  /* 捲動照常,長按成立之後才在 touchmove 裡擋掉捲動(見 initSorting) */
-  .route.can-sort .stop:not(.anchor){cursor:grab; user-select:none; -webkit-user-select:none;
-    -webkit-touch-callout:none;}
-  .route.sorting{user-select:none; touch-action:none;}
-  .route.sorting .stop .x, .route.sorting .stop .pen{visibility:hidden;}
-  /* 按住 → 整列浮起來變一張卡片 */
-  .stop.lifted{background:var(--surface); border-radius:10px; padding:12px 10px; cursor:grabbing;
-    box-shadow:0 10px 26px rgba(0,0,0,.20); position:relative; z-index:5;
-    border-top-color:transparent !important;}
-  .stop.lifted::before{background:var(--dc,var(--muted)); transform:scale(1.15);}
-  @media (prefers-reduced-motion:no-preference){
-    .stop.lifted{animation:lift .16s ease-out both;}
-    @keyframes lift{from{transform:scale(1); box-shadow:0 0 0 rgba(0,0,0,0);}
-                    to{transform:scale(1.015); box-shadow:0 10px 26px rgba(0,0,0,.20);}}
-  }
-  .stop:hover .x, .stop:focus-within .x{opacity:1;}
-  @media (hover:none){ .stop .x{opacity:1;} }
+    /* ---- 長按整列拖移排序 ---- */
+    /* 捲動照常,長按成立之後才在 touchmove 裡擋掉捲動(見 initSorting) */
+    .route.can-sort .stop:not(.anchor){cursor:grab; user-select:none; -webkit-user-select:none;
+      -webkit-touch-callout:none;}
+    .route.sorting{user-select:none; touch-action:none;}
+    .route.sorting .stop .x, .route.sorting .stop .pen{visibility:hidden;}
+    /* 按住 → 整列浮起來變一張卡片 */
+    .stop.lifted{background:var(--surface); border-radius:10px; padding:12px 10px; cursor:grabbing;
+      box-shadow:0 10px 26px rgba(0,0,0,.20); position:relative; z-index:5;
+      border-top-color:transparent !important;}
+    .stop.lifted::before{background:var(--dc,var(--muted)); transform:scale(1.15);}
+    @media (prefers-reduced-motion:no-preference){
+      .stop.lifted{animation:lift .16s ease-out both;}
+      @keyframes lift{from{transform:scale(1); box-shadow:0 0 0 rgba(0,0,0,0);}
+                      to{transform:scale(1.015); box-shadow:0 10px 26px rgba(0,0,0,.20);}}
+    }
+    .stop:hover .x, .stop:focus-within .x{opacity:1;}
+    @media (hover:none){ .stop .x{opacity:1;} }
 
-  /* ---- stat tiles ---- */
-  .stats{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:1px; background:var(--line); border:1px solid var(--line); border-radius:10px; overflow:hidden;}
-  .stat{background:var(--surface); padding:14px 16px 15px;}
-  .stat .lb{font-size:11px; color:var(--muted); letter-spacing:.05em;}
-  .stat .vl{font-family:var(--font-mono); font-size:23px; font-weight:600; letter-spacing:-.01em; margin-top:3px; line-height:1.15;}
-  .stat .sb{font-size:11px; color:var(--muted); margin-top:2px;}
+    /* ---- stat tiles ---- */
+    .stats{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:1px; background:var(--line); border:1px solid var(--line); border-radius:10px; overflow:hidden;}
+    .stat{background:var(--surface); padding:14px 16px 15px;}
+    .stat .lb{font-size:11px; color:var(--muted); letter-spacing:.05em;}
+    .stat .vl{font-family:var(--font-mono); font-size:23px; font-weight:600; letter-spacing:-.01em; margin-top:3px; line-height:1.15;}
+    .stat .sb{font-size:11px; color:var(--muted); margin-top:2px;}
 
-  /* ---- category bar ---- */
-  .catbar{display:flex; height:10px; border-radius:5px; overflow:hidden; background:var(--line-soft); margin-bottom:12px;}
-  .catbar span{display:block; height:100%;}
-  .catlist{display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:5px 18px;}
-  .catrow{display:flex; align-items:center; gap:8px; font-size:12.5px; padding:3px 0;}
-  .swatch{width:9px; height:9px; border-radius:2.5px; flex:0 0 auto;}
-  .catrow .nm{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
-  .catrow .vv{font-family:var(--font-mono); font-variant-numeric:tabular-nums;}
-  .catrow .pc{font-family:var(--font-mono); color:var(--muted); font-size:11px; width:36px; text-align:right;}
+    /* ---- category bar ---- */
+    .catbar{display:flex; height:10px; border-radius:5px; overflow:hidden; background:var(--line-soft); margin-bottom:12px;}
+    .catbar span{display:block; height:100%;}
+    .catlist{display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:5px 18px;}
+    .catrow{display:flex; align-items:center; gap:8px; font-size:12.5px; padding:3px 0;}
+    .swatch{width:9px; height:9px; border-radius:2.5px; flex:0 0 auto;}
+    .catrow .nm{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+    .catrow .vv{font-family:var(--font-mono); font-variant-numeric:tabular-nums;}
+    .catrow .pc{font-family:var(--font-mono); color:var(--muted); font-size:11px; width:36px; text-align:right;}
 
-  /* ---- expense list ---- */
-  .datehead{display:flex; align-items:baseline; gap:10px; margin:18px 0 6px; font-family:var(--font-mono); font-size:11px; letter-spacing:.1em; color:var(--muted);}
-  .datehead .rule{flex:1; height:1px; background:var(--line-soft);}
-  .exp{display:grid; grid-template-columns:1fr auto; gap:2px 12px; padding:11px 14px; border:1px solid var(--line); border-radius:9px; background:var(--surface); margin-bottom:6px;}
-  .exp .hd{display:flex; align-items:center; gap:8px; flex-wrap:wrap; min-width:0;}
-  .exp .ti{font-weight:500; font-size:14.5px;}
-  .chip{font-size:10.5px; padding:1.5px 7px; border-radius:20px; background:var(--surface-2); color:var(--muted); border:1px solid var(--line); white-space:nowrap;}
-  .chip.cat{border-color:transparent; color:#fff;}
-  .exp .amt{text-align:right; font-family:var(--font-mono); font-variant-numeric:tabular-nums; font-size:15px; font-weight:600; white-space:nowrap;}
-  .exp .amt .sub{display:block; font-size:10.5px; font-weight:400; color:var(--muted);}
-  .exp .mt{grid-column:1/2; font-size:12px; color:var(--muted); display:flex; gap:6px; flex-wrap:wrap; align-items:center;}
-  .exp .ops{grid-column:2/3; display:flex; justify-content:flex-end; gap:6px;}
+    /* ---- expense list ---- */
+    .datehead{display:flex; align-items:baseline; gap:10px; margin:18px 0 6px; font-family:var(--font-mono); font-size:11px; letter-spacing:.1em; color:var(--muted);}
+    .datehead .rule{flex:1; height:1px; background:var(--line-soft);}
+    .exp{display:grid; grid-template-columns:1fr auto; gap:2px 12px; padding:11px 14px; border:1px solid var(--line); border-radius:9px; background:var(--surface); margin-bottom:6px;}
+    .exp .hd{display:flex; align-items:center; gap:8px; flex-wrap:wrap; min-width:0;}
+    .exp .ti{font-weight:500; font-size:14.5px;}
+    .chip{font-size:10.5px; padding:1.5px 7px; border-radius:20px; background:var(--surface-2); color:var(--muted); border:1px solid var(--line); white-space:nowrap;}
+    .chip.cat{border-color:transparent; color:#fff;}
+    .exp .amt{text-align:right; font-family:var(--font-mono); font-variant-numeric:tabular-nums; font-size:15px; font-weight:600; white-space:nowrap;}
+    .exp .amt .sub{display:block; font-size:10.5px; font-weight:400; color:var(--muted);}
+    .exp .mt{grid-column:1/2; font-size:12px; color:var(--muted); display:flex; gap:6px; flex-wrap:wrap; align-items:center;}
+    .exp .ops{grid-column:2/3; display:flex; justify-content:flex-end; gap:6px;}
 
-  /* ---- forms ---- */
-  .form{display:grid; gap:12px; padding:16px; border:1px dashed var(--line); border-radius:10px; background:var(--surface-2); margin-bottom:16px;}
-  .grid2{display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px;}
-  .fld{display:flex; flex-direction:column; gap:4px; min-width:0;}
-  .fld label{font-size:11px; color:var(--muted); letter-spacing:.05em;}
-  .fld input,.fld select,.fld textarea{background:var(--surface); border:1px solid var(--line); border-radius:7px; padding:7px 9px; font-size:14px; line-height:1.5; width:100%; min-width:0;}
-  /* iOS Safari 把 input[type=time] 畫成一顆圓角灰按鈕,跟旁邊的文字框差很多。
-     關掉原生外觀讓它跟其他欄位一樣 —— 點下去還是叫得出原生的時間轉盤。
-     ::-webkit-date-and-time-value 預設有自己的 margin 和置中,也要一起清掉。 */
-  .fld input[type="time"],.fld input[type="date"]{
-    -webkit-appearance:none; appearance:none; font-family:inherit; height:auto;}
-  .fld input[type="time"]::-webkit-date-and-time-value,
-  .fld input[type="date"]::-webkit-date-and-time-value{margin:0; text-align:left; line-height:1.5;}
-  .fld input[type="time"]::-webkit-calendar-picker-indicator,
-  .fld input[type="date"]::-webkit-calendar-picker-indicator{opacity:.45; padding:0; margin:0;
-    width:1em; height:1em; block-size:1em;}
-  .fld input[type="number"]{font-family:var(--font-mono);}
-  .who{display:flex; gap:6px; flex-wrap:wrap;}
-  .who label{display:inline-flex; align-items:center; gap:5px; padding:5px 10px; border:1px solid var(--line); border-radius:20px; background:var(--surface); font-size:12.5px; cursor:pointer;}
-  .who input{accent-color:var(--accent);}
-  .form-ops{display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap;}
+    /* ---- forms ---- */
+    .form{display:grid; gap:12px; padding:16px; border:1px dashed var(--line); border-radius:10px; background:var(--surface-2); margin-bottom:16px;}
+    .grid2{display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px;}
+    .fld{display:flex; flex-direction:column; gap:4px; min-width:0;}
+    .fld label{font-size:11px; color:var(--muted); letter-spacing:.05em;}
+    .fld input,.fld select,.fld textarea{background:var(--surface); border:1px solid var(--line); border-radius:7px; padding:7px 9px; font-size:14px; line-height:1.5; width:100%; min-width:0;}
+    /* iOS Safari 把 input[type=time] 畫成一顆圓角灰按鈕,跟旁邊的文字框差很多。
+       關掉原生外觀讓它跟其他欄位一樣 —— 點下去還是叫得出原生的時間轉盤。
+       ::-webkit-date-and-time-value 預設有自己的 margin 和置中,也要一起清掉。 */
+    .fld input[type="time"],.fld input[type="date"]{
+      -webkit-appearance:none; appearance:none; font-family:inherit; height:auto;}
+    .fld input[type="time"]::-webkit-date-and-time-value,
+    .fld input[type="date"]::-webkit-date-and-time-value{margin:0; text-align:left; line-height:1.5;}
+    .fld input[type="time"]::-webkit-calendar-picker-indicator,
+    .fld input[type="date"]::-webkit-calendar-picker-indicator{opacity:.45; padding:0; margin:0;
+      width:1em; height:1em; block-size:1em;}
+    .fld input[type="number"]{font-family:var(--font-mono);}
+    .who{display:flex; gap:6px; flex-wrap:wrap;}
+    .who label{display:inline-flex; align-items:center; gap:5px; padding:5px 10px; border:1px solid var(--line); border-radius:20px; background:var(--surface); font-size:12.5px; cursor:pointer;}
+    .who input{accent-color:var(--accent);}
+    .form-ops{display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap;}
 
-  /* ---- settle ---- */
-  /* ---- 共同基金 ---- */
-  .fund{background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:15px 15px 13px;}
-  .fund-top{display:flex; align-items:baseline; justify-content:space-between; gap:12px; flex-wrap:wrap;}
-  .fund-top .used{font-family:var(--font-sign); font-size:21px; font-weight:700; letter-spacing:.01em;}
-  .fund-top .left{font-size:12.5px; color:var(--muted);}
-  .fund-top .left b{font-family:var(--font-sign); font-size:15px; font-weight:700; color:var(--pos);}
-  .fund-bar{height:8px; border-radius:99px; background:var(--surface-2); border:1px solid var(--line);
-    overflow:hidden; margin:11px 0 3px; display:flex;}
-  .fund-bar i{display:block; height:100%; background:var(--accent); transition:width .3s;}
-  .fund-bar.over i{background:var(--neg);}
-  .fund-note{font-size:11px; color:var(--muted);}
-  .fund-people{margin-top:14px; padding-top:13px; border-top:1px solid var(--line-soft); display:grid; gap:9px;}
-  .fp{display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:10px;}
-  .fp .nm{display:flex; align-items:center; gap:6px; font-size:13px; min-width:52px;}
-  .fp .track{height:6px; border-radius:99px; background:var(--surface-2); overflow:hidden;}
-  .fp .track i{display:block; height:100%; background:var(--fc,var(--accent));}
-  .fp .amt{font-family:var(--font-mono); font-size:11.5px; color:var(--muted); letter-spacing:.02em; text-align:right;}
-  .fp .amt b{color:var(--ink); font-weight:600;}
-  .fp.over .amt b{color:var(--neg);}
+    /* ---- settle ---- */
+    /* ---- 共同基金 ---- */
+    .fund{background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:15px 15px 13px;}
+    .fund-top{display:flex; align-items:baseline; justify-content:space-between; gap:12px; flex-wrap:wrap;}
+    .fund-top .used{font-family:var(--font-sign); font-size:21px; font-weight:700; letter-spacing:.01em;}
+    .fund-top .left{font-size:12.5px; color:var(--muted);}
+    .fund-top .left b{font-family:var(--font-sign); font-size:15px; font-weight:700; color:var(--pos);}
+    .fund-bar{height:8px; border-radius:99px; background:var(--surface-2); border:1px solid var(--line);
+      overflow:hidden; margin:11px 0 3px; display:flex;}
+    .fund-bar i{display:block; height:100%; background:var(--accent); transition:width .3s;}
+    .fund-bar.over i{background:var(--neg);}
+    .fund-note{font-size:11px; color:var(--muted);}
+    .fund-people{margin-top:14px; padding-top:13px; border-top:1px solid var(--line-soft); display:grid; gap:9px;}
+    .fp{display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:10px;}
+    .fp .nm{display:flex; align-items:center; gap:6px; font-size:13px; min-width:52px;}
+    .fp .track{height:6px; border-radius:99px; background:var(--surface-2); overflow:hidden;}
+    .fp .track i{display:block; height:100%; background:var(--fc,var(--accent));}
+    .fp .amt{font-family:var(--font-mono); font-size:11.5px; color:var(--muted); letter-spacing:.02em; text-align:right;}
+    .fp .amt b{color:var(--ink); font-weight:600;}
+    .fp.over .amt b{color:var(--neg);}
 
-  .people{display:grid; grid-template-columns:repeat(auto-fit,minmax(168px,1fr)); gap:10px;}
-  .person{background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:13px 14px;}
-  .person .nm{display:flex; align-items:center; gap:7px; font-family:var(--font-sign); font-size:15px; font-weight:500; margin-bottom:9px;}
-  .dot{width:8px; height:8px; border-radius:50%; flex:0 0 auto;}
-  .kv{display:flex; justify-content:space-between; font-size:12px; color:var(--muted); padding:1.5px 0;}
-  .kv .num{color:var(--ink-2);}
-  .net{display:flex; justify-content:space-between; align-items:baseline; margin-top:8px; padding-top:8px; border-top:1px solid var(--line-soft); font-size:12px;}
-  .net .v{font-family:var(--font-mono); font-size:16px; font-weight:600; font-variant-numeric:tabular-nums;}
-  .pay{display:flex; align-items:center; gap:10px; padding:11px 14px; border:1px solid var(--line); border-radius:9px; background:var(--surface); margin-bottom:6px; flex-wrap:wrap;}
-  .pay .arr{color:var(--muted); font-family:var(--font-mono);}
-  .pay .who1,.pay .who2{font-family:var(--font-sign); font-weight:500;}
-  .pay .v{margin-left:auto; font-family:var(--font-mono); font-weight:600; font-variant-numeric:tabular-nums;}
+    .people{display:grid; grid-template-columns:repeat(auto-fit,minmax(168px,1fr)); gap:10px;}
+    .person{background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:13px 14px;}
+    .person .nm{display:flex; align-items:center; gap:7px; font-family:var(--font-sign); font-size:15px; font-weight:500; margin-bottom:9px;}
+    .dot{width:8px; height:8px; border-radius:50%; flex:0 0 auto;}
+    .kv{display:flex; justify-content:space-between; font-size:12px; color:var(--muted); padding:1.5px 0;}
+    .kv .num{color:var(--ink-2);}
+    .net{display:flex; justify-content:space-between; align-items:baseline; margin-top:8px; padding-top:8px; border-top:1px solid var(--line-soft); font-size:12px;}
+    .net .v{font-family:var(--font-mono); font-size:16px; font-weight:600; font-variant-numeric:tabular-nums;}
+    .pay{display:flex; align-items:center; gap:10px; padding:11px 14px; border:1px solid var(--line); border-radius:9px; background:var(--surface); margin-bottom:6px; flex-wrap:wrap;}
+    .pay .arr{color:var(--muted); font-family:var(--font-mono);}
+    .pay .who1,.pay .who2{font-family:var(--font-sign); font-weight:500;}
+    .pay .v{margin-left:auto; font-family:var(--font-mono); font-weight:600; font-variant-numeric:tabular-nums;}
 
-  /* ---- footer / backup ---- */
-  footer{margin-top:34px; padding-top:16px; border-top:1px solid var(--line-soft); font-size:11.5px; color:var(--muted);}
-  .foot-row{display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:center;}
-  .backup{display:flex; gap:7px; flex-wrap:wrap; margin-top:12px;}
-  .sync{font-family:var(--font-mono); font-size:10.5px; letter-spacing:.06em;}
+    /* ---- footer / backup ---- */
+    footer{margin-top:34px; padding-top:16px; border-top:1px solid var(--line-soft); font-size:11.5px; color:var(--muted);}
+    .foot-row{display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:center;}
+    .backup{display:flex; gap:7px; flex-wrap:wrap; margin-top:12px;}
+    .sync{font-family:var(--font-mono); font-size:10.5px; letter-spacing:.06em;}
 
-  /* ---- cloud status + auth ---- */
-  .cloudbar{display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:9px 13px; border-radius:8px; font-size:12.5px;
-    background:var(--accent-soft); color:var(--ink-2); margin-bottom:14px; border:1px solid var(--line);}
-  .cloudbar .led{width:7px; height:7px; border-radius:50%; flex:0 0 auto; background:var(--muted);}
-  .cloudbar.on .led{background:var(--pos);}
-  .cloudbar.off .led{background:var(--warn);}
-  .cloudbar .sp{margin-left:auto; display:flex; gap:7px;}
+    /* ---- cloud status + auth ---- */
+    .cloudbar{display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:9px 13px; border-radius:8px; font-size:12.5px;
+      background:var(--accent-soft); color:var(--ink-2); margin-bottom:14px; border:1px solid var(--line);}
+    .cloudbar .led{width:7px; height:7px; border-radius:50%; flex:0 0 auto; background:var(--muted);}
+    .cloudbar.on .led{background:var(--pos);}
+    .cloudbar.off .led{background:var(--warn);}
+    .cloudbar .sp{margin-left:auto; display:flex; gap:7px;}
 
-  .overlay{position:fixed; inset:0; z-index:60; display:flex; align-items:center; justify-content:center; padding:20px;
-    background:color-mix(in srgb, var(--paper) 86%, transparent); backdrop-filter:blur(6px);}
-  .signin{width:100%; max-width:380px; background:var(--surface); border:1px solid var(--line); border-radius:12px;
-    padding:24px 22px; box-shadow:var(--shadow); display:grid; gap:14px;}
-  .signin h2{font-family:var(--font-sign); font-size:19px; letter-spacing:.03em;}
-  .signin p{font-size:12.5px; color:var(--muted); line-height:1.55;}
-  .signin .err{font-size:12.5px; color:var(--neg); line-height:1.5;}
-  .signin .ops{display:grid; gap:8px;}
-  .signin #si-adminbox{display:grid; gap:14px;}
-  /* 花費那張表欄位多,要寬一點,而且手機上高度會爆,所以讓它自己捲 */
-  .signin.wide{max-width:440px; max-height:calc(100vh - 40px); overflow-y:auto; gap:12px;}
+    .overlay{position:fixed; inset:0; z-index:60; display:flex; align-items:center; justify-content:center; padding:20px;
+      background:color-mix(in srgb, var(--paper) 86%, transparent); backdrop-filter:blur(6px);}
+    .signin{width:100%; max-width:380px; background:var(--surface); border:1px solid var(--line); border-radius:12px;
+      padding:24px 22px; box-shadow:var(--shadow); display:grid; gap:14px;}
+    .signin h2{font-family:var(--font-sign); font-size:19px; letter-spacing:.03em;}
+    .signin p{font-size:12.5px; color:var(--muted); line-height:1.55;}
+    .signin .err{font-size:12.5px; color:var(--neg); line-height:1.5;}
+    .signin .ops{display:grid; gap:8px;}
+    .signin #si-adminbox{display:grid; gap:14px;}
+    /* 花費那張表欄位多,要寬一點,而且手機上高度會爆,所以讓它自己捲 */
+    .signin.wide{max-width:440px; max-height:calc(100vh - 40px); overflow-y:auto; gap:12px;}
 
-  @media (max-width:640px){
-    .topbar h1{font-size:19px;}
-    .countdown b{font-size:18px;}
-    .port{min-width:88px;}
-    .port .code{font-size:19px;}
-    .stop{grid-template-columns:48px 1fr auto;}
+    @media (max-width:640px){
+      .topbar h1{font-size:19px;}
+      .countdown b{font-size:18px;}
+      .port{min-width:88px;}
+      .port .code{font-size:19px;}
+      .stop{grid-template-columns:48px 1fr auto;}
 
-    /* 收起來的時候只留一行摘要 */
-    .board:not([open]) .bh-name{display:none;}
-    .board:not([open]) .bh-brief{display:inline;}
-    .board-head{padding:13px 14px;}
+      /* 收起來的時候只留一行摘要 */
+      .board:not([open]) .bh-name{display:none;}
+      .board:not([open]) .bh-brief{display:inline;}
+      .board-head{padding:13px 14px;}
 
-    /* 分頁移到底部,拇指按得到 */
-    .tabs{position:fixed; left:0; right:0; bottom:0; z-index:30; margin:0;
-      border-top:1px solid var(--line); border-bottom:0; background:var(--surface);
-      padding-bottom:env(safe-area-inset-bottom,0px); box-shadow:0 -6px 20px -14px rgba(0,0,0,.55);}
-    .tab{flex:1; text-align:center; min-height:54px; padding:14px 6px;
-      border-bottom:0; border-top:2px solid transparent;}
-    .tab[aria-selected="true"]{border-top-color:var(--accent); border-bottom-color:transparent; background:var(--accent-soft);}
-    .wrap{padding-bottom:calc(78px + env(safe-area-inset-bottom,0px));}
+      /* 分頁移到底部,拇指按得到 */
+      .tabs{position:fixed; left:0; right:0; bottom:0; z-index:30; margin:0;
+        border-top:1px solid var(--line); border-bottom:0; background:var(--surface);
+        padding-bottom:env(safe-area-inset-bottom,0px); box-shadow:0 -6px 20px -14px rgba(0,0,0,.55);}
+      .tab{flex:1; text-align:center; min-height:54px; padding:14px 6px;
+        border-bottom:0; border-top:2px solid transparent;}
+      .tab[aria-selected="true"]{border-top-color:var(--accent); border-bottom-color:transparent; background:var(--accent-soft);}
+      .wrap{padding-bottom:calc(78px + env(safe-area-inset-bottom,0px));}
 
-    /* iOS 對焦時不要自動放大:輸入框至少 16px */
-    .fld input,.fld select,.fld textarea{font-size:16px; padding:10px 11px;}
-    .who label{padding:9px 13px; font-size:14px;}
+      /* iOS 對焦時不要自動放大:輸入框至少 16px */
+      .fld input,.fld select,.fld textarea{font-size:16px; padding:10px 11px;}
+      .who label{padding:9px 13px; font-size:14px;}
 
-    /* 手指按得到的按鈕 */
-    .btn{min-height:42px; padding:9px 15px;}
-    .btn-sm{min-height:38px; padding:8px 13px; font-size:13px;}
-    .form-ops .btn{flex:1;}
-    .backup{gap:8px;}
-    .backup .btn{flex:1 1 auto;}
+      /* 手指按得到的按鈕 */
+      .btn{min-height:42px; padding:9px 15px;}
+      .btn-sm{min-height:38px; padding:8px 13px; font-size:13px;}
+      .form-ops .btn{flex:1;}
+      .backup{gap:8px;}
+      .backup .btn{flex:1 1 auto;}
 
-    /* 花費列:刪除鍵貼齊底部,不要浮在中間 */
-    .exp .ops{align-self:end;}
-    .grid2{grid-template-columns:1fr;}
+      /* 花費列:刪除鍵貼齊底部,不要浮在中間 */
+      .exp .ops{align-self:end;}
+      .grid2{grid-template-columns:1fr;}
+    }
   }
 </style>
 </head>
