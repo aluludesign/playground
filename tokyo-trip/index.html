@@ -222,6 +222,19 @@
   .map .pin.plan:hover{opacity:1;}
   /* 被聚焦的那個標記:外面套一圈光暈,跟清單那一列同時亮 */
   /* 滑鼠滑過清單那一列時,對應的標記跳出來。比 .on 輕一點 —— 它是路過,不是選定。 */
+  /* 標記正上方的名稱,就是「做什麼／想去哪」那欄填的字。
+     pointer-events:none —— 它只是標籤,不能擋住拖地圖。
+     .pin 本身有 transform,hover 放大時標籤跟著一起放大。 */
+  .map .pin .lab{position:absolute; bottom:calc(100% + 5px); left:50%; transform:translateX(-50%);
+    max-width:116px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    padding:1px 5px; border-radius:5px; pointer-events:none;
+    background:var(--surface); color:var(--ink); border:1px solid var(--line);
+    box-shadow:0 1px 3px rgba(0,0,0,.18);
+    font-family:var(--font-sign); font-size:10px; font-weight:500; letter-spacing:0;}
+  /* 已排進行程的那些只在滑過或被聚焦時才給標籤 —— 十幾個一起掛著會糊成一片 */
+  .map .pin.plan .lab{display:none;}
+  .map .pin.plan.hot .lab,.map .pin.plan.on .lab{display:block;}
+  .map .pin.hot .lab{border-color:var(--accent); color:var(--accent);}
   .map .pin.hot{opacity:1; z-index:4; transform:translate(-50%,-50%) scale(1.25);
     box-shadow:0 0 0 3px var(--accent-soft), 0 2px 8px rgba(0,0,0,.4);}
   .map .pin.on{box-shadow:0 0 0 5px var(--accent-soft), 0 1px 6px rgba(0,0,0,.4); z-index:3;}
@@ -1756,7 +1769,8 @@
         '" href="' + gmap(p.place) + '" target="_blank" rel="noopener" style="left:' +
         Math.round(left + projX(p.lo, v.z) * TILE) + "px; top:" + Math.round(top + projY(p.la, v.z) * TILE) +
         "px" + (p.color ? "; background:" + p.color : "") +
-        '" title="' + esc(p.tip) + '">' + esc(p.n) + "</a>";
+        '" title="' + esc(p.tip) + '">' + esc(p.n) +
+        '<span class="lab">' + esc(p.title) + '</span></a>';
     });
     html += "</div>";
     html += '<div class="mapzoom"><button type="button" data-zoom="1" aria-label="\u653e\u5927">+</button>' +
