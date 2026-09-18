@@ -215,11 +215,6 @@
     background:var(--dc,var(--ink)); color:#fff; box-shadow:0 1px 4px rgba(0,0,0,.35);
     font-family:var(--font-mono); font-size:11px; font-weight:700; text-decoration:none;
     display:flex; align-items:center; justify-content:center;}
-  /* 許願地圖上順便畫出已經排進行程的點:小一號、半透明,字是第幾天。
-     它們是拿來對照的背景,不是要挑的東西,所以不能搶過願望。 */
-  .map .pin.plan{min-width:17px; height:17px; padding:0 4px; border-radius:9px;
-    font-size:9.5px; font-weight:600; opacity:.72; border-width:1px; box-shadow:none;}
-  .map .pin.plan:hover{opacity:1;}
   /* 被聚焦的那個標記:外面套一圈光暈,跟清單那一列同時亮 */
   /* 滑鼠滑過清單那一列時,對應的標記跳出來。比 .on 輕一點 —— 它是路過,不是選定。 */
   /* 標記正上方的名稱,就是「做什麼／想去哪」那欄填的字。
@@ -231,9 +226,25 @@
     background:var(--surface); color:var(--ink); border:1px solid var(--line);
     box-shadow:0 1px 3px rgba(0,0,0,.18);
     font-family:var(--font-sign); font-size:10px; font-weight:500; letter-spacing:0;}
-  /* 已排的也掛著,但小一號、淡一點 —— 願望還是主角 */
-  .map .pin.plan .lab{font-size:9px; padding:0 4px; opacity:.82; max-width:96px;}
-  .map .pin.plan.hot .lab{opacity:1;}
+  /* 兩個圖層的開關。關掉的那個變灰,開著的用它自己的顏色。 */
+  .maplayers{display:flex; gap:6px; margin-bottom:9px;}
+  .lay{display:inline-flex; align-items:center; gap:6px; cursor:pointer;
+    border:1px solid var(--line); border-radius:99px; padding:4px 11px 4px 9px;
+    background:var(--surface); color:var(--muted);
+    font-family:var(--font-sign); font-size:11.5px; font-weight:500;}
+  .lay::before{content:""; width:9px; height:9px; border-radius:50%;
+    background:var(--line); border:1px solid var(--line);}
+  .lay[aria-pressed="true"]{color:var(--ink); border-color:var(--ink-2);}
+  #lay-plan[aria-pressed="true"]::before{background:var(--dc,var(--ink)); border-color:var(--dc,var(--ink));}
+  #lay-wish[aria-pressed="true"]::before{background:var(--accent); border-color:var(--accent);}
+  /* 許願模式下行程那層是六天六種顏色,點一個顏色代表不了,用中性色 */
+  #map-sheet[data-mode="wish"] #lay-plan[aria-pressed="true"]::before{background:var(--ink-2); border-color:var(--ink-2);}
+  .lay:hover{background:var(--surface-2);}
+
+  /* 擠不下的讓位:先試標記下面,再擠不下就先藏起來,滑過／聚焦時照樣冒出來 */
+  .map .pin .lab.below{bottom:auto; top:calc(100% + 5px);}
+  .map .pin .lab.hide{display:none;}
+  .map .pin.hot .lab.hide,.map .pin.on .lab.hide{display:block;}
   .map .pin.hot .lab{border-color:var(--accent); color:var(--accent);}
   .map .pin.hot{opacity:1; z-index:4; transform:translate(-50%,-50%) scale(1.25);
     box-shadow:0 0 0 3px var(--accent-soft), 0 2px 8px rgba(0,0,0,.4);}
@@ -762,6 +773,10 @@
       <button type="button" class="sheet-x" id="map-sheet-x" aria-label="收起來">
         <svg class="i" aria-hidden="true"><use href="#i-xmark"></use></svg>
       </button>
+    </div>
+    <div class="maplayers">
+      <button type="button" class="lay" id="lay-plan" data-layer="plan" aria-pressed="true">已排行程</button>
+      <button type="button" class="lay" id="lay-wish" data-layer="wish" aria-pressed="true">大家的許願</button>
     </div>
     <div class="map" id="map"></div>
   </div>
@@ -1570,21 +1585,39 @@
      wish —— 全部的願望,外加**已經排進行程的每一個點**(不分哪一天),
              這樣才看得出「這個願望離我已經排好的東西近不近」。
              已排的畫成小一點的淡標記、字是第幾天,願望仍然是主角。 */
+  /* 兩個圖層,各自可以關掉。記在瀏覽器裡,下次打開還是你上次選的。 */
+  const LAYLS = "tokyo5-layers";
+  let layers = { plan: true, wish: true };
+  try { layers = Object.assign(layers, JSON.parse(localStorage.getItem(LAYLS) || "{}")); } catch (_) {}
+  function paintLayerBtns() {
+    el("lay-plan").setAttribute("aria-pressed", String(!!layers.plan));
+    el("lay-wish").setAttribute("aria-pressed", String(!!layers.wish));
+  }
+
+  /* 這張圖上要畫哪些點。
+     模式決定「行程」那層的範圍:從 DAY 那顆按鈕進來就只有那天,從願望進來是全部六天。
+     開關決定哪一層看得到。兩層畫得一樣明顯,靠顏色分 —— 行程用當天的顏色,願望用主色。 */
   function sheetPoints() {
-    if (sheetMode === "day") {
-      return dayList(state.day).map((x, i) => ({
-        item: x, k: "d" + i, n: i + 1,
-        tip: (i + 1) + ". " + x.title + (x.place ? " · " + x.place : ""),
+    const out = [];
+    if (layers.wish) {
+      wishOrder().forEach((w, i) => out.push({
+        item: w, k: "w" + i, n: i + 1,
+        tip: (i + 1) + ". " + w.title + (w.place ? " \u00b7 " + w.place : ""),
       }));
     }
-    const out = wishOrder().map((w, i) => ({
-      item: w, k: "w" + i, n: i + 1,
-      tip: (i + 1) + ". " + w.title + (w.place ? " · " + w.place : ""),
-    }));
-    DAYS.forEach(d => dayList(d.date).forEach((x, i) => out.push({
-      item: x, k: "p" + d.date + "-" + i, n: d.n, cls: "plan", color: d.color,
-      tip: "DAY " + d.n + " " + (x.time || "") + " " + x.title + "(已排進行程)",
-    })));
+    if (layers.plan) {
+      if (sheetMode === "day") {
+        dayList(state.day).forEach((x, i) => out.push({
+          item: x, k: "d" + i, n: i + 1, cls: "plan",
+          tip: (i + 1) + ". " + x.title + (x.place ? " \u00b7 " + x.place : ""),
+        }));
+      } else {
+        DAYS.forEach(d => dayList(d.date).forEach((x, i) => out.push({
+          item: x, k: "p" + d.date + "-" + i, n: d.n, cls: "plan", color: d.color,
+          tip: "DAY " + d.n + " " + (x.time || "") + " " + x.title,
+        })));
+      }
+    }
     return out;
   }
 
@@ -1595,6 +1628,7 @@
     el("map-title").textContent = sheetMode === "wish" ? "大家想去的地方"
       : "DAY " + (d ? d.n : "") + " · " + state.day.slice(5).replace("-", "/");
     el("map-sheet").style.setProperty("--dc", sheetMode === "wish" ? "var(--accent)" : (d ? d.color : ""));
+    el("map-sheet").dataset.mode = sheetMode || "";
   }
 
   async function loadSheetMap(force) {
@@ -1621,8 +1655,8 @@
       drawMap(el("map"), pts);
       const got = pts.filter(x => x.cls !== "plan").length;
       const planned = pts.length - got;
-      el("map-n").textContent = (wishes.length ? got + "／" + wishes.length + " 個" : "") +
-        (planned ? " · 已排 " + planned : "");
+      el("map-n").textContent = [wishes.length ? "願望 " + got + "／" + wishes.length : "",
+        planned ? "行程 " + planned : ""].filter(Boolean).join(" · ");
     };
 
     draw();
@@ -1790,6 +1824,31 @@
     /* OSM 的圖磚要求標示出處 */
     html += '<span class="attr">\u00a9 <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a></span>';
     box.innerHTML = html;
+    layoutLabels(box);
+  }
+
+  /* 標籤會互相蓋住。照優先序一個一個放:願望／當天行程先,已排的背景點後。
+     位置被佔走就改放到標記下面,下面也被佔走就先藏起來 ——
+     藏起來的那些滑過或被聚焦時還是會冒出來,不是永久消失。 */
+  function layoutLabels(box) {
+    const pins = [].slice.call(box.querySelectorAll(".pin"));
+    pins.sort((a, b) => (a.classList.contains("plan") ? 1 : 0) - (b.classList.contains("plan") ? 1 : 0));
+    const placed = [];
+    /* 留 2px 空隙,兩片貼在一起也算擠 */
+    const clash = (a, b) => !(a.right + 2 < b.left || a.left - 2 > b.right ||
+                              a.bottom + 2 < b.top || a.top - 2 > b.bottom);
+    pins.forEach(pin => {
+      const lab = pin.querySelector(".lab");
+      if (!lab) return;
+      lab.className = "lab";
+      let r = lab.getBoundingClientRect();
+      if (placed.some(q => clash(r, q))) {
+        lab.className = "lab below";
+        r = lab.getBoundingClientRect();
+        if (placed.some(q => clash(r, q))) { lab.className = "lab hide"; return; }
+      }
+      placed.push(r);
+    });
   }
 
   /* 以容器裡的某一點為中心縮放 —— 捏合和雙擊都要,不然畫面會從中心跳開 */
@@ -1989,9 +2048,11 @@
     if (!w || !h) return;
     if (!pts.length) { box.innerHTML = ""; box._v = null; return; }
 
-    /* 取景只看「主角」那組點。許願模式裡已排進行程的成田、桃園機場也是點,
-       跟著算的話整張圖會為了容納機場而縮出去,願望全擠成一團 —— 而願望才是要挑的。 */
-    const stars = pts.filter(p => p.cls !== "plan");
+    /* 取景只看「主角」那組點 —— 兩層都開時是願望那層。許願模式裡已排的成田、
+       桃園機場也是點,跟著算的話整張圖會為了容納機場而縮出去,願望全擠成一團。
+       只開行程那層時,行程自己就是主角。 */
+    const stars = pts.filter(p => p.cls !== "plan").length
+      ? pts.filter(p => p.cls !== "plan") : pts;
     const split = coreOf(stars.length ? stars : pts);
     const fit = split.core;
 
@@ -2887,17 +2948,35 @@
     if (sheetMode !== mode) sheetKey = null;
     sheetMode = mode;
     syncSheetChrome();
+    paintLayerBtns();
     if (!drawK) drawK = readDrawK();
     applyDrawer(drawK * quarter());
     el("map-sheet").hidden = false;
     document.body.classList.add("drawer-open");
   }
+  /* 從哪顆進來,就保證那一層是開的 —— 不然按了地圖卻什麼都沒有,會以為壞掉 */
   el("day-map-btn").addEventListener("click", () => {
+    layers.plan = true; saveLayers();
     openMapSheet("day");
     loadSheetMap(true);
   });
   el("wish-map-btn").addEventListener("click", () => {
+    layers.wish = true; saveLayers();
     openMapSheet("wish");
+    loadSheetMap(true);
+  });
+  function saveLayers() {
+    paintLayerBtns();
+    try { localStorage.setItem(LAYLS, JSON.stringify(layers)); } catch (_) {}
+  }
+  el("map-sheet").addEventListener("click", ev => {
+    const b = ev.target.closest("[data-layer]");
+    if (!b) return;
+    const which = b.dataset.layer;
+    /* 兩層都關掉就變成一張空地圖,沒有意義 —— 至少留一層 */
+    if (layers[which] && !layers[which === "plan" ? "wish" : "plan"]) return;
+    layers[which] = !layers[which];
+    saveLayers();
     loadSheetMap(true);
   });
 
