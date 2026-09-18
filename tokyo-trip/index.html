@@ -1697,13 +1697,20 @@
 
      座標問 Nominatim(OSM 的地名查詢,免費、不用金鑰)。它認繁體:「淺草寺」
      「豐洲市場」「阿美橫町」都查得到,比天氣用的那個準很多。但也會亂給 ——
-     「晴空塔」會給雲南的一個村子 —— 所以回來的座標一樣要落在關東範圍才算數。 */
-  const PINLS = "tokyo5-pin";
-  /* 大東京。bounded=1 是硬界線,不是加權 —— 沒有這條,「TPE 桃園 T1」會查到
-     靜岡縣一個也叫桃園的地方,「晴空塔」會查到埼玉縣的青空広場,標出去的點
-     看起來很正常但整張圖的比例就毀了。出東京的地方走下面那份對照表。 */
+     「晴空塔」會給雲南的一個村子 —— 所以限定在這趟的國家裡找。 */
+  /* 換過 key:之前鎖在東京框裡查,存下來的座標有一批是錯的,舊的不能再用。 */
+  const PINLS = "tokyo5-pin2";
   /* 這趟在哪裡,看網頁標題決定。標題改成別的城市,查詢範圍跟著換,不用改別的地方。
-     認不出來就當東京。cc 是國家代碼,view 是地名查詢偏重的範圍(lon,lat,lon,lat)。 */
+     認不出來就當東京。cc 是國家代碼,view 是地名查詢偏重的範圍(lon,lat,lon,lat)。
+
+     view 只加權,不設界線。這裡本來加了 bounded=1 當硬界線,以為這樣才擋得住
+     亂給的結果 —— 但硬界線的意思是「框外的一律不算」,Nominatim 只好從框內硬挑
+     一個最像的交差:查「京都車站」給東京車站大飯店,查「伏見稻荷」給荒川區一個
+     同名小社,查「金閣寺」給埼玉的日立金屬熊谷工場。名字對不上也照給,而且每筆
+     挑到的還不一樣,看起來就像地圖壞了。它連原本要擋的都沒擋住 —— 「晴空塔」
+     在框內也查得到埼玉的青空広場。
+     所以只留加權:同名的優先給這趟附近的(查「清水寺」在東京行會給橫濱那間,
+     要京都的就打「京都 清水寺」),真的在外地的地名也還回得來。 */
   const REGIONS = [
     { key: ["東京", "東京"], cc: "jp", view: "139.0,36.25,140.35,35.15" },
     { key: ["大阪", "京都", "關西", "関西"], cc: "jp", view: "134.9,35.35,136.2,34.3" },
@@ -1761,7 +1768,7 @@
     for (const t of tries) {
       try {
         const res = await queued(() => fetch("https://nominatim.openstreetmap.org/search?format=json" +
-          "&limit=1&countrycodes=" + TRIP_REGION.cc + "&accept-language=zh-TW&bounded=1&viewbox=" + PIN_VIEW +
+          "&limit=1&countrycodes=" + TRIP_REGION.cc + "&accept-language=zh-TW&viewbox=" + PIN_VIEW +
           "&q=" + encodeURIComponent(t)).then(r => r.json()));
         if (res && res[0]) { found = { la: +res[0].lat, lo: +res[0].lon }; break; }
       } catch (_) { break; }
