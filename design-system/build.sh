@@ -1,45 +1,29 @@
 #!/bin/sh
-# 把 preset 編成一支靜態 CSS，正式網站就不用掛 cdn.tailwindcss.com。
+# 把設計系統編成一支靜態 CSS。
 #
-#   ./build.sh ../tokyo-trip/index.html
-#   ./build.sh '../my-trip/**/*.html'
+#   ./build.sh                       # 編 demo.html 用的那份 → demo.css
+#   ./build.sh <入口.css> <輸出.css>  # 編某個網站用的那份
 #
-# 產出 dist/retro-modern.tailwind.css，只包含來源檔案真的用到的 utility。
-# Tailwind 是 content-driven 的，所以一定要指定掃哪些檔案——
-# 沒有「全部 utility 的預編版本」這種東西（那會是好幾 MB）。
+# v4 是 CSS-first 的，沒有 config 檔 —— token 全在 retro-modern.css 的 @theme 裡。
+# 要掃哪些檔案也不用指定：它會掃入口 CSS 所在資料夾底下的原始碼（跳過 .gitignore 的）。
+#
+# 消費端自己寫一支入口，設計系統就不必知道誰在用它：
+#
+#   /* tokyo-trip/app.css */
+#   @import "../design-system/retro-modern.css";
+#
+#   cd design-system && ./build.sh ../tokyo-trip/app.css ../tokyo-trip/app.css.out
 set -e
 
 cd "$(dirname "$0")"
 
-if [ $# -eq 0 ]; then
-  echo "用法: ./build.sh <要掃描的 HTML glob> [更多...]" >&2
-  echo "例如: ./build.sh '../tokyo-trip/index.html'" >&2
-  exit 1
-fi
+IN="${1:-retro-modern.css}"
+OUT="${2:-demo.css}"
 
-CONTENT=""
-for arg in "$@"; do
-  CONTENT="$CONTENT    '$arg',
-"
-done
+# v4 的 CLI 需要能解析到 tailwindcss 套件，所以是本機相依而不是 npx。
+# node_modules 不進版控（見 .gitignore），第一次會裝、之後直接用。
+[ -d node_modules ] || npm install --silent --no-audit --no-fund
 
-mkdir -p dist
-cat > dist/.tailwind.config.js <<CFG
-module.exports = {
-  presets: [require('../tailwind.preset.js')],
-  content: [
-$CONTENT  ],
-};
-CFG
+./node_modules/.bin/tailwindcss -i "$IN" -o "$OUT" --minify
 
-printf '@tailwind base;\n@tailwind utilities;\n' > dist/.in.css
-
-npx --yes tailwindcss@3 \
-  -c dist/.tailwind.config.js \
-  -i dist/.in.css \
-  -o dist/retro-modern.tailwind.css \
-  --minify
-
-rm -f dist/.tailwind.config.js dist/.in.css
-echo "→ dist/retro-modern.tailwind.css ($(wc -c < dist/retro-modern.tailwind.css) bytes)"
-echo "  正式網站改引這支，把 cdn.tailwindcss.com 那兩行拿掉。"
+echo "→ $OUT ($(wc -c < "$OUT") bytes)"
