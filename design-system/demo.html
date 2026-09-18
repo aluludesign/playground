@@ -11,26 +11,17 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Fraunces:opsz,wght@9..144,600;9..144,700;9..144,800&family=JetBrains+Mono:wght@400;600&family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@700&display=swap">
 
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="./tailwind.preset.js"></script>
-<script>
-  /* preset 沒載到就別讓整頁跟著掛掉。demo.html 常常被單獨拖進預覽窗格開，
-     那裡拿不到相對路徑的兄弟檔案——與其丟一個 ReferenceError，不如講清楚。 */
-  if (typeof retroModern === 'undefined') {
-    window.__rmPresetMissing = true;
-  } else {
-    tailwind.config = { presets: [retroModern] };
-  }
-</script>
-<link rel="stylesheet" href="./retro-modern.css">
+<!-- 編譯過的成品。retro-modern.css 是原始碼（含 @theme），不能直接 link。
+     重編：./build.sh -->
+<link rel="stylesheet" href="./demo.css">
 </head>
 
 <body class="rm-base min-h-screen">
 
-<div id="rm-preset-warning" hidden style="padding:1rem 1.25rem;background:#C93B2B;color:#F1EFE6;font:700 14px/1.6 system-ui,sans-serif">
-  <strong>tailwind.preset.js 沒有載入</strong>，這頁只會顯示未套用 token 的樣子。
-  demo.html 要和 <code>tailwind.preset.js</code>、<code>retro-modern.css</code>、<code>retro-modern.js</code>
-  放在同一層一起開（直接開資料夾裡的檔案，或用本機伺服器），不要單獨拖進預覽窗格。
+<div id="rm-css-warning" hidden style="padding:1rem 1.25rem;background:#C93B2B;color:#F1EFE6;font:700 14px/1.6 system-ui,sans-serif">
+  <strong>demo.css 沒有載入</strong>，這頁只會顯示沒有樣式的樣子。
+  它是 <code>retro-modern.css</code> 編出來的成品 —— 在 <code>design-system/</code> 裡跑
+  <code>./build.sh</code> 就會產生。單獨把 demo.html 拖進預覽窗格也會這樣，那裡抓不到同層的檔案。
 </div>
 
 <header class="sticky top-0 z-40 border-b-2 border-ink bg-paper/90 backdrop-blur-md">
@@ -436,7 +427,11 @@
 <script src="./retro-modern.js"></script>
 <script>
   /* 色塊是從 data-swatches 長出來的，省得同一段 markup 抄三十遍 */
-  if (window.__rmPresetMissing) document.getElementById('rm-preset-warning').hidden = false;
+  /* 直接問畫面：body 的底色有沒有被 .rm-base 套上。比檢查某個全域變數可靠——
+     樣式表 404、編譯漏掉、路徑打錯，三種情況它都抓得到。 */
+  if (getComputedStyle(document.body).backgroundColor !== 'rgb(241, 239, 230)') {
+    document.getElementById('rm-css-warning').hidden = false;
+  }
 
   document.querySelectorAll('[data-swatches]').forEach(function (host) {
     host.innerHTML = JSON.parse(host.dataset.swatches).map(function (s) {
