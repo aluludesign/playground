@@ -285,6 +285,31 @@ RetroModern.copy('#D54C15', 'accent');     // 複製並跳 toast
 
 `pressFlash` 的 callback 刻意延後，讓使用者先看到金屬凹下去、再看到事情發生。
 
+## 紋理
+
+`.pattern-checker`、`.pattern-stripes`、`.pattern-grid`、`.texture-brushed-metal`。
+
+方格是參數化的 —— 四個變數行內給值就好，不必為每種配色各寫一個 class：
+
+```html
+<div class="pattern-grid"
+     style="--grid-fill-color:#8DB6C7; --grid-border-color:#D54C15;
+            --grid-size:24px; --grid-border-width:2px"></div>
+```
+
+| 變數 | 預設 | |
+| --- | --- | --- |
+| `--grid-fill-color` | `transparent` | 方格填色 |
+| `--grid-border-color` | 8% 丁香褐 | 線色 |
+| `--grid-border-width` | `1px` | 線粗 |
+| `--grid-size` | `20px` | 格寬 |
+
+四個各自獨立，只給想改的那個就行。變數名沒有 `rm-` 前綴，沿用規格書原稿，
+那份 HTML 的 markup 可以直接貼過來。
+
+格子愈小、線愈細，愈接近 Retro Editorial 的排版底紋；格子大、線粗則偏向
+70s 海報的活潑感。demo 裡那兩組（24px/2px 與 14px/1.5px）就是這兩端。
+
 ## 組件 class
 
 `rm-` 開頭的是這套系統新增的；沒有前綴的

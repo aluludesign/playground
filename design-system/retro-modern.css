@@ -279,11 +279,19 @@
   );
 }
 
+/* 參數化的方格引擎。四個變數在行內給值就好，不必為每種配色各寫一個 class。
+   變數名沿用規格書原稿（沒有 rm- 前綴），那份 HTML 的 markup 可以直接貼過來。 */
 .pattern-grid {
-  background-size: 20px 20px;
+  --grid-size: 20px;
+  --grid-border-width: 1px;
+  --grid-border-color: rgba(83, 68, 61, 0.08);
+  --grid-fill-color: transparent;
+
+  background-color: var(--grid-fill-color);
+  background-size: var(--grid-size) var(--grid-size);
   background-image:
-    linear-gradient(to right, rgba(83, 68, 61, 0.08) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(83, 68, 61, 0.08) 1px, transparent 1px);
+    linear-gradient(to right, var(--grid-border-color) var(--grid-border-width), transparent var(--grid-border-width)),
+    linear-gradient(to bottom, var(--grid-border-color) var(--grid-border-width), transparent var(--grid-border-width));
 }
 
 /* ── 組件 ─────────────────────────────────────────────────────────── */
