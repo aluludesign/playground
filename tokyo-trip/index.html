@@ -416,7 +416,17 @@
   .grid2{display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px;}
   .fld{display:flex; flex-direction:column; gap:4px; min-width:0;}
   .fld label{font-size:11px; color:var(--muted); letter-spacing:.05em;}
-  .fld input,.fld select,.fld textarea{background:var(--surface); border:1px solid var(--line); border-radius:7px; padding:7px 9px; font-size:14px; width:100%; min-width:0;}
+  .fld input,.fld select,.fld textarea{background:var(--surface); border:1px solid var(--line); border-radius:7px; padding:7px 9px; font-size:14px; line-height:1.5; width:100%; min-width:0;}
+  /* iOS Safari 把 input[type=time] 畫成一顆圓角灰按鈕,跟旁邊的文字框差很多。
+     關掉原生外觀讓它跟其他欄位一樣 —— 點下去還是叫得出原生的時間轉盤。
+     ::-webkit-date-and-time-value 預設有自己的 margin 和置中,也要一起清掉。 */
+  .fld input[type="time"],.fld input[type="date"]{
+    -webkit-appearance:none; appearance:none; font-family:inherit; height:auto;}
+  .fld input[type="time"]::-webkit-date-and-time-value,
+  .fld input[type="date"]::-webkit-date-and-time-value{margin:0; text-align:left; line-height:1.5;}
+  .fld input[type="time"]::-webkit-calendar-picker-indicator,
+  .fld input[type="date"]::-webkit-calendar-picker-indicator{opacity:.45; padding:0; margin:0;
+    width:1em; height:1em; block-size:1em;}
   .fld input[type="number"]{font-family:var(--font-mono);}
   .who{display:flex; gap:6px; flex-wrap:wrap;}
   .who label{display:inline-flex; align-items:center; gap:5px; padding:5px 10px; border:1px solid var(--line); border-radius:20px; background:var(--surface); font-size:12.5px; cursor:pointer;}
