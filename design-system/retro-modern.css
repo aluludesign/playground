@@ -1,109 +1,180 @@
 /*!
- * Retro Modern Design System — 材質、紋理與組件
- * 搭配 tailwind.preset.js 使用；沒有 Tailwind 也能單獨用（token 都有 CSS 變數）。
+ * Retro Modern Design System
+ * "Modern usability dressed in 70s optimism."
  *
- * ⚠️ 字型要自己在 HTML 裡引，這支 CSS 刻意不做 @import（會多一次往返、擋住渲染）：
+ * 這支是「原始碼」，不是可以直接 <link> 的成品 —— 它含 @import "tailwindcss"、
+ * @theme 與 @utility，要先編譯：
  *
- *   <link rel="preconnect" href="https://fonts.googleapis.com">
+ *   ./build.sh                       # 編 demo.html 用的那份
+ *   ./build.sh <入口.css> <輸出.css>  # 編某個網站用的那份
+ *
+ * ⚠️ 字型要自己在 HTML 裡引，這支刻意不做字型 @import（會多一次往返、擋住渲染）：
+ *
  *   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
  *   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Fraunces:opsz,wght@9..144,600;9..144,700;9..144,800&family=JetBrains+Mono:wght@400;600&family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@700&display=swap">
  */
+@import "tailwindcss";
 
 /* ── Tokens ───────────────────────────────────────────────────────────
-   跟 tailwind.preset.js 同一組值。給沒走 Tailwind 的地方用
-   （inline style、canvas、SVG、JS 算出來的顏色）。 */
+   v4 的 @theme 同時做兩件事：產生 utility，以及把每個 token 輸出成真正的
+   CSS 變數。所以手寫 CSS 直接寫 var(--color-ink) 就是顏色，不必再維護
+   第二份 :root —— v3 時期那份 --rm-* 的重複就是這樣消失的。 */
 
-:root {
-  /* Foundation */
-  --rm-muslin: #F1EFE6;
-  --rm-linen: #F9E8D4;
-  --rm-sandstone: #DCCFB8;
-  --rm-warm-taupe: #9A8E84;
-  --rm-driftwood: #8A5033;
-  --rm-chocolate: #663924;
-  --rm-clove: #53443D;
+@theme {
+  /* 顏料 */
+  --color-foundation-muslin: #F1EFE6;
+  --color-foundation-linen: #F9E8D4;
+  --color-foundation-sandstone: #DCCFB8;
+  --color-foundation-warm-taupe: #9A8E84;
+  --color-foundation-driftwood: #8A5033;
+  --color-foundation-chocolate: #663924;
+  --color-foundation-clove: #53443D;
+  --color-earth-tangelo: #D54C15;
+  --color-earth-cork: #B44B28;
+  --color-earth-terracotta: #AD7556;
+  --color-earth-chocolate: #663924;
+  --color-sky-blue-tide: #97A3AE;
+  --color-sky-chambray: #7A9CB3;
+  --color-sky-botticelli: #8DB6C7;
+  --color-sky-play-blue: #4F67B1;
+  --color-sun-mustard: #E3A824;
+  --color-sun-tangelo: #D54C15;
+  --color-sun-coral: #E77451;
+  --color-sun-tomato: #C93B2B;
+  --color-botanical-olive: #727B48;
+  --color-botanical-sage: #98A68B;
+  --color-steel-luster: #F0F2F5;
+  --color-steel-highlight: #D8DCE1;
+  --color-steel-body: #B2B9C0;
+  --color-steel-satin: #CBD0D6;
+  --color-steel-shadow: #889098;
+  --color-steel-deep-luster: #F1F4F8;
+  --color-steel-deep-highlight: #C8D0DA;
+  --color-steel-deep-body: #9EA7B4;
+  --color-steel-deep-satin: #B4BDC8;
+  --color-steel-deep-shadow: #727C88;
+  --color-steel-iri-luster: #F6F8FB;
+  --color-steel-iri-lavender: #E0E5F0;
+  --color-steel-iri-cyan: #B8CBD8;
+  --color-steel-iri-body: #B2B6C6;
+  --color-steel-iri-amber: #D8CDC2;
+  --color-steel-iri-satin: #C3CBD2;
+  --color-steel-iri-shadow: #88919A;
+  --color-day-1: #D54C15;
+  --color-day-2: #2BA6B0;
+  --color-day-3: #E3A824;
+  --color-day-4: #4F67B1;
+  --color-day-5: #6F8130;
+  --color-day-6: #9B4368;
+  --color-paper: #F1EFE6;
+  --color-surface: #F9E8D4;
+  --color-surface-2: #DCCFB8;
+  --color-line: #DCCFB8;
+  --color-ink: #53443D;
+  --color-ink-soft: #8A5033;
+  --color-ink-muted: #9A8E84;
+  --color-accent: #D54C15;
+  --color-accent-hover: #B44B28;
+  --color-accent-ink: #F1EFE6;
+  --color-positive: #727B48;
+  --color-negative: #C93B2B;
+  --color-caution: #E3A824;
+  --color-info: #7A9CB3;
 
-  /* Earth / Sky / Sun / Botanical */
-  --rm-tangelo: #D54C15;
-  --rm-cork: #B44B28;
-  --rm-terracotta: #AD7556;
-  --rm-blue-tide: #97A3AE;
-  --rm-chambray: #7A9CB3;
-  --rm-botticelli: #8DB6C7;
-  --rm-play-blue: #4F67B1;
-  --rm-mustard: #E3A824;
-  --rm-coral: #E77451;
-  --rm-tomato: #C93B2B;
-  --rm-olive: #727B48;
-  --rm-sage: #98A68B;
-
-  /* 語意別名 —— 寫版面優先用這組 */
-  --rm-paper: var(--rm-muslin);
-  --rm-surface: var(--rm-linen);
-  --rm-surface-2: var(--rm-sandstone);
-  --rm-line: var(--rm-sandstone);
-  --rm-ink: var(--rm-clove);
-  --rm-ink-soft: var(--rm-driftwood);
-  --rm-ink-muted: var(--rm-warm-taupe);
-  --rm-accent: var(--rm-tangelo);
-  --rm-accent-hover: var(--rm-cork);
-  --rm-accent-ink: var(--rm-muslin);
-  --rm-positive: var(--rm-olive);
-  --rm-negative: var(--rm-tomato);
-  --rm-caution: var(--rm-mustard);
-  --rm-info: var(--rm-chambray);
-
-  /* Day 分類色（見 preset 裡的驗證註記；一律搭數字或標籤，不單靠顏色） */
-  --rm-day-1: #D54C15;
-  --rm-day-2: #2BA6B0;
-  --rm-day-3: #E3A824;
-  --rm-day-4: #4F67B1;
-  --rm-day-5: #6F8130;
-  --rm-day-6: #9B4368;
-
-  /* 幾何 */
-  --rm-radius-sm: 8px;
-  --rm-radius-md: 16px;
-  --rm-radius-lg: 24px;
-  --rm-radius-xl: 32px;
-  --rm-radius-pill: 9999px;
-  --rm-radius-arch: 48px 48px 16px 16px;
-
-  /* 暖色光影。拒絕 Material 的冷黑陰影，全部帶 clove 的暖調。 */
-  --rm-shadow-soft: 0 4px 20px rgba(83, 68, 61, 0.08);
-  --rm-shadow-medium: 0 8px 30px rgba(83, 68, 61, 0.14);
-  --rm-shadow-floating: 0 16px 40px rgba(83, 68, 61, 0.22);
-  --rm-shadow-hard-sm: 3px 3px 0px var(--rm-clove);
-  --rm-shadow-hard-md: 5px 5px 0px var(--rm-clove);
-  --rm-shadow-hard-lg: 8px 8px 0px var(--rm-clove);
+  /* 圓角。integral 清掉 v4 預設值再定義，理由跟 v3 一樣：
+     留著原值會讓 rounded-lg 同名不同值。 */
+  --radius-*: initial;
+  --radius-sm: 8px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-xl: 32px;
+  --radius-2xl: 16px;
+  --radius-3xl: 24px;
+  --radius-pill: 9999px;
+  --radius-arch: 48px 48px 16px 16px;
+  --radius-arch-sm: 24px 24px 8px 8px;
 
   /* 字族 */
-  --rm-font-serif: 'Fraunces', 'Noto Serif TC', 'Songti TC', 'PingFang TC', serif;
-  --rm-font-sans: 'DM Sans', 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif;
-  --rm-font-mono: 'JetBrains Mono', 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-serif: Fraunces, 'Noto Serif TC', 'Songti TC', 'PingFang TC', serif;
+  --font-sans: 'DM Sans', 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 
-  --rm-ease-tactile: cubic-bezier(0.25, 1, 0.5, 1);
-  --rm-ease-overshoot: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  /* 語意字級。v4 用子屬性帶行高、字距、字重。 */
+  --text-display: clamp(2.5rem, 6vw, 4rem);
+  --text-display--line-height: 1.04;
+  --text-display--letter-spacing: -0.022em;
+  --text-display--font-weight: 800;
+  --text-h1: clamp(2rem, 4.5vw, 3rem);
+  --text-h1--line-height: 1.1;
+  --text-h1--letter-spacing: -0.018em;
+  --text-h1--font-weight: 800;
+  --text-h2: clamp(1.5rem, 3vw, 2rem);
+  --text-h2--line-height: 1.18;
+  --text-h2--letter-spacing: -0.012em;
+  --text-h2--font-weight: 700;
+  --text-h3: 1.25rem;
+  --text-h3--line-height: 1.3;
+  --text-h3--letter-spacing: -0.008em;
+  --text-h3--font-weight: 700;
+  --text-h4: 1.0625rem;
+  --text-h4--line-height: 1.4;
+  --text-h4--font-weight: 700;
+  --text-body-lg: 1.0625rem;
+  --text-body-lg--line-height: 1.72;
+  --text-body: 0.9375rem;
+  --text-body--line-height: 1.7;
+  --text-caption: 0.8125rem;
+  --text-caption--line-height: 1.5;
+  --text-overline: 0.6875rem;
+  --text-overline--line-height: 1.3;
+  --text-overline--letter-spacing: 0.12em;
+  --text-overline--font-weight: 700;
 
-  /* 反光引擎的狀態。刻意宣告在 :root 而不是每個表面上——
-     所有金屬面共用同一組光源，繼承下去就好，
-     retro-modern.js 每幀只要寫一次而不是寫 N 次。
-     個別元件（例如被按下的按鈕）照樣可以在自己身上覆寫。 */
+  /* 暖色光影 */
+  --shadow-soft: 0 4px 20px rgba(83, 68, 61, 0.08);
+  --shadow-medium: 0 8px 30px rgba(83, 68, 61, 0.14);
+  --shadow-floating: 0 16px 40px rgba(83, 68, 61, 0.22);
+  --shadow-hard-sm: 3px 3px 0px #53443D;
+  --shadow-hard-md: 5px 5px 0px #53443D;
+  --shadow-hard-lg: 8px 8px 0px #53443D;
+
+  /* 緩動與版面 */
+  --ease-tactile: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-overshoot: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  --container-prose: 68ch;
+}
+
+/* 金屬漸層。v4 沒有 backgroundImage 這個 namespace，改用 @utility 自訂。 */
+@utility bg-steel-matte {
+  background-image: linear-gradient(135deg, #F0F2F5 0%, #D8DCE1 24%, #B2B9C0 52%, #CBD0D6 76%, #889098 100%);
+}
+@utility bg-steel-matte-subtle {
+  background-image: linear-gradient(140deg, #F4F6F8 0%, #DEE2E6 32%, #C2C8CF 68%, #A4ACB5 100%);
+}
+@utility bg-steel-crisp {
+  background-image: linear-gradient(135deg, #F1F4F8 0%, #C8D0DA 22%, #9EA7B4 50%, #B4BDC8 74%, #727C88 100%);
+}
+@utility bg-steel-iridescent {
+  background-image: linear-gradient(135deg, #F6F8FB 0%, #E0E5F0 16%, #B8CBD8 36%, #B2B6C6 52%, #D8CDC2 70%, #C3CBD2 84%, #88919A 100%);
+}
+
+/* 反光引擎的狀態。不是 design token，是 retro-modern.js 每幀寫入的執行期狀態，
+   所以留在 :root 而不進 @theme —— @theme 的東西應該是設計決定，不是動畫變數。 */
+:root {
   --sheen-x: 50%;
   --sheen-y: 50%;
   --sheen-angle: 135deg;
   --sheen-intensity: 0.55;
   --sheen-specular: 0.75;
-
   color-scheme: light;
 }
 
 /* ── Base ─────────────────────────────────────────────────────────── */
 
 .rm-base {
-  background-color: var(--rm-paper);
-  color: var(--rm-ink);
-  font-family: var(--rm-font-sans);
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
   /* 使用者打進來的東西不受控（長網址、日文地址），要斷得掉 */
   overflow-wrap: anywhere;
 }
@@ -113,8 +184,8 @@
 .rm-base :where(.rm-card, .rm-row, .rm-stack) > * { min-width: 0; }
 
 .rm-base ::selection {
-  background: var(--rm-accent);
-  color: var(--rm-accent-ink);
+  background: var(--color-accent);
+  color: var(--color-accent-ink);
 }
 
 /* ── 金屬材質 ─────────────────────────────────────────────────────── */
@@ -243,7 +314,7 @@
 .steel-content-layer { position: relative; z-index: 10; }
 
 /* 按壓時的物理微光回饋 */
-.steel-press-flash { animation: rm-press-pulse 0.3s var(--rm-ease-tactile) forwards; }
+.steel-press-flash { animation: rm-press-pulse 0.3s var(--ease-tactile) forwards; }
 @keyframes rm-press-pulse {
   0%   { transform: scale(1);     filter: brightness(1) contrast(100%); }
   35%  { transform: scale(0.965); filter: brightness(1.22) contrast(108%) drop-shadow(0 0 6px rgba(255, 255, 255, 0.85)); }
@@ -264,18 +335,18 @@
 .pattern-checker {
   background-size: 24px 24px;
   background-image:
-    linear-gradient(45deg, var(--rm-sandstone) 25%, transparent 25%),
-    linear-gradient(-45deg, var(--rm-sandstone) 25%, transparent 25%),
-    linear-gradient(45deg, transparent 75%, var(--rm-sandstone) 75%),
-    linear-gradient(-45deg, transparent 75%, var(--rm-sandstone) 75%);
+    linear-gradient(45deg, var(--color-foundation-sandstone) 25%, transparent 25%),
+    linear-gradient(-45deg, var(--color-foundation-sandstone) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, var(--color-foundation-sandstone) 75%),
+    linear-gradient(-45deg, transparent 75%, var(--color-foundation-sandstone) 75%);
   background-position: 0 0, 0 12px, 12px -12px, -12px 0px;
 }
 
 .pattern-stripes {
   background: repeating-linear-gradient(
     -45deg,
-    var(--rm-linen), var(--rm-linen) 10px,
-    var(--rm-sandstone) 10px, var(--rm-sandstone) 20px
+    var(--color-foundation-linen), var(--color-foundation-linen) 10px,
+    var(--color-foundation-sandstone) 10px, var(--color-foundation-sandstone) 20px
   );
 }
 
@@ -304,45 +375,45 @@
   justify-content: center;
   gap: 0.5rem;
   padding: 0.75rem 1.5rem;
-  border: 2px solid var(--rm-clove);
-  border-radius: var(--rm-radius-pill);
-  font-family: var(--rm-font-sans);
+  border: 2px solid var(--color-foundation-clove);
+  border-radius: var(--radius-pill);
+  font-family: var(--font-sans);
   font-size: 0.8125rem;
   font-weight: 700;
   line-height: 1;
   cursor: pointer;
-  background: var(--rm-muslin);
-  color: var(--rm-ink);
-  box-shadow: var(--rm-shadow-soft);
-  transition: background-color 0.18s ease, transform 0.18s var(--rm-ease-tactile), box-shadow 0.18s ease;
+  background: var(--color-foundation-muslin);
+  color: var(--color-ink);
+  box-shadow: var(--shadow-soft);
+  transition: background-color 0.18s ease, transform 0.18s var(--ease-tactile), box-shadow 0.18s ease;
 }
-.rm-btn:hover { background: var(--rm-sandstone); }
+.rm-btn:hover { background: var(--color-foundation-sandstone); }
 .rm-btn:active { transform: translateY(1px); }
-.rm-btn:focus-visible { outline: 3px solid var(--rm-accent); outline-offset: 2px; }
+.rm-btn:focus-visible { outline: 3px solid var(--color-accent); outline-offset: 2px; }
 .rm-btn[disabled] { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
 
 /* CTA：全站最重的那一顆，一個畫面只該有一個 */
 .rm-btn--cta {
-  background: var(--rm-accent);
-  color: var(--rm-accent-ink);
-  box-shadow: var(--rm-shadow-hard-sm);
+  background: var(--color-accent);
+  color: var(--color-accent-ink);
+  box-shadow: var(--shadow-hard-sm);
 }
-.rm-btn--cta:hover { background: var(--rm-accent-hover); transform: translateY(-2px); }
+.rm-btn--cta:hover { background: var(--color-accent-hover); transform: translateY(-2px); }
 .rm-btn--cta:active { transform: translateY(1px); }
 
-.rm-btn--action { background: var(--rm-terracotta); color: var(--rm-muslin); }
-.rm-btn--action:hover { background: var(--rm-cork); }
+.rm-btn--action { background: var(--color-earth-terracotta); color: var(--color-foundation-muslin); }
+.rm-btn--action:hover { background: var(--color-earth-cork); }
 
-.rm-btn--secondary { background: var(--rm-chambray); color: var(--rm-muslin); }
-.rm-btn--secondary:hover { background: var(--rm-play-blue); }
+.rm-btn--secondary { background: var(--color-sky-chambray); color: var(--color-foundation-muslin); }
+.rm-btn--secondary:hover { background: var(--color-sky-play-blue); }
 
 .rm-btn--ghost { background: transparent; box-shadow: none; }
-.rm-btn--ghost:hover { background: var(--rm-sandstone); }
+.rm-btn--ghost:hover { background: var(--color-foundation-sandstone); }
 
 /* 不鏽鋼按鈕。搭 .steel-sheen-surface 才有動態反光。 */
 .rm-btn--steel {
   background: linear-gradient(135deg, #F0F2F5 0%, #D8DCE1 24%, #B2B9C0 52%, #CBD0D6 76%, #889098 100%);
-  color: var(--rm-ink);
+  color: var(--color-ink);
 }
 .rm-btn--steel:hover { filter: brightness(1.04); }
 
@@ -364,11 +435,11 @@
 .btn-steel-hybrid {
   position: relative;
   overflow: hidden;
-  color: var(--rm-ink);
+  color: var(--color-ink);
   /* 不要陰影：none 是必要的，不是省略 —— 只把這行刪掉的話，
      .rm-btn 的 --rm-shadow-soft 會補上來，反而多一層外投影。 */
   box-shadow: none;
-  transition: transform 0.15s var(--rm-ease-tactile);
+  transition: transform 0.15s var(--ease-tactile);
 }
 
 /* Version C 的交叉淡入層。z-index 4：蓋得住反光層（2、3），壓不到文字（10）。 */
@@ -412,21 +483,21 @@
 
 /* Cards —— 80% 中性底蘊 */
 .rm-card {
-  background: var(--rm-muslin);
-  border: 2px solid var(--rm-clove);
-  border-radius: var(--rm-radius-lg);
-  box-shadow: var(--rm-shadow-soft);
+  background: var(--color-foundation-muslin);
+  border: 2px solid var(--color-foundation-clove);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-soft);
   padding: 1.5rem;
 }
-.rm-card--surface { background: var(--rm-linen); }
+.rm-card--surface { background: var(--color-foundation-linen); }
 /* 20% 表現力：關鍵通知、推薦方塊才用 */
 .rm-card--expressive {
-  background: var(--rm-terracotta);
-  color: var(--rm-muslin);
-  box-shadow: var(--rm-shadow-hard-md);
+  background: var(--color-earth-terracotta);
+  color: var(--color-foundation-muslin);
+  box-shadow: var(--shadow-hard-md);
 }
-.rm-card--raised { box-shadow: var(--rm-shadow-hard-md); }
-.rm-card--arch { border-radius: var(--rm-radius-arch); }
+.rm-card--raised { box-shadow: var(--shadow-hard-md); }
+.rm-card--arch { border-radius: var(--radius-arch); }
 
 /* Chip / Badge */
 .rm-chip {
@@ -434,48 +505,48 @@
   align-items: center;
   gap: 0.375rem;
   padding: 0.25rem 0.75rem;
-  border: 1px solid var(--rm-clove);
-  border-radius: var(--rm-radius-pill);
-  background: var(--rm-linen);
-  color: var(--rm-ink);
-  font-family: var(--rm-font-mono);
+  border: 1px solid var(--color-foundation-clove);
+  border-radius: var(--radius-pill);
+  background: var(--color-foundation-linen);
+  color: var(--color-ink);
+  font-family: var(--font-mono);
   font-size: 0.6875rem;
   font-weight: 700;
 }
-.rm-chip--solid { background: var(--rm-clove); color: var(--rm-muslin); }
-.rm-chip--accent { background: var(--rm-accent); color: var(--rm-accent-ink); border-color: var(--rm-clove); }
+.rm-chip--solid { background: var(--color-foundation-clove); color: var(--color-foundation-muslin); }
+.rm-chip--accent { background: var(--color-accent); color: var(--color-accent-ink); border-color: var(--color-foundation-clove); }
 
 /* Overline：小標題上方那行全大寫的 mono 標記 */
 .rm-overline {
-  font-family: var(--rm-font-mono);
+  font-family: var(--font-mono);
   font-size: 0.6875rem;
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--rm-ink-muted);
+  color: var(--color-ink-muted);
 }
 
 /* Form */
 .rm-input {
   width: 100%;
   padding: 0.625rem 0.875rem;
-  border: 2px solid var(--rm-clove);
-  border-radius: var(--rm-radius-sm);
-  background: var(--rm-muslin);
-  color: var(--rm-ink);
-  font-family: var(--rm-font-sans);
+  border: 2px solid var(--color-foundation-clove);
+  border-radius: var(--radius-sm);
+  background: var(--color-foundation-muslin);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
   font-size: 0.9375rem;
   /* iOS 在 <16px 的輸入框上會自動放大整頁，所以 body 級距不要再往下掉 */
 }
-.rm-input::placeholder { color: var(--rm-ink-muted); }
-.rm-input:focus-visible { outline: 3px solid var(--rm-accent); outline-offset: 1px; }
+.rm-input::placeholder { color: var(--color-ink-muted); }
+.rm-input:focus-visible { outline: 3px solid var(--color-accent); outline-offset: 1px; }
 
 .rm-label {
   display: block;
   margin-bottom: 0.375rem;
   font-size: 0.8125rem;
   font-weight: 700;
-  color: var(--rm-ink);
+  color: var(--color-ink);
 }
 
 /* Day 標記。行程網站的時間軸號碼牌與地圖圖釘用同一個樣式，
@@ -487,18 +558,18 @@
   min-width: 1.75rem;
   height: 1.75rem;
   padding: 0 0.375rem;
-  border: 2px solid var(--rm-clove);
-  border-radius: var(--rm-radius-pill);
-  background: var(--rm-dc, var(--rm-accent));
-  color: var(--rm-muslin);
-  font-family: var(--rm-font-mono);
+  border: 2px solid var(--color-foundation-clove);
+  border-radius: var(--radius-pill);
+  background: var(--rm-dc, var(--color-accent));
+  color: var(--color-foundation-muslin);
+  font-family: var(--font-mono);
   font-size: 0.75rem;
   font-weight: 700;
   /* 數字是必要的，不是裝飾：day 色對底色的對比不足以單獨承載身分 */
 }
 
 /* 分隔線 */
-.rm-divider { border: 0; border-top: 2px solid var(--rm-line); }
+.rm-divider { border: 0; border-top: 2px solid var(--color-line); }
 .rm-divider--dashed { border-top-style: dashed; }
 
 /* Toast */
@@ -511,18 +582,18 @@
   align-items: center;
   gap: 0.75rem;
   padding: 0.75rem 1.25rem;
-  border: 2px solid var(--rm-muslin);
-  border-radius: var(--rm-radius-md);
-  background: var(--rm-clove);
-  color: var(--rm-muslin);
-  font-family: var(--rm-font-mono);
+  border: 2px solid var(--color-foundation-muslin);
+  border-radius: var(--radius-md);
+  background: var(--color-foundation-clove);
+  color: var(--color-foundation-muslin);
+  font-family: var(--font-mono);
   font-size: 0.75rem;
   font-weight: 700;
-  box-shadow: var(--rm-shadow-floating);
+  box-shadow: var(--shadow-floating);
   pointer-events: none;
   opacity: 0;
   transform: translateY(6rem);
-  transition: opacity 0.3s var(--rm-ease-overshoot), transform 0.3s var(--rm-ease-overshoot);
+  transition: opacity 0.3s var(--ease-overshoot), transform 0.3s var(--ease-overshoot);
 }
 .rm-toast.is-open { opacity: 1; transform: translateY(0); }
 
