@@ -24,6 +24,11 @@
   <code>./build.sh</code> 就會產生。單獨把 demo.html 拖進預覽窗格也會這樣，那裡抓不到同層的檔案。
 </div>
 
+<div id="rm-stale-warning" hidden style="padding:1rem 1.25rem;background:#E3A824;color:#53443D;font:700 14px/1.6 system-ui,sans-serif">
+  <strong>demo.css 比 retro-modern.css 舊</strong> —— 這頁顯示的不是你現在寫的東西。
+  在 <code>design-system/</code> 裡跑 <code>./build.sh</code> 重編。
+</div>
+
 <header class="sticky top-0 z-40 border-b-2 border-ink bg-paper/90 backdrop-blur-md">
   <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3.5 sm:px-6">
     <div class="flex items-center gap-3">
@@ -432,6 +437,27 @@
   if (getComputedStyle(document.body).backgroundColor !== 'rgb(241, 239, 230)') {
     document.getElementById('rm-css-warning').hidden = false;
   }
+
+  /* demo.css 進了版控，就有跟原始碼走鐘的可能。build.sh 會在產出尾巴蓋一枚
+     原始碼指紋，這裡自己算一次比對——與其叫人記得重編，不如讓頁面自己講。
+     file:// 下 fetch 會被擋，那種情況查不出來也不要亂報。 */
+  (function checkStale() {
+    var fnv = function (t) {
+      var h = 2166136261;
+      for (var i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); }
+      return (h >>> 0).toString(36);
+    };
+    Promise.all([
+      fetch('./retro-modern.css').then(function (r) { return r.text(); }),
+      fetch('./demo.css').then(function (r) { return r.text(); }),
+    ]).then(function (both) {
+      var stamp = /\/\*src:([a-z0-9]+)\*\/\s*$/.exec(both[1]);
+      if (!stamp) return;                      // 舊版 build.sh 編的，沒指紋可比
+      if (stamp[1] !== fnv(both[0])) {
+        document.getElementById('rm-stale-warning').hidden = false;
+      }
+    }).catch(function () { /* file:// 或離線，比不了就算了 */ });
+  })();
 
   document.querySelectorAll('[data-swatches]').forEach(function (host) {
     host.innerHTML = JSON.parse(host.dataset.swatches).map(function (s) {
