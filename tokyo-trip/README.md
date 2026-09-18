@@ -61,6 +61,19 @@ Environment Variables 加兩個:
 
 Deploy。之後每次 push 都會自動重新部署。
 
+**網址是這個 —— 要給那四個人的就是它:**
+
+<https://playground-beta-liart.vercel.app>
+
+> **只有這一個網址是公開的。** Vercel 另外會生一些別名(`playground-lulu-6af6.vercel.app`、
+> `playground-git-main-lulu-6af6.vercel.app`…),那些被 Standard Protection 擋著,
+> 打開會轉去 Vercel 登入 —— **那是預設行為,不是站掛了**。
+>
+> 要確認站活著,打正式網址,不要打別名。在 Vercel 的 Environments → Production → Domains
+> 那一列,第一個就是正式網域,後面收在 `+2` 裡的才是別名。
+>
+> (這件事害兩個人各花了半小時以為使用者全被鎖在外面。網址寫在這裡就是為了不要有第三次。)
+
 > `TRIP_KEY` 一定要設。沒設的話後端會拒絕所有寫入(回 503),
 > 網站變成純看板 —— 這是刻意的,沒設定不等於不設防。
 
