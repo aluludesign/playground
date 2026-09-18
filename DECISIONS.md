@@ -51,7 +51,7 @@ commit 之後回來把 hash 補上。還沒 commit 的先寫 `未進版控`。
 
 ## 2026-09-19
 
-### 拿掉深色模式 · `TBD`
+### 拿掉深色模式 · `ef364ce`
 
 - **決定**：移除 `@media (prefers-color-scheme: dark)` 和 `:root[data-theme="dark"]` 兩塊 token 覆寫，`color-scheme` 從 `light dark` 改成 `light`。
 - **為什麼**：要接 `design-system/`，而它刻意只做淺色（`7390406`）。不是「深色用不到」——是接上去之後沒有深色可言：`dist/retro-modern.tailwind.css` 把顏色烘成字面值（`.bg-surface` 編出 `rgb(249 232 212/…)`，整份輸出 `var(--rm-` 出現 **0** 次），所以 markup 一旦改用那些 class，就沒有變數可以重新指向，深色救不回來。先移除是讓這件事變成明講的決定，而不是接線那天才發現的副作用。
