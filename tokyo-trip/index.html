@@ -154,12 +154,18 @@
   .day.today .dn::after{content:" ·今天"; letter-spacing:0;}
 
   /* ---- route timeline ---- */
-  .route{position:relative; padding-left:26px;}
-  .route::before{content:""; position:absolute; left:5px; top:10px; bottom:10px; width:2px; background:var(--dc,var(--line)); opacity:.35; border-radius:2px;}
+  .route{position:relative; padding-left:34px;}
+  .route::before{content:""; position:absolute; left:10px; top:14px; bottom:14px; width:2px; background:var(--dc,var(--line)); opacity:.35; border-radius:2px;}
   .stop{position:relative; display:grid; grid-template-columns:54px 1fr auto; gap:4px 12px; align-items:start; padding:12px 0;}
   .stop + .stop{border-top:1px solid var(--line-soft);}
-  .stop::before{content:""; position:absolute; left:-25px; top:18px; width:12px; height:12px; border-radius:50%; background:var(--surface); border:2.5px solid var(--dc,var(--muted));}
-  .stop.anchor::before{background:var(--dc,var(--muted));}
+  /* 時間軸的號碼牌長得跟地圖上的標記一樣 —— 它們是同一個編號,看起來就該是同一個東西 */
+  .stop::before{content:attr(data-n); position:absolute; left:-34px; top:14px;
+    min-width:22px; height:22px; border-radius:11px; border:1.5px solid var(--paper);
+    background:var(--dc,var(--ink)); color:#fff; box-shadow:0 1px 4px rgba(0,0,0,.28);
+    font-family:var(--font-mono); font-size:11px; font-weight:700;
+    display:flex; align-items:center; justify-content:center;}
+  /* 這一列在地圖上被聚焦時,兩邊一起亮起來 */
+  .stop.on::before{box-shadow:0 0 0 4px var(--accent-soft), 0 1px 4px rgba(0,0,0,.28);}
   .stop .t{font-family:var(--font-mono); font-size:12.5px; color:var(--muted); padding-top:1px; letter-spacing:.02em;}
   .stop .b .ti{font-family:var(--font-sign); font-size:15px; font-weight:500;}
   .stop .b .pl{font-size:12px; color:var(--muted);}
@@ -200,6 +206,8 @@
     background:var(--dc,var(--ink)); color:#fff; box-shadow:0 1px 4px rgba(0,0,0,.35);
     font-family:var(--font-mono); font-size:11px; font-weight:700; text-decoration:none;
     display:flex; align-items:center; justify-content:center;}
+  /* 被聚焦的那個標記:外面套一圈光暈,跟清單那一列同時亮 */
+  .map .pin.on{box-shadow:0 0 0 5px var(--accent-soft), 0 1px 6px rgba(0,0,0,.4); z-index:3;}
   .map .attr{position:absolute; right:0; bottom:0; z-index:3; font-size:9px; line-height:1.5;
     padding:0 4px; background:rgba(255,255,255,.78); color:#333; border-radius:4px 0 0 0;}
   .map .attr a{color:inherit;}
@@ -224,16 +232,28 @@
 
   /* 桌機橫向空間夠,改成從右邊滑進來的抽屜:地圖佔滿高度,左邊那片版面照常用,
      清單和地圖真的並排看得到。 */
+  /* 拉寬用的握把。手機上抽屜本來就滿版,用不到。 */
+  .sheet-grip{display:none;}
   @media (min-width:641px){
-    .sheet{top:0; left:auto; width:min(440px,46vw);}
-    .sheet-in{height:100%; display:flex; flex-direction:column;
+    .sheet{top:0; left:auto; width:var(--drawer,440px);}
+    .sheet-in{position:relative; height:100%; display:flex; flex-direction:column;
       border-top:0; border-left:1px solid var(--line); border-radius:16px 0 0 16px;
-      box-shadow:-10px 0 34px rgba(0,0,0,.26); padding:16px;
+      box-shadow:-10px 0 34px rgba(0,0,0,.26); padding:16px 16px 16px 22px;
       animation-name:drawerin;}
     @keyframes drawerin{from{transform:translateX(100%)} to{transform:translateX(0)}}
     /* 往下拉收起來的把手是手機的比喻,抽屜用不到 */
     .sheet .sheet-grab{display:none;}
     .sheet #wish-map{flex:1; height:auto; min-height:0;}
+
+    .sheet-grip{display:flex; position:absolute; left:0; top:0; bottom:0; width:14px; z-index:5;
+      align-items:center; justify-content:center; cursor:col-resize; touch-action:none;}
+    .sheet-grip::before{content:""; width:4px; height:42px; border-radius:2px; background:var(--line);}
+    .sheet-grip:hover::before,.sheet.sizing .sheet-grip::before{background:var(--accent);}
+
+    /* 抽屜一開,底下的版面就縮到剩下的寬度重排 —— 不是被蓋住,是真的變窄 */
+    body.drawer-open{padding-right:var(--drawer,440px);}
+    body.drawer-open:not(.sizing-now){transition:padding-right .18s ease;}
+    .sheet:not(.sizing){transition:width .18s ease;}
   }
   /* 一看就知道可以往下收的那條把手 */
   .sheet-grab{width:38px; height:4px; border-radius:2px; background:var(--line); margin:0 auto 12px;}
@@ -248,6 +268,11 @@
   .wish{display:grid; grid-template-columns:1fr auto; align-items:center; gap:3px 10px;
     border:1px solid var(--line); border-radius:9px; padding:10px 12px; background:var(--paper);}
   .wish.mine{border-color:var(--accent);}
+  .wish.on{box-shadow:0 0 0 3px var(--accent-soft);}
+  /* 點列會把地圖移過去,所以整列是可點的 */
+  .wish{cursor:pointer;}
+  .stop{cursor:pointer;}
+  .stop .rowops,.wish .wops,.wish .wdel{cursor:auto;}
   .wish .wt{font-family:var(--font-sign); font-size:14px; font-weight:500;}
   /* 跟上面地圖上的編號對應。沒填地點的願望標不出來,也就沒有編號。 */
   .wish .wnum{display:inline-flex; align-items:center; justify-content:center; min-width:18px; height:18px;
@@ -697,6 +722,7 @@
 
 <div class="sheet" id="wish-sheet" hidden>
   <div class="sheet-in" role="dialog" aria-label="許願地點的地圖">
+    <div class="sheet-grip" id="wish-grip" title="拉寬縮窭"></div>
     <div class="sheet-grab"></div>
     <div class="sheet-head">
       <svg class="i" aria-hidden="true"><use href="#i-route"></use></svg>
@@ -1626,7 +1652,8 @@
       }
     }
     pts.forEach(p => {
-      html += '<a class="pin" href="' + gmap(p.place) + '" target="_blank" rel="noopener" style="left:' +
+      html += '<a class="pin' + (p.n === box._focus ? " on" : "") + '" href="' + gmap(p.place) +
+        '" target="_blank" rel="noopener" style="left:' +
         Math.round(left + projX(p.lo, v.z) * TILE) + "px; top:" + Math.round(top + projY(p.la, v.z) * TILE) +
         'px" title="' + esc(p.n + ". " + p.title + " \u00b7 " + p.place) + '">' + p.n + "</a>";
     });
@@ -1654,12 +1681,24 @@
     paintMap(box);
   }
 
+  /* 點時間軸／許願清單的某一列 → 地圖移到那個點上。第 n 個標記同時亮起來,
+     清單那一列也亮,兩邊看得出是同一個東西。 */
+  function focusPin(box, at, n) {
+    if (!box._v || !at) return false;
+    box._v.z = Math.max(box._v.z, 14);
+    box._v.cx = projX(at.lo, box._v.z);
+    box._v.cy = projY(at.la, box._v.z);
+    box._focus = n;
+    paintMap(box);
+    return true;
+  }
+
   /* 拖曳平移、雙指捏合、雙擊放大、角落的 +/−。每個地圖只裝一次。 */
   function initMapGestures(box) {
     if (box._wired) return;
     box._wired = true;
     const pt = new Map();
-    let mode = null, from = null, moved = 0, lastTap = 0;
+    let mode = null, from = null, moved = 0, lastTap = 0, downPin = null;
     const layer = () => box.querySelector(".layer");
     const mid = () => {
       const a = [...pt.values()];
@@ -1673,6 +1712,9 @@
 
     box.addEventListener("pointerdown", ev => {
       if (ev.target.closest(".mapzoom") || ev.target.closest(".attr")) return;
+      /* 按在哪個標記上要先記下來。下面會抓走 pointer capture,click 的目標就變成
+         容器而不是那個 <a> —— 連結不會自己開,得自己開。 */
+      downPin = ev.target.closest(".pin");
       pt.set(ev.pointerId, local(ev));
       try { box.setPointerCapture(ev.pointerId); } catch (_) {}
       if (pt.size === 1) { mode = "pan"; from = local(ev); moved = 0; }
@@ -1715,8 +1757,13 @@
         zoomAt(box, Math.round(Math.log(s) / Math.LN2), m.x, m.y);
         if (Math.round(Math.log(s) / Math.LN2) === 0) paintMap(box);
       } else if (mode === "pan") {
-        if (moved < 6) {
-          /* 幾乎沒動 = 點擊。連點兩下就放大。 */
+        if (moved < 6 && downPin) {
+          /* 點在標記上 —— 開 Google 地圖,不要當成要放大 */
+          const href = downPin.getAttribute("href");
+          lastTap = 0;
+          if (href) window.open(href, "_blank", "noopener");
+        } else if (moved < 6) {
+          /* 幾乎沒動 = 點空白處。連點兩下就放大。 */
           const now = Date.now();
           if (now - lastTap < 320) { zoomAt(box, 1, n.x, n.y); lastTap = 0; }
           else lastTap = now;
@@ -1726,15 +1773,15 @@
           paintMap(box);
         }
       }
-      if (!pt.size) mode = null;
-      else if (pt.size === 1) { mode = "pan"; from = [...pt.values()][0]; moved = 99; }
+      if (!pt.size) { mode = null; downPin = null; }
+      else if (pt.size === 1) { mode = "pan"; from = [...pt.values()][0]; moved = 99; downPin = null; }
     }
     box.addEventListener("pointerup", done);
     box.addEventListener("pointercancel", done);
 
-    /* 拖過之後放開,不要順便把底下的標記當成點擊開出去 */
+    /* 上面已經自己開過了,瀏覽器那份 click 一律擋掉,不然會開兩個分頁 */
     box.addEventListener("click", ev => {
-      if (moved >= 6 && ev.target.closest(".pin")) { ev.preventDefault(); ev.stopPropagation(); }
+      if (ev.target.closest(".pin")) { ev.preventDefault(); ev.stopPropagation(); }
     }, true);
 
     box.addEventListener("click", ev => {
@@ -1775,6 +1822,7 @@
     }
     const xs = fit.map(p => projX(p.lo, z)), ys = fit.map(p => projY(p.la, z));
     box._pts = pts;
+    box._focus = null;   /* 換了一天,上一天的第 3 個跟這一天的第 3 個不是同一個地方 */
     /* 這是「回到預設視角」—— 點變了才重算,不然你拉到一半被拉回去 */
     box._v = { z: z, cx: (Math.max.apply(null, xs) + Math.min.apply(null, xs)) / 2,
                      cy: (Math.max.apply(null, ys) + Math.min.apply(null, ys)) / 2 };
@@ -1796,10 +1844,8 @@
     if (!open) { mapKey = null; return; }
     const day = state.day;
 
-    /* 沒填地點的也留著 —— 標題可能就是地名。編號是當天的順序,
-       所以編號要照整天的行程算,不能只數查得到的那幾筆。 */
-    const list = stopsOn(day).concat(online ? [] : (ANCHORS[day] || []))
-      .sort((a, b) => ((a.day || day) + " " + (a.time || "")).localeCompare((b.day || day) + " " + (b.time || "")));
+    /* 沒填地點的也留著 —— 標題可能就是地名。編號跟時間軸同一組。 */
+    const list = dayList(day);
 
     const key = day + "|" + list.map(s => s.place + "" + s.title).join("|");
     if (!force && mapKey === key) return;
@@ -1862,13 +1908,18 @@
     return state.stops.filter(s => s.day === date || (date === LAST_DAY && s.day === OVERNIGHT));
   }
 
+  /* 時間軸上的第 N 列就是地圖上的第 N 個標記,所以兩邊得用同一個清單、同一個排序。
+     分開寫的話,同一分鐘的兩筆會因為排序穩定性而錯位。 */
+  function dayList(day) {
+    /* 連著 Notion 時,航班節點已經是 Notion 裡的資料,不要再畫一次寫死的 */
+    const anchors = online ? [] : (ANCHORS[day] || []).map(a => Object.assign({ anchor: true }, a));
+    const key = x => (x.day || day) + " " + (x.time || "");
+    return anchors.concat(stopsOn(day)).sort((a, b) => key(a).localeCompare(key(b)));
+  }
+
   function renderRoute() {
     const d = DAYS.find(x => x.date === state.day);
-    /* 連著 Notion 時,航班節點已經是 Notion 裡的資料,不要再畫一次寫死的 */
-    const anchors = online ? [] : (ANCHORS[state.day] || []).map(a => Object.assign({ anchor: true }, a));
-    const mine = stopsOn(state.day);
-    const key = x => (x.day || state.day) + " " + (x.time || "");
-    const list = anchors.concat(mine).sort((a, b) => key(a).localeCompare(key(b)));
+    const list = dayList(state.day);
     el("day-title").textContent = "DAY " + d.n + " · " + state.day.slice(5).replace("-", "/") + " 週" + d.w;
     const route = el("route");
     route.style.setProperty("--dc", d.color);
@@ -1880,8 +1931,9 @@
     }
     const movable = s => !s.anchor && editable();
     route.classList.toggle("can-sort", editable());
-    route.innerHTML = list.map(s =>
+    route.innerHTML = list.map((s, i) =>
       '<div class="stop' + (s.anchor ? " anchor" : "") + '" data-stop="' + esc(s.id || "") + '"' +
+      ' data-n="' + (i + 1) + '"' +
       (movable(s) ? ' title="長按可以拖著換順序"' : "") + ">" +
       '<div class="t num">' + (s.time || "—") +
       (s.day === OVERNIGHT ? '<span style="color:var(--muted); font-size:10px"> +1</span>' : "") + "</div>" +
@@ -2389,6 +2441,25 @@
     }, { passive: false });
   })();
 
+  /* 點行程那一列(避開按鈕)→ 打開地圖並移到那個點。
+     第一次點的時候座標可能還沒查過(地圖沒開過就不會去查),所以要等 loadMap 跑完。 */
+  el("route").addEventListener("click", async ev => {
+    if (ev.target.closest("button") || ev.target.closest("a")) return;
+    const row = ev.target.closest(".stop");
+    if (!row || !row.dataset.n) return;
+    const n = +row.dataset.n;
+    const item = dayList(state.day)[n - 1];
+    if (!item) return;
+    if (!el("mapbox").open) { skipMapToggle = true; el("mapbox").open = true; }
+    await loadMap(true);
+    const at = pinOf(item);
+    if (!at || !inJapan(at)) { flash("「" + item.title + "」在地圖上沒有位置"); return; }
+    if (focusPin(el("map"), at, n)) {
+      [].forEach.call(el("route").children, r => r.classList.toggle("on", r === row));
+      el("mapbox").scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }
+  });
+
   /* --- 改一項行程的內容 --- */
   let editing = null;
   el("route").addEventListener("click", ev => {
@@ -2485,11 +2556,30 @@
   el("wish-list").addEventListener("click", ev => {
     const v = ev.target.closest("[data-vote]");
     if (v) { toggleVote(v.dataset.vote); return; }
+    /* 點在列上的空白處 → 開地圖並移到那個願望 */
+    if (!ev.target.closest("button") && !ev.target.closest("a")) {
+      const row = ev.target.closest("[data-wish]");
+      if (row) { focusWish(row.dataset.wish); return; }
+    }
     const a = ev.target.closest("[data-add-wish]");
     if (a) { addWishToDay(a.dataset.addWish); return; }
     const d = ev.target.closest("[data-del-wish]");
     if (d) removeWish(d.dataset.delWish);
   });
+
+  async function focusWish(id) {
+    const list = wishOrder();
+    const i = list.findIndex(w => w.id === id);
+    if (i < 0) return;
+    openWishSheet();
+    await loadWishMap(true);
+    const at = pinOf(list[i]);
+    if (!at || !inJapan(at)) { flash("「" + list[i].title + "」在地圖上沒有位置"); return; }
+    if (focusPin(el("wish-map"), at, i + 1)) {
+      [].forEach.call(el("wish-list").querySelectorAll("[data-wish]"),
+        r => r.classList.toggle("on", r.dataset.wish === id));
+    }
+  }
 
   /* 「加入」→ 排進現在看的那一天。不綁在某兩筆行程中間,所以不設時間上下限,
      幾點都收 —— 時間軸本來就照時間排,晚了早了都會自己歸位。 */
@@ -2615,18 +2705,87 @@
 
   renderCountdown();
   setInterval(renderCountdown, 60000);
-  /* 收著就完全不動,展開才去查座標、抓圖磚 */
-  el("mapbox").addEventListener("toggle", () => loadMap(true));
+  /* 收著就完全不動,展開才去查座標、抓圖磚。
+     toggle 是非同步派送的 —— 程式自己打開(點行程列聚焦)時要擋掉這一次,
+     不然它會晚一步再畫一次,把剛聚焦好的視角重設回預設取景。 */
+  let skipMapToggle = false;
+  el("mapbox").addEventListener("toggle", () => {
+    if (skipMapToggle) { skipMapToggle = false; return; }
+    loadMap(true);
+  });
 
-  /* 許願池的地圖:從下面滑上來的那張 */
+  /* 許願池的地圖:手機從下面滑上來,桌機從右邊推進來變抽屜 */
+
+  /* 抽屜寬度只有四檔:螢幕的 1/4、2/4、3/4、4/4。存的是「第幾檔」不是像素 ——
+     換一台螢幕、轉個方向,同一檔還是同一個比例。 */
+  const DRAWLS = "tokyo5-drawer";
+  const quarter = () => window.innerWidth / 4;
+  let drawK = 0;
+  function readDrawK() {
+    let k = 0;
+    try { k = +localStorage.getItem(DRAWLS) || 0; } catch (_) {}
+    /* 沒設定過就挑最接近 440px 的那一檔 */
+    return Math.max(1, Math.min(4, k || Math.round(440 / quarter())));
+  }
+  function applyDrawer(px) {
+    document.documentElement.style.setProperty("--drawer", Math.round(px) + "px");
+  }
+  function setDrawK(k) {
+    drawK = Math.max(1, Math.min(4, k));
+    applyDrawer(drawK * quarter());
+    try { localStorage.setItem(DRAWLS, String(drawK)); } catch (_) {}
+    /* 寬度動畫跑完再重畫,不然量到的還是舊寬度 */
+    setTimeout(repaintWishMap, 220);
+  }
+  /* 抽屜寬度一變,地圖容器也變寬變窄 —— 要重畫才補得滿圖磚 */
+  const repaintWishMap = () => { if (!el("wish-sheet").hidden) paintMap(el("wish-map")); };
+  window.addEventListener("resize", () => {
+    if (drawK) applyDrawer(drawK * quarter());
+    repaintWishMap();
+  });
+
   function closeWishSheet() {
     el("wish-sheet").hidden = true;
+    document.body.classList.remove("drawer-open");
     wishMapKey = null;
   }
-  el("wish-map-btn").addEventListener("click", () => {
+  function openWishSheet() {
+    if (!drawK) drawK = readDrawK();
+    applyDrawer(drawK * quarter());
     el("wish-sheet").hidden = false;
+    document.body.classList.add("drawer-open");
+  }
+  el("wish-map-btn").addEventListener("click", () => {
+    openWishSheet();
     loadWishMap(true);
   });
+
+  /* 拉寬:拖的時候即時跟著手指,放開才吸到最近那一檔 */
+  (function initGrip() {
+    const grip = el("wish-grip"), sheet = el("wish-sheet");
+    let dragging = false;
+    grip.addEventListener("pointerdown", ev => {
+      dragging = true;
+      sheet.classList.add("sizing");
+      document.body.classList.add("sizing-now");
+      try { grip.setPointerCapture(ev.pointerId); } catch (_) {}
+      ev.preventDefault();
+    });
+    grip.addEventListener("pointermove", ev => {
+      if (!dragging) return;
+      applyDrawer(Math.max(quarter() * 0.6, Math.min(window.innerWidth, window.innerWidth - ev.clientX)));
+      repaintWishMap();
+    });
+    function stop(ev) {
+      if (!dragging) return;
+      dragging = false;
+      sheet.classList.remove("sizing");
+      document.body.classList.remove("sizing-now");
+      setDrawK(Math.round((window.innerWidth - ev.clientX) / quarter()));
+    }
+    grip.addEventListener("pointerup", stop);
+    grip.addEventListener("pointercancel", stop);
+  })();
   el("wish-sheet-x").addEventListener("click", closeWishSheet);
   /* 沒有背景那層可以點了(背景要留給使用者操作),所以收起來只剩 ✕ 和 Esc */
   document.addEventListener("keydown", ev => {
