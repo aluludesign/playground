@@ -221,6 +221,9 @@
     font-size:9.5px; font-weight:600; opacity:.72; border-width:1px; box-shadow:none;}
   .map .pin.plan:hover{opacity:1;}
   /* 被聚焦的那個標記:外面套一圈光暈,跟清單那一列同時亮 */
+  /* 滑鼠滑過清單那一列時,對應的標記跳出來。比 .on 輕一點 —— 它是路過,不是選定。 */
+  .map .pin.hot{opacity:1; z-index:4; transform:translate(-50%,-50%) scale(1.25);
+    box-shadow:0 0 0 3px var(--accent-soft), 0 2px 8px rgba(0,0,0,.4);}
   .map .pin.on{box-shadow:0 0 0 5px var(--accent-soft), 0 1px 6px rgba(0,0,0,.4); z-index:3;}
   .map .attr{position:absolute; right:0; bottom:0; z-index:3; font-size:9px; line-height:1.5;
     padding:0 4px; background:rgba(255,255,255,.78); color:#333; border-radius:4px 0 0 0;}
@@ -1749,6 +1752,7 @@
     /* 已排進行程的點畫在底下一層,願望疊在上面 —— 願望才是要挑的東西 */
     pts.slice().sort((a, b) => (a.cls === "plan" ? 0 : 1) - (b.cls === "plan" ? 0 : 1)).forEach(p => {
       html += '<a class="pin' + (p.cls ? " " + p.cls : "") + (p.k === box._focus ? " on" : "") +
+        '" data-k="' + esc(p.k) +
         '" href="' + gmap(p.place) + '" target="_blank" rel="noopener" style="left:' +
         Math.round(left + projX(p.lo, v.z) * TILE) + "px; top:" + Math.round(top + projY(p.la, v.z) * TILE) +
         "px" + (p.color ? "; background:" + p.color : "") +
@@ -1776,6 +1780,40 @@
     v.cy = (v.cy + oy) * k - oy;
     v.z = z;
     paintMap(box);
+  }
+
+  /* 桌機滑過某一列 → 地圖上對應的那個點跳出來。只換 class,不重畫整張圖 ——
+     每滑過一格就重建圖磚的話,滑鼠一動整片就閃。
+     手機沒有 hover 這回事(碰一下就等於點下去),所以只在真的有指標的裝置上裝。 */
+  const canHover = window.matchMedia && window.matchMedia("(hover:hover)").matches;
+
+  /* 同一列在不同模式下對應到不同的標記:行程模式它是主角 d,許願模式裡它是背景的 p */
+  function stopKey(day, i) {
+    if (sheetMode === "day") return day === state.day ? "d" + i : null;
+    if (sheetMode === "wish") return "p" + day + "-" + i;
+    return null;
+  }
+  function hotPin(key) {
+    const box = el("map");
+    if (!box) return;
+    [].forEach.call(box.querySelectorAll(".pin.hot"), e => e.classList.remove("hot"));
+    if (!key) return;
+    const pin = box.querySelector('.pin[data-k="' + key + '"]');
+    if (pin) pin.classList.add("hot");
+  }
+  if (canHover) {
+    el("route").addEventListener("mouseover", ev => {
+      const row = ev.target.closest(".stop");
+      hotPin(row && row.dataset.n ? stopKey(state.day, +row.dataset.n - 1) : null);
+    });
+    el("route").addEventListener("mouseleave", () => hotPin(null));
+    el("wish-list").addEventListener("mouseover", ev => {
+      const row = ev.target.closest("[data-wish]");
+      if (!row || sheetMode !== "wish") { hotPin(null); return; }
+      const k = wishOrder().findIndex(w => w.id === row.dataset.wish);
+      hotPin(k < 0 ? null : "w" + k);
+    });
+    el("wish-list").addEventListener("mouseleave", () => hotPin(null));
   }
 
   /* 點時間軸／許願清單的某一列 → 地圖移到那個點上。第 n 個標記同時亮起來,
