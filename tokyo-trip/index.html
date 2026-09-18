@@ -180,9 +180,20 @@
 
   /* ---- map ---- */
   /* 圖磚是絕對定位排出來的,容器要蓋掉溢出的部分 */
-  .map{position:relative; height:260px; overflow:hidden; border-radius:9px;
-    border:1px solid var(--line); background:var(--surface-2);}
-  .map .tile{position:absolute; width:256px; height:256px; pointer-events:none; user-select:none;}
+  /* touch-action:none 才收得到雙指捏合 —— 不然瀏覽器先把手勢拿去捲頁面了 */
+  .map{position:relative; height:260px; overflow:hidden; border-radius:9px; touch-action:none;
+    border:1px solid var(--line); background:var(--surface-2); cursor:grab;}
+  .map:active{cursor:grabbing;}
+  /* 拖曳／捏合時只動這一層的 transform,不重畫,圖磚才不會閃 */
+  .map .layer{position:absolute; inset:0; transform-origin:0 0;}
+  .map .tile{position:absolute; width:256px; height:256px; pointer-events:none; user-select:none;
+    -webkit-user-drag:none;}
+  .map .mapzoom{position:absolute; right:8px; top:8px; z-index:4; display:flex; flex-direction:column; gap:1px;}
+  .map .mapzoom button{width:30px; height:30px; border:1px solid var(--line); background:var(--surface);
+    color:var(--ink); font-size:17px; line-height:1; cursor:pointer; padding:0;}
+  .map .mapzoom button:first-child{border-radius:7px 7px 0 0;}
+  .map .mapzoom button:last-child{border-radius:0 0 7px 7px; border-top:0;}
+  .map .mapzoom button:hover{background:var(--surface-2);}
   /* 編號跟時間軸的順序一樣,才看得出一天怎麼走 */
   .map .pin{position:absolute; transform:translate(-50%,-50%); z-index:2;
     min-width:21px; height:21px; padding:0 5px; border-radius:11px; border:1.5px solid #fff;
@@ -1037,7 +1048,7 @@
     const stop = { id: w.id, day: day, time: time, title: w.title, place: w.place || "", note: w.note || "" };
     state.stops.push(stop);
     renderWishes(); render();
-    if (!online) { saveLocal(); checkPlace(stop.place); return; }
+    if (!online) { saveLocal(); checkPlace(stop); return; }
     try {
       const { row } = await api("?resource=itinerary&id=" + encodeURIComponent(id), {
         method: "PATCH", body: JSON.stringify(stopToRow(stop)),
@@ -1046,7 +1057,7 @@
       if (j > -1) state.stops[j] = stopFromRow(row);
       render();
       flash("「" + w.title + "」排進 " + day.slice(5).replace("-", "/") + " 了");
-      checkPlace(stop.place);   /* 有問題才會蓋掉上面那句 */
+      checkPlace(stop);   /* 有問題才會蓋掉上面那句 */
     } catch (err) {
       state.stops = state.stops.filter(x => x.id !== id);
       state.wishes.splice(k, 0, w);
@@ -1319,7 +1330,10 @@
         const pop = d.precipitation_probability_max[i];
         const hi = d.temperature_2m_max[i];
         const lo = d.temperature_2m_min[i];
-        if (pop == null && hi == null) return;   /* 超出預報範圍的那幾天不要記 */
+        /* 兩個都要有才算數。降雨機率比氣溫多預報一天,邊界那天只給得出一半 ——
+           印出「☔ 32%」旁邊空一塊看起來像壞掉,而那天是預報最遠、最不準的一天,
+           少一天不可惜,隔天就補齊了。 */
+        if (pop == null || hi == null) return;
         days[date] = [pop, hi, lo];
       });
       wxCache[k] = { at: Date.now(), days: days };
@@ -1369,8 +1383,11 @@
     const d = c && c.days[date];
     if (!d) return "";
     const bits = [];
-    if (d[0] != null) bits.push("☔ " + Math.round(d[0]) + "%");
-    if (d[1] != null) bits.push("🌡 " + Math.round(d[1]) + "°");
+    if (d[0] != null) bits.push("\u2614\ufe0f " + Math.round(d[0]) + "%");
+    /* 溫度計要加 FE0F。U+1F321 預設是文字樣式不是 emoji —— iOS 上少了它會變一格空白,
+       而 ☔ 預設就是 emoji 樣式,所以只有溫度那半邊不見。
+       null 檢查留著:瀏覽器裡可能還存著改規則前抓的那筆半殘資料,沒它會印出 0°。 */
+    if (d[1] != null) bits.push("\ud83c\udf21\ufe0f " + Math.round(d[1]) + "\u00b0");
     return bits.length ? '<span class="wx">' + bits.join("  ") + "</span>" : "";
   }
 
@@ -1411,13 +1428,17 @@
     if (wxRev !== rev) renderRoute();
   }
 
-  /* 願望池的地圖:所有填了地點的願望一起標出來,看得出哪幾個擠在一起,
-     就知道哪幾個可以排同一天。編號對應下面清單上的編號。 */
+  /* 願望池的地圖:全部的願望標在同一張圖上,看得出哪幾個擠在一起,
+     就知道哪幾個可以排同一天。編號對應下面清單上的編號。
+
+     沒填地點的也留著 —— 願望的「想去哪」本身通常就是地名(淺草寺、合羽橋道具街、
+     夢の島熱帯植物館),pinForItem 會拿它再試一次。編號照清單順序給,
+     標不出來的就是缺號,下面那行會說少了幾個。 */
   let wishMapKey = null;
   async function loadWishMap(force) {
     if (el("wish-sheet").hidden) { wishMapKey = null; return; }
-    const list = wishOrder().filter(w => w.place);
-    const key = list.map(w => w.place).join("|");
+    const list = wishOrder();
+    const key = list.map(w => w.place + "\u0001" + w.title).join("|");
     if (!force && wishMapKey === key) return;
     wishMapKey = key;
 
@@ -1425,22 +1446,22 @@
       if (wishMapKey !== key) return;
       const pts = [];
       list.forEach((w, i) => {
-        const at = pins[w.place];
-        if (inJapan(at)) pts.push({ la: at.la, lo: at.lo, place: w.place, title: w.title, n: i + 1 });
+        const at = pinOf(w);
+        if (inJapan(at)) pts.push({ la: at.la, lo: at.lo, place: w.place || w.title, title: w.title, n: i + 1 });
       });
-      drawMap(el("wish-map"), pts);
+      const far = drawMap(el("wish-map"), pts);
       const miss = list.length - pts.length;
       el("wish-map-n").textContent = list.length ? pts.length + "／" + list.length + " 個" : "";
       el("wish-map-note").innerHTML = !list.length
-        ? "許願時填了地點才標得出來。"
-        : "編號對應清單上的編號。擠在一起的幾個,排同一天比較省車錢。" +
-          (miss ? " 有 " + miss + " 個沒標上去(查不到,或不在日本境內)。" : "");
+        ? "還沒有人許願。"
+        : "可以拖、可以捏合放大。編號對應清單上的編號,擠在一起的幾個排同一天比較省車錢。" + farNote(far) +
+          (miss ? " 有 " + miss + " 個沒標上去（像「泡溫泉」這種不是地名的）。" : "");
     };
 
     draw();
     for (const w of list) {
-      if (w.place in pins) continue;
-      await pinFor(w.place);
+      if (pinOf(w)) continue;
+      await pinForItem(w);
       draw();
     }
   }
@@ -1524,50 +1545,228 @@
 
   /* 存下去的當下就查一次。不然要等你打開地圖才發現少一個點,
      那時候已經想不起來是哪一筆打錯了。 */
-  async function checkPlace(place) {
-    if (!place) return;
-    const at = await pinFor(place);
-    if (!at) flash("「" + place + "」查不到,地圖上不會顯示 —— 試試把地名打完整");
-    else if (!inJapan(at)) flash("「" + place + "」不在日本境內,地圖上不會顯示");
+  async function checkPlace(item) {
+    if (!item || (!item.place && !item.title)) return;
+    const what = item.place || item.title;
+    const at = await pinForItem(item);
+    if (!at) flash("「" + what + "」查不到,地圖上不會顯示 —— 試試把地名打完整");
+    else if (!inJapan(at)) flash("「" + what + "」不在日本境內,地圖上不會顯示");
   }
 
-  function drawMap(box, pts) {
-    const w = box.clientWidth, h = box.clientHeight;
-    if (!w || !h) return;
-    if (!pts.length) { box.innerHTML = ""; return; }
-
-    /* 塞得下全部點的最大縮放。只有一個點時直接給街區級。 */
-    let z = 16;
-    if (pts.length > 1) {
-      for (; z > 7; z--) {
-        const xs = pts.map(p => projX(p.lo, z)), ys = pts.map(p => projY(p.la, z));
-        if ((Math.max.apply(null, xs) - Math.min.apply(null, xs)) * TILE < w - 70 &&
-            (Math.max.apply(null, ys) - Math.min.apply(null, ys)) * TILE < h - 70) break;
-      }
+  /* 地點欄常常沒填,或填的不是地名(實際資料裡有一筆填「🦞」)。而「做什麼」
+     那欄往往本身就是地名 —— 淺草寺、合羽橋道具街、築地市場、夢の島熱帯植物館。
+     所以地點查不到就拿標題再試一次,兩邊都沒有才放棄。 */
+  async function pinForItem(item) {
+    if (item.place) {
+      const at = await pinFor(item.place);
+      if (at) return at;
     }
-    const xs = pts.map(p => projX(p.lo, z)), ys = pts.map(p => projY(p.la, z));
-    const cx = (Math.max.apply(null, xs) + Math.min.apply(null, xs)) / 2;
-    const cy = (Math.max.apply(null, ys) + Math.min.apply(null, ys)) / 2;
-    const left = w / 2 - cx * TILE, top = h / 2 - cy * TILE;
+    return item.title ? pinFor(item.title) : null;
+  }
+  /* 上面那兩個字串,哪個查到就用哪個。畫圖是同步的,只看已經查好的。 */
+  const pinOf = item => (item.place && pins[item.place]) || (item.title && pins[item.title]) || null;
 
-    const n = Math.pow(2, z);
-    let html = "";
-    for (let tx = Math.floor(cx - w / 2 / TILE); tx <= Math.floor(cx + w / 2 / TILE); tx++) {
-      for (let ty = Math.floor(cy - h / 2 / TILE); ty <= Math.floor(cy + h / 2 / TILE); ty++) {
+  /* 兩點間的公里數 */
+  function km(a, b) {
+    const R = 6371, r = Math.PI / 180;
+    const s = Math.sin((b.la - a.la) * r / 2) ** 2 +
+      Math.cos(a.la * r) * Math.cos(b.la * r) * Math.sin((b.lo - a.lo) * r / 2) ** 2;
+    return 2 * R * Math.asin(Math.min(1, Math.sqrt(s)));
+  }
+
+  /* 一個輕井澤(150 公里外)就能把整張圖縮到看得見群馬,東京那幾個點全擠成一團 ——
+     而那團正是你要看的東西。所以縮放只遷就「多數點所在的那一區」:取中位數當中心,
+     60 公里內的算同一區。離群的點照樣畫(通常落在畫面外),由呼叫的人在說明裡點名。
+     回傳沒被framing涵蓋的那幾個。 */
+  function coreOf(pts) {
+    if (pts.length < 3) return { core: pts, far: [] };
+    const mid = a => a.slice().sort((x, y) => x - y)[Math.floor(a.length / 2)];
+    const c = { la: mid(pts.map(p => p.la)), lo: mid(pts.map(p => p.lo)) };
+    const core = pts.filter(p => km(c, p) <= 60);
+    return core.length ? { core: core, far: pts.filter(p => core.indexOf(p) < 0) }
+                       : { core: pts, far: [] };
+  }
+
+  const Z_MIN = 8, Z_MAX = 18;
+
+  /* 圖磚和標記都放在一層 .layer 裡。拖曳和捏合時只動這一層的 transform ——
+     每次都重畫 innerHTML 的話圖磚會整個閃掉,手指還在螢幕上就看得出來。
+     手放開才把位移換算回中心座標,重畫一次。 */
+  function paintMap(box) {
+    const v = box._v, pts = box._pts || [];
+    const w = box.clientWidth, h = box.clientHeight;
+    if (!v || !w || !h) return;
+    const left = w / 2 - v.cx * TILE, top = h / 2 - v.cy * TILE;
+    const n = Math.pow(2, v.z);
+    let html = '<div class="layer">';
+    for (let tx = Math.floor(v.cx - w / 2 / TILE); tx <= Math.floor(v.cx + w / 2 / TILE); tx++) {
+      for (let ty = Math.floor(v.cy - h / 2 / TILE); ty <= Math.floor(v.cy + h / 2 / TILE); ty++) {
         if (ty < 0 || ty >= n) continue;
-        html += '<img class="tile" alt="" loading="lazy" src="https://tile.openstreetmap.org/' +
-          z + "/" + (((tx % n) + n) % n) + "/" + ty + '.png" style="left:' +
+        html += '<img class="tile" alt="" src="https://tile.openstreetmap.org/' +
+          v.z + "/" + (((tx % n) + n) % n) + "/" + ty + '.png" style="left:' +
           Math.round(left + tx * TILE) + "px; top:" + Math.round(top + ty * TILE) + 'px">';
       }
     }
     pts.forEach(p => {
       html += '<a class="pin" href="' + gmap(p.place) + '" target="_blank" rel="noopener" style="left:' +
-        Math.round(left + projX(p.lo, z) * TILE) + "px; top:" + Math.round(top + projY(p.la, z) * TILE) +
-        'px" title="' + esc(p.n + ". " + p.title + " · " + p.place) + '">' + p.n + "</a>";
+        Math.round(left + projX(p.lo, v.z) * TILE) + "px; top:" + Math.round(top + projY(p.la, v.z) * TILE) +
+        'px" title="' + esc(p.n + ". " + p.title + " \u00b7 " + p.place) + '">' + p.n + "</a>";
     });
+    html += "</div>";
+    html += '<div class="mapzoom"><button type="button" data-zoom="1" aria-label="\u653e\u5927">+</button>' +
+      '<button type="button" data-zoom="-1" aria-label="\u7e2e\u5c0f">\u2212</button></div>';
     /* OSM 的圖磚要求標示出處 */
-    html += '<span class="attr">© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a></span>';
+    html += '<span class="attr">\u00a9 <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a></span>';
     box.innerHTML = html;
+  }
+
+  /* 以容器裡的某一點為中心縮放 —— 捏合和雙擊都要,不然畫面會從中心跳開 */
+  function zoomAt(box, dz, px, py) {
+    const v = box._v;
+    if (!v) return;
+    const z = Math.max(Z_MIN, Math.min(Z_MAX, v.z + dz));
+    if (z === v.z) return;
+    const k = Math.pow(2, z - v.z);
+    const w = box.clientWidth, h = box.clientHeight;
+    /* 讓 (px,py) 底下的那塊地保持在 (px,py) */
+    const ox = (px - w / 2) / TILE, oy = (py - h / 2) / TILE;
+    v.cx = (v.cx + ox) * k - ox;
+    v.cy = (v.cy + oy) * k - oy;
+    v.z = z;
+    paintMap(box);
+  }
+
+  /* 拖曳平移、雙指捏合、雙擊放大、角落的 +/−。每個地圖只裝一次。 */
+  function initMapGestures(box) {
+    if (box._wired) return;
+    box._wired = true;
+    const pt = new Map();
+    let mode = null, from = null, moved = 0, lastTap = 0;
+    const layer = () => box.querySelector(".layer");
+    const mid = () => {
+      const a = [...pt.values()];
+      return { x: (a[0].x + a[1].x) / 2, y: (a[0].y + a[1].y) / 2,
+               d: Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y) };
+    };
+    const local = ev => {
+      const b = box.getBoundingClientRect();
+      return { x: ev.clientX - b.left, y: ev.clientY - b.top };
+    };
+
+    box.addEventListener("pointerdown", ev => {
+      if (ev.target.closest(".mapzoom") || ev.target.closest(".attr")) return;
+      pt.set(ev.pointerId, local(ev));
+      try { box.setPointerCapture(ev.pointerId); } catch (_) {}
+      if (pt.size === 1) { mode = "pan"; from = local(ev); moved = 0; }
+      else if (pt.size === 2) { mode = "pinch"; from = mid(); }
+    });
+
+    box.addEventListener("pointermove", ev => {
+      if (!pt.has(ev.pointerId) || !mode) return;
+      pt.set(ev.pointerId, local(ev));
+      const L = layer();
+      if (!L) return;
+      if (mode === "pan") {
+        const n = local(ev), dx = n.x - from.x, dy = n.y - from.y;
+        moved = Math.max(moved, Math.abs(dx) + Math.abs(dy));
+        L.style.transform = "translate(" + dx + "px," + dy + "px)";
+      } else if (pt.size === 2) {
+        const m = mid(), s = from.d ? m.d / from.d : 1;
+        moved = 99;
+        L.style.transform = "translate(" + (m.x - from.x) + "px," + (m.y - from.y) + "px) " +
+          "scale(" + s + ")";
+        L.style.transformOrigin = from.x + "px " + from.y + "px";
+      }
+    });
+
+    function done(ev) {
+      if (!pt.has(ev.pointerId)) return;
+      const wasPinch = mode === "pinch" && pt.size === 2;
+      const m = wasPinch ? mid() : null;
+      const n = local(ev);
+      pt.delete(ev.pointerId);
+      const L = layer();
+      if (L) { L.style.transform = ""; L.style.transformOrigin = ""; }
+      if (!box._v) { mode = null; return; }
+
+      if (wasPinch) {
+        /* 捏合結束才換算成整數層級 —— 圖磚只有整數層,中途是用 CSS 縮放頂著 */
+        const s = from.d ? m.d / from.d : 1;
+        box._v.cx -= (m.x - from.x) / TILE;
+        box._v.cy -= (m.y - from.y) / TILE;
+        zoomAt(box, Math.round(Math.log(s) / Math.LN2), m.x, m.y);
+        if (Math.round(Math.log(s) / Math.LN2) === 0) paintMap(box);
+      } else if (mode === "pan") {
+        if (moved < 6) {
+          /* 幾乎沒動 = 點擊。連點兩下就放大。 */
+          const now = Date.now();
+          if (now - lastTap < 320) { zoomAt(box, 1, n.x, n.y); lastTap = 0; }
+          else lastTap = now;
+        } else {
+          box._v.cx -= (n.x - from.x) / TILE;
+          box._v.cy -= (n.y - from.y) / TILE;
+          paintMap(box);
+        }
+      }
+      if (!pt.size) mode = null;
+      else if (pt.size === 1) { mode = "pan"; from = [...pt.values()][0]; moved = 99; }
+    }
+    box.addEventListener("pointerup", done);
+    box.addEventListener("pointercancel", done);
+
+    /* 拖過之後放開,不要順便把底下的標記當成點擊開出去 */
+    box.addEventListener("click", ev => {
+      if (moved >= 6 && ev.target.closest(".pin")) { ev.preventDefault(); ev.stopPropagation(); }
+    }, true);
+
+    box.addEventListener("click", ev => {
+      const b = ev.target.closest("[data-zoom]");
+      if (b) zoomAt(box, +b.dataset.zoom, box.clientWidth / 2, box.clientHeight / 2);
+    });
+
+    box.addEventListener("wheel", ev => {
+      ev.preventDefault();
+      const n = local(ev);
+      zoomAt(box, ev.deltaY < 0 ? 1 : -1, n.x, n.y);
+    }, { passive: false });
+  }
+
+  /* 離群的點照樣畫,但通常落在畫面外 —— 說明裡點名,不然看起來像漏掉 */
+  function farNote(far) {
+    if (!far || !far.length) return "";
+    return " " + far.map(f => f.n + " " + f.title + "(約 " + f.km + " 公里外)").join("、") +
+      " 離得遠,要拖出去才看得到。";
+  }
+
+  function drawMap(box, pts) {
+    const w = box.clientWidth, h = box.clientHeight;
+    if (!w || !h) return [];
+    if (!pts.length) { box.innerHTML = ""; box._v = null; return []; }
+
+    const split = coreOf(pts);
+    const fit = split.core;
+
+    /* 塞得下那一區的最大縮放。只有一個點時直接給街區級。 */
+    let z = 16;
+    if (fit.length > 1) {
+      for (; z > Z_MIN; z--) {
+        const xs = fit.map(p => projX(p.lo, z)), ys = fit.map(p => projY(p.la, z));
+        if ((Math.max.apply(null, xs) - Math.min.apply(null, xs)) * TILE < w - 40 &&
+            (Math.max.apply(null, ys) - Math.min.apply(null, ys)) * TILE < h - 40) break;
+      }
+    }
+    const xs = fit.map(p => projX(p.lo, z)), ys = fit.map(p => projY(p.la, z));
+    box._pts = pts;
+    /* 這是「回到預設視角」—— 點變了才重算,不然你拉到一半被拉回去 */
+    box._v = { z: z, cx: (Math.max.apply(null, xs) + Math.min.apply(null, xs)) / 2,
+                     cy: (Math.max.apply(null, ys) + Math.min.apply(null, ys)) / 2 };
+    paintMap(box);
+    initMapGestures(box);
+
+    /* 算一下離群的點離這區中心多遠,說明裡要講 */
+    const c = { la: (fit.reduce((s, p) => s + p.la, 0)) / fit.length,
+                lo: (fit.reduce((s, p) => s + p.lo, 0)) / fit.length };
+    return split.far.map(p => ({ n: p.n, title: p.title, km: Math.round(km(c, p)) }));
   }
 
   /* 展開時重畫,換日子重畫,行程被加／改／刪也要重畫 —— 所以比對的是
@@ -1579,11 +1778,12 @@
     if (!open) { mapKey = null; return; }
     const day = state.day;
 
+    /* 沒填地點的也留著 —— 標題可能就是地名。編號是當天的順序,
+       所以編號要照整天的行程算,不能只數查得到的那幾筆。 */
     const list = stopsOn(day).concat(online ? [] : (ANCHORS[day] || []))
-      .filter(s => s.place)
       .sort((a, b) => ((a.day || day) + " " + (a.time || "")).localeCompare((b.day || day) + " " + (b.time || "")));
 
-    const key = day + "|" + list.map(s => s.place).join("|");
+    const key = day + "|" + list.map(s => s.place + "" + s.title).join("|");
     if (!force && mapKey === key) return;
     mapKey = key;
 
@@ -1591,22 +1791,22 @@
       if (mapKey !== key) return;   /* 中途換日子或又改了行程,就不要畫舊的 */
       const pts = [];
       list.forEach((s, i) => {
-        const at = pins[s.place];
-        if (inJapan(at)) pts.push({ la: at.la, lo: at.lo, place: s.place, title: s.title, n: i + 1 });
+        const at = pinOf(s);
+        if (inJapan(at)) pts.push({ la: at.la, lo: at.lo, place: s.place || s.title, title: s.title, n: i + 1 });
       });
-      drawMap(el("map"), pts);
+      const far = drawMap(el("map"), pts);
       const miss = list.length - pts.length;
       el("map-n").textContent = list.length ? pts.length + "／" + list.length + " 個" : "";
       el("map-note").innerHTML = !list.length
-        ? "這天的行程還沒填地點。填了才標得出來。"
-        : "數字是當天的順序,點一下用 Google 地圖打開。" +
-          (miss ? " 有 " + miss + " 個地點沒標上去(查不到,或不在日本境內)。" : "");
+        ? "這天還沒排行程。"
+        : "可以拖、可以捏合放大。數字是當天的順序,點一下用 Google 地圖打開。" + farNote(far) +
+          (miss ? " 有 " + miss + " 個沒標上去（查不到,或不在日本境內）。" : "");
     };
 
     draw();
     for (const s of list) {
-      if (s.place in pins) continue;
-      await pinFor(s.place);
+      if (pinOf(s)) continue;
+      await pinForItem(s);
       draw();
     }
   }
@@ -1695,10 +1895,10 @@
   function renderWishes() {
     const list = wishOrder();
     const me = myName();
-    /* 沒填地點的標不到地圖上,就不給編號 —— 不然編號會跳號,對不起來 */
+    /* 每個願望都給編號,照清單順序。標不出來的就是地圖上缺那個號 ——
+       比起「跳過不編號」,缺號配上「有 N 個沒標上去」比較好對。 */
     const num = {};
-    let k = 0;
-    list.forEach(w => { if (w.place) num[w.id] = ++k; });
+    list.forEach((w, i) => { num[w.id] = i + 1; });
     loadWishMap();
 
     el("wish-n").textContent = list.length ? list.length + " 個" : "";
@@ -1895,7 +2095,7 @@
       place: place,
       note: el("sf-note").value.trim(),
     });
-    checkPlace(place);
+    checkPlace({ place: place, title: el("sf-title").value.trim() });
     el("stop-form").reset();
     toggleForm("stop-form", false);
   });
@@ -2219,7 +2419,7 @@
     showEditError("");
     el("edit-overlay").hidden = true;
     updateStop(id, patch);
-    checkPlace(patch.place);
+    checkPlace(patch);
     /* 換了日子它就從眼前這一天消失了。不自己跳過去 —— 你可能還在整理這一天 ——
        但總要講一聲它去了哪,不然看起來像被刪掉。 */
     if (older && older !== day) {
