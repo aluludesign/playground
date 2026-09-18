@@ -207,16 +207,34 @@
   .map-note a{color:var(--ink-2);}
 
   /* ---- bottom sheet ---- */
-  /* 許願池的地圖從下面滑上來。它是「看一下就收起來」的東西,不該長期佔著清單的位置。 */
-  .sheet{position:fixed; inset:0; z-index:70; display:flex; align-items:flex-end;
-    background:rgba(0,0,0,.42); backdrop-filter:blur(2px);}
+  /* 許願池的地圖從下面滑上來。它是「看一下就收起來」的東西,不該長期佔著清單的位置。
+
+     背景不蓋、不糊,底下照樣點得到 —— 開著地圖還要能捲願望清單來對照,
+     那才是它存在的理由。所以容器只佔底下那條,而且自己不吃事件,只有卡片吃。 */
+  .sheet{position:fixed; left:0; right:0; bottom:0; z-index:70; display:flex;
+    align-items:flex-end; pointer-events:none;}
   .sheet[hidden]{display:none;}
-  .sheet-in{width:100%; background:var(--surface); border-top:1px solid var(--line);
-    border-radius:16px 16px 0 0; box-shadow:0 -10px 34px rgba(0,0,0,.28);
+  .sheet-in{width:100%; pointer-events:auto; background:var(--surface);
+    border-top:1px solid var(--line); border-radius:16px 16px 0 0;
+    box-shadow:0 -10px 34px rgba(0,0,0,.28);
     padding:10px 15px calc(16px + env(safe-area-inset-bottom));
     animation:sheetup .22s cubic-bezier(.2,.8,.3,1);}
   @keyframes sheetup{from{transform:translateY(100%)} to{transform:translateY(0)}}
   @media (prefers-reduced-motion:reduce){ .sheet-in{animation:none;} }
+
+  /* 桌機橫向空間夠,改成從右邊滑進來的抽屜:地圖佔滿高度,左邊那片版面照常用,
+     清單和地圖真的並排看得到。 */
+  @media (min-width:641px){
+    .sheet{top:0; left:auto; width:min(440px,46vw);}
+    .sheet-in{height:100%; display:flex; flex-direction:column;
+      border-top:0; border-left:1px solid var(--line); border-radius:16px 0 0 16px;
+      box-shadow:-10px 0 34px rgba(0,0,0,.26); padding:16px;
+      animation-name:drawerin;}
+    @keyframes drawerin{from{transform:translateX(100%)} to{transform:translateX(0)}}
+    /* 往下拉收起來的把手是手機的比喻,抽屜用不到 */
+    .sheet .sheet-grab{display:none;}
+    .sheet #wish-map{flex:1; height:auto; min-height:0;}
+  }
   /* 一看就知道可以往下收的那條把手 */
   .sheet-grab{width:38px; height:4px; border-radius:2px; background:var(--line); margin:0 auto 12px;}
   .sheet-head{display:flex; align-items:center; gap:8px; margin-bottom:10px;
@@ -2610,10 +2628,7 @@
     loadWishMap(true);
   });
   el("wish-sheet-x").addEventListener("click", closeWishSheet);
-  /* 點外面那層灰的就收起來,點到卡片本身不算 */
-  el("wish-sheet").addEventListener("click", ev => {
-    if (ev.target === el("wish-sheet")) closeWishSheet();
-  });
+  /* 沒有背景那層可以點了(背景要留給使用者操作),所以收起來只剩 ✕ 和 Esc */
   document.addEventListener("keydown", ev => {
     if (ev.key === "Escape" && !el("wish-sheet").hidden) closeWishSheet();
   });
