@@ -215,6 +215,11 @@
     background:var(--dc,var(--ink)); color:#fff; box-shadow:0 1px 4px rgba(0,0,0,.35);
     font-family:var(--font-mono); font-size:11px; font-weight:700; text-decoration:none;
     display:flex; align-items:center; justify-content:center;}
+  /* 許願地圖上順便畫出已經排進行程的點:小一號、半透明,字是第幾天。
+     它們是拿來對照的背景,不是要挑的東西,所以不能搶過願望。 */
+  .map .pin.plan{min-width:17px; height:17px; padding:0 4px; border-radius:9px;
+    font-size:9.5px; font-weight:600; opacity:.72; border-width:1px; box-shadow:none;}
+  .map .pin.plan:hover{opacity:1;}
   /* 被聚焦的那個標記:外面套一圈光暈,跟清單那一列同時亮 */
   .map .pin.on{box-shadow:0 0 0 5px var(--accent-soft), 0 1px 6px rgba(0,0,0,.4); z-index:3;}
   .map .attr{position:absolute; right:0; bottom:0; z-index:3; font-size:9px; line-height:1.5;
@@ -1541,31 +1546,61 @@
      沒填地點的也留著 —— 標題往往本身就是地名(淺草寺、合羽橋道具街、
      夢の島熱帯植物館),pinForItem 會拿它再試一次。標不出來的就是缺號。 */
   let sheetMode = null, sheetKey = null;
-  const sheetItems = () => sheetMode === "wish" ? wishOrder() : dayList(state.day);
+
+  /* 這張圖上要畫哪些點。
+     day  —— 只有那天的行程,編號 = 時間軸上的順序
+     wish —— 全部的願望,外加**已經排進行程的每一個點**(不分哪一天),
+             這樣才看得出「這個願望離我已經排好的東西近不近」。
+             已排的畫成小一點的淡標記、字是第幾天,願望仍然是主角。 */
+  function sheetPoints() {
+    if (sheetMode === "day") {
+      return dayList(state.day).map((x, i) => ({
+        item: x, k: "d" + i, n: i + 1,
+        tip: (i + 1) + ". " + x.title + (x.place ? " · " + x.place : ""),
+      }));
+    }
+    const out = wishOrder().map((w, i) => ({
+      item: w, k: "w" + i, n: i + 1,
+      tip: (i + 1) + ". " + w.title + (w.place ? " · " + w.place : ""),
+    }));
+    DAYS.forEach(d => dayList(d.date).forEach((x, i) => out.push({
+      item: x, k: "p" + d.date + "-" + i, n: d.n, cls: "plan", color: d.color,
+      tip: "DAY " + d.n + " " + (x.time || "") + " " + x.title + "(已排進行程)",
+    })));
+    return out;
+  }
 
   async function loadSheetMap(force) {
     if (el("map-sheet").hidden || !sheetMode) { sheetKey = null; return; }
-    const list = sheetItems();
+    const rows = sheetPoints();
     const key = sheetMode + "|" + (sheetMode === "day" ? state.day : "") + "|" +
-      list.map(x => x.place + "\u0001" + x.title).join("|");
+      rows.map(r => r.k + r.item.place + "\u0001" + r.item.title).join("|");
     if (!force && sheetKey === key) return;
     sheetKey = key;
+
+    /* 願望的數量才是標題要報的數字,已排的那些是背景資訊 */
+    const wishes = rows.filter(r => r.cls !== "plan");
 
     const draw = () => {
       if (sheetKey !== key) return;   /* 中途換了一天或換了模式,就不要畫舊的 */
       const pts = [];
-      list.forEach((x, i) => {
-        const at = pinOf(x);
-        if (inJapan(at)) pts.push({ la: at.la, lo: at.lo, place: x.place || x.title, title: x.title, n: i + 1 });
+      rows.forEach(r => {
+        const at = pinOf(r.item);
+        if (inJapan(at)) pts.push(Object.assign({
+          la: at.la, lo: at.lo, place: r.item.place || r.item.title, title: r.item.title,
+        }, r));
       });
       drawMap(el("map"), pts);
-      el("map-n").textContent = list.length ? pts.length + "／" + list.length + " 個" : "";
+      const got = pts.filter(x => x.cls !== "plan").length;
+      const planned = pts.length - got;
+      el("map-n").textContent = (wishes.length ? got + "／" + wishes.length + " 個" : "") +
+        (planned ? " · 已排 " + planned : "");
     };
 
     draw();
-    for (const x of list) {
-      if (pinOf(x)) continue;
-      await pinForItem(x);
+    for (const r of rows) {
+      if (pinOf(r.item)) continue;
+      await pinForItem(r.item);
       draw();
     }
   }
@@ -1711,11 +1746,13 @@
           Math.round(left + tx * TILE) + "px; top:" + Math.round(top + ty * TILE) + 'px">';
       }
     }
-    pts.forEach(p => {
-      html += '<a class="pin' + (p.n === box._focus ? " on" : "") + '" href="' + gmap(p.place) +
-        '" target="_blank" rel="noopener" style="left:' +
+    /* 已排進行程的點畫在底下一層,願望疊在上面 —— 願望才是要挑的東西 */
+    pts.slice().sort((a, b) => (a.cls === "plan" ? 0 : 1) - (b.cls === "plan" ? 0 : 1)).forEach(p => {
+      html += '<a class="pin' + (p.cls ? " " + p.cls : "") + (p.k === box._focus ? " on" : "") +
+        '" href="' + gmap(p.place) + '" target="_blank" rel="noopener" style="left:' +
         Math.round(left + projX(p.lo, v.z) * TILE) + "px; top:" + Math.round(top + projY(p.la, v.z) * TILE) +
-        'px" title="' + esc(p.n + ". " + p.title + " \u00b7 " + p.place) + '">' + p.n + "</a>";
+        "px" + (p.color ? "; background:" + p.color : "") +
+        '" title="' + esc(p.tip) + '">' + esc(p.n) + "</a>";
     });
     html += "</div>";
     html += '<div class="mapzoom"><button type="button" data-zoom="1" aria-label="\u653e\u5927">+</button>' +
@@ -1743,12 +1780,12 @@
 
   /* 點時間軸／許願清單的某一列 → 地圖移到那個點上。第 n 個標記同時亮起來,
      清單那一列也亮,兩邊看得出是同一個東西。 */
-  function focusPin(box, at, n) {
+  function focusPin(box, at, key) {
     if (!box._v || !at) return false;
     box._v.z = Math.max(box._v.z, 14);
     box._v.cx = projX(at.lo, box._v.z);
     box._v.cy = projY(at.la, box._v.z);
-    box._focus = n;
+    box._focus = key;
     paintMap(box);
     return true;
   }
@@ -1861,7 +1898,10 @@
     if (!w || !h) return;
     if (!pts.length) { box.innerHTML = ""; box._v = null; return; }
 
-    const split = coreOf(pts);
+    /* 取景只看「主角」那組點。許願模式裡已排進行程的成田、桃園機場也是點,
+       跟著算的話整張圖會為了容納機場而縮出去,願望全擠成一團 —— 而願望才是要挑的。 */
+    const stars = pts.filter(p => p.cls !== "plan");
+    const split = coreOf(stars.length ? stars : pts);
     const fit = split.core;
 
     /* 塞得下那一區的最大縮放。只有一個點時直接給街區級。 */
@@ -2463,7 +2503,7 @@
     await loadSheetMap(true);
     const at = pinOf(item);
     if (!at || !inJapan(at)) { flash("「" + item.title + "」在地圖上沒有位置"); return; }
-    if (focusPin(el("map"), at, n)) {
+    if (focusPin(el("map"), at, "d" + (n - 1))) {
       [].forEach.call(el("route").children, r => r.classList.toggle("on", r === row));
     }
   });
@@ -2583,7 +2623,7 @@
     await loadSheetMap(true);
     const at = pinOf(list[i]);
     if (!at || !inJapan(at)) { flash("「" + list[i].title + "」在地圖上沒有位置"); return; }
-    if (focusPin(el("map"), at, i + 1)) {
+    if (focusPin(el("map"), at, "w" + i)) {
       [].forEach.call(el("wish-list").querySelectorAll("[data-wish]"),
         r => r.classList.toggle("on", r.dataset.wish === id));
     }
