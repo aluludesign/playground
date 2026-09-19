@@ -399,8 +399,10 @@
     .exp{display:grid; grid-template-columns:1fr auto; gap:2px 12px; padding:11px 14px; border:1px solid var(--line); border-radius:9px; background:var(--surface); margin-bottom:6px;}
     .exp .hd{display:flex; align-items:center; gap:8px; flex-wrap:wrap; min-width:0;}
     .exp .ti{font-weight:500; font-size:14.5px;}
-    .chip{font-size:10.5px; padding:1.5px 7px; border-radius:20px; background:var(--surface-2); color:var(--muted); border:1px solid var(--line); white-space:nowrap;}
-    .chip.cat{border-color:transparent; color:#fff;}
+    /* 標籤本體交給 design-system 的 .rm-chip。這裡只留它表達不了的部分:
+       每個分類一個顏色(行內 style 帶),配白字和透明邊框。
+       rm-chip--solid / --accent 都是固定色,對不上「六個分類六種顏色」。 */
+    .cat{border-color:transparent; color:#fff;}
     .exp .amt{text-align:right; font-family:var(--font-mono); font-variant-numeric:tabular-nums; font-size:15px; font-weight:600; white-space:nowrap;}
     .exp .amt .sub{display:block; font-size:10.5px; font-weight:400; color:var(--muted);}
     .exp .mt{grid-column:1/2; font-size:12px; color:var(--muted); display:flex; gap:6px; flex-wrap:wrap; align-items:center;}
@@ -2293,7 +2295,7 @@
     const whoShared = ps.length === IDS.length ? "全員均分" : ps.map(nameOf).join("、") + " 均分";
     const payer = e.payerId ? esc(nameOf(e.payerId)) + " 付" : '<span style="color:var(--warn)">未指定付款人</span>';
     const v = toTWD(e);
-    return '<div class="exp"><div class="hd"><span class="ti">' + linkify(e.title) + '</span><span class="chip cat" style="background:' + c.color + '">' + c.name + "</span></div>" +
+    return '<div class="exp"><div class="hd"><span class="ti">' + linkify(e.title) + '</span><span class="rm-chip cat" style="background:' + c.color + '">' + c.name + "</span></div>" +
       '<div class="amt">' + twd(v) + (e.currency === "JPY" ? '<span class="sub">¥' + Math.round(e.amount).toLocaleString("en-US") + "</span>" : "") + "</div>" +
       '<div class="mt"><span>' + payer + "</span><span>·</span><span>" + esc(whoShared) + "</span>" +
       (ps.length ? '<span>·</span><span class="num">每人 ' + twd(v / ps.length) + "</span>" : "") +

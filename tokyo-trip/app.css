@@ -14,15 +14,17 @@
  * 沒有 preflight。retro-modern.css 本身只匯入 theme 和 utilities,
  * 而 tokyo-trip 早就有自己的一套重設(index.html 第 33 行起)。
  */
-/* source(none) 關掉這次匯入帶進來的自動掃描範圍。不關的話 Tailwind 會連
- * design-system/ 一起掃,把 demo.html 用到的 utility 全編進來 —— 那些不是
- * 這個網站在用的,而且會讓「忘了重編」偵測不出來(class 反正都在)。
- * 掃描範圍由下面那行明確指定,只有 tokyo-trip 自己。
+/* 掃描範圍只有 tokyo-trip 自己。
+ *
+ * 不關掉自動偵測的話,Tailwind 會連 design-system/ 一起掃,把 demo.html 用到的
+ * utility 全編進來 —— 那些不是這個網站在用的,而且會讓「忘了重編」偵測不出來
+ * (class 反正都在)。那件事現在由 design-system 自己擋(它的匯入帶了 source(none)),
+ * 消費端不必記得寫 —— 「必須記得,忘了就安靜失效」的要求本身就是個坑。
  *
  * 產生檔就放在被掃的資料夾裡,看起來會自我餵養,但實測 Tailwind 不掃 .css ——
  * 在產出裡塞一個 .bg-day-4 再重編,它不會被撿回來。而且連編三次位元組完全相同。
  * 所以這裡不需要 @source not,加了也是空的。 */
-@import "../design-system/retro-modern.css" source(none);
+@import "../design-system/retro-modern.css";
 @source "./";
 
 /* ---- 一個已知的偵測盲區,事前登記 ----
