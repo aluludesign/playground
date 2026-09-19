@@ -383,6 +383,22 @@ Connections 授權才是）、
 
 ## 2026-09-19
 
+### 不帶 preflight，改讓組件自己自足 · `未進版控`
+
+接線前發現 tokyo-trip 從來沒有過 CSS reset。
+
+- **決定**：`retro-modern.css` 只匯入 `theme.css` 和 `utilities.css`，**不帶 preflight**。改成組件在 `@layer components` 裡自己宣告 `box-sizing: border-box` 和必要的 margin 歸零。
+- **為什麼**：preflight 是替全新專案抹平瀏覽器差異，不是去改一個已經長好的網站。tokyo-trip 明確設過的樣式在 `components` 層贏得過 `base`，但凡是它**依賴瀏覽器預設**的地方（標題級距、清單縮排、`b` 的粗細、各種預設 margin）都會在接線那一刻改變 —— 第一步就從「接上去、畫面不變」變成「整站到處有細微差異，而且分不清哪些是預期的」，逐塊驗收的乾淨基準就沒了。
+- **但傾向要成立，組件就不能靠它。** 實測三份對照，不帶 preflight 時組件真的會壞：`.rm-input` 的 `width:100%` 加 padding 加邊框撐出容器（348 → **380**），`.rm-day-pin` 不再是圓的（28×28 → **44×32**）—— 而那顆號碼牌的全部意義就是跟地圖圖釘長得一模一樣，變形等於功能壞掉。所以先拆掉這個依賴，才談得上不帶。
+- **只套組件本身，不套後代**：`:where(組件) :where(*)` 那種寫法會把消費端既有的子元素也從 content-box 翻過去。量過之後確認**後代那條對組件幾何毫無影響**（兩份數字一模一樣，差別只在消費端的子元素 372 vs 348），所以拿掉。用 `:where()` 讓特異度維持 0。
+- **行高也不再靠繼承**：preflight 的 `html { line-height: 1.5 }` 撐著六個組件（`.rm-card` `.rm-chip` `.rm-input` `.rm-label` `.rm-overline` `.rm-toast`），不帶就縮。各自寫明 `1.5` —— 就是它們原本繼承到的值，所以外觀零變化。**不要在 `.rm-base` 上設**，那會改掉消費端的整站行距，正是要避免的事。
+- **代價／要講準的一句話**：接上 CSS 本身不動任何既有東西，但**把既有元素套上 `rm-*` class，那個元素會變成 border-box**。這不是副作用，是組件保證自己版面正確的必要條件。會變的只有親手加了 `rm-*` 的那幾個元素本身，後代不受影響。
+- **全新專案的 preflight 是 opt-in**：`demo.entry.css` 加一行 `@import "tailwindcss/preflight.css" layer(base);`，它同時是「全新專案怎麼寫」的活範本。
+- **順序**：這件事必須在接線之前做完。否則對方換的第一塊如果含輸入框或號碼牌，會看到版面溢出，而那跟它自己改的東西無關 —— 診斷起來很浪費時間。
+- **「不帶」這個決定的另一半證據來自 tokyo-trip 那邊的量測**（由 Tokyo trip session 做）：逐項對照 preflight 的九項職責，**它自己已經做了八項**（全域 `box-sizing`、body margin 歸零、`img max-width`、h1~h6 字級字重、`list-style`、`a` 的顏色裝飾、表單字型、button 外觀重設），缺的 `border-collapse` 因為整頁沒有 `<table>` 而無關。所以不是「它沒有 reset」，是**它有一套自己的，preflight 對它買不到東西** —— 那比「不要去改一個已經長好的網站」這個原則更硬，因為是量出來的。
+- **順帶記一句方法上的教訓**（同一份量測）：如果硬要帶 preflight，625 個元素裡有 11 個尺寸會變，全部是按鈕，成因是 `button,input,select,textarea{font:inherit}` 把簡寫裡的 `line-height` 和 `font-family` 一起重設掉。試著補兩條宣告修掉，**結果變成 20 個**。**remedy 不是看程式碼推得出來的，要量著改。** 哪天有人決定要帶 preflight，從這裡開始。
+- 產出順帶從 19.5KB 降到 15.5KB，但那是附帶好處，不是理由。
+
 ### 明確宣告 layer 順序，不吃「誰先出現」的運氣 · `9801091`
 
 `458291b` 把組件包進 `@layer components` 之後，`rounded-arch` 是對的了 —— 但理由還是錯的。

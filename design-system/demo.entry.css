@@ -1,0 +1,10 @@
+/* demo.html 的建置入口。
+ *
+ * demo 是一個全新的頁面，所以它「要」preflight —— 瀏覽器的預設標題級距和
+ * 段落 margin 會打亂版面。retro-modern.css 本身不帶，因為接進既有網站時
+ * 那份全域重設會動到人家原本長好的東西。
+ *
+ * 這支同時是文件：全新專案就照這樣寫。
+ */
+@import "./retro-modern.css";
+@import "tailwindcss/preflight.css" layer(base);

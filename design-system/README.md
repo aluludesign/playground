@@ -12,7 +12,8 @@
 | 檔案 | 做什麼 |
 | --- | --- |
 | `retro-modern.css` | **原始碼** —— `@theme` 的全部 token、金屬材質、反光層、復古紋理、組件 class |
-| `demo.css` | `retro-modern.css` 編出來的成品，`demo.html` 引的就是它 |
+| `demo.entry.css` | `demo.html` 的建置入口 —— 也是「全新專案怎麼寫」的範本 |
+| `demo.css` | 編出來的成品，`demo.html` 引的就是它 |
 | `retro-modern.js` | 動態反光引擎、按壓回饋、toast、複製到剪貼簿（可選） |
 | `demo.html` | 可以直接開的展示頁，也是活的使用範例 |
 | `build.sh` | 編譯 —— 給 demo 用的那份，或給某個網站用的那份 |
@@ -22,14 +23,17 @@ token 和用到 token 的 CSS 現在在同一支檔案裡 —— Tailwind v4 是
 
 ## 接進一個新網站
 
-`retro-modern.css` 是原始碼，不能直接 `<link>` —— 它開頭是 `@import "tailwindcss"`
-和 `@theme`，瀏覽器讀不懂。每個網站編自己的那一份。
+`retro-modern.css` 是原始碼，不能直接 `<link>` —— 它開頭是 `@import` 和 `@theme`，
+瀏覽器讀不懂。每個網站編自己的那一份。
 
-寫一支一行的入口：
+寫一支入口：
 
 ```css
 /* my-trip/app.css */
 @import "../design-system/retro-modern.css";
+
+/* 全新專案才加這行。既有網站不要加 —— 見下一節。 */
+@import "tailwindcss/preflight.css" layer(base);
 ```
 
 編出來：
@@ -39,27 +43,53 @@ cd design-system
 ./build.sh ../my-trip/app.css ../my-trip/style.css
 ```
 
-HTML 只要兩件事 —— 字型和那支編好的 CSS：
+HTML 只要字型和那支編好的 CSS：
 
 ```html
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Fraunces:opsz,wght@9..144,600;9..144,700;9..144,800&family=JetBrains+Mono:wght@400;600&family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@700&display=swap">
 
 <link rel="stylesheet" href="./style.css">
-
-<!-- 動態反光，可選 -->
-<script src="../design-system/retro-modern.js"></script>
+<script src="../design-system/retro-modern.js"></script>   <!-- 可選 -->
 
 <body class="rm-base">
 ```
 
-沒有 CDN、沒有執行期編譯、沒有 config 檔。
+`demo.entry.css` 就是活生生的範本，照抄它就對了。
 
-**掃哪些檔案不用指定** —— v4 會掃入口 CSS 所在資料夾底下的原始碼（跳過
-`.gitignore` 的）。所以入口放在網站自己的資料夾裡，設計系統就不必知道誰在用它。
+**掃哪些檔案不用指定** —— v4 會掃入口 CSS 所在資料夾底下的原始碼。所以入口放在
+網站自己的資料夾裡，設計系統就不必知道誰在用它。
 
 **改了 token 或新寫了 class 都要重編。** Tailwind 只產出你真的寫在 HTML 裡的
 utility，沒重編的新 class 等於不存在。
+
+## 接上去會改變什麼、不會改變什麼
+
+**這支 CSS 不帶 preflight**（Tailwind 那份 8.5KB 的全域重設）。它的用途是替
+全新專案抹平瀏覽器差異，不是去改一個已經長好的網站。所以：
+
+**只是把 CSS 連上去 —— 你頁面上任何既有的東西都不會動。** 沒有全域選擇器、
+沒有 `*` 重設、沒有元素選擇器。標題級距、清單縮排、`b` 的粗細、各種預設
+margin，全部維持瀏覽器原本給你的。
+
+**但把既有的元素套上 `rm-*` class，那個元素會變成 `border-box`**（`.rm-divider`
+還會被清掉 margin）。這不是副作用，是組件保證自己版面正確的必要條件 ——
+少了它 `.rm-input` 的 `width:100%` 加 padding 加邊框會撐出容器（量過：348 → 380），
+`.rm-day-pin` 也不再是圓的（28×28 → 44×32）。
+
+**它的後代不受影響。** `box-sizing` 只套在組件元素本身，沒有往下傳。所以把既有
+內容放進 `.rm-card` 裡，那些內容維持它原本的盒模型。實測過：帶不帶後代那條，
+組件自己的幾何一模一樣，差別只在消費端的子元素動不動。
+
+換句話說，會變的**只有你親手加上 `rm-*` 的那幾個元素本身**。
+
+**而且你原本的決定蓋不掉。** 組件全部包在 `@layer components` 裡，而
+**沒有 layer 的 CSS 贏過所有的層** —— 你自己寫的規則是無層級的，所以它一定贏。
+真實例子：`tokyo-trip` 刻意在某個元素上設了 `box-sizing: content-box`，
+那個元素就算套上 `rm-*`，也還是 content-box。這不只是原則，是階層機制給的結構保證，
+而那套機制在這裡站在消費端那邊。
+
+全新專案想要 preflight 就自己加一行（`demo.entry.css` 裡有），那是 opt-in。
 
 ## 瀏覽器需求
 

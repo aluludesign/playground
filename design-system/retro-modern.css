@@ -13,7 +13,15 @@
  *   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
  *   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Fraunces:opsz,wght@9..144,600;9..144,700;9..144,800&family=JetBrains+Mono:wght@400;600&family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@700&display=swap">
  */
-@import "tailwindcss";
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+
+/* 刻意不帶 preflight（Tailwind 那份 8.5KB 的全域重設）。它的用途是替全新專案
+   抹平瀏覽器差異，不是去改一個已經長好的網站 —— 接進 tokyo-trip 這種既有站點時，
+   它會動到所有「原本依賴瀏覽器預設」的地方。
+   全新專案想要就自己加一行（demo 就是這樣做的，見 demo.entry.css）：
+     @import "tailwindcss/preflight.css" layer(base); */
 
 /* ── Tokens ───────────────────────────────────────────────────────────
    v4 的 @theme 同時做兩件事：產生 utility，以及把每個 token 輸出成真正的
@@ -175,6 +183,21 @@
    正是這套系統答應過的事。v3 時期靠的是 CDN 把 utility 插在後面，
    那是順序運氣；layer 是明講的。 */
 @layer components {
+
+  /* 組件自帶 border-box，不靠全域 reset —— 沒有這段，`.rm-input` 的
+     width:100% 加 padding 加邊框會撐出容器（量過：348 → 380），
+     `.rm-day-pin` 也不再是圓的（28×28 → 44×32），而那顆號碼牌的全部意義
+     就是跟地圖圖釘長得一模一樣。
+     只套組件本身、不套後代：實測後代那條對組件幾何毫無影響，
+     但會把消費端既有的子元素從 content-box 翻過去。用 :where() 讓特異度
+     維持 0，消費端和 utility 照樣蓋得過去。 */
+  :where(.rm-card, .rm-btn, .rm-chip, .rm-input, .rm-label, .rm-day-pin,
+         .rm-overline, .rm-divider, .rm-toast, .steel-sheen-surface,
+         .pattern-grid, .pattern-checker, .pattern-stripes) {
+    box-sizing: border-box;
+  }
+  :where(.rm-divider) { margin: 0; }
+
 
   /* ── Base ─────────────────────────────────────────────────────────── */
 
@@ -490,6 +513,7 @@
 
   /* Cards —— 80% 中性底蘊 */
   .rm-card {
+    line-height: 1.5;   /* 不靠 html 繼承 —— 沒有 preflight 時才不會縮 */
     background: var(--color-foundation-muslin);
     border: 2px solid var(--color-foundation-clove);
     border-radius: var(--radius-lg);
@@ -508,6 +532,7 @@
 
   /* Chip / Badge */
   .rm-chip {
+    line-height: 1.5;   /* 不靠 html 繼承 —— 沒有 preflight 時才不會縮 */
     display: inline-flex;
     align-items: center;
     gap: 0.375rem;
@@ -525,6 +550,7 @@
 
   /* Overline：小標題上方那行全大寫的 mono 標記 */
   .rm-overline {
+    line-height: 1.5;   /* 不靠 html 繼承 —— 沒有 preflight 時才不會縮 */
     font-family: var(--font-mono);
     font-size: 0.6875rem;
     font-weight: 700;
@@ -535,6 +561,7 @@
 
   /* Form */
   .rm-input {
+    line-height: 1.5;   /* 不靠 html 繼承 —— 沒有 preflight 時才不會縮 */
     width: 100%;
     padding: 0.625rem 0.875rem;
     border: 2px solid var(--color-foundation-clove);
@@ -549,6 +576,7 @@
   .rm-input:focus-visible { outline: 3px solid var(--color-accent); outline-offset: 1px; }
 
   .rm-label {
+    line-height: 1.5;   /* 不靠 html 繼承 —— 沒有 preflight 時才不會縮 */
     display: block;
     margin-bottom: 0.375rem;
     font-size: 0.8125rem;
@@ -581,6 +609,7 @@
 
   /* Toast */
   .rm-toast {
+    line-height: 1.5;   /* 不靠 html 繼承 —— 沒有 preflight 時才不會縮 */
     position: fixed;
     right: 1.5rem;
     bottom: 1.5rem;

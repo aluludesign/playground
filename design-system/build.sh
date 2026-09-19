@@ -17,7 +17,7 @@ set -e
 
 cd "$(dirname "$0")"
 
-IN="${1:-retro-modern.css}"
+IN="${1:-demo.entry.css}"
 OUT="${2:-demo.css}"
 
 # v4 的 CLI 需要能解析到 tailwindcss 套件，所以是本機相依而不是 npx。
