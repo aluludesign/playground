@@ -27,7 +27,11 @@
     --board-bg:#12141A; --board-ink:#F3F4F7; --board-muted:#878FA3; --board-line:#282C36; --board-amber:#F0B429;
     --font-body:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
     --font-sign:"Zen Kaku Gothic New","Noto Sans TC",system-ui,sans-serif;
-    --font-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+    /* CJK 排在所有等寬家族之後、generic monospace 之前:拉丁字和數字仍然由
+       IBM Plex Mono 先接走,只有它接不住的碼位才落到 Noto Sans TC。
+       沒有這幾個後援的話,mono 上的中文會掉到瀏覽器對那些碼位的預設,
+       跟頁面其他中文不同一套 —— 見 adopt-harness/block-02-mono.md。 */
+    --font-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,"Noto Sans TC","PingFang TC","Microsoft JhengHei",monospace;
     color-scheme:light;
   }
 
