@@ -114,7 +114,13 @@
   /* 字族 */
   --font-serif: Fraunces, 'Noto Serif TC', 'Songti TC', 'PingFang TC', serif;
   --font-sans: 'DM Sans', 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  /* 等寬的 CJK 後援接的是跟 sans 同一組 —— 拉丁字和數字仍然走 JetBrains Mono
+     （那才是 mono 的用意：對齊金額、時間、色碼），中文則落到頁面本來那套字，
+     不會變成另一套襯線體。
+     漢字在任何 CJK 字體裡都是全角 1em，所以中文並沒有因此「不等寬」；
+     真正對不齊的是半角數字跟全角漢字混排，而那件事換哪套字都一樣。 */
+  --font-mono: 'JetBrains Mono', 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo,
+               'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', monospace;
 
   /* 語意字級。v4 用子屬性帶行高、字距、字重。 */
   --text-display: clamp(2.5rem, 6vw, 4rem);
