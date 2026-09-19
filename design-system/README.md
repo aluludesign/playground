@@ -32,7 +32,10 @@ token 和用到 token 的 CSS 現在在同一支檔案裡 —— Tailwind v4 是
 /* my-trip/app.css */
 @import "../design-system/retro-modern.css";
 
-/* 全新專案才加這行。既有網站不要加 —— 見下一節。 */
+/* 掃描範圍：只有這個資料夾。這行是必要的，不是選項 —— 見下面。 */
+@source "./";
+
+/* 全新專案才加這行。既有網站不要加 —— 見「接上去會改變什麼」。 */
 @import "tailwindcss/preflight.css" layer(base);
 ```
 
@@ -57,11 +60,22 @@ HTML 只要字型和那支編好的 CSS：
 
 `demo.entry.css` 就是活生生的範本，照抄它就對了。
 
-**掃哪些檔案不用指定** —— v4 會掃入口 CSS 所在資料夾底下的原始碼。所以入口放在
-網站自己的資料夾裡，設計系統就不必知道誰在用它。
+**`@source "./"` 那行不能省。** `retro-modern.css` 用 `source(none)` 關掉了
+Tailwind 的自動範圍偵測，所以掃描範圍要你自己講。
+
+關掉是刻意的：不關的話，Tailwind 會連 `design-system/` 一起掃，把 `demo.html`
+用到的 utility 全編進你的產出。量過一次是 **206 個 class**，其中 `bg-steel-*`、
+`bg-day-*`、`rounded-arch` 都不是你在用的；關掉之後是 58 個。
+
+**體積是小事，真正的傷害是下一段那件事會失效** —— 你要寫的 utility 幾乎一定
+已經在裡面了（demo 用過），所以忘了重編也看不出來。失效的樣子是「一切正常」。
 
 **改了 token 或新寫了 class 都要重編。** Tailwind 只產出你真的寫在 HTML 裡的
-utility，沒重編的新 class 等於不存在。
+utility，沒重編的新 class 等於不存在 —— 而且不會有錯誤訊息，樣式就是不見。
+
+> 順帶一個掃描器的實情：它不分辨字出現在什麼語法位置。CSS 屬性名、註解、
+> 連中文散文都撿 —— 註解裡寫「用 clip 不用 hidden」，`hidden` 就會進產出。
+> 所以產出裡出現你沒寫過的 utility 是正常的，不是壞掉。
 
 ## 接上去會改變什麼、不會改變什麼
 

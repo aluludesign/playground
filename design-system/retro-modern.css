@@ -15,7 +15,16 @@
  */
 @layer theme, base, components, utilities;
 @import "tailwindcss/theme.css" layer(theme);
-@import "tailwindcss/utilities.css" layer(utilities);
+@import "tailwindcss/utilities.css" layer(utilities) source(none);
+
+/* source(none) 關掉「自動偵測掃描範圍」。不關的話，消費端匯入這支的同時
+   Tailwind 會連 design-system/ 一起掃，把 demo.html 用到的 utility 全編進
+   他的產出 —— 量過：206 個 class，其中 bg-steel-*、bg-day-*、rounded-arch
+   都不是他在用的。
+   體積是小事。真正的傷害是「忘了重編」偵測不出來：他要寫的 utility 幾乎
+   一定已經在裡面了（demo 用過），content-driven 的前提整個失效，
+   而失效的樣子是「一切正常」。
+   所以掃描範圍改由每個入口自己宣告 @source —— 關在這裡，消費端就不必記得。 */
 
 /* 刻意不帶 preflight（Tailwind 那份 8.5KB 的全域重設）。它的用途是替全新專案
    抹平瀏覽器差異，不是去改一個已經長好的網站 —— 接進 tokyo-trip 這種既有站點時，
