@@ -438,8 +438,9 @@
     document.getElementById('rm-css-warning').hidden = false;
   }
 
-  /* demo.css 進了版控，就有跟原始碼走鐘的可能。build.sh 會在產出尾巴蓋一枚
-     原始碼指紋，這裡自己算一次比對——與其叫人記得重編，不如讓頁面自己講。
+  /* demo.css 進了版控，就有跟原始碼走鐘的可能。build.sh 在產出尾巴蓋了
+     一枚指紋，連同它涵蓋哪些檔案 —— 照清單抓、算一次、比對。
+     與其叫人記得重編，不如讓頁面自己講。
      file:// 下 fetch 會被擋，那種情況查不出來也不要亂報。 */
   (function checkStale() {
     var fnv = function (t) {
@@ -447,15 +448,17 @@
       for (var i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); }
       return (h >>> 0).toString(36);
     };
-    Promise.all([
-      fetch('./retro-modern.css').then(function (r) { return r.text(); }),
-      fetch('./demo.css').then(function (r) { return r.text(); }),
-    ]).then(function (both) {
-      var stamp = /\/\*src:([a-z0-9]+)\*\/\s*$/.exec(both[1]);
-      if (!stamp) return;                      // 舊版 build.sh 編的，沒指紋可比
-      if (stamp[1] !== fnv(both[0])) {
-        document.getElementById('rm-stale-warning').hidden = false;
-      }
+    fetch('./demo.css').then(function (r) { return r.text(); }).then(function (out) {
+      var m = /\/\*src:([a-z0-9]+):([^*]+)\*\/\s*$/.exec(out);
+      if (!m) return;                        // 舊版 build.sh 編的，沒指紋可比
+      var want = m[1], list = m[2].split(',');
+      return Promise.all(list.map(function (f) {
+        return fetch(f).then(function (r) { return r.text(); });
+      })).then(function (parts) {
+        if (fnv(parts.join('')) !== want) {
+          document.getElementById('rm-stale-warning').hidden = false;
+        }
+      });
     }).catch(function () { /* file:// 或離線，比不了就算了 */ });
   })();
 

@@ -45,16 +45,28 @@ node -e '
   console.error("  layer 順序: " + names.join(" → "));
 ' "$OUT"
 
-# 在產出尾巴蓋一枚原始碼的指紋。demo.html 會自己比對，發現對不上就跳警告——
+# 在產出尾巴蓋一枚原始碼指紋。demo.html 會自己比對，發現對不上就跳警告——
 # 產生檔進了版控就有走鐘的可能：有人改了 retro-modern.css 忘了重編，
 # git 裡的 demo 就開始說謊，而那正是這套系統被審閱的方式。
-STAMP=$(node -e '
-  const fs = require("fs");
-  const t = fs.readFileSync(process.argv[1], "utf8");
+#
+# 入口檔本身很少變，真正會變的是它 @import 進來的那些。所以指紋涵蓋
+# 「入口 + 它引用的本機 CSS」，而且把檔案清單一起寫進去 —— 這樣 demo.html
+# 不必知道建置結構，照著清單抓就好。
+node -e '
+  const fs = require("fs"), path = require("path");
+  const entry = process.argv[1], dir = path.dirname(entry);
+  const files = [entry];
+  /* 只跟一層本機 @import；套件名（"tailwindcss/..."）不算，那是相依不是原始碼 */
+  for (const m of fs.readFileSync(entry, "utf8").matchAll(/@import\s+"(\.[^"]+)"/g))
+    files.push(path.join(dir, m[1]));
   let h = 2166136261;                        /* FNV-1a，夠用又不必動到 crypto */
-  for (let i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); }
-  process.stdout.write((h >>> 0).toString(36));
-' "$IN")
-printf '\n/*src:%s*/' "$STAMP" >> "$OUT"
+  for (const f of files) {
+    const t = fs.readFileSync(f, "utf8");
+    for (let i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); }
+  }
+  const list = files.map(f => "./" + path.basename(f)).join(",");
+  fs.appendFileSync(process.argv[2], "\n/*src:" + (h >>> 0).toString(36) + ":" + list + "*/");
+  console.error("  指紋涵蓋: " + list);
+' "$IN" "$OUT"
 
-echo "→ $OUT ($(wc -c < "$OUT") bytes, src:$STAMP)"
+echo "→ $OUT ($(wc -c < "$OUT") bytes)"
