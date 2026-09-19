@@ -109,7 +109,11 @@ document.getElementById('f').onload = function(){
     setTimeout(function(){
       var bad = [];
       "$5".split(",").forEach(function(spec){
-        var p = spec.split(":"), sel = p[0], min = parseInt(p[1], 10);
+        /* 從最後一個冒號切。用 split(":")[1] 的話,選擇器裡只要出現 :not() 之類的
+           偽類,門檻就會被切成字串,parseInt 得到 NaN,而 n < NaN 永遠是 false ——
+           斷言不會報錯,只是安靜地不再檢查任何東西。 */
+        var q = spec.lastIndexOf(":"), sel = spec.slice(0, q), min = parseInt(spec.slice(q + 1), 10);
+        if (!(min > 0)) { bad.push(spec + " 的門檻讀不出來"); return; }
         var n = d.querySelectorAll(sel).length;
         if (n < min) bad.push(sel + " 只有 " + n + " 個(至少要 " + min + ")");
       });
@@ -138,10 +142,10 @@ shot 02-plan-desktop    1100  900 ""                                            
 shot 03-cost-mobile      390 1400 "d.getElementById('tab-cost').click();"       ".exp:3+,.rm-chip:3+,.catrow:2+"
 shot 04-split-mobile     390 1300 "d.getElementById('tab-split').click();"      ".fp:5+"
 shot 05-wishes-mobile    390 1200 "d.getElementById('wishbox').open=true;"      ".wish:3+"
-shot 06-map-sheet        390 1000 "d.getElementById('day-map-btn').click();"    ".map .pin:2+"
-shot 07-map-drawer      1100  900 "d.getElementById('wish-map-btn').click();"   ".map .pin:2+"
-shot 08-addstop-form     390 1100 "d.getElementById('add-stop-btn').click();"   "#stop-form input:3+"
-shot 09-edit-dialog      390  900 "d.querySelector('[data-edit-stop]').click();" "#edit-form input:3+"
+shot 06-map-sheet        390 1000 "d.getElementById('day-map-btn').click();"    ".map .pin:4+"
+shot 07-map-drawer      1100  900 "d.getElementById('wish-map-btn').click();"   ".map .pin:6+"
+shot 08-addstop-form     390 1100 "d.getElementById('add-stop-btn').click();"   "#stop-form:not([hidden]) input:3+,.stop:3+"
+shot 09-edit-dialog      390  900 "d.querySelector('[data-edit-stop]').click();" "#edit-overlay:not([hidden]) #edit-form input:3+,.stop:3+"
 
 kill $SRV 2>/dev/null || true
 if [ -n "$FAILED" ]; then

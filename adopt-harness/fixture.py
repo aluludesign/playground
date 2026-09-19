@@ -25,6 +25,8 @@ STATE = {"version":3,"rate":0.21,"names":{},"expenses":EXPENSES,"stops":STOPS,"w
 DAYS = ["2026-10-0%d" % d for d in range(3,9)]
 WX = {"35.68,139.65":{"at":9e14,"days":{d:[40,24.0,18.0] for d in DAYS}},
       "35.23,139.11":{"at":9e14,"days":{d:[55,22.0,15.0] for d in DAYS}}}
+# key 必須跟 index.html 的 PINLS 一字不差(現在是 tokyo5-pin3)。對不上不會報錯,
+# 只是快取整份失效 —— 地圖改成去 Nominatim 現查,截圖就跟著網路快慢變。
 PINS = {"淺草寺":{"la":35.7134,"lo":139.7955},"築地市場":{"la":35.6649,"lo":139.7669},
         "合羽橋道具街":{"la":35.7143,"lo":139.7889},"明治神宮":{"la":35.6748,"lo":139.6996},
         "teamLab":{"la":35.6620,"lo":139.7434},"港灣未來":{"la":35.4437,"lo":139.6380},
@@ -49,6 +51,6 @@ def seed():
     return CLOCK + ("<script>try{"
       "localStorage.setItem('tokyo5-v1',"+j(STATE)+");"
       "localStorage.setItem('tokyo5-wx',"+j(WX)+");"
-      "localStorage.setItem('tokyo5-pin',"+j(PINS)+");"
+      "localStorage.setItem('tokyo5-pin3',"+j(PINS)+");"
       "localStorage.setItem('tokyo5-me','hsieh_chinhui');"
       "}catch(e){}</script>\n")
