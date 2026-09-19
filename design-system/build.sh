@@ -26,23 +26,51 @@ OUT="${2:-demo.css}"
 
 ./node_modules/.bin/tailwindcss -i "$IN" -o "$OUT" --minify
 
-# 明確宣告 layer 順序。層的優先序由「第一次出現的順序」決定，不是由名字——
+# 明確宣告 layer 順序。層的優先序由「名字第一次出現的順序」決定，不是由名字——
 # 所以不宣告的話，utilities 排在最後只是剛好，任何人在前面插一層就翻盤。
 # 寫在原始碼裡沒用：--minify 會把 @layer a,b,c; 這種宣告拿掉，所以在這裡補。
-# 名單從產出本身推導，Tailwind 之後多一層也不會漏掉。
+#
+# 層有兩種註冊方式，兩種都要數：帶區塊的 `@layer x {` 和裸宣告 `@layer x;`
+# （後者也可能是逗號清單）。只數區塊的話空層會被漏掉——而漏掉的後果不是
+# 「少宣告一個」，是那個層被接在名單後面、變成優先序最高的。
+# 補完會再驗一次，驗不過就讓建置失敗，不留一個看起來有在運作的空保證。
 node -e '
   const fs = require("fs"), f = process.argv[1];
+  const LAYER = /@layer\s+([a-z][a-z0-9-]*(?:\s*,\s*[a-z][a-z0-9-]*)*)\s*[{;]/g;
+  const scan = (css) => {
+    const out = [];
+    for (const m of css.matchAll(LAYER))
+      for (const n of m[1].split(",").map(x => x.trim()))
+        if (!out.includes(n)) out.push(n);
+    return out;
+  };
+
   let css = fs.readFileSync(f, "utf8");
-  const names = [];
-  for (const m of css.matchAll(/@layer ([a-z-]+)\s*\{/g))
-    if (!names.includes(m[1])) names.push(m[1]);
+  const names = scan(css);
   if (!names.length) process.exit(0);
   const decl = "@layer " + names.join(",") + ";";
-  /* 接在開頭那行 banner 註解之後，一定要在第一個 @layer 區塊之前 */
-  const i = css.indexOf("*/");
+  const i = css.indexOf("*/");                 /* 接在開頭那行 banner 註解之後 */
   css = i === -1 ? decl + css : css.slice(0, i + 2) + "\n" + decl + css.slice(i + 2);
   fs.writeFileSync(f, css);
-  console.error("  layer 順序: " + names.join(" → "));
+
+  /* 驗收刻意「不」重用上面那個 pattern。用同一個等於循環論證——
+     看不見的東西，驗證時一樣看不見。這裡改成最笨也最寬的方式：
+     找出每一處 @layer，把它到 { 或 ; 之間的字全部當成層名候選。
+     寬鬆會誤報，而誤報看得見；漏報看不見。 */
+  const after = fs.readFileSync(f, "utf8");
+  const declEnd = after.indexOf(decl) + decl.length;
+  const rest = after.slice(declEnd);
+  const late = [];
+  for (let at = rest.indexOf("@layer"); at !== -1; at = rest.indexOf("@layer", at + 6)) {
+    const head = rest.slice(at + 6, at + 200).split(/[{;]/)[0];
+    for (const n of head.split(/[^a-zA-Z0-9_-]+/))
+      if (n && !names.includes(n) && !late.includes(n)) late.push(n);
+  }
+  if (late.length) {
+    console.error("  ✗ 這些層沒有在頂端宣告過，會排到最後面: " + late.join(", "));
+    process.exit(1);
+  }
+  console.error("  layer 順序: " + names.join(" → ") + "（已驗證無遺漏）");
 ' "$OUT"
 
 # 在產出尾巴蓋一枚原始碼指紋。demo.html 會自己比對，發現對不上就跳警告——
