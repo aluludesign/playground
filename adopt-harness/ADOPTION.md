@@ -45,7 +45,7 @@ Lulu 要的是「網站真的變成 retro-modern 的樣子」,不只是色調統
 | ✅ 接線(載入 design-system) | `b43a2f7`,視覺零改變,**已上線** |
 | ✅ 第一塊:`.chip` → `.rm-chip` | `c43340e`,只有花費頁變,**已上線** |
 | ✅ 正向斷言驗完 + 工具修正 | 見「補救:正向斷言」 |
-| 🔴 `--font-mono` 缺 CJK fallback | **已經在使用者面前**,不是待辦。等 design-system 修 |
+| 🔴 `--font-mono` 缺 CJK fallback | **已經在使用者面前**,不是待辦。要修的是 **tokyo-trip 自己那個 `--font-mono`**,不是 design-system —— 見 `block-01-chip.md`「怎麼分辨這個 computed 值是誰的 stack」 |
 | ⏸ 第二塊 | 建議 `.fld label` → `rm-label`,但**等 mono 修好再開始** |
 | ⏸ 字型 | **排最後**,見下 |
 
@@ -76,7 +76,15 @@ Lulu 要的是「網站真的變成 retro-modern 的樣子」,不只是色調統
 
 1. **`--font-mono` 的中文 fallback** —— 這件事的優先序被提前了。原本以為它還沒上線,
    實際上花費頁的中文分類標籤現在就是 fallback 字體,那五個人看得到。
-   修法會改變 `.rm-chip` 上中文的長相,要自己驗一輪(預期差異事前登記)
+   修法會改變**站上每一處 mono 中日文**的長相(不只 `.rm-chip`,共 19 個元素),
+   九張截圖全部會動,要自己驗一輪(預期差異事前登記)。
+
+   > **這裡原本寫成「等 design-system 修」,那是錯的。** design-system 的
+   > `--font-mono` 已經補上 CJK(`7214658`),重編之後九張**零差異** ——
+   > 因為 `tokyo-trip/index.html:30` 的**無層級 `:root`** 自己定義了 `--font-mono`,
+   > 無層級一律贏過 `@layer theme`,那個修正到不了任何元素。
+   > 要生效就得改 tokyo-trip 自己那一行。完整的辨識方法寫在
+   > `block-01-chip.md`,這一輪的登記與結果在 `block-02-mono.md`。
 2. 挑第二塊。判準見「怎麼挑一塊」。**建議 `.fld label` → `rm-label`**,理由見那一節
 3. 字型**最後才做**。理由:字型一換,九張截圖全部不一樣;排在前面的話,後面每一塊
    都是在一個剛剛大幅變動過的基準上比對。排最後,前面每一塊都還能跟乾淨的基準比
@@ -327,6 +335,8 @@ localhost 以外的網路全部切斷重跑,確認數字一模一樣** —— �
 第三個是這一輪加的:`rm-chip`、`rm-overline`、`rm-day-pin` 都吃 `--font-mono`,
 而 mono 沒有 CJK fallback 還沒修。**那幾塊應該等修好再碰**,不然這一輪的差異
 之後會被下一輪的字型修正再翻一次,兩輪都難歸因。
+(mono 的 CJK fallback 在 `block-02-mono` 那一輪補上了 —— **補在 tokyo-trip 自己的
+`:root` 上**,不是 design-system 那一份。)
 
 可用的組件(`design-system/retro-modern.css` 的 `@layer components`):
 

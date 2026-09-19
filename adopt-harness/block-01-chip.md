@@ -56,7 +56,7 @@ diff 會從標籤一路往下延伸。那是預期的,不是版面壞掉。
 | white-space 沒了 | normal | ✅ |
 | 整列撐高 | 標籤 48×27,整列跟著變高 | ✅ |
 | display inline-flex | **flex** | ⚠ 見下 |
-| font-family 換成 mono | `"IBM Plex Mono", ui-monospace, …` | ⚠ 疑慮成立,見下 |
+| font-family 換成 mono | `"IBM Plex Mono", ui-monospace, …` | ⚠ 症狀成立,但**歸因原本寫錯了**,見下 |
 
 ### 兩個偏離
 
@@ -64,11 +64,60 @@ diff 會從標籤一路往下延伸。那是預期的,不是版面壞掉。
 `.exp .hd` 是 flex 容器,**flex 項目的 `inline-flex` 會被 blockify 成 `flex`**。
 組件宣告的是 `inline-flex`,瀏覽器照規範改的。視覺上沒有影響(單行文字)。
 
-**2. mono stack 沒有中文字體 —— 事前登記的疑慮成立。**
-`--font-mono` 是 `JetBrains Mono, IBM Plex Mono, ui-monospace, SFMono-Regular, Menlo, monospace`,
-**整串沒有任何 CJK 字體**。標籤內容是中文(景點、餐飲、交通),所以中文字會
-fallback 到瀏覽器對這些碼位的預設,跟頁面其他中文(Noto Sans TC)不同一套。
+**2. mono stack 沒有中文字體 —— 症狀成立,但這裡原本把它歸錯了對象。**
 
-實際看起來沒有壞掉,但字重和字距明顯不一樣。這是 design-system 的問題,不是我的用法問題 ——
-它的 `--font-sans` 有 `'Noto Sans TC', 'PingFang TC'` 的 fallback,`--font-mono` 沒有。
-已回報。
+> **這一段是更正。** 原文寫的是「`--font-mono` 是
+> `JetBrains Mono, IBM Plex Mono, ui-monospace, SFMono-Regular, Menlo, monospace`,
+> 整串沒有任何 CJK 字體……這是 design-system 的問題」。
+>
+> **症狀是真的,歸因的位置是錯的。** 左邊實測欄自己寫著
+> `"IBM Plex Mono", ui-monospace, …` —— **開頭沒有 `JetBrains Mono`**,
+> 那根本不是 design-system 的 stack,是 **tokyo-trip 自己的**。
+>
+> 這個錯誤歸因害整條線繞了一大圈:有人照著去修了 design-system 的 `--font-mono`
+> (`7214658`),重編之後九張截圖零差異 —— 因為那個 token 從來沒有到達任何元素。
+
+### 怎麼分辨這個 computed 值是誰的 stack
+
+`--font-mono` 這個名字**兩邊都有**,而且值長得很像(都以 mono 家族開頭、都以
+`monospace` 收尾)。看 computed `font-family` 的時候,**只看第一個名字**:
+
+| computed 開頭 | 是誰的 | 從哪來 |
+| --- | --- | --- |
+| `"JetBrains Mono"` | design-system | `retro-modern.built.css` 的 `@layer theme` |
+| `"IBM Plex Mono"` | **tokyo-trip** | `tokyo-trip/index.html:30`,**無層級的 `:root`** |
+
+**為什麼永遠是 tokyo-trip 贏:**`@layer` 的規則是「有層級的一律輸給無層級的」。
+design-system 的 `--font-mono` 住在 `@layer theme` 裡,tokyo-trip 的住在無層級的
+`:root` 裡 —— 特異度一樣、原始碼順序 tokyo-trip 也在後面,但**就算順序反過來也一樣**,
+因為無層級勝出跟順序無關。
+
+那個覆寫是**刻意的**,`ADOPTION.md` 的「`:root` 留在 `@layer components` 外面」寫了理由:
+它是「之後想覆寫 design-system 某個 token 時唯一有效的位置」。
+**它同時是保護傘也是阻礙** —— 保護 tokyo-trip 不被 design-system 的 token 無聲改掉,
+也擋住 design-system 對同一個 token 的修正。
+
+**下一個人會再踩的地方,三條:**
+
+1. 看到 computed 出來是 mono,不要就寫成「design-system 的 mono」。
+   **先比對第一個字體名**,那唯一決定了是誰的 stack
+2. 要知道某個 token 現在是誰說了算,不要讀 CSS 猜,直接在真實 DOM 上問:
+   `getComputedStyle(document.documentElement).getPropertyValue('--font-mono')`
+3. **在「該改變外觀的輪」裡,零差異就是沒生效**,不要當成好消息。
+   `7214658` 重編之後零差異,那是 token 沒到達的證據,不是「修好了而且很安全」
+
+### 症狀本身仍然成立,而且是這一塊造成的回歸
+
+`.rm-chip` 上那三顆中文分類標籤(景點／餐飲／交通)用的是
+`"IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace` —— 整串沒有 CJK,
+中文 fallback 到瀏覽器對這些碼位的預設,跟頁面其他中文(Noto Sans TC)不同一套。
+
+**這是第一塊造成的回歸**:轉換前 `.chip` 沒設 `font-family`,中文繼承本文;
+轉換後 `.rm-chip` 用 `--font-mono`,中文就掉出去了。
+
+站上另外 18 處用 mono 且含中日文的地方(出發倒數的「天」、航班板、金額說明)
+**在 design-system 進場前就已經是這樣**,不是回歸,是既有狀態。
+
+修法見 `block-02-mono.md`:在 `tokyo-trip/index.html:30` 自己的 `--font-mono`
+補中文後援。**不是**刪掉覆寫讓 design-system 接手 —— 那會把站上每個 mono 的拉丁字和
+數字都從 IBM Plex Mono 換成 JetBrains Mono,血量大得多。
