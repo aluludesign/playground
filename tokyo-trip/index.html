@@ -8,6 +8,14 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗼</text></svg>">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;500;700&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap">
+<!-- design-system 的產出。這支是編出來的,不要手改 —— 改 app.css 或 design-system/ 再重編。
+
+     放在下面那個 <style> 之前是**必要條件**,不是保險:我的樣式和它的組件
+     class 在同一層(兩邊都用 components)。同層之內比特異度、再比原始碼順序,
+     後載入的贏。所以它先載入,我的 .card 才蓋得過它的 .rm-card;
+     反過來的話它的組件會開始無聲蓋掉我寫好的東西。
+     (跨層的部分由它產出裡那行 @layer 順序宣告決定,utilities 最後,utility 贏我。) -->
+<link rel="stylesheet" href="retro-modern.built.css">
 <style>
   :root{
     --paper:#F1F2F6; --surface:#FFFFFF; --surface-2:#F7F8FB;
@@ -3046,6 +3054,55 @@
   document.addEventListener("keydown", ev => {
     if (ev.key === "Escape" && !el("map-sheet").hidden) closeMapSheet();
   });
+
+  /* ---- 產生檔走鐘的防護 ----
+     retro-modern.built.css 是編出來的,而 Tailwind 是 content-driven ——
+     在 markup 寫了新的 utility 卻忘記重編,那個 class 就不存在,樣式安靜消失。
+     這裡直接檢查那件事本身:頁面上用到、但沒有任何 CSS 規則提到的 class。
+
+     正式站不出聲(那五個人不該看到我們的工程訊息),只寫 console;
+     localhost 和 file:// 才跳出來擋在眼前。 */
+  (function checkBuild() {
+    /* 純標記用的 class,沒有樣式也沒有 JS 用到,不是漏編 */
+    const IGNORE = ["brand", "panel"];
+    const dev = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname) || location.protocol === "file:";
+    setTimeout(() => {
+      const known = {};
+      let sheets = 0;
+      [].forEach.call(document.styleSheets, ss => {
+        let rules;
+        try { rules = ss.cssRules; } catch (_) { return; }   /* 跨來源的(字型)讀不到,略過 */
+        sheets++;
+        (function walk(list) {
+          [].forEach.call(list, r => {
+            if (r.selectorText) {
+              (r.selectorText.match(/\.-?[A-Za-z_][A-Za-z0-9_-]*/g) || []).forEach(s => { known[s.slice(1)] = 1; });
+            }
+            if (r.cssRules) walk(r.cssRules);
+          });
+        })(rules);
+      });
+      const used = {};
+      [].forEach.call(document.querySelectorAll("[class]"), e => {
+        (typeof e.className === "string" ? e.className : "").split(/\s+/).forEach(c => { if (c) used[c] = 1; });
+      });
+      const orphan = Object.keys(used).filter(c => !known[c] && IGNORE.indexOf(c) < 0);
+
+      /* 產生檔整個沒載到也是無聲的失敗(部署漏檔、路徑打錯),一起擋 */
+      const built = [].some.call(document.styleSheets, ss => (ss.href || "").indexOf("retro-modern.built") >= 0);
+      if (built && !orphan.length) return;
+
+      const msg = (!built ? "retro-modern.built.css 沒載到。" : "") +
+        (orphan.length ? "這些 class 用了但沒有任何 CSS 規則,多半是改了 markup 沒重編:" + orphan.join(" ") : "");
+      console.warn("[build] " + msg + "  →  cd design-system && ./build.sh ../tokyo-trip/app.css ../tokyo-trip/retro-modern.built.css");
+      if (!dev) return;
+      const bar = document.createElement("div");
+      bar.textContent = "⚠ " + msg + " 請重編。";
+      bar.style.cssText = "position:fixed;left:0;right:0;bottom:0;z-index:9999;background:#8A5A00;color:#fff;" +
+        "font:12px/1.5 monospace;padding:8px 12px;white-space:pre-wrap";
+      document.body.appendChild(bar);
+    }, 0);
+  })();
 
   state.day = initialDay();
   switchTab("plan");

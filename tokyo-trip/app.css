@@ -1,0 +1,46 @@
+/* tokyo-trip 的樣式入口。
+ *
+ * 這支不是給 <link> 用的 —— 它要先編譯:
+ *
+ *   cd design-system && ./build.sh ../tokyo-trip/app.css ../tokyo-trip/retro-modern.built.css
+ *
+ * 編出來的那支才是 index.html 引的。產生檔要進版控,因為 Vercel 的
+ * Root Directory 是 tokyo-trip,design-system/ 不在部署範圍內。
+ *
+ * Tailwind v4 是 content-driven:它掃這支入口所在資料夾底下的原始碼,
+ * 決定要編出哪些 utility。所以 index.html 用了新的 class 之後一定要重編,
+ * 不然那個 class 不存在 —— 而且不會有任何錯誤訊息,樣式就是不見。
+ *
+ * 沒有 preflight。retro-modern.css 本身只匯入 theme 和 utilities,
+ * 而 tokyo-trip 早就有自己的一套重設(index.html 第 33 行起)。
+ */
+/* source(none) 關掉這次匯入帶進來的自動掃描範圍。不關的話 Tailwind 會連
+ * design-system/ 一起掃,把 demo.html 用到的 utility 全編進來 —— 那些不是
+ * 這個網站在用的,而且會讓「忘了重編」偵測不出來(class 反正都在)。
+ * 掃描範圍由下面那行明確指定,只有 tokyo-trip 自己。
+ *
+ * 產生檔就放在被掃的資料夾裡,看起來會自我餵養,但實測 Tailwind 不掃 .css ——
+ * 在產出裡塞一個 .bg-day-4 再重編,它不會被撿回來。而且連編三次位元組完全相同。
+ * 所以這裡不需要 @source not,加了也是空的。 */
+@import "../design-system/retro-modern.css" source(none);
+@source "./";
+
+/* ---- 一個已知的偵測盲區,事前登記 ----
+ *
+ * 限定掃描範圍之後,產出的 utilities 層還剩 8 個 class:
+ *
+ *   block  ease-out  filter  hidden  inline  resize  sticky  transform
+ *
+ * 這些**不是** markup 在用 utility —— 沒有一個出現在任何 class 屬性裡。
+ * 它們是 Tailwind 的掃描器從 CSS 屬性值和 JS 字串裡撿出來的候選字:
+ *   padding-block / position:sticky / cursor:col-resize / text-transform /
+ *   [hidden] / backdrop-filter / animation … ease-out / display:inline-flex
+ * 連中文註解裡提到的「sticky 的標題列」「用 clip 不用 hidden」都被撿走。
+ *
+ * 後果:**這 8 個名字不受「忘了重編」的偵測保護。** 哪天真的想拿其中一個
+ * 當 utility 用(例如 class="hidden"),它早就在產出裡了,所以忘記重編也不會被抓到。
+ * 那正是掃描範圍設錯時的同一個盲區,只是從 190 個縮到 8 個。
+ *
+ * 不修:為了 8 個常見字去調掃描規則,成本高於收益,而且容易漏掉別的。
+ * 登記在這裡,是因為已知的盲區要事前寫下來 —— 事後才拿出來解釋的,沒辦法被檢驗。
+ */
