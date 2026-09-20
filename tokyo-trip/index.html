@@ -416,7 +416,10 @@
     .form{display:grid; gap:12px; padding:16px; border:1px dashed var(--line); border-radius:10px; background:var(--surface-2); margin-bottom:16px;}
     .grid2{display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px;}
     .fld{display:flex; flex-direction:column; gap:0; min-width:0;}
-    .fld input,.fld select,.fld textarea{background:var(--surface); border:1px solid var(--line); border-radius:7px; padding:7px 9px; font-size:14px; line-height:1.5; width:100%; min-width:0;}
+    /* 欄位本體交給 design-system 的 .rm-input(見 adopt-harness/block-04-input.md)。
+       這裡原本那條 `.fld input,.fld select,.fld textarea{...}` 整條刪掉了 ——
+       它的特異度(0,1,1)高過 .rm-input(0,1,0),留著組件就永遠到不了。
+       下面幾條 [type=...] 的覆寫是刻意留的,它們表達的是 .rm-input 表達不了的事。 */
     /* iOS Safari 把 input[type=time] 畫成一顆圓角灰按鈕,跟旁邊的文字框差很多。
        關掉原生外觀讓它跟其他欄位一樣 —— 點下去還是叫得出原生的時間轉盤。
        ::-webkit-date-and-time-value 預設有自己的 margin 和置中,也要一起清掉。 */
@@ -428,12 +431,24 @@
     .fld input[type="date"]::-webkit-calendar-picker-indicator{opacity:.45; padding:0; margin:0;
       width:1em; height:1em; block-size:1em;}
     .fld input[type="number"]{font-family:var(--font-mono);}
+    /* :53 的 :focus-visible 也設了 border-radius:4px(那是為了讓沒有圓角的東西
+       對焦時外框不要是直角)。以前 .fld input(0,1,1)蓋得過它,量過:對焦中的
+       xe-title 圓角一樣是 7px —— **對焦不會改變欄位的形狀**。
+       換成 .rm-input 之後兩者同為(0,1,0),而 :53 在原始碼後面 → 對焦時圓角會
+       從 8px 掉到 4px,那是這一輪沒有要引入的新行為。綁回組件自己的 token。 */
+    .fld .rm-input:focus-visible{border-radius:var(--radius-sm);}
     .who{display:flex; gap:6px; flex-wrap:wrap;}
     .who label{display:inline-flex; align-items:center; gap:5px; padding:5px 10px; border:1px solid var(--line); border-radius:20px; background:var(--surface); font-size:12.5px; cursor:pointer;
       /* color 和 letter-spacing 以前是從 .fld label 繼承下來的（.who 住在 .fld 裡）。
          那條規則換成 rm-label 之後來源沒了，這裡原樣補回 —— 成員膠囊不在這一塊的範圍內。 */
       color:var(--muted); letter-spacing:.05em;}
-    .who input{accent-color:var(--accent);}
+    /* .who 住在 .fld 裡,所以上面刪掉的那條 `.fld input` 一直也選到這些核取方塊。
+       量過:border / padding / border-radius 對原生核取方塊無效,但
+       width / background / font-size / line-height 是真的生效的 ——
+       width:100% 把 13px 的原生方塊撐成 28px。這裡原樣補回,讓它逐項不變。
+       不是因為被撐寬一倍好看,是因為這一輪不該碰它,而且九張截圖沒有一張看得到它。 */
+    .who input{accent-color:var(--accent);
+      width:100%; background:var(--surface); font-size:14px; line-height:1.5;}
     .form-ops{display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap;}
 
     /* ---- settle ---- */
@@ -612,11 +627,11 @@
       </div>
       <form class="form" id="stop-form" hidden>
         <div class="grid2">
-          <div class="fld"><label class="rm-label" for="sf-time">時間</label><input type="time" id="sf-time" required></div>
-          <div class="fld"><label class="rm-label" for="sf-title">做什麼</label><input type="text" id="sf-title" placeholder="淺草寺參拜" required></div>
-          <div class="fld"><label class="rm-label" for="sf-place">地點／車站</label><input type="text" id="sf-place" placeholder="銀座線 淺草站"></div>
+          <div class="fld"><label class="rm-label" for="sf-time">時間</label><input class="rm-input" type="time" id="sf-time" required></div>
+          <div class="fld"><label class="rm-label" for="sf-title">做什麼</label><input class="rm-input" type="text" id="sf-title" placeholder="淺草寺參拜" required></div>
+          <div class="fld"><label class="rm-label" for="sf-place">地點／車站</label><input class="rm-input" type="text" id="sf-place" placeholder="銀座線 淺草站"></div>
         </div>
-        <div class="fld"><label class="rm-label" for="sf-note">備註</label><input type="text" id="sf-note" placeholder="要先線上預約"></div>
+        <div class="fld"><label class="rm-label" for="sf-note">備註</label><input class="rm-input" type="text" id="sf-note" placeholder="要先線上預約"></div>
         <div class="form-ops">
           <button type="button" class="btn btn-ghost btn-sm" id="sf-cancel">取消</button>
           <button type="submit" class="btn btn-main btn-sm">加入這天</button>
@@ -635,11 +650,11 @@
         <p class="wish-intro">想去哪裡先丟進來,不用等排好。誰都可以許願、可以幫別人的願望 +1。</p>
         <form class="form" id="wish-form" hidden>
           <div class="grid2">
-            <div class="fld"><label class="rm-label" for="wf-title">想去哪</label><input type="text" id="wf-title" placeholder="teamLab" required></div>
-            <div class="fld"><label class="rm-label" for="wf-place">地點／車站</label><input type="text" id="wf-place" placeholder="豐洲"></div>
+            <div class="fld"><label class="rm-label" for="wf-title">想去哪</label><input class="rm-input" type="text" id="wf-title" placeholder="teamLab" required></div>
+            <div class="fld"><label class="rm-label" for="wf-place">地點／車站</label><input class="rm-input" type="text" id="wf-place" placeholder="豐洲"></div>
           </div>
-          <div class="fld"><label class="rm-label" for="wf-by">你是誰</label><select id="wf-by"></select></div>
-          <div class="fld"><label class="rm-label" for="wf-note">想說的</label><input type="text" id="wf-note" placeholder="可留白"></div>
+          <div class="fld"><label class="rm-label" for="wf-by">你是誰</label><select class="rm-input" id="wf-by"></select></div>
+          <div class="fld"><label class="rm-label" for="wf-note">想說的</label><input class="rm-input" type="text" id="wf-note" placeholder="可留白"></div>
           <div class="err" id="wf-err" hidden></div>
           <div class="form-ops">
             <button type="button" class="btn btn-ghost btn-sm" id="wf-cancel">取消</button>
@@ -669,17 +684,17 @@
         </div>
         <form class="form" id="exp-form" hidden>
           <div class="grid2">
-            <div class="fld"><label class="rm-label" for="ef-date">日期</label><input type="date" id="ef-date" required></div>
-            <div class="fld"><label class="rm-label" for="ef-title">項目</label><input type="text" id="ef-title" placeholder="一蘭拉麵" required></div>
-            <div class="fld"><label class="rm-label" for="ef-cat">分類</label><select id="ef-cat"></select></div>
+            <div class="fld"><label class="rm-label" for="ef-date">日期</label><input class="rm-input" type="date" id="ef-date" required></div>
+            <div class="fld"><label class="rm-label" for="ef-title">項目</label><input class="rm-input" type="text" id="ef-title" placeholder="一蘭拉麵" required></div>
+            <div class="fld"><label class="rm-label" for="ef-cat">分類</label><select class="rm-input" id="ef-cat"></select></div>
           </div>
           <div class="grid2">
-            <div class="fld"><label class="rm-label" for="ef-amount">金額</label><input type="number" id="ef-amount" step="1" min="0" placeholder="0" required></div>
-            <div class="fld"><label class="rm-label" for="ef-cur">幣別</label><select id="ef-cur"><option value="JPY">JPY 日圓</option><option value="TWD">TWD 台幣</option></select></div>
-            <div class="fld"><label class="rm-label" for="ef-payer">誰付的</label><select id="ef-payer"></select></div>
+            <div class="fld"><label class="rm-label" for="ef-amount">金額</label><input class="rm-input" type="number" id="ef-amount" step="1" min="0" placeholder="0" required></div>
+            <div class="fld"><label class="rm-label" for="ef-cur">幣別</label><select class="rm-input" id="ef-cur"><option value="JPY">JPY 日圓</option><option value="TWD">TWD 台幣</option></select></div>
+            <div class="fld"><label class="rm-label" for="ef-payer">誰付的</label><select class="rm-input" id="ef-payer"></select></div>
           </div>
           <div class="fld"><label class="rm-label">誰分攤</label><div class="who" id="ef-who"></div></div>
-          <div class="fld"><label class="rm-label" for="ef-note">備註</label><input type="text" id="ef-note" placeholder="可留白"></div>
+          <div class="fld"><label class="rm-label" for="ef-note">備註</label><input class="rm-input" type="text" id="ef-note" placeholder="可留白"></div>
           <div class="form-ops"><button type="button" class="btn btn-ghost btn-sm" id="ef-cancel">取消</button><button type="submit" class="btn btn-main btn-sm">記下來</button></div>
         </form>
         <div id="exp-list"></div>
@@ -726,7 +741,7 @@
       <button type="button" class="btn btn-ghost btn-sm" id="si-admin">我是管理員</button>
     </div>
     <div id="si-adminbox" hidden>
-      <div class="fld"><label class="rm-label" for="si-key">通行碼</label><input type="password" id="si-key" autocomplete="current-password"></div>
+      <div class="fld"><label class="rm-label" for="si-key">通行碼</label><input class="rm-input" type="password" id="si-key" autocomplete="current-password"></div>
       <div class="err" id="si-err" hidden></div>
       <div class="ops">
         <button type="submit" class="btn btn-main" id="si-submit">登入</button>
@@ -741,17 +756,17 @@
   <form class="signin wide" id="exp-edit-form">
     <h2>改這一筆</h2>
     <div class="grid2">
-      <div class="fld"><label class="rm-label" for="xe-date">日期</label><input type="date" id="xe-date" required></div>
-      <div class="fld"><label class="rm-label" for="xe-title">項目</label><input type="text" id="xe-title" required></div>
-      <div class="fld"><label class="rm-label" for="xe-cat">分類</label><select id="xe-cat"></select></div>
+      <div class="fld"><label class="rm-label" for="xe-date">日期</label><input class="rm-input" type="date" id="xe-date" required></div>
+      <div class="fld"><label class="rm-label" for="xe-title">項目</label><input class="rm-input" type="text" id="xe-title" required></div>
+      <div class="fld"><label class="rm-label" for="xe-cat">分類</label><select class="rm-input" id="xe-cat"></select></div>
     </div>
     <div class="grid2">
-      <div class="fld"><label class="rm-label" for="xe-amount">金額</label><input type="number" id="xe-amount" step="1" min="0" required></div>
-      <div class="fld"><label class="rm-label" for="xe-cur">幣別</label><select id="xe-cur"><option value="JPY">JPY 日圓</option><option value="TWD">TWD 台幣</option></select></div>
-      <div class="fld"><label class="rm-label" for="xe-payer">誰付的</label><select id="xe-payer"></select></div>
+      <div class="fld"><label class="rm-label" for="xe-amount">金額</label><input class="rm-input" type="number" id="xe-amount" step="1" min="0" required></div>
+      <div class="fld"><label class="rm-label" for="xe-cur">幣別</label><select class="rm-input" id="xe-cur"><option value="JPY">JPY 日圓</option><option value="TWD">TWD 台幣</option></select></div>
+      <div class="fld"><label class="rm-label" for="xe-payer">誰付的</label><select class="rm-input" id="xe-payer"></select></div>
     </div>
     <div class="fld"><label class="rm-label">誰分攤</label><div class="who" id="xe-who"></div></div>
-    <div class="fld"><label class="rm-label" for="xe-note">備註</label><input type="text" id="xe-note" placeholder="可留白"></div>
+    <div class="fld"><label class="rm-label" for="xe-note">備註</label><input class="rm-input" type="text" id="xe-note" placeholder="可留白"></div>
     <div class="err" id="xe-err" hidden></div>
     <div class="ops">
       <button type="submit" class="btn btn-main">存起來</button>
@@ -763,11 +778,11 @@
 <div class="overlay" id="edit-overlay" hidden>
   <form class="signin" id="edit-form">
     <h2>改這一項</h2>
-    <div class="fld"><label class="rm-label" for="se-day">哪一天</label><select id="se-day"></select></div>
-    <div class="fld"><label class="rm-label" for="se-time">時間</label><input type="time" id="se-time" required></div>
-    <div class="fld"><label class="rm-label" for="se-title">做什麼</label><input type="text" id="se-title" required></div>
-    <div class="fld"><label class="rm-label" for="se-place">地點／車站</label><input type="text" id="se-place"></div>
-    <div class="fld"><label class="rm-label" for="se-note">備註</label><input type="text" id="se-note"></div>
+    <div class="fld"><label class="rm-label" for="se-day">哪一天</label><select class="rm-input" id="se-day"></select></div>
+    <div class="fld"><label class="rm-label" for="se-time">時間</label><input class="rm-input" type="time" id="se-time" required></div>
+    <div class="fld"><label class="rm-label" for="se-title">做什麼</label><input class="rm-input" type="text" id="se-title" required></div>
+    <div class="fld"><label class="rm-label" for="se-place">地點／車站</label><input class="rm-input" type="text" id="se-place"></div>
+    <div class="fld"><label class="rm-label" for="se-note">備註</label><input class="rm-input" type="text" id="se-note"></div>
     <div class="err" id="se-err" hidden></div>
     <div class="ops">
       <button type="submit" class="btn btn-main">存起來</button>
@@ -801,7 +816,7 @@
   <form class="signin" id="time-form">
     <h2>時間對不上</h2>
     <p id="tf-why"></p>
-    <div class="fld"><label class="rm-label" for="tf-time">改成幾點</label><input type="time" id="tf-time" required></div>
+    <div class="fld"><label class="rm-label" for="tf-time">改成幾點</label><input class="rm-input" type="time" id="tf-time" required></div>
     <div class="err" id="tf-err" hidden></div>
     <div class="ops">
       <button type="submit" class="btn btn-main">存起來</button>
@@ -2852,7 +2867,7 @@
   el("people").parentNode.insertBefore(renameForm, el("people"));
   el("rename-btn").addEventListener("click", () => {
     renameForm.innerHTML = '<div class="grid2">' + MEMBERS.map(m =>
-      '<div class="fld"><label class="rm-label" for="rn-' + m.id + '">' + m.full + '</label><input type="text" id="rn-' + m.id +
+      '<div class="fld"><label class="rm-label" for="rn-' + m.id + '">' + m.full + '</label><input class="rm-input" type="text" id="rn-' + m.id +
       '" value="' + esc(nameOf(m.id)) + '" maxlength="12"></div>').join("") +
       '</div><div class="form-ops"><button type="button" class="btn btn-ghost btn-sm" id="rn-cancel">取消</button>' +
       '<button type="submit" class="btn btn-main btn-sm">存起來</button></div>';
