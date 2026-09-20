@@ -231,6 +231,33 @@ async function listAll(shape) {
   return rows;
 }
 
+/* ---------- 沒有通行碼也能重查:只限「某一筆願望自己填的地點」 ----------
+   Lulu 的規則是「任何人自己加的行程可以自己再修改」。願望做得到(wishOut 有 `by`,
+   而且許願本來就是開放的,見 SHAPES.wishes 的 open:true);行程做不到
+   (stopOut 沒有任何「誰加的」欄位),所以這一條只開願望那一半。
+
+   **這不是身分驗證,不要當成身分驗證。** 前端的「我是誰」是 localStorage 裡的
+   一個字串(tokyo5-me),誰都能設成任何人,伺服器驗不了 —— 所以這裡不寫一段
+   假裝驗得了的程式,改成**限制被問的是什麼**:要查的字串必須就是那一筆願望的
+   「地點」欄,而那一筆必須真的是願望(沒有日期)、而且真的住在這個資料庫裡。
+
+   它買到的:這個端點不能被拿去當免費的地名查詢服務 —— 能查的字串只有
+   已經寫在願望表裡的那些。
+   它沒買到的:有人對同一筆狂按,額度照樣會被燒。**那個上限要在服務那一端設**
+   (Lulu 的帳號),程式解決不了,寫在這裡免得下一個人以為它解決了。 */
+const bare = s => String(s || "").replace(/-/g, "").toLowerCase();
+async function wishAsksForItsOwnPlace(id, q) {
+  if (!id) return false;
+  let page;
+  try { page = await notion("/pages/" + encodeURIComponent(String(id))); } catch (_) { return false; }
+  const parent = (page && page.parent && page.parent.database_id) || "";
+  if (bare(parent) !== bare(DB.itinerary)) return false;
+  const p = page.properties || {};
+  if (dat(p["日期"])) return false;                 /* 有日期的是行程,不是願望 */
+  const place = txt(p["地點"]).trim();
+  return !!place && place === q;
+}
+
 /* ---------- 入口 ---------- */
 module.exports = async (req, res) => {
   res.setHeader("Cache-Control", "no-store");
@@ -272,14 +299,19 @@ module.exports = async (req, res) => {
       res.setHeader("Allow", "GET");
       return res.status(405).json({ error: "不支援的方法" });
     }
-    const no = denyWrite();
-    if (no) return res.status(no.status).json({ error: no.error });
-    if (!process.env.GEOCODE_KEY) {
-      return res.status(503).json({ error: "伺服器還沒設定 GEOCODE_KEY,再查一次目前不能用" });
-    }
     const q = String((req.query && req.query.q) || "").trim();
     if (!q) return res.status(400).json({ error: "沒有要查的字串" });
     if (q.length > 120) return res.status(400).json({ error: "要查的字串太長" });
+    /* 通行碼那條照舊。沒帶的話還有一條窄路:重查某一筆願望自己填的地點 ——
+       前端只有在「這是我許的願望」時才會走它,而伺服器能驗的是**被問的是什麼**。
+       見上面 wishAsksForItsOwnPlace 的那一段。 */
+    const no = denyWrite();
+    if (no && !(await wishAsksForItsOwnPlace(req.query && req.query.wish, q))) {
+      return res.status(no.status).json({ error: no.error });
+    }
+    if (!process.env.GEOCODE_KEY) {
+      return res.status(503).json({ error: "伺服器還沒設定 GEOCODE_KEY,再查一次目前不能用" });
+    }
     /* 國家代碼只收兩個字母,不讓查詢字串以外的東西跑進 URL */
     const cc = /^[a-z]{2}$/.test(String((req.query && req.query.cc) || "")) ? req.query.cc : "jp";
     try {
