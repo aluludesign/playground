@@ -5,9 +5,10 @@
   ./pngdiff.py a.png b.png
       全圖逐像素比,回報差異列與列群。
 
-  ./pngdiff.py a.png b.png --band <y0> <y1> [--x <x0> <x1>] [--shift <N>]
-      只比 a 的 y0..y1 這一帶,並且在 b 上做 **±N 列的垂直位移搜尋**,
+  ./pngdiff.py a.png b.png --band <y0> <y1> [--x <x0> <x1>] [--shift <N>] [--shiftx <M>]
+      只比 a 的 y0..y1 這一帶,並且在 b 上做位移搜尋,
       回答那個真正要問的問題:**這一帶的內容變了,還是只是被推走了?**
+      --shift 搜垂直(±N 列)、--shiftx 搜水平(±M 行),兩個一起給就搜二維。
 
       每一塊轉換都會把下面的東西整片往下推,於是全圖比對一定是滿江紅,
       而「被推走」和「被改掉」在那個數字上長得一模一樣。
@@ -19,6 +20,26 @@
       block-05 需要它的理由很具體:`.who` 那一整組被第三塊和第四塊各凍了一次,
       兩輪都只有探針的 computed 值、沒有畫面。現在有畫面了,而它在三個 commit 的
       截圖裡位於**不同的 y**,所以「凍住有沒有守住」只能靠位移搜尋回答。
+
+      **水平那一半是後來補的,而它補的是一個會給錯答案的洞。**
+      01 的雙穩態是 `scrollLeft` 差 27px —— 水平的。只有垂直版的時候,
+      拿 `--shift` 去問它,得到的是「沒有任何位移對得上,這一帶是真的被改掉了」:
+      **一個很有自信的錯答案**,比沒有答案危險。geocode-retry 那一輪是另外
+      手寫十幾行搜出來的(`dx=27,殘差 2.81%`),然後把「這應該進工具」寫下來 ——
+      而這個 repo 有前科:寫下那句話跟真的放進去之間隔了一整輪。
+
+      所以除了補上 `--shiftx`,**沒搜到的方向現在會自己講出來**:
+      只搜了垂直而沒命中的時候,結論那一行會說「這一趟沒搜水平」。
+      能力缺一半不可怕,**不知道自己缺一半才可怕**。
+
+      01 那個雙穩態現在問得出答案了(而且比手寫那次乾淨,殘差是 0 不是 2.81%):
+
+        pngdiff.py A/01-plan-mobile.png B/01-plan-mobile.png --band 460 640 --x 100 740 --shiftx 40
+        → 最佳位移 dy=+0 dx=-27,差異像素 0/115200 —— 逐位元組相同,只是被推走了
+
+      **`--x` 要框在捲動區的「裡面」。** 同一題用 `--x 60 780` 會說「沒有位移對得上」,
+      因為那個範圍把不會跟著捲的邊緣也框進來了 —— 一個真的純位移,
+      只要框到固定不動的東西,就會看起來像是被改掉了。
 """
 import zlib, struct, sys
 
@@ -67,45 +88,65 @@ def rgb_rows(p, w, h, bpp):
     return [p[y * w * 3:(y + 1) * w * 3] for y in range(h)]
 
 
-def band_compare(a, b, w, h, bpp, y0, y1, x0, x1, maxshift):
-    """把 a 的 y0..y1 這一帶,拿去跟 b 的同一帶 ± maxshift 列比,找最合的位移。
+def _order(m):
+    """由內往外(0, -1, +1, -2, +2 ...)。這樣第一個完全命中的就是位移最小的那個 ——
+    從 -m 一路掃到 +m 的話,命中好幾個位移時報出來的會是最負的那個,
+    而「0 就已經相同」跟「要退 37 才相同」意思差很多。"""
+    return [0] + [s * d for d in range(1, m + 1) for s in (-1, 1)]
+
+
+def band_compare(a, b, w, h, bpp, y0, y1, x0, x1, maxshift, maxshiftx=0):
+    """把 a 的 y0..y1 這一帶,拿去跟 b 的同一帶 ±maxshift 列 / ±maxshiftx 行比,
+    找最合的位移。
 
     回報的重點不是「差幾 %」,是**有沒有一個位移讓它逐位元組相同** ——
-    那一句才等於「這一帶的內容沒被改到,只是被推走了」。"""
-    ra, rb = rgb_rows(a, w, h, bpp), rgb_rows(b, w, h, bpp)
-    cut = (lambda r: r[x0 * 3:x1 * 3]) if (x0, x1) != (0, w) else (lambda r: r)
-    band = [cut(ra[y]) for y in range(y0, y1)]
+    那一句才等於「這一帶的內容沒被改到,只是被推走了」。
 
-    # 由內往外掃(0, -1, +1, -2, +2 ...),這樣第一個完全命中的就是位移最小的那個。
-    # 從 -maxshift 一路掃到 +maxshift 的話,命中好幾個位移時報出來的會是最負的那個,
-    # 而「dy=0 就已經相同」跟「要退 37 列才相同」意思差很多。
-    order = [0] + [s * d for d in range(1, maxshift + 1) for s in (-1, 1)]
+    **兩個方向都要能搜。** 只有垂直版的時候,水平的位移(01 那個 scrollLeft
+    差 27px 的雙穩態)會被答成「這一帶是真的被改掉了」—— 錯的,而且講得很有自信。"""
+    ra, rb = rgb_rows(a, w, h, bpp), rgb_rows(b, w, h, bpp)
+    band = [ra[y][x0 * 3:x1 * 3] for y in range(y0, y1)]
+
+    # 二維時由「總位移量」由小到大掃:先問「動得最少的解釋」,那才是要的答案。
+    pairs = sorted([(dy, dx) for dy in _order(maxshift) for dx in _order(maxshiftx)],
+                   key=lambda p: (abs(p[0]) + abs(p[1]), abs(p[0]), abs(p[1])))
     best = None
-    for dy in order:
-        if y0 + dy < 0 or y1 + dy > h:
+    for dy, dx in pairs:
+        if y0 + dy < 0 or y1 + dy > h or x0 + dx < 0 or x1 + dx > w:
             continue
-        nrow = sum(1 for i, r in enumerate(band) if r != cut(rb[y0 + dy + i]))
+        nrow = sum(1 for i, r in enumerate(band)
+                   if r != rb[y0 + dy + i][(x0 + dx) * 3:(x1 + dx) * 3])
         if best is None or nrow < best[0]:
-            best = (nrow, dy)
+            best = (nrow, dy, dx)
         if nrow == 0:
             break
     if best is None:
-        print("  ✗ maxshift 範圍內沒有任何合法的位移(帶狀超出圖高了)"); return
+        print("  ✗ 位移範圍內沒有任何合法的位移(帶狀超出圖邊了)"); return
 
-    nrow, dy = best
+    nrow, dy, dx = best
     npx = 0
     for i, r in enumerate(band):
-        s = cut(rb[y0 + dy + i])
+        s = rb[y0 + dy + i][(x0 + dx) * 3:(x1 + dx) * 3]
         npx += sum(1 for x in range(0, len(r), 3) if r[x:x + 3] != s[x:x + 3])
     tot = (y1 - y0) * (x1 - x0)
+    mv = f"dy={dy:+d} dx={dx:+d}"
     print(f"帶狀比對  a 的 y={y0}..{y1}  x={x0}..{x1}  ({y1-y0} 列 × {x1-x0} 行)")
-    print(f"  最佳位移 dy={dy:+d}  差異列 {nrow}/{y1-y0}  差異像素 {npx}/{tot} ({npx/tot*100:.4f}%)")
+    print(f"  搜尋範圍  垂直 ±{maxshift} 列 · 水平 ±{maxshiftx} 行")
+    print(f"  最佳位移 {mv}  差異列 {nrow}/{y1-y0}  差異像素 {npx}/{tot} ({npx/tot*100:.4f}%)")
     if nrow == 0:
-        print(f"  → 位移 {dy:+d} 之後**逐位元組相同**:這一帶的內容沒有變,只是被推走了。")
-    elif dy != 0:
-        print(f"  → 位移 {dy:+d} 最接近,但仍有 {nrow} 列不同 —— 是位移**加上**改變,不是純位移。")
+        print(f"  → 位移 {mv} 之後**逐位元組相同**:這一帶的內容沒有變,只是被推走了。")
+    elif (dy, dx) != (0, 0):
+        print(f"  → 位移 {mv} 最接近,但仍有 {nrow} 列不同 —— 是位移**加上**改變,不是純位移。")
+        print("     (殘差集中在邊緣、比例零點幾到幾 % 的話先想次像素相位,見 ADOPTION 陷阱 9。)")
     else:
-        print("  → 沒有任何位移對得上,這一帶是真的被改掉了。")
+        # **這句話以前是無條件印的,而它在水平位移上是錯的。** 現在只有兩個方向
+        # 都真的搜過才敢這樣講;沒搜過的方向要自己講出來,不要讓讀的人以為搜過了。
+        miss = [n for n, m in (("水平(--shiftx N)", maxshiftx), ("垂直(--shift N)", maxshift)) if not m]
+        if miss:
+            print(f"  → 在搜過的範圍裡沒有位移對得上。**但這一趟沒搜 {' 和 '.join(miss)}** ——")
+            print("     在下結論說「這一帶被改掉了」之前先把那個方向也搜一次(01 的雙穩態就是水平的)。")
+        else:
+            print("  → 兩個方向都搜過,沒有任何位移對得上,這一帶是真的被改掉了。")
 
 
 def main():
@@ -124,10 +165,13 @@ def main():
     band = opt('--band', 2)
     xr = opt('--x', 2)
     sh = opt('--shift', 1)
+    shx = opt('--shiftx', 1)
     if xr is not None and band is None:
         print("--x 要跟 --band 一起用"); sys.exit(2)
     if sh is not None and band is None:
         print("--shift 要跟 --band 一起用"); sys.exit(2)
+    if shx is not None and band is None:
+        print("--shiftx 要跟 --band 一起用"); sys.exit(2)
     if len(argv) < 2:
         print(__doc__); sys.exit(2)
 
@@ -141,7 +185,8 @@ def main():
         x0, x1 = xr if xr else (0, w1)
         if not (0 <= y0 < y1 <= h1 and 0 <= x0 < x1 <= w1):
             print(f"帶狀範圍超出圖片({w1}x{h1})"); sys.exit(2)
-        band_compare(p1, p2, w1, h1, bpp, y0, y1, x0, x1, sh[0] if sh else 0)
+        band_compare(p1, p2, w1, h1, bpp, y0, y1, x0, x1,
+                     sh[0] if sh else 0, shx[0] if shx else 0)
         return
 
     rows = {}

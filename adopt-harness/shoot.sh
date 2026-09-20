@@ -228,8 +228,21 @@ shot 02-plan-desktop    1100  900 ""                                            
 shot 03-cost-mobile      390 1400 "d.getElementById('tab-cost').click();"       ".exp:3+,.rm-chip:3+,.catrow:2+"
 shot 04-split-mobile     390 1300 "d.getElementById('tab-split').click();"      ".fp:5+"
 shot 05-wishes-mobile    390 1200 "d.getElementById('wishbox').open=true;"      ".wish:3+"
-shot 06-map-sheet        390 1000 "d.getElementById('day-map-btn').click();"    ".map .pin:4+"
-shot 07-map-drawer      1100  900 "d.getElementById('wish-map-btn').click();"   ".map .pin:6+"
+# 06 / 07 的門檻在「沒填地點就不查」那一輪重設過,而且**不是只把數字調低**:
+#
+# 1. 規則改了之後,兩顆本來靠「拿標題去查」得來的 pin 消失了(合羽橋道具街、teamLab)。
+#    截圖上 06 是 3 顆、07 是 7 顆。
+# 2. 但**斷言和截圖看的不是同一個時刻**:斷言那一趟在動作後 900ms 量,
+#    截圖那一趟拍的是 virtual-time budget(25s)跑完的終態。
+#    07 的三顆航班點要等 A1「樂桃 MM626 · …」那兩次 Nominatim 真的回來才畫得出來
+#    (實測約 1.2s 才到),所以斷言在 900ms 只看得到 fixture 快取裡那 4 顆。
+#    **門檻只認「不靠網路就一定在」的那幾顆** —— 07 是 4,不是截圖上的 7。
+#    把門檻設成 7 等於讓這條斷言變成網路的函數,那正是 tokyo5-pin3 那個坑的形狀。
+# 3. 數字調低會削弱「app 死掉也過」的防線(07 以前就是門檻 2 太低而漏接),
+#    所以兩張各補一條 `.stop:3+` —— 那三筆是 fixture 的資料,app 沒真的跑起來就不存在,
+#    而航班那幾個點是走 OUTSIDE 硬表畫的,湊不出來。**換句話說:門檻降了,斷言更強。**
+shot 06-map-sheet        390 1000 "d.getElementById('day-map-btn').click();"    ".map .pin:3+,.stop:3+"
+shot 07-map-drawer      1100  900 "d.getElementById('wish-map-btn').click();"   ".map .pin:4+,.stop:3+"
 shot 08-addstop-form     390 1100 "d.getElementById('add-stop-btn').click();"   "#stop-form:not([hidden]) input:3+,.stop:3+"
 shot 09-edit-dialog      390  900 "d.querySelector('[data-edit-stop]').click();" "#edit-overlay:not([hidden]) #edit-form input:3+,.stop:3+"
 # 10 / 11:花費的兩張表單。九張裡從來沒有一張打開過它們,而裡面有 16 個欄位、

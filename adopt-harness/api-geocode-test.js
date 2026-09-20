@@ -20,13 +20,22 @@ function mkres() {
   r.json = b => { r.body = b; return r; };
   return r;
 }
-async function call(query, headers, env, stub) {
+/* notionPage:給那條「沒有通行碼、但重查的是自己那筆願望的地點」的路用的。
+   同一個 fetch 樁要分兩家:打 api.notion.com 的回這一份,其餘的是地名查詢那家。 */
+async function call(query, headers, env, stub, notionPage) {
   for (const k of Object.keys(env)) process.env[k] = env[k];
   ["GEOCODE_KEY", "TRIP_KEY", "NOTION_TOKEN"].forEach(k => { if (!(k in env)) delete process.env[k]; });
   delete require.cache[require.resolve(path)];
   const handler = require(path);
   let seenUrl = null;
-  global.fetch = async (u) => { seenUrl = u; return { ok: true, json: async () => stub }; };
+  global.fetch = async (u) => {
+    if (String(u).indexOf("api.notion.com") >= 0) {
+      const p = notionPage || { __missing: true };
+      return { ok: !p.__missing, status: p.__missing ? 404 : 200, json: async () => (p.__missing ? { message: "找不到" } : p) };
+    }
+    seenUrl = u;
+    return { ok: true, json: async () => stub };
+  };
   const res = mkres();
   await handler({ method: query.method || "GET", query: query, headers: headers || {}, body: "" }, res);
   return { res: res, url: seenUrl };
@@ -107,6 +116,59 @@ function ok(name, cond, extra) {
   ok("不認識的 resource 仍然 400", r.res.code === 400, r.res.body);
   r = await call({ resource: "auth" }, KEYH, ENV, {});
   ok("auth 仍然 200", r.res.code === 200, r.res.body);
+
+  /* ---- 沒有通行碼的那條窄路:重查某一筆願望自己填的地點 ----
+     Lulu:「任何人自己加的行程可以自己再修改」。願望做得到,行程做不到
+     (stopOut 沒有「誰加的」欄位)—— 所以只開願望那一半。
+
+     **這幾條測的是「被問的是什麼」,不是「誰在問」。** 伺服器驗不了身分
+     (tokyo5-me 是瀏覽器裡的一個字串),所以下面沒有任何一條在測身分 ——
+     有的話那才是要擔心的事。 */
+  const DBID = "3b2d1f3045fc4b2490e93e3238c26b3a";
+  const wishPage = (place, extra) => Object.assign({
+    id: "w-1",
+    parent: { database_id: "3b2d1f30-45fc-4b24-90e9-3e3238c26b3a" },   /* Notion 回的帶橫線 */
+    properties: { "地點": { rich_text: [{ plain_text: place }] } },
+  }, extra || {});
+
+  r = await call({ resource: "geocode", q: "港灣未來", wish: "w-1" }, {}, ENV,
+    { status: "ZERO_RESULTS" }, wishPage("港灣未來"));
+  ok("沒通行碼 + 查的就是那筆願望的地點 → 放行", r.res.code === 200, r.res.body);
+  ok("放行那次真的去查了(URL 有送出去)", /components=country:jp/.test(r.url || ""), r.url);
+
+  r = await call({ resource: "geocode", q: "別的東西", wish: "w-1" }, {}, ENV, {}, wishPage("港灣未來"));
+  ok("沒通行碼 + 查的不是那筆願望的地點 → 401(不能當免費的地名查詢服務用)",
+     r.res.code === 401, r.res.body);
+
+  r = await call({ resource: "geocode", q: "港灣未來", wish: "w-1" }, {}, ENV, {},
+    wishPage("港灣未來", { properties: {
+      "地點": { rich_text: [{ plain_text: "港灣未來" }] },
+      "日期": { date: { start: "2026-10-05" } } } }));
+  ok("沒通行碼 + 那一筆其實是行程(有日期)→ 401(行程維持要通行碼)", r.res.code === 401, r.res.body);
+
+  r = await call({ resource: "geocode", q: "港灣未來", wish: "w-1" }, {}, ENV, {},
+    wishPage("港灣未來", { parent: { database_id: "ffffffffffffffffffffffffffffffff" } }));
+  ok("沒通行碼 + 那一頁不在這個資料庫裡 → 401", r.res.code === 401, r.res.body);
+
+  r = await call({ resource: "geocode", q: "", wish: "w-1" }, {}, ENV, {}, wishPage(""));
+  ok("沒通行碼 + 地點欄是空的 → 400(空字串本來就先擋)", r.res.code === 400, r.res.body);
+
+  r = await call({ resource: "geocode", q: "港灣未來", wish: "不存在" }, {}, ENV, {}, null);
+  ok("沒通行碼 + 那一筆根本查不到 → 401(Notion 丟錯不會變成 500)", r.res.code === 401, r.res.body);
+
+  r = await call({ resource: "geocode", q: "港灣未來" }, {}, ENV, {}, wishPage("港灣未來"));
+  ok("沒通行碼、也沒帶 wish → 照舊 401(原本那道門還在)", r.res.code === 401, r.res.body);
+
+  r = await call({ resource: "geocode", q: "港灣未來", wish: "w-1" }, {},
+    { NOTION_TOKEN: "x", GEOCODE_KEY: "SECRET-NOT-A-REAL-KEY" }, { status: "ZERO_RESULTS" }, wishPage("港灣未來"));
+  ok("伺服器連 TRIP_KEY 都沒設,自己那筆願望仍然重查得動(願望本來就是開放的)",
+     r.res.code === 200, r.res.body);
+
+  r = await call({ resource: "geocode", q: "港灣未來", wish: "w-1" }, {}, BASE, {}, wishPage("港灣未來"));
+  ok("這條路一樣要 GEOCODE_KEY,沒設 → 503", r.res.code === 503, r.res.body);
+
+  r = await call({ resource: "geocode", q: "港灣未來", wish: "w-1", method: "POST" }, {}, ENV, {}, wishPage("港灣未來"));
+  ok("這條路一樣只收 GET → 405", r.res.code === 405, r.res.body);
 
   console.log(fails ? "\n有 " + fails + " 項沒過" : "\n全部通過");
   process.exit(fails ? 1 : 0);

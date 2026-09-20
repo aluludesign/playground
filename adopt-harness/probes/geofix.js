@@ -10,6 +10,12 @@
 //
 // 這一支是非同步的(要點按鈕、等重畫),所以它自己晚一點覆寫 #r,
 // 回傳值只是佔位。probe.sh 的 --virtual-time-budget 撐得住。
+//
+// 「沒填地點就不查 + 按『對』」那一輪擴了三段(見 geocode-place-and-confirm.md):
+//   - 規則一:沒填地點的那幾筆,**一次查詢都不該發**,連按鈕都不該畫。
+//     這裡把 Nominatim 的 URL 全部記下來事後對帳 —— 「沒發生」要有證據。
+//   - 規則三:虛線圈要變得回來。按「對」→ 實線、不再問、**而且不打網路**。
+//   - 送出去的 URL 在願望那條路上要帶 `wish=`,行程那條不帶。
 
 var log = [];
 var out = { 步驟: log, 沒過的: [] };
@@ -72,10 +78,17 @@ function approxPins() {
 
     // 2 ---- 從 DAY 那顆按鈕開地圖 = 06 那張截圖的狀態 ----
     q("#day-map-btn").click();
-    await until(function () { return d.querySelectorAll(".map .pin").length >= 4; });
+    await until(function () { return d.querySelectorAll(".map .pin").length >= 3; });
     ok("只開地圖(= 06 / 07 的狀態)時仍然 hidden", bar().hidden === true, barText());
-    ok("地圖有畫出 pin(確認這一輪真的跑起來了)", d.querySelectorAll(".map .pin").length >= 4,
+    /* 3 顆而不是 5 顆:合羽橋道具街(行程,沒填地點)和 teamLab(願望,沒填地點)
+       以前是**拿標題去查**才有 pin 的,規則一之後它們不該再出現。 */
+    ok("地圖有畫出 pin(確認這一輪真的跑起來了)", d.querySelectorAll(".map .pin").length >= 3,
       d.querySelectorAll(".map .pin").length);
+    var labs = [].map.call(d.querySelectorAll(".map .pin .lab"), function (e) { return e.textContent; });
+    ok("沒填地點的沒有被標上去(合羽橋道具街)",
+      !labs.some(function (t) { return /合羽橋/.test(t); }), labs);
+    ok("沒填地點的沒有被標上去(teamLab)",
+      !labs.some(function (t) { return /teamLab/.test(t); }), labs);
 
     // 3 ---- 點一列「有標上去」的 ----
     var rows = [].slice.call(d.querySelectorAll("#route .stop"));
@@ -107,22 +120,96 @@ function approxPins() {
     ok("虛線圈真的生效(border-style)",
       w.getComputedStyle(q(".map .pin.approx")).borderTopStyle === "dashed",
       w.getComputedStyle(q(".map .pin.approx")).borderTopStyle);
+    ok("行程那條路送出去的 URL 不帶 wish=", asked[0].indexOf("wish=") < 0, asked[0]);
 
-    // 5 ---- 點一列「沒標上去」的:泡溫泉 ----
+    // 4b ---- 概略之後,那一條要改問「這個位置對嗎」,並且長出「對」 ----
+    ok("概略之後改問「這個位置對嗎」", /淺草寺.*這個位置對嗎/.test(barText()), barText());
+    ok("「對」出現了", q("#map-fix-ok").hidden === false, q("#map-fix-ok").outerHTML);
+    ok("「再查一次」仍然在(「不對」就是再按一次它)", q("#map-fix-go").hidden === false, null);
+
+    // 4c ---- 按「對」:變實線、不再問,而且**不打任何網路** ----
+    var netBefore = asked.length + osm.length;
+    flashes.length = 0;
+    q("#map-fix-ok").click();
+    ok("按「對」之後虛線圈不見了(變實線)",
+      await until(function () { return d.querySelectorAll(".map .pin.approx").length === 0; }),
+      d.querySelectorAll(".map .pin.approx").length);
+    ok("按「對」沒有發出任何請求(它不花錢,所以也不需要通行碼)",
+      asked.length + osm.length === netBefore, { 之前: netBefore, 之後: asked.length + osm.length });
+    ok("確認記在同一份 tokyo5-pin3 的同一筆上(ok:1)", pins()["淺草寺"].ok === 1, pins()["淺草寺"]);
+    ok("概略這件事本身沒有被抹掉(ap 還在)", pins()["淺草寺"].ap === 1, pins()["淺草寺"]);
+    ok("確認過的 pin 是實線",
+      w.getComputedStyle(d.querySelector('.map .pin[data-k="d0"]')).borderTopStyle === "solid",
+      w.getComputedStyle(d.querySelector('.map .pin[data-k="d0"]')).borderTopStyle);
+    ok("「約 」留著(座標仍然是那一區的中心,人只能說「我接受」)",
+      /^約 /.test(d.querySelector('.map .pin[data-k="d0"] .lab').textContent),
+      d.querySelector('.map .pin[data-k="d0"] .lab').textContent);
+    /* 地圖是在 loadSheetMap 裡重畫的,那一條是**之後**才重畫的 ——
+       等虛線圈消失就去問那一條,會早一步(這兩條第一次跑就是這樣紅的)。 */
+    ok("那一條不再問了",
+      await until(function () { return /淺草寺.*不在這裡/.test(barText()); }), barText());
+    ok("「對」收回去了", q("#map-fix-ok").hidden === true, null);
+
+    // 4d ---- 確認過的再按一次「再查一次」:同一個座標 → 確認留著,不重問 ----
+    asked.length = 0; flashes.length = 0;
+    reply = { body: { found: true, la: 35.6764, lo: 139.65, precision: "area", label: "日本東京都" } };
+    q("#map-fix-go").click();
+    ok("再查一次照樣送得出去", await until(function () { return asked.length === 1; }), asked);
+    ok("查回同一個座標 → flash 說還是同一個位置",
+      await until(function () { return flashed(/還是同一個位置/); }), flashes);
+    ok("查回同一個座標 → 那個「對」留著(不再問第二次)", pins()["淺草寺"].ok === 1, pins()["淺草寺"]);
+    ok("查回同一個座標 → 仍然是實線", d.querySelectorAll(".map .pin.approx").length === 0, null);
+    ok("查回同一個座標 → 那一條沒有變回「對嗎」", !/對嗎/.test(barText()), barText());
+
+    // 4e ---- 再查一次,這次回到**別的**概略位置 → 虛線圈回來、重新問 ----
+    flashes.length = 0;
+    reply = { body: { found: true, la: 35.70, lo: 139.70, precision: "area", label: "日本東京都" } };
+    q("#map-fix-go").click();
+    ok("換了座標 → 虛線圈回來",
+      await until(function () { return d.querySelectorAll(".map .pin.approx").length === 1; }),
+      pins()["淺草寺"]);
+    ok("換了座標 → 那個「對」不跟著走(它講的是那個座標,不是那個名字)",
+      pins()["淺草寺"].ok === undefined, pins()["淺草寺"]);
+    ok("換了座標 → 又問一次「這個位置對嗎」", /對嗎/.test(barText()), barText());
+
+    // 4f ---- 沒填地點的那一筆:不查、不畫按鈕、講清楚為什麼不在地圖上 ----
+    asked.length = 0;
+    var kappa = rows.filter(function (r) { return /合羽橋/.test(r.textContent); })[0];
+    ok("找得到合羽橋那一列", !!kappa, null);
+    kappa.click();
+    ok("沒填地點 → 那一條講的是「沒填地點,不會出現在地圖上」",
+      await until(function () { return /合羽橋.*沒填地點/.test(barText()); }), barText());
+    ok("沒填地點 → 不畫「再查一次」(按了也只是再問一次同一個錯問題,而且要錢)",
+      q("#map-fix-go").hidden === true, q("#map-fix-go").outerHTML);
+    ok("沒填地點 → 也不畫「對」", q("#map-fix-ok").hidden === true, null);
+    q("#map-fix-go").click();          /* 直接戳 DOM 也不該送出去 */
+    await sleep(100);
+    ok("沒填地點 → 就算硬按也不發查詢", asked.length === 0, asked);
+
+    // 5 ---- 願望那條路:查無,以及送出去的 URL 要帶 wish= ----
+    /* 泡溫泉(w3)以前是這一段的主角,現在它沒填地點,連查都不會查 —— 上面 4f 測的是
+       那條路。查無這條要用**有填地點**的那一筆:w2「橫濱 港灣未來」,地點欄是「港灣未來」。
+       它也剛好是 fixture 裡 tokyo5-me(hsieh_chinhui)自己許的那一個。 */
     flashes.length = 0; asked.length = 0;
     var wish = [].slice.call(d.querySelectorAll("#wish-list [data-wish]"))
-      .filter(function (r) { return /泡溫泉/.test(r.textContent); })[0];
-    ok("找得到泡溫泉那一列", !!wish, null);
+      .filter(function (r) { return /港灣未來/.test(r.textContent); })[0];
+    ok("找得到港灣未來那一列", !!wish, null);
     wish.click();
-    ok("沒標上去的文案不一樣", await until(function () { return /泡溫泉.*沒標上去/.test(barText()); }),
-      barText());
+    ok("有標上去的願望問的是「不在這裡?」",
+      await until(function () { return /港灣未來.*不在這裡/.test(barText()); }), barText());
     var nWish = d.querySelectorAll(".map .pin").length;
     reply = { body: { found: false } };
     q("#map-fix-go").click();
     ok("查無 → 誠實說還是找不到", await until(function () { return flashed(/還是找不到/); }), flashes);
-    ok("查無 → 不假裝有結果(快取仍然是 null)", pins()["泡溫泉"] === null, pins()["泡溫泉"]);
-    ok("查無 → 地圖上沒有多出一顆 pin", d.querySelectorAll(".map .pin").length === nWish,
+    ok("查無 → 不假裝有結果(那一筆變成 null)", pins()["港灣未來"] === null, pins()["港灣未來"]);
+    ok("查無 → 地圖上少一顆(不留下一個兩邊都不相信的座標)",
+      d.querySelectorAll(".map .pin").length === nWish - 1,
       { 之前: nWish, 之後: d.querySelectorAll(".map .pin").length });
+    /* 願望那條路要帶 wish=:沒有通行碼的人只走得通「重查自己那筆願望的地點」,
+       而伺服器核對的是**被問的是什麼**(那一筆的地點欄),不是誰在問。 */
+    ok("願望那條路送出去的 URL 帶了 wish=", /[?&]wish=w2(&|$)/.test(asked[0] || ""), asked[0]);
+    ok("送出去的還是地點欄那個字串,不是標題",
+      /q=%E6%B8%AF%E7%81%A3%E6%9C%AA%E4%BE%86/.test(asked[0] || ""), asked[0]);
 
     // 6 ---- 退路整個不能用時,不可以把本來好好的座標弄丟 ----
     flashes.length = 0;
@@ -163,6 +250,50 @@ function approxPins() {
     ok("mapfix 有 CSS 規則(不然走鐘防護會叫)", known.mapfix === 1, null);
     ok("mf-t 有 CSS 規則", known["mf-t"] === 1, null);
     ok("approx 有 CSS 規則", known.approx === 1, null);
+
+    // 9 ---- 規則一的總對帳:沒填地點的那三筆,從頭到尾一次查詢都沒發出去 ----
+    /* 「沒發生」也要有證據。這裡看的是整趟跑下來所有送出去的 URL ——
+       Nominatim 那家(osm)和退路那家(asked)都算。 */
+    var all = osm.concat(asked).join(" ");
+    ["合羽橋", "teamLab", "%E6%B3%A1%E6%BA%AB%E6%B3%89", "泡溫泉"].forEach(function (k) {
+      ok("整趟沒有任何查詢問過「" + k + "」(它們都沒填地點)", all.indexOf(k) < 0, all.slice(0, 400));
+    });
+    out.線上查詢的完整清單 = osm;
+
+    // 10 ---- 規則二:送出的當下就講「沒填地點 → 不會上地圖」 ----
+    /* 這是規則一製造出來的那個新的無聲狀態的解藥:東西存進去了、地圖上沒有它,
+       而「我沒填」「還在查」「壞了」三種長得一模一樣。**送出的當下是唯一
+       他還能馬上處理的時機。** 講完不擋送出 —— 那一筆照樣要存下去。 */
+    var netBefore2 = asked.length + osm.length;
+    var nWishBefore = d.querySelectorAll("#wish-list [data-wish]").length;
+    flashes.length = 0;
+    q("#add-wish-btn").click();
+    q("#wf-title").value = "多喝水";
+    q("#wf-place").value = "";
+    q("#wf-by").value = "hsieh_chinhui";
+    q("#wf-submit").click();
+    ok("許願沒填地點 → 講的是「不會出現在地圖上」和「補上地點就會」",
+      await until(function () { return flashed(/沒填地點.*地圖上不會有它.*補上地點/); }), flashes);
+    ok("許願沒填地點 → 照樣存下去(這是告知不是驗證)",
+      d.querySelectorAll("#wish-list [data-wish]").length === nWishBefore + 1,
+      { 之前: nWishBefore, 之後: d.querySelectorAll("#wish-list [data-wish]").length });
+    ok("許願沒填地點 → 一次查詢都沒發",
+      asked.length + osm.length === netBefore2, { 之前: netBefore2, 之後: asked.length + osm.length });
+
+    flashes.length = 0;
+    var nStopBefore = d.querySelectorAll("#route .stop").length;
+    q("#add-stop-btn").click();
+    q("#sf-time").value = "16:00";
+    q("#sf-title").value = "早點睡";
+    q("#sf-place").value = "";
+    q("#stop-form button[type=submit]").click();
+    ok("加行程沒填地點 → 同一句話(同一個 checkPlace,不是第二套機制)",
+      await until(function () { return flashed(/早點睡.*沒填地點/); }), flashes);
+    ok("加行程沒填地點 → 照樣存下去",
+      d.querySelectorAll("#route .stop").length === nStopBefore + 1,
+      { 之前: nStopBefore, 之後: d.querySelectorAll("#route .stop").length });
+    ok("加行程沒填地點 → 一次查詢都沒發",
+      asked.length + osm.length === netBefore2, { 之前: netBefore2, 之後: asked.length + osm.length });
   } catch (e) {
     out.爆掉了 = String((e && e.stack) || e);
   }
