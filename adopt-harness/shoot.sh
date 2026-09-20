@@ -232,6 +232,20 @@ shot 06-map-sheet        390 1000 "d.getElementById('day-map-btn').click();"    
 shot 07-map-drawer      1100  900 "d.getElementById('wish-map-btn').click();"   ".map .pin:6+"
 shot 08-addstop-form     390 1100 "d.getElementById('add-stop-btn').click();"   "#stop-form:not([hidden]) input:3+,.stop:3+"
 shot 09-edit-dialog      390  900 "d.querySelector('[data-edit-stop]').click();" "#edit-overlay:not([hidden]) #edit-form input:3+,.stop:3+"
+# 10 / 11:花費的兩張表單。九張裡從來沒有一張打開過它們,而裡面有 16 個欄位、
+# 10 個 .who 核取方塊、10 個成員膠囊 —— 第三塊(color / letter-spacing)和
+# 第四塊(width / background / font-size / line-height)各「刻意凍住」過一次,
+# 理由每次都一樣:「沒有截圖就驗不了」。債堆了兩輪,而驗收規則第 4 點
+# (「清單上有但沒出現也是問題」)在一個沒有畫面的地方根本執行不了。
+#
+# 斷言挑的是 `.who label` 而不是 `#exp-form input`:`ef-who` / `xe-who` 在 markup 裡
+# 是**空的 <div>**,那五個膠囊是 JS 跑起來才產生的(index.html:2447 / :2496)。
+# 靜態 markup 不算數 —— 那正是 08 / 09 的斷言收緊過的理由。
+# 再加 `:not([hidden])` 確認容器真的開了(`.click()` 丟例外會被 try/catch 吃掉)。
+shot 10-exp-form         390 1700 "d.getElementById('tab-cost').click(); d.getElementById('add-exp-btn').click();" \
+                                  "#exp-form:not([hidden]) .rm-input:7+,#exp-form .who label:4+"
+shot 11-exp-edit-dialog  390 1100 "d.getElementById('tab-cost').click(); d.querySelector('[data-edit-exp]').click();" \
+                                  "#exp-edit-overlay:not([hidden]) .rm-input:7+,#exp-edit-overlay .who label:4+"
 
 kill $SRV 2>/dev/null || true
 rm -rf "$H/.work"
