@@ -648,6 +648,10 @@
           <button type="submit" class="btn btn-main btn-sm">加入這天</button>
         </div>
       </form>
+      <!-- 送出之後那句話講在這裡,不講在頁尾。表單送出就收起來了,所以槽在表單**外面**
+           才活得過那一下。預設 hidden、外層不掛任何有 display 的 class,
+           所以 08 / 09 / 10 / 11 四張截圖一個像素都不會動。 -->
+      <div id="stop-msg" hidden></div>
       <div class="route" id="route"></div>
 
       <details class="wishbox" id="wishbox">
@@ -672,6 +676,7 @@
             <button type="submit" class="btn btn-main btn-sm" id="wf-submit">許下去</button>
           </div>
         </form>
+        <div id="wish-msg" hidden></div>
         <div id="wish-list"></div>
         <button class="btn btn-sm" id="add-wish-btn" type="button">
           <svg class="i" aria-hidden="true"><use href="#i-plus"></use></svg>許願地點
@@ -1068,10 +1073,35 @@
   function sortExpenses() {
     state.expenses.sort((a, b) => (a.date || "").localeCompare(b.date || "") || (a.createdAt || "").localeCompare(b.createdAt || ""));
   }
+  /* 站上的第一套提示:寫在 <footer> 的 #sync 上。
+     **它適合什麼**:「已刪除」「刪不掉」「移到 10/07 了」這種操作回饋 ——
+     事情已經做完了,看不看得到沒那麼要緊。全站 30 處都是這一種。
+     **它不適合什麼**:「這一筆不會出現在地圖上」這種**要人當下就讀到**的話。
+     使用者在許願表單上按送出,眼睛在表單;這裡把字寫到頁面最底下那行 10.5px 的小字。
+     上一輪就是這樣漏掉的 —— **機制用對了,位置用錯了**,而且訊息確實有發,
+     所以程式看起來完全正常。(這份 repo 的 ADOPTION.md 記過同一個形狀四次:
+     被當成噪音的 modified 產出檔、永遠在響的落後警告、被 `| grep` 濾掉的錯誤訊息。
+     **訊號發了,但沒有人站在那個頻道上。**) */
   function flash(msg) {
     el("sync").textContent = msg;
     setTimeout(renderSync, 2800);
   }
+
+  /* 第二套:**講在使用者眼睛所在的地方**。用的是站上已經有的 `.note` 方塊
+     (分帳那條「有 N 筆花費還沒指定付款人」同一個),**沒有長出第三套機制**。
+     槽本身預設 hidden,而且外層不掛任何有 display 的 class ——
+     `[hidden]` 被 `display:flex` 蓋掉是上一輪登記過的形狀。
+     **不自動消失**:這幾句的重點就是要人讀到。再打開那張表單、再送出一次、
+     或換一天就清掉 —— 常駐的提示會變成背景,那也是這個 repo 學過的。 */
+  function sayHere(slot, msg) {
+    const box = el(slot);
+    if (!box) return;
+    box.innerHTML = msg
+      ? '<div class="note" style="margin-bottom:16px"><span>⚠</span><span>' +
+        esc(msg) + "</span></div>" : "";
+    box.hidden = !msg;
+  }
+  const clearHere = () => { sayHere("stop-msg", ""); sayHere("wish-msg", ""); };
 
   /* --- 寫入:兩種模式共用的入口 --- */
   /* 唯讀時按鈕本來就藏起來了,這層是防手動戳 DOM 或 console */
@@ -1240,7 +1270,7 @@
     const stop = { id: w.id, day: day, time: time, title: w.title, place: w.place || "", note: w.note || "" };
     state.stops.push(stop);
     renderWishes(); render();
-    if (!online) { saveLocal(); checkPlace(stop); return; }
+    if (!online) { saveLocal(); checkPlace(stop, "wish-msg"); return; }
     try {
       const { row } = await api("?resource=itinerary&id=" + encodeURIComponent(id), {
         method: "PATCH", body: JSON.stringify(stopToRow(stop)),
@@ -1249,7 +1279,10 @@
       if (j > -1) state.stops[j] = stopFromRow(row);
       render();
       flash("「" + w.title + "」排進 " + day.slice(5).replace("-", "/") + " 了");
-      checkPlace(stop);   /* 有問題才會蓋掉上面那句 */
+      /* 以前這句寫著「有問題才會蓋掉上面那句」—— 兩句都寫在 #sync 上,後到的蓋掉先到的。
+         現在不會了:上面那句是操作回饋(flash,頁尾),這句是要當下讀到的(願望那一槽),
+         **兩句各自待在自己該在的地方,而且同時看得到。** */
+      checkPlace(stop, "wish-msg");
     } catch (err) {
       state.stops = state.stops.filter(x => x.id !== id);
       state.wishes.splice(k, 0, w);
@@ -1495,6 +1528,15 @@
     { keys: ["桃園", "TPE"],             lat: 25.080, lon: 121.234 },
   ];
 
+  /* 一個字串比對這張表。三個消費者(天氣的 resolvePlace / stopWx、地圖的 pinFor)
+     本來各寫一次同樣這三行,抽出來才有一個地方可以問「誰在用這張表」——
+     上一輪就是因為沒有這個地方,改地圖那條的時候看不見表還有別的受益者。 */
+  function outsideHit(s) {
+    if (!s) return null;
+    const up = String(s).toUpperCase();
+    return OUTSIDE.find(o => o.keys.some(k => up.indexOf(k.toUpperCase()) >= 0)) || null;
+  }
+
   let wxCache = {};
   let geoCache = {};
   try { wxCache = JSON.parse(localStorage.getItem(WXLS) || "{}"); } catch (_) {}
@@ -1546,8 +1588,11 @@
   /* 地點字串 → 座標。表裡有就用表的,沒有才問線上,兩邊都沒有就回 null。
      之後手動加的地點走的是同一條路,不必回來改程式。 */
   async function resolvePlace(place) {
-    const up = place.toUpperCase();
-    const hit = OUTSIDE.find(o => o.keys.some(k => up.indexOf(k.toUpperCase()) >= 0));
+    /* **這一條只看地點欄,標題不是候選。** 地圖那邊的人工表比對已經把標題也算進去了
+       (見 pinForItem),天氣這邊刻意沒跟上 —— 它要改的話會連帶決定「航班報到那一筆
+       要不要顯示桃園的天氣」,那是產品決定不是修 bug,而且會改到 01 / 02 兩張截圖。
+       登記在 geocode-outside-and-notice.md 的「不做的事」。 */
+    const hit = outsideHit(place);
     if (hit) return { lat: hit.lat, lon: hit.lon };
     if (place in geoCache) return geoCache[place];   /* null 也是答案,不再問一次 */
 
@@ -1707,12 +1752,22 @@
        精確的結果不問 —— 機器有信心的時候反過來讓人背書,只會把確認變成例行公事,
        然後沒有人真的在看。那正是這個 repo 一路在拆的那種「還在響但沒人讀」的檢查。 */
     const asking = !!at && !!at.ap && !at.ok;
+    /* `via` 只有「地點欄答不出來、由標題比對到人工表」那一步會帶上,而且它帶的是
+       比對到的那個字串 —— 所以這裡講得出「是哪幾個字命中的」,而不是印出
+       地點欄那句航班備註。 */
+    const manual = !!at && !!at.via;
     el("map-fix-ok").hidden = !asking;
-    /* 沒填地點的那一筆連按鈕都不畫:按下去也只是再問一次同一個錯問題(規則一),
-       而且那一問要錢。這裡順便是「為什麼它不在地圖上」的第二個時機。 */
-    el("map-fix-go").hidden = !fixItem.place;
-    el("map-fix-t").textContent = !fixItem.place
-      ? "「" + what + "」沒填地點,不會出現在地圖上"
+    /* 什麼時候不畫「再查一次」:
+       - 沒填地點:按了只是再問一次同一個錯問題(規則一),而且那一問要錢
+       - 人工表就是答案:再查只會拿一個比較差的結果去蓋掉一個人工驗過的座標。
+         (**注意這跟 regeoItem 先查表不衝突**:那條路要處理的是
+          `pins[place]` 已經有一個線上錯座標、表還沒接手的那一種,按鈕在那種
+          狀態下是畫得出來的。) */
+    el("map-fix-go").hidden = !fixItem.place || manual;
+    el("map-fix-t").textContent =
+        manual && !found ? "「" + at.via + "」在人工確認過的表裡,但不在日本境內 —— 這張圖只畫日本的點"
+      : manual ? "「" + at.via + "」用的是人工確認過的座標"
+      : !fixItem.place ? "「" + what + "」沒填地點,不會出現在地圖上"
       : asking ? "「" + what + "」這個位置對嗎?"
       : found ? "「" + what + "」不在這裡?"
       : "「" + what + "」沒標上去";
@@ -1758,8 +1813,7 @@
   /* 已經查過的地點才拿得到座標。renderRoute 是同步的,查不到就這輪先不畫。 */
   function stopWx(place, date) {
     if (!place) return "";
-    const up = place.toUpperCase();
-    const hit = OUTSIDE.find(o => o.keys.some(k => up.indexOf(k.toUpperCase()) >= 0));
+    const hit = outsideHit(place);   /* 同上:天氣這條只看地點欄 */
     return wxLine(hit ? { lat: hit.lat, lon: hit.lon } : geoCache[place], date);
   }
 
@@ -1829,8 +1883,7 @@
     if (place in pins) return pins[place];
 
     /* 出東京的地方用天氣那份人工確認過的表,線上查詢對它們最不準 */
-    const up = place.toUpperCase();
-    const known = OUTSIDE.find(o => o.keys.some(k => up.indexOf(k.toUpperCase()) >= 0));
+    const known = outsideHit(place);
     if (known) {
       pins[place] = { la: known.lat, lo: known.lon };
       savePins();
@@ -1885,7 +1938,23 @@
      使用者按了修正卻什麼都沒變。用 null 不是 delete:null 在這份快取裡
      本來就有意思(查過了,沒有),delete 會讓下一次重畫又跑去問線上查詢。 */
   async function regeoItem(item) {
-    /* 候選只有地點欄(規則見 pinForItem)。以前標題也是候選,而那正是
+    /* **先查人工確認過的表,而且兩個欄位都比。** 以前這條路根本沒查它 ——
+       按下去只會拿線上結果蓋掉,錯得更確定,而且每按一次都要錢。
+       命中就直接用:那是人工驗過的座標,比任何線上服務準(這張表存在的理由
+       就是線上查詢對這些地方最不準),而且**不打任何 API**。 */
+    const kp = outsidePin(item.place), kt = kp ? null : outsidePin(item.title);
+    if (kp || kt) {
+      const known = kp || kt;
+      const old = item.place ? pins[item.place] : null;
+      /* 快取要跟著動,不然 pinOf 先看 pins[place],按了畫面不會變(跟下面
+         「先把候選清成 null」同一個理由)。
+         地點欄命中 → 把表的值寫回去,換掉任何線上蓋上來的錯座標;
+         標題命中   → 清成 null,讓 pinOf 掉到標題那一步。
+         `null` 不是 delete:null 在這份快取裡本來就有意思(查過了,沒有)。 */
+      if (item.place) { pins[item.place] = kp ? { la: kp.la, lo: kp.lo } : null; savePins(); }
+      return { at: known, area: false, manual: true, same: !!old && km(old, known) < 0.05 };
+    }
+    /* 線上那一端的候選只有地點欄(規則一)。以前標題也是候選,而那正是
        「拿做什麼去查在哪」—— 退路那一端比較準,但它回答的還是同一個錯問題。 */
     const tries = [item.place].filter(Boolean);
     if (!tries.length) return null;
@@ -1937,23 +2006,33 @@
 
   /* 存下去的當下就查一次。不然要等你打開地圖才發現少一個點,
      那時候已經想不起來是哪一筆打錯了。 */
-  async function checkPlace(item) {
+  async function checkPlace(item, slot) {
     if (!item || (!item.place && !item.title)) return;
     const what = item.place || item.title;
+    /* **這三句講在 `slot` 上,不講在 flash() 上。** 它們是「送出的當下要讀到」的話,
+       而 flash() 寫的是頁尾那行 10.5px 的小字 —— 使用者的眼睛在表單上。
+       上一輪選 flash() 的理由(不長第三套提示、不改到四張截圖)**兩個都還成立**:
+       `.note` 是站上現成的第二套,而訊息槽在表單**外面**、預設 hidden,
+       08 / 09 / 10 / 11 一個像素都不會動。 */
+    const say = m => (slot ? sayHere(slot, m) : flash(m));
     /* 沒填地點 = 不會上地圖(規則見 pinForItem)。**送出的當下是唯一講得到的時機** ——
        存完之後才發現地圖上沒有它的人,得回頭找那一筆、開編輯、補地點,而多數人
        不會,他只會覺得地圖怪怪的。而且那個狀態跟「還在查」「壞了」長得一模一樣。
        講的是「會怎樣」和「怎麼辦」,不是「你沒填」。**不擋送出**:有些願望
        (「多喝水」「早點睡」)本來就不需要上地圖,沒填地點是合法的。 */
     if (!item.place) {
-      flash("「" + item.title + "」沒填地點,地圖上不會有它 —— 補上地點就會出現");
+      /* 沒填地點,但**標題本身就在人工確認過的表裡**(「箱根」「桃園機場…報到」)——
+         那一筆會上地圖,不可以再說「沒填地點,地圖上不會有它」,那是假的。 */
+      const k = outsidePin(item.title);
+      if (!k) { say("「" + item.title + "」沒填地點,地圖上不會有它 —— 補上地點就會出現"); return; }
+      if (!inJapan(k)) say("「" + item.title + "」不在日本境內,地圖上不會顯示");
       return;
     }
     const at = await pinForItem(item);
     /* 查不到就要順手講「怎麼再試一次」—— 不然使用者只知道失敗,不知道還有退路。
        講的是站上已經有的那條路(開地圖、點那一列),不另外長一套提示機制。 */
-    if (!at) flash("「" + what + "」查不到 —— 試試把地名打完整,或開地圖點那一列再查一次");
-    else if (!inJapan(at)) flash("「" + what + "」不在日本境內,地圖上不會顯示");
+    if (!at) say("「" + what + "」查不到 —— 試試把地名打完整,或開地圖點那一列再查一次");
+    else if (!inJapan(at)) say("「" + (at.via || what) + "」不在日本境內,地圖上不會顯示");
   }
 
   /* **沒填「地點」就不查,一次查詢都不發。**
@@ -1968,13 +2047,48 @@
 
      天氣那條路本來就是這樣做的(loadStopWeather 的 `if (!s.place) continue`)——
      這條規則有一半早就在站上了,只是地圖這條沒跟上。 */
+  /* ---- 規則一修正:**人工表比對**和**線上查詢**是兩件事 ----
+     上一輪把標題從候選裡拿掉,**連帶把 OUTSIDE 那張人工表也關掉了** ——
+     因為 pinForItem 只把 item.place 傳給 pinFor(),而 pinFor() 是拿那個字串去比對表的。
+     `{ title:"桃園機場 第一航廈 報到", place:"樂桃 MM626 · 建議起飛前 2.5 小時" }`
+     於是掉到線上查詢,拿一句航班備註去問 —— 而「桃園」就寫在標題裡,表裡也有。
+
+     **一條規則的正面效果(不拿標題去猜),連帶砍掉了一個它沒看見的受益者。**
+
+     分開之後:
+       線上查詢 —— 維持規則一,只用地點欄。拿「做什麼」去問一個不知道自己不確定的
+                   服務,就是雲南那顆 pin 的成因,這裡一個字都不鬆。
+       人工表   —— 標題也算候選。它比對的是**明確的關鍵字**(箱根／桃園／TPE／成田),
+                   命中就是命中,不會產生「拿做什麼當在哪」。
+
+     **但標題排在地點欄之後**,不是最前面。最前面的話會出新的事:
+     `title:"富士電視台"` + `place:"台場"` —— 表裡的 `富士` 會蓋掉一個**填對了的**
+     地點欄,把那一筆標到河口湖,差 100 公里。排在後面,危害就只剩
+     「地點欄是空的或查不出東西,而標題含表裡的關鍵字」那一種(已登記,見那份紀錄的決定 2)。 */
+  const outsidePin = s => {
+    const h = outsideHit(s);
+    return h ? { la: h.lat, lo: h.lon, via: String(s) } : null;
+  };
+
   async function pinForItem(item) {
-    return item && item.place ? pinFor(item.place) : null;
+    if (!item) return null;
+    /* 1. 地點欄已經有答案(查過的,或使用者按「再查一次」修過的)—— 那一格最權威 */
+    if (item.place && pins[item.place]) return pins[item.place];
+    /* 2. 地點欄還沒有答案:表 + 線上,兩個都只用地點欄(規則一) */
+    if (item.place) {
+      const at = await pinFor(item.place);
+      if (at) return at;
+    }
+    /* 3. 地點欄答不出來,才輪到標題,**而且只比對人工表,不問線上**。
+          航班報到那一筆走的就是這一步:一次查詢都不發。 */
+    return outsidePin(item.title);
   }
-  /* 畫圖是同步的,只看已經查好的。**只認地點那一筆。**
-     瀏覽器裡還留著上一版拿標題查出來的座標 —— 壞的正好就是那一批,不去讀它
-     就等於失效了,所以不必換快取 key(換 key 會把大家查好的正確座標一起丟掉)。 */
-  const pinOf = item => (item && item.place && pins[item.place]) || null;
+  /* 畫圖是同步的,只看已經查好的 —— 順序要跟 pinForItem 一模一樣,
+     不然「畫出來的」和「查到的」會各講各的。
+     `pins[item.place]` 可能是 null(「查過了,沒有」),那是 falsy,會掉到標題那一步。
+     瀏覽器裡還留著更早以前拿標題查出來的座標 —— 那些 key 從此不會被讀到,
+     所以不必換快取 key(換 key 會把大家查好的正確座標一起丟掉)。 */
+  const pinOf = item => (item && ((item.place && pins[item.place]) || outsidePin(item.title))) || null;
 
   /* 兩點間的公里數 */
   function km(a, b) {
@@ -2558,6 +2672,7 @@
     if (!b) return;
     state.day = b.dataset.day;
     paintFix(null);   /* 換了一天,剛才選定的那一列已經不在畫面上了 */
+    clearHere();      /* 那句話講的是剛才那一筆,換了一天它就沒有對象了 */
     renderDays(); renderRoute();
   });
 
@@ -2568,7 +2683,8 @@
   }
 
   /* --- 行程 --- */
-  el("add-stop-btn").addEventListener("click", () => toggleForm("stop-form"));
+  /* 再打開表單 = 使用者要做下一件事了,上一次那句話可以收了。 */
+  el("add-stop-btn").addEventListener("click", () => { sayHere("stop-msg", ""); toggleForm("stop-form"); });
   el("sf-cancel").addEventListener("click", () => toggleForm("stop-form", false));
   el("stop-form").addEventListener("submit", ev => {
     ev.preventDefault();
@@ -2580,7 +2696,7 @@
       place: place,
       note: el("sf-note").value.trim(),
     });
-    checkPlace({ place: place, title: el("sf-title").value.trim() });
+    checkPlace({ place: place, title: el("sf-title").value.trim() }, "stop-msg");
     el("stop-form").reset();
     toggleForm("stop-form", false);
   });
@@ -2923,7 +3039,9 @@
     showEditError("");
     el("edit-overlay").hidden = true;
     updateStop(id, patch);
-    checkPlace(patch);
+    /* 對話框是置中的 overlay,關掉之後蓋住的那一區就是行程列表 —— 所以講在
+       行程那一槽上。**這是推論,不是量到的**(登記在紀錄的 N3)。 */
+    checkPlace(patch, "stop-msg");
     /* 換了日子它就從眼前這一天消失了。不自己跳過去 —— 你可能還在整理這一天 ——
        但總要講一聲它去了哪,不然看起來像被刪掉。 */
     if (older && older !== day) {
@@ -2946,6 +3064,7 @@
   }
   el("add-wish-btn").addEventListener("click", () => {
     fillWishWho();
+    sayHere("wish-msg", "");
     showWishError("");
     const f = el("wish-form");
     f.hidden = !f.hidden;
@@ -2968,7 +3087,7 @@
     /* 許願**以前完全沒有這個回饋**,而它正是最需要的地方:願望有一大半不填地點,
        存進去之後地圖上就是沒有它,而使用者分不出那是「我沒填」「還在查」還是「壞了」。
        跟行程走同一個 checkPlace(),不長第二套。 */
-    checkPlace({ place: place, title: title });
+    checkPlace({ place: place, title: title }, "wish-msg");
     el("wish-form").reset();
     el("wish-form").hidden = true;
     showWishError("");
@@ -3259,6 +3378,9 @@
       /* 誠實講結果。還是找不到就說還是找不到,不要假裝有東西。 */
       let msg;
       if (!hit) msg = "「" + what + "」還是找不到 —— 它可能不是一個地名,地圖上不會顯示";
+      /* 人工表命中:沒有打任何 API,所以也要講清楚它為什麼不用再查。 */
+      else if (hit.manual) msg = "「" + hit.at.via + "」用的是人工確認過的座標" +
+        (inJapan(hit.at) ? " —— 這比線上查得到的準,不用再查" : ",它不在日本境內,這張圖只畫日本的點");
       else if (!inJapan(hit.at)) msg = "「" + what + "」查到的位置不在日本境內,地圖上不會顯示";
       else if (hit.area) msg = "「" + what + "」只查到大概的範圍,標的是那一區的中心 —— 地名打完整會更準";
       else if (hit.same) msg = "「" + what + "」再查一次還是同一個位置";
