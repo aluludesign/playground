@@ -222,6 +222,126 @@ var THREE = [
     } else {
       ok("找得到可編輯的行程", false, "#route 裡沒有 [data-edit-stop]");
     }
+
+    // 10 ---- 改我的願望:**三種情況一字不差地照抄行程那張表** ----
+    /* 這是這一輪的新功能,而它踩在合併那一輪最容易出事的那塊地上。
+       `merge-place-field.md` 那三種情況不是可以隨手簡化的分支,所以三種各量一次。
+       fixture 的 tokyo5-me 是 hsieh_chinhui,他許的是 w2「橫濱 港灣未來」。 */
+    function wishes() {
+      return JSON.parse(w.localStorage.getItem("tokyo5-v1") || "{}").wishes || [];
+    }
+    function wishRow(re) {
+      return [].slice.call(d.querySelectorAll("#wish-list [data-wish]"))
+        .filter(function (r) { return re.test(r.textContent); })[0];
+    }
+    d.getElementById("wishbox").open = true;
+    await sleep(60);
+
+    // 10a ---- 入口只長在自己那幾筆上 ----
+    var edits = d.querySelectorAll("#wish-list [data-edit-wish]");
+    ok("「改」只出現在自己許的那幾筆上(三筆願望裡只有一筆是我的)",
+      edits.length === 1, [].map.call(d.querySelectorAll("#wish-list [data-wish]"), function (r) {
+        return r.textContent.slice(0, 10) + ":" + (r.querySelector("[data-edit-wish]") ? "有" : "無");
+      }));
+    ok("而且它就長在自己那一筆上(不是隨便一筆)",
+      !!wishRow(/港灣未來/) && !!wishRow(/港灣未來/).querySelector("[data-edit-wish]"), null);
+    ok("「改」跟 `.mine` 的紫框是同一個判準(同一列同時有這兩個)",
+      !!wishRow(/港灣未來/) && wishRow(/港灣未來/).classList.contains("mine"),
+      wishRow(/港灣未來/) && wishRow(/港灣未來/).className);
+
+    // 10b ---- 情況二:沒挑、標題沒動 → 原來那個留著 ----
+    var w2before = wishes().find(function (x) { return x.id === "w2"; });
+    d.querySelector("#wish-list [data-edit-wish]").click();
+    ok("「改」打得開", await until(function () { return !q("#wish-edit-overlay").hidden; }),
+      q("#wish-edit-overlay").outerHTML.slice(0, 120));
+    ok("標題帶進去了", q("#we-title").value === "橫濱 港灣未來", q("#we-title").value);
+    ok("**既有的位置講出來了**(合併之後畫面上沒有地點欄,它只活在這一行)",
+      /已標定/.test(q("#we-title-out").textContent), q("#we-title-out").textContent);
+    ok("而且印的是名字不是地址 —— 這一筆是舊資料,不是挑過的,**不要假裝它是**",
+      /港灣未來/.test(q("#we-title-out").textContent), q("#we-title-out").textContent);
+    ok("**沒有「哪一天」「時間」這兩欄** —— 願望一有日期就不再是願望了",
+      !q("#wish-edit-overlay #we-day") && !q("#wish-edit-overlay #we-time"), null);
+    ok("也沒有「你是誰」 —— 歸屬是這整條唯一擋得住的東西,不開給人改",
+      !q("#wish-edit-overlay select"), q("#wish-edit-form").innerHTML.slice(0, 60));
+    q("#we-note").value = "只改想說的";
+    q("#wish-edit-form button[type=submit]").click();
+    await until(function () {
+      var x = wishes().find(function (y) { return y.id === "w2"; });
+      return x && x.note === "只改想說的";
+    });
+    var w2after = wishes().find(function (x) { return x.id === "w2"; });
+    ok("情況二:沒挑、標題沒動 → 原來的位置留著(沒有被悄悄丟掉)",
+      w2after.place === w2before.place && w2after.place === "港灣未來",
+      { 之前: w2before.place, 之後: w2after.place });
+    ok("而且 by 沒有被動到(它是「改」這顆按鈕自己的地基)",
+      w2after.by === "hsieh_chinhui", w2after);
+    ok("votes 也沒有被動到", JSON.stringify(w2after.votes) === JSON.stringify(w2before.votes),
+      { 之前: w2before.votes, 之後: w2after.votes });
+
+    // 10c ---- 情況三:標題改了又沒挑 → 清空 ----
+    /* 舊的 place 講的是舊的地方,留著會把新標題標到錯的位置上 ——
+       那正是這整串(泡溫泉→鳥取、港灣未來→福井)要根除的東西。 */
+    d.querySelector("#wish-list [data-edit-wish]").click();
+    await until(function () { return !q("#wish-edit-overlay").hidden; });
+    q("#we-title").value = "橫濱 中華街";
+    q("#wish-edit-form button[type=submit]").click();
+    await until(function () {
+      var x = wishes().find(function (y) { return y.id === "w2"; });
+      return x && x.title === "橫濱 中華街";
+    });
+    var w2c = wishes().find(function (x) { return x.id === "w2"; });
+    ok("情況三:標題改了又沒挑 → place 清空(舊的位置講的是舊的地方)",
+      w2c.place === "", { title: w2c.title, place: w2c.place });
+
+    // 10d ---- 情況一:挑過 → 用挑的,座標跟著候選一起來 ----
+    d.querySelector("#wish-list [data-edit-wish]").click();
+    await until(function () { return !q("#wish-edit-overlay").hidden; });
+    reply = THREE;
+    q("#we-title").value = "teamLab";
+    q('[data-seek="we-title"]').click();
+    ok("編輯框裡的搜尋鈕真的會查",
+      await until(function () { return d.querySelectorAll('[data-hit="we-title"]').length === 3; }),
+      d.querySelectorAll('[data-hit="we-title"]').length);
+    d.querySelectorAll('[data-hit="we-title"]')[1].click();
+    await sleep(50);
+    ok("挑完之後那一欄換成挑到的名字",
+      q("#we-title").value === "teamLab Borderless Museum", q("#we-title").value);
+    ok("挑完之後狀態列印的是地址(他剛從三間同名的裡面挑了一間)",
+      /麻布台/.test(q("#we-title-out").textContent), q("#we-title-out").textContent);
+    q("#wish-edit-form button[type=submit]").click();
+    await until(function () {
+      var x = wishes().find(function (y) { return y.id === "w2"; });
+      return x && x.place === "teamLab Borderless Museum";
+    });
+    var w2d = wishes().find(function (x) { return x.id === "w2"; });
+    ok("情況一:挑過 → place 等於挑到的那個名字", w2d.place === "teamLab Borderless Museum", w2d);
+    var saved2 = pins()["teamLab Borderless Museum"];
+    ok("座標跟著候選一起存下來,而且標記成「人親手選的」",
+      !!saved2 && saved2.by === "pick" && Math.abs(saved2.la - 35.662) < 0.001, saved2);
+
+    // 10e ---- 「再查一次」在編輯框裡,不在別的地方 ----
+    d.querySelector("#wish-list [data-edit-wish]").click();
+    await until(function () { return !q("#wish-edit-overlay").hidden; });
+    ok("有 place 的那一筆:「再查一次」畫出來了(入口搬家的另一半)",
+      q("#we-again").hidden === false, q("#we-again").outerHTML);
+    /* 取消掉再開一筆沒有 place 的 —— 規則一:沒挑地點就不查,連按鈕都不該畫。
+       w2 現在有 place,所以先把它的標題改掉、不挑,讓它回到沒有 place。 */
+    q("#we-title").value = "隨便一個不是地名的字";
+    q("#wish-edit-form button[type=submit]").click();
+    await until(function () {
+      var x = wishes().find(function (y) { return y.id === "w2"; });
+      return x && x.place === "";
+    });
+    d.querySelector("#wish-list [data-edit-wish]").click();
+    await until(function () { return !q("#wish-edit-overlay").hidden; });
+    ok("沒有 place 的那一筆:**不畫「再查一次」**(規則一,按了只是再問一次同一個錯問題)",
+      q("#we-again").hidden === true, q("#we-again").outerHTML);
+    var netB = asked.length;
+    q("#we-again").click();            /* 硬戳 DOM 也不該送出去 */
+    await sleep(60);
+    ok("而且硬戳它一次查詢都不發", asked.length === netB, { 之前: netB, 之後: asked.length });
+    q("#we-cancel").click();
+    ok("取消關得掉", q("#wish-edit-overlay").hidden === true, null);
   } catch (e) {
     out.爆掉了 = String((e && e.stack) || e);
   }

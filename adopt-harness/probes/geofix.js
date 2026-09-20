@@ -45,6 +45,8 @@ var reply = null, asked = [], osm = [];
 // Nominatim 那家預設回「查無」。osmReply 可以改成一筆結果 —— 有些段落要先讓
 // 某一筆**真的有 pin**,才測得到「再查一次之後它不見了」。
 var osmReply = [];
+/* 這三個是「切換成唯讀」那一段用的,預設關著 —— 前面每一段都還是離線模式。 */
+var serveNotion = false, notionWrites = [], notionWishes = [];
 w.fetch = function (url, init) {
   // 順便把平常那家線上查詢也擋掉並記下來:這一支不該依賴網路,
   // 而「有沒有人在沒按按鈕的情況下發查詢」本身就是要看的事。
@@ -52,6 +54,25 @@ w.fetch = function (url, init) {
     osm.push(String(url));
     var rr = osmReply;
     return Promise.resolve({ ok: true, json: function () { return Promise.resolve(rr); } });
+  }
+  /* **「沒有通行碼的人看到什麼」以前這支答不出來。**
+     `online` 和 `canEdit` 是那個 IIFE 裡的 `let`,探針碰不到,所以第一直覺是
+     「fixture 是離線模式,`editable()` 一律 true,那條路驗不到」——
+     **而那句話是錯的,查證之後才知道。** 畫面上有一條真的路可以走到唯讀:
+     `#cloud-in`(連上 Notion)→ `goOnline()` → `pull()` 成功 → `online=true`
+     而 `canEdit` 仍然 false。所以只要這個樁**把 `/api/notion` 也接起來**,
+     探針就能把自己切成那三個人的身分。
+     (ADOPTION.md 驗收規則第 5 點:「我驗不到」跟「我預期它會變」一樣是一個斷言,
+      一樣要有根據。這一條原本要被寫進「沒有驗到的」,查了才發現不必。) */
+  if (serveNotion && /\/api\/notion/.test(String(url))) {
+    var m = String(url).match(/resource=([a-z]+)/);
+    var kind = m ? m[1] : "";
+    var method = (init && init.method) || "GET";
+    if (method !== "GET") notionWrites.push({ 方法: method, 網址: String(url), 內容: init && init.body });
+    var body;
+    if (method === "PATCH") body = { row: JSON.parse((init && init.body) || "{}") };
+    else body = { rows: kind === "wishes" ? notionWishes : [] };
+    return Promise.resolve({ ok: true, status: 200, json: function () { return Promise.resolve(body); } });
   }
   if (String(url).indexOf("resource=geocode") < 0) return realFetch(url, init);
   asked.push(String(url));
@@ -647,9 +668,235 @@ function approxPins() {
     /* 「不要長第三套」這句話是可以查的:改完之後 index.html 裡 `flash("` 的數量
        應該**比上一輪少**(那三句搬走了),而不是多出一套。 */
     out.flash字面數 = (d.documentElement.outerHTML.match(/flash\("/g) || []).length;
-    ok("flash() 的字面數變少了(那三句搬走,沒有多出一套)",
-      out.flash字面數 <= 30, out.flash字面數);
+    /* 門檻從 30 調到 31,而**理由要寫下來,不然這就是「把期望值從現況抄過來」**
+       (工具陷阱 12,這支自己登記過的)。
+       這一輪新增的是一句:`flash("改不成:" + err.message)` ——
+       它跟既有的 `刪不掉:` / `+1 沒成功:` 是**同一套**(寫入失敗的回饋走頁尾),
+       不是第三套。而 `只改得動自己許的願望` 跟 `mayEdit()` 那句同形。
+       **真正在防的那件事(那三句搬走的別回來)靠的是上面那幾條 `!flashed(...)`,
+       它們量的是執行時有沒有出現,比數字面強。這一條只是漂移偵測。** */
+    ok("flash() 的字面數沒有暴增(那三句沒回來,新增的是既有那一套的同類)",
+      out.flash字面數 <= 31, out.flash字面數);
     out.sayHere字面數 = (d.documentElement.outerHTML.match(/sayHere\(/g) || []).length;
+
+    /* ======================================================================
+       14 ---- 說明和動作拆開:那句解釋對**所有人**顯示
+       ======================================================================
+       Lulu 回報的是:那三個沒有通行碼的人點了一列,地圖開了、沒有東西被聚焦、
+       **而完全沒有任何解釋**。
+
+       **這一段放在最後,因為它是單向的** —— `goOnline()` 之後回不到離線模式
+       (要 reload),而上面每一段量的都是離線那一套。
+
+       先量一次改之前的形狀:現在(離線、editable() 為 true)整條是看得到的。
+       那不是這一輪的成果,是**對照的起點** —— 沒有它,下面那幾條紅了也分不出
+       是「唯讀看不到」還是「整條都壞了」。 */
+    function wishRow(re) {
+      return [].slice.call(d.querySelectorAll("#wish-list [data-wish]"))
+        .filter(function (r) { return re.test(r.textContent); })[0];
+    }
+    /* `.wm` 那一排有沒有換到第二行 —— 問的是子元素落在幾個不同的 offsetTop 上。
+       **那是 flex-wrap 有沒有發生的定義,不是它的代理指標。**
+       (第一版比的是兩列的 offsetHeight,量出來 22 vs 18 看起來像換行,
+        實際上 4px 差的是「按鈕比純文字高」,而真的換行會多一整個行高。
+        **一個閾值式的比較分不出「高 4px」和「多一行」,除非你先知道一行有多高。**) */
+    function rowsOf(wm) {
+      var tops = {};
+      [].forEach.call(wm.children, function (c) { tops[c.offsetTop] = 1; });
+      return Object.keys(tops).length;
+    }
+
+    /* ---- 先造一筆「乾淨」的願望,而這一步是這一段成立的前提 ----
+       **第一版用 w2(橫濱 港灣未來)來測「唯讀下再查一次不見了」,而那條綠燈是假的。**
+       上面第 5 段已經把 `pins["港灣未來"]` 清成 null,所以 `pinOf` 會掉到標題那一步,
+       而「橫濱」寫在 OUTSIDE 人工表裡 —— 也就是說 w2 **早就是「人工表就是答案」**,
+       那顆按鈕本來就該 hidden。**沒有我這一輪的改動它也是 hidden。**
+
+       那正是工具陷阱 12 的形狀,只是長在我自己剛寫的斷言上:
+       **一條在改動前後都綠的斷言,證明的是零。**
+
+       所以改用一筆標題裡不含任何人工表關鍵字、而且地點欄有真實快取座標的願望。
+       「台場自由女神像」對 OUTSIDE 那十四組 key 一個都不中。 */
+    var CLEAN = "台場自由女神像";
+    q("#add-wish-btn").click();
+    q("#wf-title").value = CLEAN;
+    await pickPlace("wf", CLEAN, "35.6270", "139.7740");
+    q("#wf-by").value = "hsieh_chinhui";
+    q("#wf-submit").click();
+    await until(function () { return !!wishRow(new RegExp(CLEAN)); });
+    ok("造得出一筆「自己的、有座標、而且人工表答不出來」的願望",
+      !!pins()[CLEAN] && !pins()[CLEAN].via, pins()[CLEAN]);
+
+    /* **這一條是下面那個「不見了」的對照組。** 現在還是離線(`editable()` 為 true),
+       同一筆願望、同一顆按鈕**是畫得出來的** —— 沒有這一條,下面那條紅不紅都沒有意義。 */
+    wishRow(new RegExp(CLEAN)).click();
+    await until(function () { return bar().hidden === false; });
+    ok("【對照組】可編輯的時候,這一筆在地圖上**有**「再查一次」",
+      q("#map-fix-go").hidden === false, q("#map-fix-go").outerHTML);
+
+    /* ---- 05 那張截圖上那個換行,在這裡先量一次當對照組 ----
+       離線(`editable()` 為 true)的時候「改」和「刪掉」同時出現,`.wm` 裝不下,
+       **那正是 05 變胖 51px 的原因**。先量它,下面那條「唯讀不換行」才不是恆真 ——
+       沒有這一條,`rowsOf() === 1` 有可能只是因為這支量錯了東西。 */
+    /* **它只在窄視窗下換行,而那正是 05 的寬度(390)。** 第一版沒有分寬度,
+       結果 1100 那一趟紅了 —— 那不是壞掉,是**那個寬度裝得下**。
+       (ADOPTION.md:「一塊如果出現在手機圖上,兩個寬度都要量」——
+        而這一條在兩個寬度下本來就該有兩個不同的答案。) */
+    var wmEditable = wishRow(/港灣未來/).querySelector(".wm");
+    var narrow = w.innerWidth <= 640;
+    out.可編輯時那一排 = {
+      視窗寬: w.innerWidth, 行數: rowsOf(wmEditable),
+      內容: [].map.call(wmEditable.children, function (c) { return c.textContent.trim(); }),
+    };
+    if (narrow) {
+      /* **期望值不是從現況抄來的**:05 的比對量到那張卡高了 51px、
+         位移搜尋說 `dy=+51`,那是這條斷言的獨立證據。 */
+      ok("【對照組】窄視窗 + 可編輯 + 自己的願望 → 那一排**真的換行了**(改 + 刪掉 裝不下,05 因此變胖 51px)",
+        rowsOf(wmEditable) === 2, out.可編輯時那一排);
+    } else {
+      /* 這個寬度沒有截圖可以當獨立證據,所以**不在這裡下斷言** ——
+         寫一條「1100 下不換行」等於把現況抄成期望值(工具陷阱 12)。 */
+      out.可編輯時那一排.說明 = "**這個寬度沒有下斷言** —— 沒有對應的截圖當獨立證據," +
+        "寫「不換行」會變成把現況抄成期望值。換行那條只在 390 量。";
+    }
+
+    var wishRows = [
+      { id: "w1", title: "teamLab", place: "", note: "要先訂票", votes: ["chang_chiayu", "hsieh_chinhui"], by: "chang_chiayu", createdAt: "2026-09-16T01:00:00Z" },
+      { id: "w2", title: "橫濱 港灣未來", place: "港灣未來", note: "本來的備註", votes: ["hsieh_chinhui"], by: "hsieh_chinhui", createdAt: "2026-09-16T02:00:00Z" },
+      { id: "w3", title: "泡溫泉", place: "", note: "沒填地點的那種", votes: [], by: "chen_suchih", createdAt: "2026-09-16T03:00:00Z" },
+      { id: "w4", title: CLEAN, place: CLEAN, note: "", votes: ["hsieh_chinhui"], by: "hsieh_chinhui", createdAt: "2026-09-16T04:00:00Z" },
+    ];
+    notionWishes = wishRows;
+
+    // 14a ---- 切換到唯讀之前,先確認那條路真的把我們帶過去 ----
+    serveNotion = true;
+    ok("切換之前是離線模式(對照的起點)", /離線模式/.test(q("#cloud-msg").textContent), q("#cloud-msg").textContent);
+    var cin = q("#cloud-in");
+    ok("畫面上有「連上 Notion」這條路(唯讀是從這裡進去的)", !!cin, q("#cloud-ops").innerHTML);
+    cin.click();
+    ok("連上之後是**已連上但不是管理員**(= 那三個人的身分)",
+      await until(function () { return /^已連上 Notion$/.test(q("#cloud-msg").textContent); }),
+      q("#cloud-msg").textContent);
+    /* **這一條是上面那句身分宣告的憑證。** 只看 cloud-msg 的話,我只是在讀一段
+       我自己也可以寫錯的文案;`add-stop-btn` 被收起來是 `renderEditAbility()`
+       對 `editable()` 的反應,那才是真的在問「這個 session 能不能編輯」。 */
+    ok("而且 editable() 真的是 false(加行程的按鈕被收起來了)",
+      q("#add-stop-btn").hidden === true, q("#add-stop-btn").outerHTML.slice(0, 100));
+
+    // 14b ---- 唯讀 + 別人的願望:**以前一個字都沒有,現在有解釋** ----
+    /* 挑 w3(泡溫泉,chen_suchih 許的、沒挑地點):它同時踩到兩個以前會靜默的條件 ——
+       不是我的(`mineWish` false)、而且沒有 place(所以本來就不會上地圖)。
+       **這一筆正是 Lulu 描述的那個畫面。** */
+    var other = wishRow(/泡溫泉/);
+    ok("找得到別人許的那一筆(泡溫泉)", !!other, null);
+    other.click();
+    ok("唯讀 + 別人的願望 → **那一條出現了**(這一輪之前它是 hidden)",
+      await until(function () { return bar().hidden === false; }), bar().outerHTML.slice(0, 160));
+    ok("而且講的是為什麼它不在圖上,不是叫他去做什麼",
+      /泡溫泉.*還沒挑地點/.test(barText()), barText());
+    ok("唯讀 → 不畫「再查一次」(沒挑地點本來就不畫,這裡兩個理由都成立)",
+      q("#map-fix-go").hidden === true, q("#map-fix-go").outerHTML);
+
+    // 14c ---- 唯讀 + 自己的願望:說明在、「再查一次」搬走了 ----
+    /* **用的是上面那筆對照組驗過的願望**,不是 w2 —— 見上面那段註解。
+       同一筆、同一顆按鈕,唯一換掉的變數是 `editable()`。 */
+    var mineRow = wishRow(new RegExp(CLEAN));
+    ok("找得到自己許的那一筆(" + CLEAN + ")", !!mineRow, null);
+    var netB14 = asked.length + osm.length;
+    mineRow.click();
+    ok("唯讀 + 自己的願望 → 說明照樣在",
+      await until(function () { return bar().hidden === false && new RegExp(CLEAN).test(barText()); }), barText());
+    ok("**「再查一次」不在地圖上了** —— 它搬進「改我的願望」裡(對照組同一筆是畫得出來的)",
+      q("#map-fix-go").hidden === true, q("#map-fix-go").outerHTML);
+    q("#map-fix-go").click();          /* 硬戳 DOM 也不該送出去 */
+    await sleep(60);
+    ok("而且硬戳它一次查詢都不發",
+      asked.length + osm.length === netB14, { 之前: netB14, 之後: asked.length + osm.length });
+
+    // 14d ---- 「對」不分身分:它不打 API,作用域只有這台裝置 ----
+    /* **這一條要小心變成恆真。** 「對」只在 `asking`(有 ap、而且沒按過 ok)時才畫,
+       而 w2 的座標是 fixture 灌的、沒有 ap —— 也就是說它在唯讀下**本來就該是 hidden**,
+       量它等於什麼都沒量(工具陷阱 12 的形狀)。
+       所以這裡不去斷言「它出現了」,改成斷言**它的判準裡沒有身分** ——
+       做法是先問一個已經帶著 ok/ap 的那一筆(上面第 4 段按過「對」的淺草寺
+       已經不在了,因為 pull() 換掉了 state.stops),所以這裡誠實登記:
+       **唯讀下「對」有沒有畫出來,這支探針沒有量到**,理由寫在 wish-edit.md。 */
+    out.唯讀下的對按鈕 = "**沒測到東西** —— asking 要 ap 且未確認,而 pull() 之後" +
+      "手上沒有這種資料;不要把 14c 的綠燈讀成「對」也驗過了";
+
+    // 14e ---- 「改」在唯讀下還在,「刪掉」不在 ----
+    ok("唯讀 → 自己那一筆仍然有「改」(它的判準是 mineWish,不是通行碼)",
+      !!mineRow.querySelector("[data-edit-wish]"), mineRow.innerHTML.slice(0, 300));
+    ok("唯讀 → 別人那一筆沒有「改」",
+      !wishRow(/泡溫泉/).querySelector("[data-edit-wish]"), null);
+    ok("唯讀 → 「刪掉」不在(那一顆本來就是管理員的)",
+      !mineRow.querySelector("[data-del-wish]"), null);
+
+    /* **這一條是被截圖逼出來的。** 05 那張(離線,`editable()` 為 true)顯示:
+       「改」和「刪掉」同時出現時,`.wm` 那一排(flex-wrap)裝不下,
+       「刪掉」被擠到第二行,那張卡因此高了 51px。
+       **但那是管理員看自己願望的樣子,不是那三個人看到的樣子** ——
+       他們沒有「刪掉」。而 05 是唯一一張願望清單的截圖,**它拍不到唯讀**。
+
+       所以這裡直接量那一排的高度:跟同一份清單裡沒有任何按鈕的那一列比,
+       一樣高就代表沒有換行。**截圖答不出來的那一半,用探針補。** */
+    /* **第一版比的是兩列的 offsetHeight,而那量錯了東西。** 量出來 22 vs 18,
+       看起來像「換行了」,實際上 4px 差的是**按鈕比純文字高**(`.wdel` 有 padding),
+       而真的換行會多一整個行高(~18px)。
+       **一個閾值式的比較,分不出「高 4px」和「多一行」——除非你先知道一行有多高。**
+       改成直接問那件事本身:`.wm` 的子元素是不是全部在同一個 `offsetTop` 上。
+       那是 flex-wrap 有沒有發生的定義,不是它的代理指標。 */
+    var wmMine = mineRow.querySelector(".wm");
+    out.唯讀下那一排 = {
+      自己的行數: rowsOf(wmMine), 自己的高度: wmMine.offsetHeight,
+      內容: [].map.call(wmMine.children, function (c) { return c.textContent.trim(); }),
+    };
+    ok("唯讀 → 多了「改」也沒有把那一排擠到第二行(他們沒有「刪掉」,所以裝得下)",
+      rowsOf(wmMine) === 1, out.唯讀下那一排);
+
+    // 14f ---- 唯讀的人真的改得動自己那一筆,而且送出去的形狀是對的 ----
+    /* 先在**同一筆**(對照組那一筆)上看「再查一次」有沒有接上 ——
+       入口搬家最容易的失敗是舊的拿掉了、新的沒接上,而那兩件事要在同一筆上問。 */
+    mineRow.querySelector("[data-edit-wish]").click();
+    ok("「改」打得開",
+      await until(function () { return q("#wish-edit-overlay").hidden === false; }),
+      q("#wish-edit-overlay").outerHTML.slice(0, 120));
+    ok("**「再查一次」在這裡**(入口搬家的另一半:地圖上沒有了,這裡有)",
+      q("#we-again").hidden === false, q("#we-again").outerHTML);
+    q("#we-cancel").click();
+
+    /* 換到 w2 測送出的形狀:它有備註和票,漏送哪一個看得出來。
+       **順帶量到人工表那條規則在編輯框裡也成立** —— w2 現在是人工表答的
+       (上面第 5 段把它的地點欄清成 null 了),所以這一筆**不該**有「再查一次」。 */
+    notionWrites.length = 0;
+    var w2row = wishRow(/港灣未來/);
+    w2row.querySelector("[data-edit-wish]").click();
+    await until(function () { return q("#wish-edit-overlay").hidden === false; });
+    ok("既有的 place 在狀態列上講出來了(合併之後它只活在這一行)",
+      /已標定/.test(q("#we-title-out").textContent), q("#we-title-out").textContent);
+    ok("人工表就是答案的那一筆 → 編輯框裡也不畫「再查一次」(跟地圖上同一條規則)",
+      q("#we-again").hidden === true, { 按鈕: q("#we-again").outerHTML, 快取: pins()["港灣未來"] });
+    q("#we-note").value = "改過了";
+    q("#wish-edit-form button[type=submit]").click();
+    ok("送出去了(唯讀的人動得了自己那一筆)",
+      await until(function () { return notionWrites.length > 0; }), notionWrites);
+    var patch = notionWrites[0] || {};
+    var sent = JSON.parse(patch.內容 || "{}");
+    ok("走的是 PATCH ?resource=wishes&id=w2",
+      patch.方法 === "PATCH" && /resource=wishes/.test(patch.網址 || "") && /id=w2/.test(patch.網址 || ""), patch);
+    ok("改到的是 note", sent.note === "改過了", sent);
+    /* **這兩條不是防禦性程式碼,是那個資料形狀的要求。**
+       後端 wishIn() 把「備註」寫成 joinNote(note, votes)、把「時間」寫成 by ——
+       漏送哪一個,那一個在 Notion 上就會被寫成空的。
+       漏送 by 尤其嚴重:`by` 是 `.mine`、「改」按鈕、和 geocode 那條窄路
+       三者共同的地基,它一空,使用者就再也編不動自己那一筆了。 */
+    ok("`by` 一起送回去(漏送的話 Notion 的「時間」欄會被寫空,這一筆從此沒有主人)",
+      sent.by === "hsieh_chinhui", sent);
+    ok("`votes` 一起送回去(漏送的話備註欄裡那串 +1 會被寫掉)",
+      JSON.stringify(sent.votes) === JSON.stringify(["hsieh_chinhui"]), sent);
+    ok("**沒有動 title**(只改了想說的,標題原樣)", sent.title === "橫濱 港灣未來", sent);
+    ok("**沒有動 place**(標題沒改,所以原來那個留著,沒有被悄悄丟掉)",
+      sent.place === "港灣未來", sent);
   } catch (e) {
     out.爆掉了 = String((e && e.stack) || e);
   }

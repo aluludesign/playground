@@ -278,6 +278,24 @@ shot 11-exp-edit-dialog  390 1100 "d.getElementById('tab-cost').click(); d.query
 shot 12-place-search     390 1100 "w.fetch=function(u){return String(u).indexOf('nominatim')<0?Promise.reject(new Error('擋掉')):Promise.resolve({ok:true,json:function(){return Promise.resolve([{lat:'34.6111',lon:'135.5205',display_name:'teamLab Botanical Garden, 長居公園, 東住吉區, 大阪市, 大阪府, 日本'},{lat:'35.6620',lon:'139.7434',display_name:'teamLab Borderless Museum, 麻布台ヒルズ, 虎ノ門, 港區, 東京都, 日本'},{lat:'34.9837',lon:'135.7654',display_name:'teamLab BioVortex, 八条通, 下京区, 京都市, 京都府, 日本'}])}})};d.getElementById('add-stop-btn').click();d.getElementById('sf-title').value='teamLab';d.querySelector('[data-seek=sf-title]').click();" \
                                   "#stop-form:not([hidden]) .seek-out .hit:3+"
 
+# 13:「改我的願望」。理由跟 10 / 11 同形 —— **沒有截圖的介面等於沒有人看過**,
+# 而 block-05 那一輪一打開 #exp-form 就當場發現十顆膠囊壞了、壞了兩輪。
+#
+# fixture 的 tokyo5-me 是 hsieh_chinhui,而 w2(「橫濱 港灣未來」)正是他許的 ——
+# 所以整份清單裡只有那一筆有 `[data-edit-wish]`,`querySelector` 不會挑錯。
+# **那不是巧合,是這張圖要證的事的一半**:別人的願望沒有那顆按鈕。
+#
+# 三條斷言各自釘一件事:
+#   .rm-input:2+        兩個欄位真的畫出來了(標題 + 想說的)
+#   .said.ok            **既有的 place 講出來了**。w2 的 place 是「港灣未來」、
+#                       title 是「橫濱 港灣未來」—— 兩欄合併之後 place 沒有欄位可住,
+#                       它只活在這一行上。這條掛掉就是「合併把位置藏起來」回來了。
+#   #we-again           **「再查一次」真的搬到這裡了**。它是這一輪的入口搬家,
+#                       而搬家最容易的失敗是舊的拿掉了、新的沒接上。
+#                       (w2 的快取座標沒有 via,所以這一筆的按鈕該是畫出來的。)
+shot 13-wish-edit        390 1000 "d.getElementById('wishbox').open=true; d.querySelector('[data-edit-wish]').click();" \
+                                  "#wish-edit-overlay:not([hidden]) .rm-input:2+,#wish-edit-overlay .seek-out .said.ok:1+,#we-again:not([hidden]):1+"
+
 kill $SRV 2>/dev/null || true
 rm -rf "$H/.work"
 echo "→ $OUT"
