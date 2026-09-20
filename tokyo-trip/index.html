@@ -449,17 +449,23 @@
        從 8px 掉到 4px,那是這一輪沒有要引入的新行為。綁回組件自己的 token。 */
     .fld .rm-input:focus-visible{border-radius:var(--radius-sm);}
     .who{display:flex; gap:6px; flex-wrap:wrap;}
-    .who label{display:inline-flex; align-items:center; gap:5px; padding:5px 10px; border:1px solid var(--line); border-radius:20px; background:var(--surface); font-size:12.5px; cursor:pointer;
-      /* color 和 letter-spacing 以前是從 .fld label 繼承下來的（.who 住在 .fld 裡）。
-         那條規則換成 rm-label 之後來源沒了，這裡原樣補回 —— 成員膠囊不在這一塊的範圍內。 */
-      color:var(--muted); letter-spacing:.05em;}
-    /* .who 住在 .fld 裡,所以上面刪掉的那條 `.fld input` 一直也選到這些核取方塊。
-       量過:border / padding / border-radius 對原生核取方塊無效,但
-       width / background / font-size / line-height 是真的生效的 ——
-       width:100% 把 13px 的原生方塊撐成 28px。這裡原樣補回,讓它逐項不變。
-       不是因為被撐寬一倍好看,是因為這一輪不該碰它,而且九張截圖沒有一張看得到它。 */
-    .who input{accent-color:var(--accent);
-      width:100%; background:var(--surface); font-size:14px; line-height:1.5;}
+    /* 十顆膠囊改用 `.rm-chip`(加在 markup 上)。這裡只留 **rm-chip 沒有、而拿掉會壞掉**
+       的那一項:`cursor:pointer`。它不是外觀 —— 這十顆是 <label>,點了會勾選裡面的
+       核取方塊,少了它桌機上滑過去不變手指,**看起來就不像可以點**。
+       跟第四塊 `:521` 那個 16px 同一類:組件不知道消費端把它當控制項在用。
+       走掉的(刻意的,這就是換組件的意思):gap 5→6px、padding、border 顏色、
+       圓角、背景、字級、`color:var(--muted)`、`letter-spacing:.05em`。
+       進來的:mono 字體、`font-weight:700`。 */
+    .who label{cursor:pointer;}
+    /* **`width:100%` 走了。** 它是被刪掉的 `.fld input{width:100%}`(給文字欄位用的)
+       連帶選到這些核取方塊,第四塊為了讓那一輪零改變又原樣補了回來 ——
+       當時寫「看起來就是個意外」,而補了第 10/11 張截圖之後可以把「看起來」拿掉:
+       它把 13px 的原生方塊撐成 **27.531×13**,在 82px 寬的膠囊裡吃掉三分之一,
+       四個雙字名字全部被擠成兩行,膠囊因此高 **64.781px** —— 比旁邊 48px 的輸入欄還高。
+       另外三項(background / font-size / line-height)一起走,逐項量過見這一輪的紀錄。
+       **`font-size:14px` 在手機上從來沒生效過** —— `:547` 的 `.fld input{font-size:16px}`
+       特異度相同而且寫在後面,一直贏著它。 */
+    .who input{accent-color:var(--accent);}
     .form-ops{display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap;}
 
     /* ---- settle ---- */
@@ -2760,7 +2766,7 @@
     el("ef-payer").innerHTML = '<option value="">— 還不確定 —</option>' +
       MEMBERS.map(m => '<option value="' + m.id + '">' + esc(nameOf(m.id)) + "</option>").join("");
     el("ef-who").innerHTML = MEMBERS.map(m =>
-      '<label><input type="checkbox" id="who-' + m.id + '" value="' + m.id + '" checked>' + esc(nameOf(m.id)) + "</label>").join("");
+      '<label class="rm-chip"><input type="checkbox" id="who-' + m.id + '" value="' + m.id + '" checked>' + esc(nameOf(m.id)) + "</label>").join("");
   }
   function defaultDate() {
     const t = todayISO();
@@ -2809,7 +2815,7 @@
     el("xe-payer").innerHTML = '<option value="">— 還不確定 —</option>' +
       MEMBERS.map(m => '<option value="' + m.id + '"' + (m.id === payerId ? " selected" : "") + ">" + esc(nameOf(m.id)) + "</option>").join("");
     el("xe-who").innerHTML = MEMBERS.map(m =>
-      '<label><input type="checkbox" value="' + m.id + '"' + (participants.includes(m.id) ? " checked" : "") + ">" + esc(nameOf(m.id)) + "</label>").join("");
+      '<label class="rm-chip"><input type="checkbox" value="' + m.id + '"' + (participants.includes(m.id) ? " checked" : "") + ">" + esc(nameOf(m.id)) + "</label>").join("");
   }
   function showExpError(msg) {
     const box = el("xe-err");
