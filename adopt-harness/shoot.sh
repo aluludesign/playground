@@ -262,9 +262,9 @@ shot 09-edit-dialog      390  900 "d.querySelector('[data-edit-stop]').click();"
 # 靜態 markup 不算數 —— 那正是 08 / 09 的斷言收緊過的理由。
 # 再加 `:not([hidden])` 確認容器真的開了(`.click()` 丟例外會被 try/catch 吃掉)。
 shot 10-exp-form         390 1700 "d.getElementById('tab-cost').click(); d.getElementById('add-exp-btn').click();" \
-                                  "#exp-form:not([hidden]) .rm-input:7+,#exp-form .who label:4+"
+                                  "#exp-form:not([hidden]) .rm-input:7+,#exp-form .who label.rm-chip:4+"
 shot 11-exp-edit-dialog  390 1100 "d.getElementById('tab-cost').click(); d.querySelector('[data-edit-exp]').click();" \
-                                  "#exp-edit-overlay:not([hidden]) .rm-input:7+,#exp-edit-overlay .who label:4+"
+                                  "#exp-edit-overlay:not([hidden]) .rm-input:7+,#exp-edit-overlay .who label.rm-chip:4+"
 
 kill $SRV 2>/dev/null || true
 rm -rf "$H/.work"

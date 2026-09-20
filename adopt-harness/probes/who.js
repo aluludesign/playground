@@ -27,6 +27,10 @@ function pill(el) {
     // 第三塊凍的兩項
     color: c.color,
     letterSpacing: c.letterSpacing,
+    /* **第六塊才發現這一欄不在。** `rm-chip` 會把字體換成 mono,而這支探針
+       從 block-05 寫到現在都沒量字體 —— 那正是第二塊(`--font-mono` 的 CJK fallback)
+       整輪在處理的東西。不量的欄位不會變紅。 */
+    fontFamily: c.fontFamily,
     // 從 .fld label 一起繼承過來、但沒有人登記過的幾項 —— 如果第三塊漏掉了,會在這裡現形
     fontWeight: c.fontWeight,
     fontSize: c.fontSize,
