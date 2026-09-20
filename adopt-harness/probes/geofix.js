@@ -80,6 +80,29 @@ function approxPins() {
     ok("前端讀不到 GEOCODE_KEY 這個名字",
       d.documentElement.outerHTML.indexOf("GEOCODE_KEY") < 0, "index.html 裡出現了金鑰的環境變數名");
 
+    // 1b ---- 開場對帳:舊快取裡那些表答得出來的 key,一載入就自己修好 ----
+    /* fixture 灌的是 Lulu 那台裝置的狀態:`TPE 桃園 T1` 躺著一個線上查來的錯座標
+       (東京車站,離桃園 2000 公里),而且沒有 `via`。**沒有這段對帳的話,
+       `pinFor()` 開頭那句 `place in pins` 會直接回頭**,錯的值留著,介面也
+       因為缺 via 而講不出人工表那句話 —— 使用者要自己去按「再查一次」才會好,
+       而程式不會告訴他要按。 */
+    ok("舊的錯座標被換成人工表的值(不必按任何按鈕)",
+      pins()["TPE 桃園 T1"] && pins()["TPE 桃園 T1"].la === 25.080 &&
+      pins()["TPE 桃園 T1"].lo === 121.234, pins()["TPE 桃園 T1"]);
+    ok("而且補上了 `via` —— 介面靠它才講得出這是人工表的座標",
+      pins()["TPE 桃園 T1"] && pins()["TPE 桃園 T1"].via === "TPE 桃園 T1",
+      pins()["TPE 桃園 T1"]);
+    ok("對帳寫回了 localStorage(不是只改了記憶體裡那份)",
+      /25\.08/.test(w.localStorage.getItem("tokyo5-pin3") || ""),
+      (w.localStorage.getItem("tokyo5-pin3") || "").slice(0, 200));
+    /* **只動這張表答得出來的 key。** 換快取 key 會把下面這些一起丟掉,
+       然後每一顆重查一次、每次排隊 1.1 秒 —— 那是 `57473b5` 付過的代價。 */
+    ok("表答不出來的 key 一個字都沒動(淺草寺)",
+      JSON.stringify(pins()["淺草寺"]) === JSON.stringify({ la: 35.7134, lo: 139.7955 }),
+      pins()["淺草寺"]);
+    ok("`null`(查過了,沒有)也沒有被當成要修的東西",
+      pins()["泡溫泉"] === null && "泡溫泉" in pins(), pins()["泡溫泉"]);
+
     // 2 ---- 從 DAY 那顆按鈕開地圖 = 06 那張截圖的狀態 ----
     q("#day-map-btn").click();
     await until(function () { return d.querySelectorAll(".map .pin").length >= 3; });
@@ -395,15 +418,48 @@ function approxPins() {
     ["樂桃", "%E6%A8%82%E6%A1%83", "MM626", "%E5%BB%BA%E8%AD%B0%E8%B5%B7%E9%A3%9B"].forEach(function (k) {
       ok("整趟沒有任何查詢問過「" + k + "」(那是航班備註,不是地名)", all2.indexOf(k) < 0, all2.slice(0, 500));
     });
-    /* 同一天的另外兩筆航班,地點欄本身就命中表(TPE 桃園 T1 / NRT 成田 T1)——
-       它們從頭到尾沒壞過,這裡順便確認這一輪沒有把它們弄壞。 */
+    // 11b ---- 關鍵字寫在**地點欄**的那幾筆(Lulu 回報的就是這一種) ----
+    /* **上一輪這兩條斷言是綠的,而且是錯的。** 它們斷言成田講「不在這裡?」、
+       「再查一次」照樣畫得出來 —— 那正是 bug 的樣子,被當成基準寫了下來。
+
+       根因:`via`(「這顆座標來自人工表」的標記)以前只掛在 outsidePin() 的
+       回傳值上,一寫進 `pins[place]` 就掉。於是只有**標題命中**那條路
+       (`kp` 為 null、地點欄存 null、pinOf 掉到標題)看得到人工表那句話;
+       **關鍵字寫在地點欄的那幾筆走 `pins[place]`,永遠講不出來**。
+
+       11 段測的是標題那條路,所以 114 條全綠。**問錯的問題會得到一個乾淨的、
+       錯的綠燈** —— 這一輪的版本是「只走了會過的那條路」。 */
+    var mm = [].slice.call(d.querySelectorAll("#route .stop"))
+      .filter(function (r) { return /MM626 起飛/.test(r.textContent); })[0];
+    ok("找得到 MM626 起飛那一列(place = TPE 桃園 T1,關鍵字在地點欄)", !!mm, null);
+    mm.click();
+    /* **等的條件必須是「這一列才有的字」。** 第一版等的是 /人工確認過的表裡/ ——
+       而上一列(桃園機場報到)講的就是那句話,於是 until() 在這一列重畫之前
+       就通過了,後面兩條斷言量的是**上一列的字**。第一次跑就抓到,寫下來:
+       畫面上留著的舊字會讓「等到了」跟「換好了」看起來一模一樣。 */
+    ok("地點欄命中表 → 講得出「在人工確認過的表裡」(Lulu 看到的是「沒標上去」)",
+      await until(function () { return /TPE 桃園 T1/.test(barText()); }) &&
+      /人工確認過的表裡/.test(barText()), barText());
+    ok("而且同一句話說得出為什麼它不在圖上", /不在日本境內/.test(barText()), barText());
+    ok("印的是地點欄那幾個字(TPE 桃園 T1),不是標題",
+      /TPE 桃園 T1/.test(barText()) && !/第一航廈/.test(barText()), barText());
+    ok("人工表就是答案 → 不畫「再查一次」(這一顆以前是畫得出來的)",
+      q("#map-fix-go").hidden === true, q("#map-fix-go").outerHTML);
+
+    /* 成田:同一條路,但它**在**日本境內 —— 所以走的是 manual 的另一半分支。
+       兩半都要有人測,不然改壞一半另一半照樣綠。 */
     var nrt = [].slice.call(d.querySelectorAll("#route .stop"))
       .filter(function (r) { return /抵達成田機場/.test(r.textContent); })[0];
     nrt.click();
-    ok("地點欄本身命中表的那幾筆沒有被弄壞(成田照樣標得出來)",
-      await until(function () { return /不在這裡/.test(barText()); }), barText());
-    ok("成田那一筆的「再查一次」照樣畫得出來(它有 pin,使用者說不對還是能按)",
-      q("#map-fix-go").hidden === false, null);
+    ok("地點欄命中表 + 在日本境內 → 講「用的是人工確認過的座標」",
+      await until(function () { return /NRT 成田 T1/.test(barText()); }) &&
+      /人工確認過的座標/.test(barText()), barText());
+    ok("成田那一條不該說「不在日本境內」", !/不在日本境內/.test(barText()), barText());
+    ok("成田的「再查一次」也收起來(再查只會拿比較差的去蓋人工驗過的)",
+      q("#map-fix-go").hidden === true, q("#map-fix-go").outerHTML);
+    ok("成田那一顆 pin 還在(收起按鈕不等於失去座標)",
+      !!pins()["NRT 成田 T1"] && pins()["NRT 成田 T1"].via === "NRT 成田 T1",
+      pins()["NRT 成田 T1"]);
 
     // 12 ---- 問題二:那句話講在使用者眼睛所在的地方 ----
     /* 上一輪那三句走的是 flash() → <footer> 裡的 #sync,10.5px 的小字。
