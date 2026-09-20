@@ -234,15 +234,21 @@ shot 05-wishes-mobile    390 1200 "d.getElementById('wishbox').open=true;"      
 #    截圖上 06 是 3 顆、07 是 7 顆。
 # 2. 但**斷言和截圖看的不是同一個時刻**:斷言那一趟在動作後 900ms 量,
 #    截圖那一趟拍的是 virtual-time budget(25s)跑完的終態。
-#    07 的三顆航班點要等 A1「樂桃 MM626 · …」那兩次 Nominatim 真的回來才畫得出來
+#    07 的三顆航班點當時要等 A1「樂桃 MM626 · …」那兩次 Nominatim 真的回來才畫得出來
 #    (實測約 1.2s 才到),所以斷言在 900ms 只看得到 fixture 快取裡那 4 顆。
-#    **門檻只認「不靠網路就一定在」的那幾顆** —— 07 是 4,不是截圖上的 7。
-#    把門檻設成 7 等於讓這條斷言變成網路的函數,那正是 tokyo5-pin3 那個坑的形狀。
+#    **門檻只認「不靠網路就一定在」的那幾顆** —— 所以當時是 4,不是截圖上的 7。
 # 3. 數字調低會削弱「app 死掉也過」的防線(07 以前就是門檻 2 太低而漏接),
-#    所以兩張各補一條 `.stop:3+` —— 那三筆是 fixture 的資料,app 沒真的跑起來就不存在,
-#    而航班那幾個點是走 OUTSIDE 硬表畫的,湊不出來。**換句話說:門檻降了,斷言更強。**
+#    所以兩張各補一條 `.stop:3+` —— 那三筆是 fixture 的資料,app 沒真的跑起來就不存在。
+#
+# **07 現在是 7,而且它比 4 更強,不是更鬆。** 那兩次 Nominatim 的成因是
+# A1 的地點欄裡填的是航班備註(`樂桃 MM626 · 建議起飛前 2.5 小時`),而規則一
+# 把標題從候選裡拿掉的時候連帶讓 OUTSIDE 人工表也比對不到 —— 於是它掉到線上查詢。
+# 修好之後(見 geocode-outside-and-notice.md),**許願地圖那條路一次網路都不碰**:
+# 七顆全部來自 fixture 快取或 OUTSIDE 人工表,900ms 就全部到齊。
+# 所以這裡把門檻設回截圖上的數字是合法的 —— **「不靠網路就一定在」這個判準沒有放寬,
+# 是那條路真的不靠網路了。** 哪天它又需要一次網路往返,這條斷言會先紅,那是對的。
 shot 06-map-sheet        390 1000 "d.getElementById('day-map-btn').click();"    ".map .pin:3+,.stop:3+"
-shot 07-map-drawer      1100  900 "d.getElementById('wish-map-btn').click();"   ".map .pin:4+,.stop:3+"
+shot 07-map-drawer      1100  900 "d.getElementById('wish-map-btn').click();"   ".map .pin:7+,.stop:3+"
 shot 08-addstop-form     390 1100 "d.getElementById('add-stop-btn').click();"   "#stop-form:not([hidden]) input:3+,.stop:3+"
 shot 09-edit-dialog      390  900 "d.querySelector('[data-edit-stop]').click();" "#edit-overlay:not([hidden]) #edit-form input:3+,.stop:3+"
 # 10 / 11:花費的兩張表單。九張裡從來沒有一張打開過它們,而裡面有 16 個欄位、

@@ -170,6 +170,19 @@ function ok(name, cond, extra) {
   r = await call({ resource: "geocode", q: "港灣未來", wish: "w-1", method: "POST" }, {}, ENV, {}, wishPage("港灣未來"));
   ok("這條路一樣只收 GET → 405", r.res.code === 405, r.res.body);
 
+  /* ---- 伺服器不認得那張人工確認過的表,而那是**刻意的** ----
+     「人工表命中就不打 API」這件事整個發生在前端(index.html 的 outsidePin)。
+     下面兩條把那條界線釘住:如果哪天有人把省錢的責任搬到伺服器,這兩條會先紅。
+     **重點不是「伺服器該擋」,是「現在它不擋,所以省下來的每一次查詢都是前端省的」**
+     —— 前端那條短路壞掉的話,這裡不會有任何東西攔住它。 */
+  r = await call({ resource: "geocode", q: "TPE 桃園 T1" }, KEYH, ENV, { status: "ZERO_RESULTS" });
+  ok("人工表裡的字串照樣會被送去上游(省下來的查詢全部是前端省的,伺服器不認得那張表)",
+     r.res.code === 200 && /TPE/.test(decodeURIComponent(r.url || "")), { code: r.res.code, url: r.url });
+
+  r = await call({ resource: "geocode", q: "樂桃 MM626 · 建議起飛前 2.5 小時" }, KEYH, ENV, { status: "ZERO_RESULTS" });
+  ok("送什麼就查什麼:伺服器不會像前端 pinFor 那樣自己拆掉前綴(這條路只查一次)",
+     /樂桃 MM626 · 建議起飛前 2\.5 小時/.test(decodeURIComponent(r.url || "")), r.url);
+
   console.log(fails ? "\n有 " + fails + " 項沒過" : "\n全部通過");
   process.exit(fails ? 1 : 0);
 })();
