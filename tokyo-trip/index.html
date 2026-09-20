@@ -466,6 +466,20 @@
        **`font-size:14px` 在手機上從來沒生效過** —— `:547` 的 `.fld input{font-size:16px}`
        特異度相同而且寫在後面,一直贏著它。 */
     .who input{accent-color:var(--accent);}
+    /* ---- 地點搜尋 ---- */
+    .seek{display:flex; gap:6px; align-items:stretch;}
+    .seek .rm-input{flex:1; min-width:0;}
+    .seek .btn{flex:none; white-space:nowrap;}
+    .seek-out{margin-top:6px; border:1px solid var(--line); border-radius:10px; overflow:hidden; background:var(--surface);}
+    .seek-out .hit{display:block; width:100%; text-align:left; padding:9px 11px; border:0; border-top:1px solid var(--line);
+      background:none; font:inherit; color:inherit; cursor:pointer;}
+    .seek-out .hit:first-child{border-top:0;}
+    .seek-out .hit:hover,.seek-out .hit:focus-visible{background:var(--accent-soft);}
+    .seek-out .hit b{display:block; font-weight:600;}
+    /* 地址那行會很長。夾成兩行,不要讓一筆候選把清單撐到看不完 */
+    .seek-out .hit span{display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+      font-size:12px; color:var(--muted);}
+    .seek-out .said{padding:9px 11px; font-size:12.5px; color:var(--muted);}
     .form-ops{display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap;}
 
     /* ---- settle ---- */
@@ -646,7 +660,7 @@
         <div class="grid2">
           <div class="fld"><label class="rm-label" for="sf-time">時間</label><input class="rm-input" type="time" id="sf-time" required></div>
           <div class="fld"><label class="rm-label" for="sf-title">做什麼</label><input class="rm-input" type="text" id="sf-title" placeholder="淺草寺參拜" required></div>
-          <div class="fld"><label class="rm-label" for="sf-place">地點／車站</label><input class="rm-input" type="text" id="sf-place" placeholder="銀座線 淺草站"></div>
+          <div class="fld"><label class="rm-label" for="sf-place">地點／車站</label><div class="seek"><input class="rm-input" type="text" id="sf-place" placeholder="銀座線 淺草站"><button type="button" class="btn btn-sm" data-seek="sf-place">搜尋</button></div><div class="seek-out" id="sf-place-out" hidden></div></div>
         </div>
         <div class="fld"><label class="rm-label" for="sf-note">備註</label><input class="rm-input" type="text" id="sf-note" placeholder="要先線上預約"></div>
         <div class="form-ops">
@@ -672,7 +686,7 @@
         <form class="form" id="wish-form" hidden>
           <div class="grid2">
             <div class="fld"><label class="rm-label" for="wf-title">想去哪</label><input class="rm-input" type="text" id="wf-title" placeholder="teamLab" required></div>
-            <div class="fld"><label class="rm-label" for="wf-place">地點／車站</label><input class="rm-input" type="text" id="wf-place" placeholder="豐洲"></div>
+            <div class="fld"><label class="rm-label" for="wf-place">地點／車站</label><div class="seek"><input class="rm-input" type="text" id="wf-place" placeholder="teamLab 豐洲"><button type="button" class="btn btn-sm" data-seek="wf-place">搜尋</button></div><div class="seek-out" id="wf-place-out" hidden></div></div>
           </div>
           <div class="fld"><label class="rm-label" for="wf-by">你是誰</label><select class="rm-input" id="wf-by"></select></div>
           <div class="fld"><label class="rm-label" for="wf-note">想說的</label><input class="rm-input" type="text" id="wf-note" placeholder="可留白"></div>
@@ -803,7 +817,7 @@
     <div class="fld"><label class="rm-label" for="se-day">哪一天</label><select class="rm-input" id="se-day"></select></div>
     <div class="fld"><label class="rm-label" for="se-time">時間</label><input class="rm-input" type="time" id="se-time" required></div>
     <div class="fld"><label class="rm-label" for="se-title">做什麼</label><input class="rm-input" type="text" id="se-title" required></div>
-    <div class="fld"><label class="rm-label" for="se-place">地點／車站</label><input class="rm-input" type="text" id="se-place"></div>
+    <div class="fld"><label class="rm-label" for="se-place">地點／車站</label><div class="seek"><input class="rm-input" type="text" id="se-place"><button type="button" class="btn btn-sm" data-seek="se-place">搜尋</button></div><div class="seek-out" id="se-place-out" hidden></div></div>
     <div class="fld"><label class="rm-label" for="se-note">備註</label><input class="rm-input" type="text" id="se-note"></div>
     <div class="err" id="se-err" hidden></div>
     <div class="ops">
@@ -1892,6 +1906,10 @@
       const h = outsideHit(k);
       if (!h) continue;
       const cur = pins[k];
+      /* **人親手選過的不要動。** 表的 key 是子字串,「箱根湯本站」會被 `箱根` 命中 ——
+         對帳會把使用者從候選清單裡挑的那個精確座標,換成表裡那個概略的區域中心。
+         他看著名字和地址挑的東西,比任何表都更知道他要什麼。 */
+      if (cur && cur.by === "pick") continue;
       if (cur && cur.via === k && cur.la === h.lat && cur.lo === h.lon) continue;
       pins[k] = { la: h.lat, lo: h.lon, via: k };
       n++;
@@ -1968,6 +1986,93 @@
   function savePins() {
     try { localStorage.setItem(PINLS, JSON.stringify(pins)); } catch (_) {}
   }
+
+  /* ---- 地點搜尋:打關鍵字、看候選、自己選一個 ----
+
+     為什麼要有它:在這之前,使用者打一個字串,程式**背地裡**拿去查,猜中就標對、
+     猜錯就標到四百公里外,而他從頭到尾不知道發生過這件事。那是「泡溫泉 → 鳥取」
+     和「港灣未來 → 福井」的成因,也是後來所有補丁(硬界線、人工表、虛線圈、
+     再查一次)要處理的同一件事。**讓人看著名字和地址自己挑,那件事整個不見。**
+
+     **這裡刻意不帶 `bounded=1`,而 `pinFor()` 帶 —— 差別不在服務,在誰在挑。**
+     `pinFor` 是程式自己挑一筆直接標上去,框外的東西進來就是一顆沒有人看過的錯 pin,
+     所以要硬界線。這裡是人在挑,**硬界線只會把他要的那個藏起來**,而挑錯的那個
+     他不會按。viewbox 留著當加權(這趟在哪就偏重哪),那個沒有壞處。 */
+  async function seekPlace(q) {
+    const rg = regionFor(q);
+    return queued(() => fetch("https://nominatim.openstreetmap.org/search?format=json" +
+      "&limit=6&accept-language=zh-TW&countrycodes=" + rg.cc + "&viewbox=" + rg.view +
+      "&q=" + encodeURIComponent(q)).then(r => r.json()).catch(() => null));
+  }
+
+  /* display_name 是「名字, 街, 區, 市, 縣, 郵遞區號, 國家」。第一截當名字,其餘當地址 ——
+     兩個都要給:光看名字分不出兩間同名的鬼太郎茶屋,那正是要人挑的理由。 */
+  const hitName = r => String(r.display_name || "").split(",")[0].trim();
+  const hitAddr = r => String(r.display_name || "").split(",").slice(1).join(",").trim();
+
+  function seekBox(id) { return el(id + "-out"); }
+
+  function seekSay(id, msg) {
+    const box = seekBox(id);
+    if (!box) return;
+    box.innerHTML = msg ? '<div class="said">' + esc(msg) + "</div>" : "";
+    box.hidden = !msg;
+  }
+
+  function seekClear(id) {
+    const box = seekBox(id);
+    if (box) { box.innerHTML = ""; box.hidden = true; }
+  }
+
+  async function runSeek(id) {
+    const input = el(id);
+    const q = input ? input.value.trim() : "";
+    if (!q) { seekSay(id, "先打幾個字,再按搜尋。"); return; }
+    seekSay(id, "「" + q + "」搜尋中…");
+    const res = await seekPlace(q);
+    if (!res) { seekSay(id, "連不上地名查詢服務 —— 網路好一點再試,或直接把地點打完整。"); return; }
+    if (!res.length) {
+      /* **誠實說查無,不要退而求其次給一個。** 那正是這個功能要取代的行為。 */
+      seekSay(id, "「" + q + "」找不到。換個說法試試 —— 店名找不到的話打最近的車站或街區。");
+      return;
+    }
+    const box = seekBox(id);
+    box.innerHTML = res.map((r, i) =>
+      '<button type="button" class="hit" data-hit="' + id + '" data-i="' + i + '">' +
+      "<b>" + esc(hitName(r)) + "</b><span>" + esc(hitAddr(r)) + "</span></button>").join("");
+    box.hidden = false;
+    box._hits = res;
+  }
+
+  /* 選了一個:地點欄換成那個名字,座標**同時**寫進快取,所以這一筆從此不會再被查。
+     `by:"pick"` 是「這是人親手選的」—— 開場那段跟人工表對帳的程式碼會跳過它,
+     不然使用者選的座標會被那張表蓋掉(表的 key 是子字串,「箱根湯本站」會中)。 */
+  function takeHit(id, i) {
+    const box = seekBox(id), r = box && box._hits && box._hits[i];
+    const input = el(id);
+    if (!r || !input) return;
+    const name = hitName(r);
+    input.value = name;
+    pins[name] = { la: +r.lat, lo: +r.lon, by: "pick" };
+    savePins();
+    seekSay(id, "選好了:" + name + " —— 這一筆的位置以後不用再查。");
+  }
+
+  document.addEventListener("click", ev => {
+    const go = ev.target.closest && ev.target.closest("[data-seek]");
+    if (go) { runSeek(go.getAttribute("data-seek")); return; }
+    const hit = ev.target.closest && ev.target.closest("[data-hit]");
+    if (hit) { takeHit(hit.getAttribute("data-hit"), +hit.getAttribute("data-i")); }
+  });
+
+  /* Enter 搜尋,而不是邊打邊搜。Nominatim 的使用條款是一秒一次(`queued()` 排的就是它),
+     而且邊打邊搜會把「東京」這種打到一半的字送出去。**按下去才查,是刻意的。** */
+  document.addEventListener("keydown", ev => {
+    const t = ev.target;
+    if (!t || !t.id || !/^(sf|wf|se)-place$/.test(t.id) || ev.key !== "Enter") return;
+    ev.preventDefault();   /* 不要順手送出整張表單 */
+    runSeek(t.id);
+  });
 
   /* ---- 再查一次 ----
      上面那個線上查詢**不確定的時候不會說**:「淺草寺」和「泡溫泉」回的是同一份格式,
