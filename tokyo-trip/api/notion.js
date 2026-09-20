@@ -7,9 +7,12 @@
 //   NOTION_TOKEN     Notion internal integration 的密鑰(secret_... 或 ntn_...)
 //   TRIP_KEY         五個人共用的通行碼,前端會帶在 x-trip-key 標頭
 //   NOTION_DB_EXPENSES / NOTION_DB_ITINERARY  (選填,預設值見下方)
+//   GEOCODE_KEY      地名查詢退路的金鑰(選填;沒設就只是那條退路不能用,
+//                    網站其他部分照常。理由和它擋住什麼,見下面 resource=geocode)
 
 const NOTION = "https://api.notion.com/v1";
 const VERSION = "2022-06-28";
+const GEOCODE = "https://maps.googleapis.com/maps/api/geocode/json";
 
 const DB = {
   expenses: process.env.NOTION_DB_EXPENSES || "bc4321f89f224137845f5e528730f042",
@@ -34,6 +37,71 @@ async function notion(path, init) {
     throw err;
   }
   return body;
+}
+
+/* ---------- 地名查詢的退路 ---------- */
+/* 網站平常用 Nominatim(免費、不用金鑰、對繁體地名夠好)。它的問題是
+   **不確定的時候不會說**:同一份格式、同樣的欄位 ——
+
+     淺草寺  → 35.7134,139.7955  淺草寺, 浅草二丁目, 臺東區, 東京都   對
+     泡溫泉  → 24.6985,99.6963   温泉镇, 保山市, 云南省, 中国         錯,差三千公里
+
+   沒有信心值、沒有警告,所以前端的 pinFor() 無從判斷第二筆是錯的,
+   使用者看到的是一顆很有自信的錯 pin。
+
+   程式偵測不到,但**使用者知道** —— 所以這條退路是使用者按「再查一次」才走的,
+   偵測器是人。這一家每筆都帶精度,而且非地名會明確回查無,那正是前一家沒有的。
+
+   金鑰只能待在這裡。前端拿不到,理由跟 NOTION_TOKEN 一樣:
+   放前端等於公開。任何時候都只從 process.env 讀,不寫進程式碼、不回給前端、不印出來。 */
+
+/* 精度只分兩級,前端只需要知道「這是不是一個精確的位置」。
+   APPROXIMATE 代表它給的是行政區的概略中心(實測:「東京都廳」回「日本東京都」)——
+   看起來像個合理的 pin,精度完全不同,所以一定要傳出去。 */
+const PRECISION = {
+  ROOFTOP: "exact",
+  RANGE_INTERPOLATED: "exact",
+  GEOMETRIC_CENTER: "exact",
+  APPROXIMATE: "area",
+};
+
+/* 回傳 { found:false } 或 { found:true, la, lo, precision, label }。
+   丟出去的 Error 一律是自己寫的字 —— 上游的 error_message 不轉發,
+   那是沒必要的外洩面,而且對使用者也沒意義。 */
+async function geocode(q, cc) {
+  const url = GEOCODE + "?address=" + encodeURIComponent(q) +
+    "&language=zh-TW&components=country:" + cc +
+    "&key=" + encodeURIComponent(process.env.GEOCODE_KEY);
+  let body;
+  try {
+    const res = await fetch(url);
+    body = await res.json();
+  } catch (_) {
+    const err = new Error("地名查詢服務連不上");
+    err.status = 502;
+    throw err;
+  }
+  const st = body && body.status;
+  if (st === "ZERO_RESULTS") return { found: false };
+  if (st !== "OK" || !body.results || !body.results[0]) {
+    const err = new Error(
+      st === "REQUEST_DENIED" ? "地名查詢服務拒絕了這次請求(伺服器的 GEOCODE_KEY 可能沒設好)"
+      : st === "OVER_QUERY_LIMIT" ? "地名查詢服務的額度用完了"
+      : st === "INVALID_REQUEST" ? "這個字串沒辦法拿去查"
+      : "地名查詢服務回了沒辦法處理的結果");
+    err.status = st === "INVALID_REQUEST" ? 400 : 502;
+    throw err;
+  }
+  const r = body.results[0];
+  const at = r.geometry && r.geometry.location;
+  if (!at || typeof at.lat !== "number" || typeof at.lng !== "number") return { found: false };
+  return {
+    found: true,
+    la: at.lat,
+    lo: at.lng,
+    precision: PRECISION[r.geometry.location_type] || "area",
+    label: r.formatted_address || "",
+  };
 }
 
 /* ---------- 欄位讀寫 ---------- */
@@ -194,6 +262,31 @@ module.exports = async (req, res) => {
     const no = denyWrite();
     if (no) return res.status(no.status).json({ error: no.error });
     return res.status(200).json({ ok: true });
+  }
+
+  /* 地名再查一次:使用者說「這個 pin 不對」時才走。不碰 Notion。
+     跟寫入同一條規則(要通行碼)—— 這一條每查一次都要錢,付錢的是 Lulu 的信用卡,
+     公開的 GET 端點等於把額度開給全世界。前端也只在可編輯時才畫那顆按鈕。 */
+  if (resource === "geocode") {
+    if (req.method !== "GET") {
+      res.setHeader("Allow", "GET");
+      return res.status(405).json({ error: "不支援的方法" });
+    }
+    const no = denyWrite();
+    if (no) return res.status(no.status).json({ error: no.error });
+    if (!process.env.GEOCODE_KEY) {
+      return res.status(503).json({ error: "伺服器還沒設定 GEOCODE_KEY,再查一次目前不能用" });
+    }
+    const q = String((req.query && req.query.q) || "").trim();
+    if (!q) return res.status(400).json({ error: "沒有要查的字串" });
+    if (q.length > 120) return res.status(400).json({ error: "要查的字串太長" });
+    /* 國家代碼只收兩個字母,不讓查詢字串以外的東西跑進 URL */
+    const cc = /^[a-z]{2}$/.test(String((req.query && req.query.cc) || "")) ? req.query.cc : "jp";
+    try {
+      return res.status(200).json(await geocode(q, cc));
+    } catch (e) {
+      return res.status(e.status || 502).json({ error: e.message || "地名查詢沒成功" });
+    }
   }
 
   const shape = SHAPES[resource];

@@ -243,6 +243,17 @@
     #map-sheet[data-mode="wish"] #lay-plan[aria-pressed="true"]::before{background:var(--ink-2); border-color:var(--ink-2);}
     .lay:hover{background:var(--surface-2);}
 
+    /* 「再查一次」那一條。只有在清單上點過某一列(= 使用者正在看某一個點)之後才出現 ——
+       線上查詢不確定的時候不會說,能看出「這顆 pin 不對」的是人,不是程式。
+       預設 hidden,所以沒點過任何一列的地圖畫面一個像素都沒變。 */
+    .mapfix{display:flex; align-items:center; gap:8px; margin-bottom:9px;}
+    .mf-t{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+      font-family:var(--font-sign); font-size:11.5px; color:var(--muted);}
+    /* 只查到大概範圍的那種 pin:虛線圈 + 標籤前面的「約 」。
+       它跟精確的 pin 看起來一模一樣,那正是要擋的事 —— 標示留在 pin 自己身上,
+       不是只留在一則 2.8 秒就消失的提示裡。 */
+    .map .pin.approx{border-style:dashed; box-shadow:0 1px 4px rgba(0,0,0,.2);}
+
     /* 擠不下的讓位:先試標記下面,再擠不下就先藏起來,滑過／聚焦時照樣冒出來 */
     .map .pin .lab.below{bottom:auto; top:calc(100% + 5px);}
     .map .pin .lab.hide{display:none;}
@@ -807,6 +818,11 @@
     <div class="maplayers">
       <button type="button" class="lay" id="lay-plan" data-layer="plan" aria-pressed="true">已排行程</button>
       <button type="button" class="lay" id="lay-wish" data-layer="wish" aria-pressed="true">大家的許願</button>
+    </div>
+    <!-- 點過清單某一列之後才出現:那一筆標錯了、或根本沒標上去,從這裡再查一次 -->
+    <div class="mapfix" id="map-fix" hidden>
+      <span class="mf-t" id="map-fix-t"></span>
+      <button type="button" class="btn btn-sm" id="map-fix-go">再查一次</button>
     </div>
     <div class="map" id="map"></div>
   </div>
@@ -1665,6 +1681,22 @@
     el("map-sheet").dataset.mode = sheetMode || "";
   }
 
+  /* ---- 「再查一次」那一條 ----
+     它只在使用者**點過清單某一列**之後出現 —— 那時候他正盯著某一個點,
+     不是這裡標錯了,就是這一筆根本沒標上去,兩種都是他才判斷得出來的事。
+     沒點過任何一列時它是 hidden,所以預設的地圖畫面完全沒變。
+     唯讀的人不畫 —— 退路那一端要通行碼,不要畫一顆按下去一定失敗的按鈕。 */
+  let fixItem = null, fixKey = null;
+  function paintFix(item, key, found) {
+    fixItem = item || null;
+    fixKey = key || null;
+    const bar = el("map-fix");
+    if (!fixItem || !editable()) { bar.hidden = true; return; }
+    const what = fixItem.place || fixItem.title;
+    el("map-fix-t").textContent = found ? "「" + what + "」不在這裡?" : "「" + what + "」沒標上去";
+    bar.hidden = false;
+  }
+
   async function loadSheetMap(force) {
     if (el("map-sheet").hidden || !sheetMode) { sheetKey = null; return; }
     syncSheetChrome();
@@ -1683,7 +1715,7 @@
       rows.forEach(r => {
         const at = pinOf(r.item);
         if (inJapan(at)) pts.push(Object.assign({
-          la: at.la, lo: at.lo, place: r.item.place || r.item.title, title: r.item.title,
+          la: at.la, lo: at.lo, ap: at.ap, place: r.item.place || r.item.title, title: r.item.title,
         }, r));
       });
       drawMap(el("map"), pts);
@@ -1779,7 +1811,7 @@
     const known = OUTSIDE.find(o => o.keys.some(k => up.indexOf(k.toUpperCase()) >= 0));
     if (known) {
       pins[place] = { la: known.lat, lo: known.lon };
-      try { localStorage.setItem(PINLS, JSON.stringify(pins)); } catch (_) {}
+      savePins();
       return pins[place];
     }
 
@@ -1799,8 +1831,53 @@
       } catch (_) { break; }
     }
     pins[place] = found;   /* 查不到也記下來,不要每次重畫都再問一次 */
-    try { localStorage.setItem(PINLS, JSON.stringify(pins)); } catch (_) {}
+    savePins();
     return found;
+  }
+
+  function savePins() {
+    try { localStorage.setItem(PINLS, JSON.stringify(pins)); } catch (_) {}
+  }
+
+  /* ---- 再查一次 ----
+     上面那個線上查詢**不確定的時候不會說**:「淺草寺」和「泡溫泉」回的是同一份格式,
+     一個對、一個在雲南,差三千公里。沒有信心值,pinFor() 無從判斷第二筆是錯的,
+     使用者看到的是一顆很有自信的錯 pin。
+
+     程式偵測不到這件事,但**使用者知道** —— 打「泡溫泉」的人知道那不是地名,
+     看到 pin 跑到雲南的人也知道不對。所以這條退路是**人按下去才走的**,
+     偵測器是人。走的是自己的 API(金鑰不能放前端,理由跟 Notion token 一樣),
+     那一頭每筆都帶精度,而且非地名會明確說查無。 */
+  async function regeo(text) {
+    return api("?resource=geocode&q=" + encodeURIComponent(text) +
+      "&cc=" + encodeURIComponent(regionFor(text).cc));
+  }
+
+  /* 一筆行程／願望的兩個候選字串一起重查。
+     **先把兩個都設成 null 再寫回查到的那個** —— 不先清的話會出現
+     「地點欄留著舊的錯座標、標題欄查到新的對座標」,而 pinOf 先看地點欄,
+     使用者按了修正卻什麼都沒變。用 null 不是 delete:null 在這份快取裡
+     本來就有意思(查過了,沒有),delete 會讓下一次重畫又跑去問線上查詢。 */
+  async function regeoItem(item) {
+    const tries = [item.place, item.title].filter(Boolean);
+    /* **查完才動快取。** 中途丟例外(沒設金鑰、額度用完、連不上)就原封不動退出 ——
+       不然一次失敗的重查會把使用者本來好好的那顆 pin 清掉。 */
+    let hit = null;
+    for (const t of tries) {
+      const r = await regeo(t);
+      if (r && r.found) { hit = { key: t, r: r }; break; }
+    }
+    const old = hit ? (pins[hit.key] || null) : null;
+    tries.forEach(t => { pins[t] = null; });
+    let out = null;
+    if (hit) {
+      const at = { la: hit.r.la, lo: hit.r.lo };
+      if (hit.r.precision !== "exact") at.ap = 1;   /* 只查到行政區的概略中心 */
+      pins[hit.key] = at;
+      out = { at: at, area: !!at.ap, same: !!old && km(old, at) < 0.05 };
+    }
+    savePins();
+    return out;
   }
 
   /* 日本境內。出發日的桃園機場查得到,但一張圖同時要裝下台灣和成田,就得縮到
@@ -1813,7 +1890,9 @@
     if (!item || (!item.place && !item.title)) return;
     const what = item.place || item.title;
     const at = await pinForItem(item);
-    if (!at) flash("「" + what + "」查不到,地圖上不會顯示 —— 試試把地名打完整");
+    /* 查不到就要順手講「怎麼再試一次」—— 不然使用者只知道失敗,不知道還有退路。
+       講的是站上已經有的那條路(開地圖、點那一列),不另外長一套提示機制。 */
+    if (!at) flash("「" + what + "」查不到 —— 試試把地名打完整,或開地圖點那一列再查一次");
     else if (!inJapan(at)) flash("「" + what + "」不在日本境內,地圖上不會顯示");
   }
 
@@ -1873,13 +1952,13 @@
     }
     /* 已排進行程的點畫在底下一層,願望疊在上面 —— 願望才是要挑的東西 */
     pts.slice().sort((a, b) => (a.cls === "plan" ? 0 : 1) - (b.cls === "plan" ? 0 : 1)).forEach(p => {
-      html += '<a class="pin' + (p.cls ? " " + p.cls : "") + (p.k === box._focus ? " on" : "") +
-        '" data-k="' + esc(p.k) +
+      html += '<a class="pin' + (p.cls ? " " + p.cls : "") + (p.ap ? " approx" : "") +
+        (p.k === box._focus ? " on" : "") + '" data-k="' + esc(p.k) +
         '" href="' + gmap(p.place, p) + '" target="_blank" rel="noopener" style="left:' +
         Math.round(left + projX(p.lo, v.z) * TILE) + "px; top:" + Math.round(top + projY(p.la, v.z) * TILE) +
         "px" + (p.color ? "; background:" + p.color : "") +
         '" title="' + esc(p.tip) + '">' + esc(p.n) +
-        '<span class="lab">' + esc(p.title) + '</span></a>';
+        '<span class="lab">' + esc((p.ap ? "約 " : "") + p.title) + '</span></a>';
     });
     html += "</div>";
     html += '<div class="mapzoom"><button type="button" data-zoom="1" aria-label="\u653e\u5927">+</button>' +
@@ -2408,6 +2487,7 @@
     const b = ev.target.closest("[data-day]");
     if (!b) return;
     state.day = b.dataset.day;
+    paintFix(null);   /* 換了一天,剛才選定的那一列已經不在畫面上了 */
     renderDays(); renderRoute();
   });
 
@@ -2718,6 +2798,7 @@
     openMapSheet("day");
     await loadSheetMap(true);
     const at = pinOf(item);
+    paintFix(item, "d" + (n - 1), !!at && inJapan(at));
     if (!at || !inJapan(at)) { flash("「" + item.title + "」在地圖上沒有位置"); return; }
     if (focusPin(el("map"), at, "d" + (n - 1))) {
       [].forEach.call(el("route").children, r => r.classList.toggle("on", r === row));
@@ -2838,6 +2919,7 @@
     openMapSheet("wish");
     await loadSheetMap(true);
     const at = pinOf(list[i]);
+    paintFix(list[i], "w" + i, !!at && inJapan(at));
     if (!at || !inJapan(at)) { flash("「" + list[i].title + "」在地圖上沒有位置"); return; }
     if (focusPin(el("map"), at, "w" + i)) {
       [].forEach.call(el("wish-list").querySelectorAll("[data-wish]"),
@@ -3005,9 +3087,13 @@
     document.body.classList.remove("drawer-open");
     sheetKey = null;
     sheetMode = null;
+    paintFix(null);
   }
   /* mode 只有 "day" 和 "wish"。換模式等於換內容,得重畫。 */
   function openMapSheet(mode) {
+    /* 每次進來先收掉 —— 從 DAY 或許願那顆按鈕進來時沒有選定任何一列。
+       點某一列進來的那條路會在 loadSheetMap 之後自己再畫回去。 */
+    paintFix(null);
     if (sheetMode !== mode) sheetKey = null;
     sheetMode = mode;
     syncSheetChrome();
@@ -3072,6 +3158,35 @@
     grip.addEventListener("pointerup", stop);
     grip.addEventListener("pointercancel", stop);
   })();
+  /* 使用者說「不對」的那一下。這是整條退路唯一的觸發點 ——
+     沒有人按,就一次查詢都不會發出去(那一端每查一次都要錢)。 */
+  el("map-fix-go").addEventListener("click", async () => {
+    const item = fixItem, key = fixKey;
+    if (!item) return;
+    const btn = el("map-fix-go");
+    const what = item.place || item.title;
+    btn.disabled = true;
+    el("map-fix-t").textContent = "「" + what + "」查詢中…";
+    try {
+      const hit = await regeoItem(item);
+      /* 誠實講結果。還是找不到就說還是找不到,不要假裝有東西。 */
+      let msg;
+      if (!hit) msg = "「" + what + "」還是找不到 —— 它可能不是一個地名,地圖上不會顯示";
+      else if (!inJapan(hit.at)) msg = "「" + what + "」查到的位置不在日本境內,地圖上不會顯示";
+      else if (hit.area) msg = "「" + what + "」只查到大概的範圍,標的是那一區的中心 —— 地名打完整會更準";
+      else if (hit.same) msg = "「" + what + "」再查一次還是同一個位置";
+      else msg = "「" + what + "」重新標好了";
+      await loadSheetMap(true);
+      if (hit && inJapan(hit.at)) focusPin(el("map"), hit.at, key);
+      paintFix(item, key, !!hit && inJapan(hit.at));
+      flash(msg);
+    } catch (e) {
+      paintFix(item, key, !!pinOf(item));
+      flash("再查一次沒成功:" + e.message);
+    } finally {
+      btn.disabled = false;
+    }
+  });
   el("map-sheet-x").addEventListener("click", closeMapSheet);
   /* 沒有背景那層可以點了(背景要留給使用者操作),所以收起來只剩 ✕ 和 Esc */
   document.addEventListener("keydown", ev => {
