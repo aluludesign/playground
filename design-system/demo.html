@@ -436,6 +436,9 @@
      樣式表 404、編譯漏掉、路徑打錯，三種情況它都抓得到。 */
   if (getComputedStyle(document.body).backgroundColor !== 'rgb(241, 239, 230)') {
     document.getElementById('rm-css-warning').hidden = false;
+    console.warn('[rm] demo.css 沒有生效，body 底色不是 muslin');
+  } else {
+    console.log('[rm] 樣式表生效：body 底色 = muslin');
   }
 
   /* demo.css 進了版控，就有跟原始碼走鐘的可能。build.sh 在產出尾巴蓋了
@@ -450,16 +453,26 @@
     };
     fetch('./demo.css').then(function (r) { return r.text(); }).then(function (out) {
       var m = /\/\*src:([a-z0-9]+):([^*]+)\*\/\s*$/.exec(out);
-      if (!m) return;                        // 舊版 build.sh 編的，沒指紋可比
+      /* 沒指紋不能默默通過 —— 那是「這次沒檢查」，跟「檢查過沒問題」不一樣 */
+      if (!m) { console.warn('[rm] demo.css 沒有指紋，新舊比對這次等於沒做'); return; }
       var want = m[1], list = m[2].split(',');
       return Promise.all(list.map(function (f) {
         return fetch(f).then(function (r) { return r.text(); });
       })).then(function (parts) {
-        if (fnv(parts.join('')) !== want) {
+        var got = fnv(parts.join(''));
+        if (got !== want) {
           document.getElementById('rm-stale-warning').hidden = false;
+          console.warn('[rm] demo.css 比原始碼舊（記 ' + want + ' / 實 ' + got + '），跑 ./build.sh');
+        } else {
+          /* 成功也要出聲，而且報事實不報評價 —— 「沒訊息」有兩個意思，
+             其中一個是這段根本沒跑。用 console 不用橫幅：展示頁的觀眾
+             不該一直看著一條狀態列。 */
+          console.log('[rm] demo.css 是最新的（指紋 ' + got + '，涵蓋 ' + list.length + ' 個來源檔）');
         }
       });
-    }).catch(function () { /* file:// 或離線，比不了就算了 */ });
+    }).catch(function () {
+      console.log('[rm] 抓不到檔案（file:// 或離線），新舊比對這次跳過');
+    });
   })();
 
   document.querySelectorAll('[data-swatches]').forEach(function (host) {

@@ -200,14 +200,17 @@ node -e '
     return (h >>> 0).toString(36);
   };
   const stale = [], unsure = [];
+  let scanned = 0, stamped = 0;
   const walk = (d) => {
     for (const e of fs.readdirSync(d, { withFileTypes: true })) {
       if (e.name.startsWith(".") || SKIP.has(e.name)) continue;
       const f = path.join(d, e.name);
       if (e.isDirectory()) { walk(f); continue; }
       if (!e.name.endsWith(".css")) continue;
+      scanned++;
       const m = STAMP.exec(fs.readFileSync(f, "utf8"));
       if (!m) continue;
+      stamped++;
       const srcs = m[2].split(",").map(s => path.resolve(path.dirname(f), s.trim()));
       const missing = srcs.filter(s => !fs.existsSync(s));
       if (missing.length) {
@@ -231,6 +234,18 @@ node -e '
   };
   for (const [f, entry] of stale) {
     console.error("  ⚠ " + f + " 比它的來源舊了，重編: ./build.sh " + rel(entry) + " " + rel(f));
+  }
+
+  /* 成功也要出聲，而且要報數字。原本這段只在 stale／unsure 有東西時才印，
+     所以「沒聲音」有兩個意思：「都驗過都最新」和「一份帶指紋的產出都沒找到」——
+     那正是這支腳本另外兩道檢查在防的事，而它自己犯了。
+     **印數字比印「OK」重要：數字從 2 掉到 0 看得出來，「OK」不會。** */
+  if (!stale.length && !unsure.length) {
+    /* 一份都沒找到不能說成「全部最新」——那句話是真的但沒有意義，
+       而且它跟「兩份都驗過」用同一個句型，讀的人分不出來。 */
+    console.error(stamped
+      ? "  產出檢查: " + stamped + " 份帶指紋的產出全部最新（掃過 " + scanned + " 個 .css）"
+      : "  ⚠ 產出檢查沒找到任何帶指紋的產出（掃過 " + scanned + " 個 .css），這次等於沒檢查。");
   }
 ' "$OUT"
 
