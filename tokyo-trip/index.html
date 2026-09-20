@@ -1857,6 +1857,30 @@
 
   let pins = {};
   try { pins = JSON.parse(localStorage.getItem(PINLS) || "{}"); } catch (_) {}
+  /* 開場跟人工表對一次帳。
+     `via` 是後來才加的標記,而**五個人的瀏覽器裡已經躺著一批沒有它的舊資料**:
+     一種是舊 pinFor() 寫下的表命中(值是對的,只是沒有標記),另一種是更早以前
+     「再查一次」拿線上結果蓋掉表的錯座標(值是錯的)。兩種都長得跟對的一模一樣,
+     光在寫入端補 via 修不到它們 —— `pinFor()` 開頭那句 `place in pins` 會直接回頭。
+
+     **不換快取 key。** 換 key(`57473b5` 那次的做法)會把大家辛苦查好的、跟這張表
+     無關的座標一起丟掉,然後每一顆重查一次、每次排隊 1.1 秒。這裡只動這張表
+     答得出來的那幾個 key,其餘一個字不碰。
+
+     對完帳之後,快取裡的值就跟「這台裝置第一次載入會算出來的值」一致 ——
+     也就是說**沒有人需要為了拿到正確座標去按「再查一次」**。 */
+  (() => {
+    let n = 0;
+    for (const k of Object.keys(pins)) {
+      const h = outsideHit(k);
+      if (!h) continue;
+      const cur = pins[k];
+      if (cur && cur.via === k && cur.la === h.lat && cur.lo === h.lon) continue;
+      pins[k] = { la: h.lat, lo: h.lon, via: k };
+      n++;
+    }
+    if (n) savePins();
+  })();
 
   /* 光丟名字過去,Google 會用「你人在哪」來猜 —— 點「輕井澤」跑出一堆台灣的火鍋店。
      但座標我們早就查到了,把地圖中心一起帶過去,它就只會在那附近找。 */
@@ -1885,7 +1909,12 @@
     /* 出東京的地方用天氣那份人工確認過的表,線上查詢對它們最不準 */
     const known = outsideHit(place);
     if (known) {
-      pins[place] = { la: known.lat, lo: known.lon };
+      /* **`via` 要一起存。** 它是「這顆座標來自人工表」的唯一標記,而介面靠它
+         決定講哪一句話(`paintFix` 的 `manual`)、以及要不要畫「再查一次」。
+         以前只掛在 outsidePin() 的回傳值上,一存進快取就掉 —— 於是
+         **凡是關鍵字寫在地點欄的那幾筆(TPE 桃園 T1、NRT 成田 T1、箱根…),
+         人工表那一句話永遠出不來**,只有標題命中那條路看得到。 */
+      pins[place] = { la: known.lat, lo: known.lon, via: place };
       savePins();
       return pins[place];
     }
@@ -1951,7 +1980,7 @@
          地點欄命中 → 把表的值寫回去,換掉任何線上蓋上來的錯座標;
          標題命中   → 清成 null,讓 pinOf 掉到標題那一步。
          `null` 不是 delete:null 在這份快取裡本來就有意思(查過了,沒有)。 */
-      if (item.place) { pins[item.place] = kp ? { la: kp.la, lo: kp.lo } : null; savePins(); }
+      if (item.place) { pins[item.place] = kp ? { la: kp.la, lo: kp.lo, via: kp.via } : null; savePins(); }
       return { at: known, area: false, manual: true, same: !!old && km(old, known) < 0.05 };
     }
     /* 線上那一端的候選只有地點欄(規則一)。以前標題也是候選,而那正是
