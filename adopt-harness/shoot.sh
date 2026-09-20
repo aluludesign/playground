@@ -1,11 +1,22 @@
 #!/bin/sh
 # 逐頁截圖。同一套資料、同一個流程,才比得出 CSS 有沒有壞。
 #   ./shoot.sh <標籤>        例:./shoot.sh baseline / ./shoot.sh layered
-# 來源固定取 tokyo-trip/ 的工作目錄現況;要截某個 commit 就先 git stash 或 checkout。
+# 來源預設取 tokyo-trip/ 的工作目錄現況。
+#
+# SRC= 可以改成別的來源樹(例如 `git worktree add` 出來的某個 commit):
+#   git worktree add /tmp/wt-8b4ee7c 8b4ee7c
+#   SRC=/tmp/wt-8b4ee7c/tokyo-trip ./shoot.sh pre-label-expform
+# 以前這裡是硬編碼的,要截某個 commit 的樣子只能 `git stash` 或 checkout ——
+# 也就是**動共用工作樹裡的 tokyo-trip/index.html**。這個 repo 同時有別的 session
+# 在動那個檔,而且「一塊一個人」的時候常常被明確要求不准碰它。
+# block-05 要拿新截圖回頭比對兩輪之前凍住的東西,沒有這個開關就只能二選一:
+# 要嘛動別人的檔,要嘛手寫一支一次性的截圖腳本(ADOPTION「工具還缺什麼」第 1 條
+# 那個累犯的形狀)。所以開關做進工具裡。
 set -e
 LABEL=${1:?用法: ./shoot.sh <標籤>}
 H=$(cd "$(dirname "$0")" && pwd)
-SRC=$H/../tokyo-trip
+SRC=${SRC:-$H/../tokyo-trip}
+SRC=$(cd "$SRC" && pwd)
 OUT=$H/shots/$LABEL
 CHROME="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 PORT=8999
@@ -38,8 +49,29 @@ trap 'rm -rf "$LOCK"; if [ -n "${SRV:-}" ]; then kill "$SRV" 2>/dev/null || true
 # 先重編再截圖。Tailwind 是 content-driven —— markup 用了新的 utility 而沒重編,
 # 那個 class 就不存在,樣式安靜消失。這件事必須是工具的一部分,不是人要記得的。
 if [ -f "$SRC/app.css" ]; then
-  ( cd "$H/../design-system" && ./build.sh ../tokyo-trip/app.css ../tokyo-trip/retro-modern.built.css ) \
-    | sed 's/^/  build: /'
+  # 編到 $SRC 自己身上,不要寫死 ../tokyo-trip —— SRC= 指到別的樹時,
+  # 寫死的話會「編主樹、截別的樹」,兩邊對不上而且不會有任何錯誤訊息。
+  # 注意:app.css 的 `@import "../design-system/..."` 是相對 $SRC 解析的,
+  # 所以 SRC= 指到 worktree 時用的是**那個 commit 的 design-system**,不是主樹的。
+# 重編的成敗**一定要看**。原本這裡是
+#     ( cd ... && ./build.sh ... ) | sed 's/^/  build: /'
+# —— `set -e` 之下,管線的結果是**最後一個指令**(sed)的結果,永遠是 0。
+# 所以 build.sh 失敗時它照樣往下跑,拿**上一次留在樹裡的舊 retro-modern.built.css**
+# 去截圖,而且一個字都不會多說。錯誤訊息確實有印出來,但它混在 build 的正常輸出裡,
+# 而那一段一路都被 `| tail`、`| grep` 接走 —— 又一次「訊號活著,沒有人站在它的頻道上」。
+# block-05 是這樣撞到的:SRC= 指到 git worktree,那棵樹的 design-system 沒有 node_modules,
+# tailwind 解不到 `tailwindcss/theme.css`,**兩批歷史截圖全部是用舊產出截的,而腳本說成功**。
+# (那一次結論沒被弄壞,是運氣:那幾個 commit 的 built.css 內容剛好一樣。)
+  if ( cd "$H/../design-system" && ./build.sh "$SRC/app.css" "$SRC/retro-modern.built.css" ) \
+       > "$H/.build.log" 2>&1; then
+    sed 's/^/  build: /' "$H/.build.log"; rm -f "$H/.build.log"
+  else
+    sed 's/^/  build: /' "$H/.build.log"; rm -f "$H/.build.log"
+    echo "✗ 重編失敗。這批不截 —— 再截下去用的是樹裡那份舊產出,而差異會被歸因到別的地方。" >&2
+    echo "  SRC= 指到 git worktree 的話,那棵樹的 design-system/ 要有 node_modules:" >&2
+    echo "    ln -s $H/../design-system/node_modules <worktree>/design-system/node_modules" >&2
+    exit 3
+  fi
 fi
 
 rm -rf "$H/.work" "$OUT" && mkdir -p "$H/.work" "$OUT"
@@ -60,6 +92,15 @@ R=$(git -C "$H" rev-parse --show-toplevel)
 DIRTY_DS=$(git -C "$R" status --porcelain -- design-system)
 {
   echo "截於      $(date '+%Y-%m-%d %H:%M:%S')"
+  # 來源要自己講一句。下面的 HEAD / 工作樹統計問的是**主工作樹**,SRC= 指到別的樹時
+  # 那幾行就跟這批圖無關了 —— 而它們看起來一模一樣。所以不是預設來源就大聲說,
+  # 並且另外印那棵樹自己的 HEAD。
+  echo "來源      $SRC"
+  if [ "$SRC" != "$(cd "$H/../tokyo-trip" && pwd)" ]; then
+    echo "⚠ 來源不是主工作樹 —— 下面的 HEAD / 工作樹是主樹的,不是這批圖的來源"
+    echo "來源HEAD  $(git -C "$SRC" log --oneline -1)"
+    echo "來源工作樹 $(git -C "$SRC" status --porcelain | wc -l | tr -d ' ') 個檔案有未提交的改動(含剛才重編的產出)"
+  fi
   echo "HEAD      $(git -C "$R" log --oneline -1)"
   echo "工作樹    $(git -C "$R" status --porcelain | wc -l | tr -d ' ') 個檔案有未提交的改動(整個 repo)"
   git -C "$R" status --porcelain | sed 's/^/          /'
@@ -193,9 +234,16 @@ shot 08-addstop-form     390 1100 "d.getElementById('add-stop-btn').click();"   
 shot 09-edit-dialog      390  900 "d.querySelector('[data-edit-stop]').click();" "#edit-overlay:not([hidden]) #edit-form input:3+,.stop:3+"
 
 kill $SRV 2>/dev/null || true
-if [ -n "$FAILED" ]; then
-  echo
-  echo "⚠ 有畫面是空的。這一批截圖不能拿來比對 —— 差異式檢查對「兩邊都空」全綠。"
-fi
 rm -rf "$H/.work"
 echo "→ $OUT"
+# 正向斷言掛掉的時候要**回傳非零**,不能只印一行警告。
+# block-04 把「每一次成功都回傳 1」修掉了,但沒有人檢查反過來的那一半:
+# 在那之後,不管幾張印 ✗,這支都還是回傳 0。也就是說 `./shoot.sh a && 比對`
+# 會在一批「有畫面是空的」的截圖上**照樣往下跑**,而差異式檢查對兩邊都空全綠 ——
+# 那正是這整套工具的「最貴的一個教訓」那一節在防的東西,而它的出口是開著的。
+# (block-05 用 SRC= 截歷史 commit 時看到的:10 / 11 印 ✗,腳本回傳 0。)
+if [ -n "$FAILED" ]; then
+  echo
+  echo "⚠ 有畫面是空的。這一批截圖不能拿來比對 —— 差異式檢查對「兩邊都空」全綠。" >&2
+  exit 4
+fi

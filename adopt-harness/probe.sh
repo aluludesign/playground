@@ -17,7 +17,11 @@ set -e
 JS=${1:?用法: ./probe.sh <js檔>}
 [ -f "$JS" ] || { echo "找不到 $JS" >&2; exit 1; }
 H=$(cd "$(dirname "$0")" && pwd)
-SRC=$H/../tokyo-trip
+# SRC= 可以指到別的來源樹(`git worktree add` 出來的某個 commit),跟 shoot.sh 同一個開關:
+#   SRC=/tmp/wt/tokyo-trip WIDTH=390 ./probe.sh probes/who.js
+# 沒有它的話,要量「兩輪之前那個值是多少」只能去動共用工作樹裡的 index.html。
+SRC=${SRC:-$H/../tokyo-trip}
+SRC=$(cd "$SRC" && pwd)
 CHROME="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 PORT=8998   # 跟 shoot.sh 的 8999 錯開
 
@@ -38,7 +42,24 @@ echo "pid $$ · $(date '+%Y-%m-%d %H:%M:%S') · probe $(basename "$JS")" > "$LOC
 trap 'rm -rf "$LOCK"; if [ -n "${SRV:-}" ]; then kill "$SRV" 2>/dev/null || true; fi' EXIT INT TERM
 
 if [ -f "$SRC/app.css" ]; then
-  ( cd "$H/../design-system" && ./build.sh ../tokyo-trip/app.css ../tokyo-trip/retro-modern.built.css ) >/dev/null
+  # 編到 $SRC 自己身上。寫死 ../tokyo-trip 的話,SRC= 指到別的樹時會變成
+  # 「編主樹、量別的樹」,而兩邊對不上不會有任何錯誤訊息。
+# 重編的成敗**一定要看**。原本這裡是
+#     ( cd ... && ./build.sh ... ) | sed 's/^/  build: /'
+# —— `set -e` 之下,管線的結果是**最後一個指令**(sed)的結果,永遠是 0。
+# 所以 build.sh 失敗時它照樣往下跑,拿**上一次留在樹裡的舊 retro-modern.built.css**
+# 去量,而且一個字都不會多說。錯誤訊息確實有印出來,但它混在 build 的正常輸出裡,
+# 而那一段一路都被 `| tail`、`| grep` 接走 —— 又一次「訊號活著,沒有人站在它的頻道上」。
+# block-05 是這樣撞到的:SRC= 指到 git worktree,那棵樹的 design-system 沒有 node_modules,
+# tailwind 解不到 `tailwindcss/theme.css`,**兩批歷史截圖全部是用舊產出截的,而腳本說成功**。
+# (那一次結論沒被弄壞,是運氣:那幾個 commit 的 built.css 內容剛好一樣。)
+  if ! ( cd "$H/../design-system" && ./build.sh "$SRC/app.css" "$SRC/retro-modern.built.css" ) \
+         > "$H/.build.log" 2>&1; then
+    sed 's/^/  build: /' "$H/.build.log" >&2; rm -f "$H/.build.log"
+    echo "✗ 重編失敗。這次不量 —— 再量下去問到的是樹裡那份舊產出。" >&2
+    exit 3
+  fi
+  rm -f "$H/.build.log"
 fi
 rm -rf "$H/.work" && mkdir -p "$H/.work"
 cp -r "$SRC/." "$H/.work/"
