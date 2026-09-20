@@ -480,6 +480,8 @@
     .seek-out .hit span{display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
       font-size:12px; color:var(--muted);}
     .seek-out .said{padding:9px 11px; font-size:12.5px; color:var(--muted);}
+    /* 已標定是「好消息」,跟查詢中／查無用同一個槽但要分得出來 */
+    .seek-out .said.ok{color:var(--ink);}
     .form-ops{display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap;}
 
     /* ---- settle ---- */
@@ -659,8 +661,10 @@
       <form class="form" id="stop-form" hidden>
         <div class="grid2">
           <div class="fld"><label class="rm-label" for="sf-time">時間</label><input class="rm-input" type="time" id="sf-time" required></div>
-          <div class="fld"><label class="rm-label" for="sf-title">做什麼</label><input class="rm-input" type="text" id="sf-title" placeholder="淺草寺參拜" required></div>
-          <div class="fld"><label class="rm-label" for="sf-place">地點／車站</label><div class="seek"><input class="rm-input" type="text" id="sf-place" placeholder="銀座線 淺草站"><button type="button" class="btn btn-sm" data-seek="sf-place">搜尋</button></div><div class="seek-out" id="sf-place-out" hidden></div></div>
+          <div class="fld"><label class="rm-label" for="sf-title">去哪／做什麼</label>
+            <div class="seek"><input class="rm-input" type="text" id="sf-title" placeholder="淺草寺" required>
+            <button type="button" class="btn btn-sm" data-seek="sf-title">搜尋</button></div>
+            <div class="seek-out" id="sf-title-out" hidden></div></div>
         </div>
         <div class="fld"><label class="rm-label" for="sf-note">備註</label><input class="rm-input" type="text" id="sf-note" placeholder="要先線上預約"></div>
         <div class="form-ops">
@@ -685,8 +689,10 @@
         <p class="wish-intro">想去哪裡先丟進來,不用等排好。誰都可以許願、可以幫別人的願望 +1。</p>
         <form class="form" id="wish-form" hidden>
           <div class="grid2">
-            <div class="fld"><label class="rm-label" for="wf-title">想去哪</label><input class="rm-input" type="text" id="wf-title" placeholder="teamLab" required></div>
-            <div class="fld"><label class="rm-label" for="wf-place">地點／車站</label><div class="seek"><input class="rm-input" type="text" id="wf-place" placeholder="teamLab 豐洲"><button type="button" class="btn btn-sm" data-seek="wf-place">搜尋</button></div><div class="seek-out" id="wf-place-out" hidden></div></div>
+            <div class="fld"><label class="rm-label" for="wf-title">想去哪</label>
+              <div class="seek"><input class="rm-input" type="text" id="wf-title" placeholder="teamLab" required>
+              <button type="button" class="btn btn-sm" data-seek="wf-title">搜尋</button></div>
+              <div class="seek-out" id="wf-title-out" hidden></div></div>
           </div>
           <div class="fld"><label class="rm-label" for="wf-by">你是誰</label><select class="rm-input" id="wf-by"></select></div>
           <div class="fld"><label class="rm-label" for="wf-note">想說的</label><input class="rm-input" type="text" id="wf-note" placeholder="可留白"></div>
@@ -816,8 +822,10 @@
     <h2>改這一項</h2>
     <div class="fld"><label class="rm-label" for="se-day">哪一天</label><select class="rm-input" id="se-day"></select></div>
     <div class="fld"><label class="rm-label" for="se-time">時間</label><input class="rm-input" type="time" id="se-time" required></div>
-    <div class="fld"><label class="rm-label" for="se-title">做什麼</label><input class="rm-input" type="text" id="se-title" required></div>
-    <div class="fld"><label class="rm-label" for="se-place">地點／車站</label><div class="seek"><input class="rm-input" type="text" id="se-place"><button type="button" class="btn btn-sm" data-seek="se-place">搜尋</button></div><div class="seek-out" id="se-place-out" hidden></div></div>
+    <div class="fld"><label class="rm-label" for="se-title">去哪／做什麼</label>
+      <div class="seek"><input class="rm-input" type="text" id="se-title" required>
+      <button type="button" class="btn btn-sm" data-seek="se-title">搜尋</button></div>
+      <div class="seek-out" id="se-title-out" hidden></div></div>
     <div class="fld"><label class="rm-label" for="se-note">備註</label><input class="rm-input" type="text" id="se-note"></div>
     <div class="err" id="se-err" hidden></div>
     <div class="ops">
@@ -1791,7 +1799,7 @@
     el("map-fix-t").textContent =
         manual && !found ? "「" + at.via + "」在人工確認過的表裡,但不在日本境內 —— 這張圖只畫日本的點"
       : manual ? "「" + at.via + "」用的是人工確認過的座標"
-      : !fixItem.place ? "「" + what + "」沒填地點,不會出現在地圖上"
+      : !fixItem.place ? "「" + what + "」還沒挑地點,不會出現在地圖上"
       : asking ? "「" + what + "」這個位置對嗎?"
       : found ? "「" + what + "」不在這裡?"
       : "「" + what + "」沒標上去";
@@ -2053,9 +2061,39 @@
     if (!r || !input) return;
     const name = hitName(r);
     input.value = name;
-    pins[name] = { la: +r.lat, lo: +r.lon, by: "pick" };
+    /* `at` 是地址那一行,狀態列要印它 —— **「已標定」光講名字不夠**:
+       使用者剛剛才從三間同名的裡面挑了一間,他要看到的是自己挑的是哪一間。 */
+    pins[name] = { la: +r.lat, lo: +r.lon, by: "pick", at: hitAddr(r) };
     savePins();
-    seekSay(id, "選好了:" + name + " —— 這一筆的位置以後不用再查。");
+    seekMark(id, name);
+  }
+
+  /* **這一欄挑過了嗎。** 兩欄合併之後,它就是「這一筆會不會上地圖」的唯一判準:
+     `by:"pick"` 只有 takeHit() 寫得出來,所以打字打不出一個假的已標定。
+     使用者挑完又去改字,`pins[改過的字]` 查不到,這裡自動回到沒標定 —— 不必另外清狀態。 */
+  const locatedAt = v => {
+    const at = v && pins[v];
+    return at && at.by === "pick" ? at : null;
+  };
+
+  /* 打開編輯時用的:這一筆本來就有 place(不論是挑的還是更早以前查到的),
+     在狀態列上講出來。挑過的印地址,舊的只印名字 —— **不要假裝舊的也是挑過的**。 */
+  function seekShowExisting(id, place) {
+    const box = seekBox(id);
+    if (!box) return;
+    if (!place) { seekClear(id); return; }
+    const at = locatedAt(place);
+    box.innerHTML = '<div class="said ok">✓ 已標定 · ' +
+      esc(at && at.at ? at.at : place) + "</div>";
+    box.hidden = false;
+  }
+
+  function seekMark(id, name) {
+    const box = seekBox(id), at = locatedAt(name);
+    if (!box) return;
+    if (!at) { seekClear(id); return; }
+    box.innerHTML = '<div class="said ok">✓ 已標定' + (at.at ? " · " + esc(at.at) : "") + "</div>";
+    box.hidden = false;
   }
 
   document.addEventListener("click", ev => {
@@ -2069,7 +2107,7 @@
      而且邊打邊搜會把「東京」這種打到一半的字送出去。**按下去才查,是刻意的。** */
   document.addEventListener("keydown", ev => {
     const t = ev.target;
-    if (!t || !t.id || !/^(sf|wf|se)-place$/.test(t.id) || ev.key !== "Enter") return;
+    if (!t || !t.id || !/^(sf|wf|se)-title$/.test(t.id) || ev.key !== "Enter") return;
     ev.preventDefault();   /* 不要順手送出整張表單 */
     runSeek(t.id);
   });
@@ -2184,7 +2222,9 @@
       /* 沒填地點,但**標題本身就在人工確認過的表裡**(「箱根」「桃園機場…報到」)——
          那一筆會上地圖,不可以再說「沒填地點,地圖上不會有它」,那是假的。 */
       const k = outsidePin(item.title);
-      if (!k) { say("「" + item.title + "」沒填地點,地圖上不會有它 —— 補上地點就會出現"); return; }
+      /* **文案跟著畫面改。** 兩欄合併之後畫面上沒有「地點欄」這個東西了,
+         說「補上地點」等於叫使用者去找一個不存在的欄位。現在該講的動作是「按搜尋挑一個」。 */
+      if (!k) { say("「" + item.title + "」還沒挑地點,地圖上不會有它 —— 按欄位旁邊的「搜尋」挑一個就會出現"); return; }
       if (!inJapan(k)) say("「" + item.title + "」不在日本境內,地圖上不會顯示");
       return;
     }
@@ -2848,15 +2888,19 @@
   el("sf-cancel").addEventListener("click", () => toggleForm("stop-form", false));
   el("stop-form").addEventListener("submit", ev => {
     ev.preventDefault();
-    const place = el("sf-place").value.trim();
+    const title = el("sf-title").value.trim();
+    /* **只有挑過的才有 `place`。** 兩欄合併之後這一行就是「程式不再自己猜」那個決定
+       的落點:沒挑就是空字串,而「沒有 place 就不查、不上地圖」是本來就有的規則。
+       所以拿掉自動猜測不必改地圖那條路 —— 只要改誰去填這一欄。 */
+    const place = locatedAt(title) ? title : "";
     addStop({
       id: uid(), day: state.day,
       time: el("sf-time").value,
-      title: el("sf-title").value.trim(),
+      title: title,
       place: place,
       note: el("sf-note").value.trim(),
     });
-    checkPlace({ place: place, title: el("sf-title").value.trim() }, "stop-msg");
+    checkPlace({ place: place, title: title }, "stop-msg");
     el("stop-form").reset();
     toggleForm("stop-form", false);
   });
@@ -3167,8 +3211,11 @@
     el("se-day").value = s.day || state.day;
     el("se-time").value = s.time || "";
     el("se-title").value = s.title || "";
-    el("se-place").value = s.place || "";
     el("se-note").value = s.note || "";
+    /* **既有的 `place` 要看得見,不然合併等於把它藏起來然後悄悄丟掉。**
+       標定過的那幾筆(挑過的、或以前查到座標的)在狀態列上講出來,
+       使用者不動它就留著,重新搜尋挑一個就換掉。 */
+    seekShowExisting("se-title", s.place);
     showEditError("");
     el("edit-overlay").hidden = false;
     el("se-title").focus();
@@ -3190,11 +3237,16 @@
     if (!title) { showEditError("總要寫個名字。"); return; }
     if (toMin(el("se-time").value) == null) { showEditError("時間格式不對。"); return; }
     const id = editing;
-    /* updateStop 是就地改的,存完再比就晚了 —— 先把舊日期抄成字串 */
-    const older = (state.stops.find(x => x.id === id) || {}).day;
+    /* updateStop 是就地改的,存完再比就晚了 —— 先把舊日期抄成字串。
+       **地點也一樣要先抄**:下面要判斷「標題沒動的話舊的 place 留著」。 */
+    const was = state.stops.find(x => x.id === id) || {};
+    const older = was.day;
     const day = el("se-day").value;
     const patch = { day: day, time: el("se-time").value, title: title,
-      place: el("se-place").value.trim(), note: el("se-note").value.trim() };
+      /* 三種情況:剛挑過 → 用挑的;沒挑但標題沒動 → 原來那個留著;
+         標題改了又沒挑 → 清空(舊的 place 講的是舊的地方,留著會標錯)。 */
+      place: locatedAt(title) ? title : (title === was.title ? (was.place || "") : ""),
+      note: el("se-note").value.trim() };
     editing = null;
     showEditError("");
     el("edit-overlay").hidden = true;
@@ -3238,7 +3290,7 @@
     const by = el("wf-by").value;
     if (!by) { showWishError("選一下你是誰,不然沒人知道這是誰許的。"); return; }
     setMe(by);
-    const place = el("wf-place").value.trim();
+    const place = locatedAt(title) ? title : "";
     addWish({
       id: uid(), title: title, place: place,
       note: el("wf-note").value.trim(), by: by, votes: [by],
