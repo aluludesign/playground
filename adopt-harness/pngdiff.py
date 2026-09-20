@@ -36,20 +36,44 @@ def load(path):
         out += line; prev = line
     return w, h, bpp, bytes(out)
 
-w1, h1, bpp, p1 = load(sys.argv[1])
-w2, h2, _,   p2 = load(sys.argv[2])
-if (w1, h1) != (w2, h2):
-    print(f"尺寸不同:{w1}x{h1} vs {w2}x{h2}"); sys.exit(1)
 
-rows = {}
-for y in range(h1):
-    o = y * w1 * bpp
-    n = sum(1 for x in range(0, w1*bpp, bpp) if p1[o+x:o+x+3] != p2[o+x:o+x+3])
-    if n: rows[y] = n
-tot = sum(rows.values())
-print(f"{w1}x{h1}  不同像素 {tot} / {w1*h1}  ({tot/(w1*h1)*100:.4f}%)")
-if rows:
+# 主程式包進 __main__。load() 以前跟它黏在同一層,一 import 就會去讀 sys.argv[1]
+# 然後炸掉,所以別的工具重用不了(crop.py 就是為了這個才踩到)。
+# 直接執行的行為完全不變。
+def main():
+    w1, h1, bpp, p1 = load(sys.argv[1])
+    w2, h2, _,   p2 = load(sys.argv[2])
+    if (w1, h1) != (w2, h2):
+        print(f"尺寸不同:{w1}x{h1} vs {w2}x{h2}"); sys.exit(1)
+
+    rows = {}
+    for y in range(h1):
+        o = y * w1 * bpp
+        n = sum(1 for x in range(0, w1*bpp, bpp) if p1[o+x:o+x+3] != p2[o+x:o+x+3])
+        if n: rows[y] = n
+    tot = sum(rows.values())
+    print(f"{w1}x{h1}  不同像素 {tot} / {w1*h1}  ({tot/(w1*h1)*100:.4f}%)")
+    if not rows:
+        return
     ys = sorted(rows)
     print(f"  出現在 y={ys[0]}..{ys[-1]},共 {len(ys)} 列")
     top = sorted(rows.items(), key=lambda kv: -kv[1])[:6]
     print("  差最多:", ", ".join(f"y={y}({n}px)" for y, n in top))
+
+    # 連續的列切成群。只講「y=a..b」對帳不了 ——「差異出現在 793..2089」可能是
+    # 一整片往下推,也可能是四個分開的小塊,兩者意思完全不同。
+    # (`ADOPTION.md`「工具還缺什麼」第 2 條。給列群,還沒給 x 方向的區域。)
+    groups, start, prev = [], ys[0], ys[0]
+    for y in ys[1:]:
+        if y - prev > 3:
+            groups.append((start, prev)); start = y
+        prev = y
+    groups.append((start, prev))
+    print(f"  切成 {len(groups)} 群:")
+    for a, b in groups:
+        n = sum(rows[y] for y in range(a, b + 1) if y in rows)
+        print(f"    y={a}..{b}  ({b-a+1} 列, {n}px)")
+
+
+if __name__ == "__main__":
+    main()

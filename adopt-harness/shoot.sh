@@ -10,6 +10,25 @@ OUT=$H/shots/$LABEL
 CHROME="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 PORT=8999
 
+# 同一時間只准一隻在截圖。理由不是禮貌 —— 這支腳本碰的每一樣東西都是共用的:
+# 硬編碼的單一 PORT、單一 .work/(而且第一件事就是 rm -rf 它)、
+# 以及上面那行 build 直接寫進工作樹的那份被追蹤的 retro-modern.built.css。
+# 兩隻同時跑,後跑的會 rm -rf 掉前一隻正在用的目錄,前一隻於是拍到一半舊一半新,
+# 或者對著空目錄拍 —— 而兩邊都不會收到任何錯誤訊息。
+# 那正是這整套工具存在的理由(無聲失敗),卻長在工具自己身上。
+# 所以寧可大聲拒絕,不要安靜覆蓋。mkdir 是原子的,兩隻搶同一個只有一隻會成功。
+LOCK=$H/.lock
+if ! mkdir "$LOCK" 2>/dev/null; then
+  echo "✗ 另一隻 shoot.sh 正在跑,這次不截。" >&2
+  echo "  持有者: $(cat "$LOCK/owner" 2>/dev/null || echo 不明)" >&2
+  echo "  兩隻同時跑會無聲汙染彼此的截圖(共用 .work/、共用埠 ${PORT}、共用產出檔)。" >&2
+  echo "  確定那一隻已經死了,就 rm -rf $LOCK 再試。" >&2
+  exit 2
+fi
+echo "pid $$ · $(date '+%Y-%m-%d %H:%M:%S') · 標籤 $LABEL" > "$LOCK/owner"
+# 中途死掉也要放鎖,順便把 http server 收乾淨(原本只在正常結束時 kill)。
+trap 'rm -rf "$LOCK"; [ -n "${SRV:-}" ] && kill "$SRV" 2>/dev/null; true' EXIT INT TERM
+
 # 先重編再截圖。Tailwind 是 content-driven —— markup 用了新的 utility 而沒重編,
 # 那個 class 就不存在,樣式安靜消失。這件事必須是工具的一部分,不是人要記得的。
 if [ -f "$SRC/app.css" ]; then
@@ -23,12 +42,32 @@ cp -r "$SRC/." "$H/.work/"
 # 這支腳本截的是「工作目錄現在長什麼樣」,不是某個 tag 或 commit。
 # 忘了這件事的症狀是「比對永遠通過」—— 比失敗危險得多,因為它看起來像成功。
 # 所以每組截圖旁邊留一份出處,事後回頭看得出這批是站在哪裡截的。
+#
+# 出處要涵蓋「會被烘進這批截圖的每一個來源」,而那不只 tokyo-trip/。
+# 這裡原本寫的是 `git -C "$SRC" status --porcelain -- .`:cwd 在 tokyo-trip/,
+# `-- .` 把範圍限死在那個目錄。但上面那行 build 是從 design-system/ 編出來的,
+# 而且是在 .work/ 複本拷貝**之前**就寫進樹裡 —— 所以 design-system/ 的未提交改動
+# 會被編進產出、烘進每一張截圖,紀錄卻照樣印「0 個檔案有未提交的改動」。
+# 「一輪進行中 design-system 要凍結」那條規則因此從來沒有儀器在背後撐著:
+# 凍結被打破的時候,九張全部會變,而出處說一切乾淨。
+R=$(git -C "$H" rev-parse --show-toplevel)
+DIRTY_DS=$(git -C "$R" status --porcelain -- design-system)
 {
   echo "截於      $(date '+%Y-%m-%d %H:%M:%S')"
-  echo "HEAD      $(git -C "$SRC" log --oneline -1)"
-  echo "工作樹    $(git -C "$SRC" status --porcelain -- . | wc -l | tr -d ' ') 個檔案有未提交的改動"
-  git -C "$SRC" status --porcelain -- . | sed 's/^/          /'
-  echo "stash     $(git -C "$SRC" stash list | wc -l | tr -d ' ') 筆"
+  echo "HEAD      $(git -C "$R" log --oneline -1)"
+  echo "工作樹    $(git -C "$R" status --porcelain | wc -l | tr -d ' ') 個檔案有未提交的改動(整個 repo)"
+  git -C "$R" status --porcelain | sed 's/^/          /'
+  echo "會烘進圖  $(git -C "$R" status --porcelain -- tokyo-trip design-system | wc -l | tr -d ' ') 個(只算 tokyo-trip/ 與 design-system/)"
+  # 相依單獨列一行。build 是從 design-system/ 跑的,而且在 .work/ 複本拷貝之前
+  # 就把產出寫進樹裡 —— 它的狀態完全決定這批圖長什麼樣,所以它要有自己的戳記。
+  echo "相依      design-system @ $(git -C "$H/../design-system" log --oneline -1)"
+  echo "相依工作樹 $(git -C "$R" status --porcelain -- design-system | wc -l | tr -d ' ') 個檔案有未提交的改動"
+  echo "stash     $(git -C "$R" stash list | wc -l | tr -d ' ') 筆"
+  # 注意 `&&` 不能是這個區塊的最後一句 —— set -e 之下,乾淨時它回非零,整支腳本會
+  # 在這裡無聲結束。用 if 寫,不要省。
+  if [ -n "$DIRTY_DS" ]; then
+    echo "⚠ design-system/ 不乾淨 —— 這批圖裡有未提交的 design-system 改動,差異無法歸因"
+  fi
 } > "$OUT/PROVENANCE.txt"
 echo "出處:"; sed 's/^/  /' "$OUT/PROVENANCE.txt"
 
