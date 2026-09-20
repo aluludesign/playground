@@ -64,6 +64,7 @@ w.fetch = function (url, init) {
 };
 
 function pins() { return JSON.parse(w.localStorage.getItem("tokyo5-pin3") || "{}"); }
+function pinsOf(k) { return pins()[k]; }
 function bar() { return q("#map-fix"); }
 function barText() { return q("#map-fix-t").textContent; }
 function approxPins() {
@@ -102,6 +103,14 @@ function approxPins() {
       pins()["淺草寺"]);
     ok("`null`(查過了,沒有)也沒有被當成要修的東西",
       pins()["泡溫泉"] === null && "泡溫泉" in pins(), pins()["泡溫泉"]);
+
+    /* 反方向:表會變(`富士` 被拆掉過),那些**聲稱來自人工表、而表已經不認得**
+       的舊資料要被清掉,不然錯的座標永遠留著 —— 上面那圈只看表答得出來的 key,
+       碰不到它們。 */
+    ok("表不再認得的舊表資料被清掉(富士電視台,曾經被 `富士` 拉到河口湖)",
+      !("富士電視台" in pins()), pins()["富士電視台"]);
+    ok("而且是 delete 不是寫 null(null 會讓它再也不去問線上)",
+      pins()["富士電視台"] === undefined, JSON.stringify(pins()).slice(0, 160));
 
     // 2 ---- 從 DAY 那顆按鈕開地圖 = 06 那張截圖的狀態 ----
     q("#day-map-btn").click();
@@ -460,6 +469,60 @@ function approxPins() {
     ok("成田那一顆 pin 還在(收起按鈕不等於失去座標)",
       !!pins()["NRT 成田 T1"] && pins()["NRT 成田 T1"].via === "NRT 成田 T1",
       pins()["NRT 成田 T1"]);
+
+    // 11c ---- 把 `富士` 從表裡拆掉(量測之後改的,見 table-vs-apis.js) ----
+    /* `富士` 是子字串比對,所以「富士電視台」(台場)會被拉到河口湖 ——
+       量到差 151km,而同一個字串 Nominatim 只差 0.03km。**表在那一筆上是
+       比較差的答案**,所以 key 改成 `富士山`。
+
+       **這幾條測的是看得見的行為,不是內部函式。** 第一版寫的是
+       `w.eval('outsideHit("富士電視台")')` —— 那兩個函式不在全域,第一條因為我加了
+       `typeof` 保護而回 ✓(**又一個假綠燈:它證明的是函式碰不到,不是行為對**),
+       第二條直接 ReferenceError 把整支探針炸掉,126 條只跑到 111 條。
+       表有沒有接住一個字串,**看得見的證據是「有沒有發出線上查詢」**。 */
+    flashes.length = 0; asked.length = 0;
+    var osmB11c = osm.length;
+    osmReply = [{ lat: "35.6267", lon: "139.7745" }];   /* 台場,線上那家答得出來 */
+    q("#add-wish-btn").click();
+    q("#wf-title").value = "看電視台";
+    q("#wf-place").value = "富士電視台";
+    q("#wf-by").value = "hsieh_chinhui";
+    q("#wf-submit").click();
+    await until(function () {
+      return [].slice.call(d.querySelectorAll("#wish-list [data-wish]"))
+        .some(function (r) { return /看電視台/.test(r.textContent); });
+    });
+    await until(function () { return osm.length > osmB11c; });
+    ok("表不再接住「富士電視台」→ 它掉到線上查詢(表接住的話一次都不會發)",
+      osm.length > osmB11c, { 之前: osmB11c, 送出的: osm.slice(osmB11c) });
+    ok("而且問的就是那個字串", /%E5%AF%8C%E5%A3%AB|富士/.test(osm.slice(osmB11c).join(" ")),
+      osm.slice(osmB11c));
+    /* **等的是「答案存好」,不是「查詢送出」。** 第一版等 `osm.length` 變多就斷言,
+       而那時 fetch 才剛送出,`pins` 還沒寫 —— 量到 undefined。
+       今天第三次同型的錯了:**等待條件要選在你要量的那個東西身上。** */
+    ok("拿到的是線上那家的答案(台場),不是表裡的河口湖",
+      await until(function () { return !!pinsOf("富士電視台"); }) &&
+      Math.abs(pinsOf("富士電視台").la - 35.6267) < 0.01 && !pinsOf("富士電視台").via,
+      pinsOf("富士電視台"));
+
+    /* 另一半:拆 key 不能把它本來該接住的東西一起拆掉。
+       「富士山」「河口湖」要照樣命中,而命中的證據同樣是**一次查詢都不發**。 */
+    var osmB11d = osm.length;
+    q("#add-wish-btn").click();
+    q("#wf-title").value = "爬山";
+    q("#wf-place").value = "富士山 五合目";
+    q("#wf-by").value = "hsieh_chinhui";
+    q("#wf-submit").click();
+    await until(function () {
+      return [].slice.call(d.querySelectorAll("#wish-list [data-wish]"))
+        .some(function (r) { return /爬山/.test(r.textContent); });
+    });
+    await sleep(300);
+    ok("「富士山 五合目」仍然被表接住(一次查詢都不發)",
+      osm.length === osmB11d, osm.slice(osmB11d));
+    ok("而且拿到的是表裡河口湖那組座標",
+      !!pinsOf("富士山 五合目") && Math.abs(pinsOf("富士山 五合目").la - 35.517) < 0.001,
+      pinsOf("富士山 五合目"));
 
     // 12 ---- 問題二:那句話講在使用者眼睛所在的地方 ----
     /* 上一輪那三句走的是 flash() → <footer> 裡的 #sync,10.5px 的小字。

@@ -16,7 +16,7 @@ Lulu 要的是「網站真的變成 retro-modern 的樣子」,不只是色調統
 | | |
 | --- | --- |
 | [現在做到哪](#現在做到哪) | 哪幾塊做完了、下一塊是什麼。**開工先跑那三行指令問線上狀態** |
-| [工具](#工具adopt-harness這份文件的同一個資料夾) | `shoot.sh` / `probe.sh` / `pngdiff.py` / `crop.py` 怎麼用 |
+| [工具](#工具adopt-harness這份文件的同一個資料夾) | `shoot.sh` / `probe.sh` / `pngdiff.py` / `crop.py` 怎麼用。另有 `table-vs-apis.js`(人工表 vs 三家地名查詢,**Google 那一欄要錢**,見 `table-vs-apis.md`)|
 | [這份文件為什麼住在 `adopt-harness/`](#這份文件為什麼住在-adopt-harness) | 掃描範圍會把你寫的字編成 CSS。**工程文件不要放 `tokyo-trip/`** |
 | [工具的陷阱](#工具的陷阱全部是踩出來的) | 十三條,全部是踩出來的。截到錯的東西、量到假的數字都在這裡。
 **第 10 條是「斷言和截圖不是同一趟」;第 12 條是「迴歸斷言的期望值不要從現況抄」** |
@@ -52,6 +52,7 @@ Lulu 要的是「網站真的變成 retro-modern 的樣子」,不只是色調統
 | ✅ 第四塊:`.fld input/select/textarea` → `rm-input` | 七張零差異、08/09 變,對帳命中 13 落空 0 **清單外 3**(都處理了)。Lulu 的決定:保留手機 16px 覆寫、刪桌機基底規則。連帶修好 harness 兩個缺口。見 `block-04-input.md`。**iOS 放大行為工具驗不到,但 Lulu 已在 iPhone 上實測過,沒有放大,見下** |
 | ✅ 第五塊:補第 10 / 11 張截圖 | **一個樣式都沒改**,九張逐位元組相同。`#exp-form` / `#exp-edit-overlay` 第一次被打開:16 個欄位、10 個成員膠囊、10 個核取方塊都有畫面了。**回頭驗過第三、四塊凍住的東西,守住了**。連帶修好 harness 兩個坑、給 `pngdiff` / `crop` / `probe` 各加一個開關。見 `block-05-expform-shot.md` |
 | ✅ 修回歸:`via` 在寫進快取那一刻掉了 | Lulu 真機回報「桃園按了只說沒標上去」。**人工表那句話只有標題那條路講得出來**,關鍵字寫在地點欄的(TPE／NRT／箱根…)全部講不出來,而且「再查一次」該收起來卻沒收。連帶清掉一顆會插在東京車站的幽靈 pin。探針 114 → **126**(修改前跑,10 條掛)。見 `geocode-via-in-cache.md` |
+| ✅ 人工表 vs 開放 API 的量測 | Lulu 問「可以都用 google map 嗎」。20 組 × 3 家量完:**表留著**,而且理由跟準確度無關(三家的錯不重疊、同名地點與非地名字串是結構上答不出來的、Google 是唯一會硬給答案的)。順帶把 `富士` 拆成 `富士山`。探針 126 → **133**。見 `table-vs-apis.md` |
 | ⏸ 第六塊 | **`.who` 那一整組**,擋了兩輪的理由已經消失。見「怎麼挑一塊」 |
 | ⏸ 字型 | **排最後**,見下 |
 
@@ -970,7 +971,8 @@ ok("...", await until(function () { return /人工確認過的表裡/.test(barTe
 
 | 組 | 狀態 |
 | --- | --- |
-| `shots/via-fix` | ✅ **最新的乾淨基準**(`geocode-via-in-cache` 之後)。`01`–`10` 與 `shots/gx-after` 逐位元組相同,`11` 落在已登記雙穩態的狀態 A。連跑兩次,只有 `11` 在兩個狀態間跳 |
+| `shots/fuji-split` | ✅ **最新的乾淨基準**(`table-vs-apis` 之後)。`01`–`10` 與 `shots/via-fix` 逐位元組相同,`11` 落在已登記雙穩態 |
+| `shots/via-fix` | ✅ 上一個乾淨基準(`geocode-via-in-cache` 之後)。`01`–`10` 與 `shots/gx-after` 逐位元組相同,`11` 落在已登記雙穩態的狀態 A。連跑兩次,只有 `11` 在兩個狀態間跳 |
 | `shots/psf-rep1` / `psf-rep2` / `prefix-samefixture` | ⚠ 負向對照,不是基準:`SRC=` 指到修之前那個 commit + **這一輪的新 fixture**,三趟雜湊完全相同(`cc553fca`),07 印的是 `行程 8`(多兩顆幽靈 pin)。留著當「修好之前真的不一樣、而且那個不一樣是決定性的」的證據 |
 | `shots/gx-after` | ✅ **最新的乾淨基準**(`geocode-outside-and-notice` 之後,工作樹只有那一輪自己的檔)。**11 張全 `✓`**,連跑三次逐位元組相同;`01`–`10` 與 `shots/gx-base` / `gc-after` / `expform` 也逐位元組相同,`11` 落在已登記雙穩態的狀態 A(= `shots/expform` 那一邊) |
 | `shots/gx-negctl` | ⚠ 負向對照,不是基準:用 `SRC=` 指到修之前那個 commit + **新的** 07 門檻(7)跑出來的,07 印 `✗ 只有 4 個`,整支 `exit=4`。留著當「門檻升回去是有東西撐著的」那句話的證據 |
@@ -988,7 +990,7 @@ ok("...", await until(function () { return /人工確認過的表裡/.test(barTe
 | `shots/wired` | ⚠ 同上 |
 | `shots/negctl2` | 負向對照的證據,九張全 `✗`,不是基準 |
 
-**下一塊的基準用 `shots/via-fix`**(最新的一組)。
+**下一塊的基準用 `shots/fuji-split`**(最新的一組)。
 會動到地圖的話絕對不要用 `block01`。
 
 > **這一行是這份文件唯一該寫基準名的地方。** 最上面那張索引以前也寫了一個,
