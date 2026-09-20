@@ -3576,27 +3576,44 @@
   (function initGrip() {
     const grip = el("map-grip"), sheet = el("map-sheet");
     let dragging = false;
+    /* **拖曳中最後看到的那個寬度。** 放開時不再從 `ev.clientX` 反推 ——
+       `pointercancel` 的座標可能是 0(那會吸到最寬那一檔),而在視窗外放開時
+       座標也不可靠。記下來的這個值是我們自己算的,永遠對。 */
+    let liveW = 0;
     grip.addEventListener("pointerdown", ev => {
       dragging = true;
+      liveW = sheet.getBoundingClientRect().width;
       sheet.classList.add("sizing");
       document.body.classList.add("sizing-now");
+      /* 抓得到最好(移動會集中送過來),**抓不到也不影響收尾** —— 收尾綁在 window 上。
+         以前這個 try/catch 是無聲的,而抓不到就等於整個拖曳沒有結束的那一刻。 */
       try { grip.setPointerCapture(ev.pointerId); } catch (_) {}
       ev.preventDefault();
     });
-    grip.addEventListener("pointermove", ev => {
+    /* **移動和放開都綁在 window 上,不是綁在那條 14px 的握把上。**
+       量到的(探針,真的把 pointerup 丟在 body 上):
+       在握把上放開 → 700 吸到 640;**在別的元素上放開 → 停在 500,完全沒有吸附**。
+       而 `setPointerCapture` 回報 `false` —— 它失敗了,而 try/catch 把那件事吞掉。
+       拖曳一開始游標就離開那 14px 了,所以「放開落在握把上」本來就是少數情況。
+       Lulu 在真的瀏覽器上拖一次就翻出來了,而我的探針把三個事件都丟在握把上,
+       量到的是一條沒有人會走的路。 */
+    window.addEventListener("pointermove", ev => {
       if (!dragging) return;
-      applyDrawer(Math.max(STEPS[0] * 0.6, Math.min(window.innerWidth * 0.82, window.innerWidth - ev.clientX)));
+      liveW = Math.max(STEPS[0] * 0.6, Math.min(window.innerWidth * 0.82, window.innerWidth - ev.clientX));
+      applyDrawer(liveW);
       repaintMap();
     });
-    function stop(ev) {
+    function stop() {
       if (!dragging) return;
       dragging = false;
       sheet.classList.remove("sizing");
       document.body.classList.remove("sizing-now");
-      setDrawK(nearestStep(window.innerWidth - ev.clientX));
+      setDrawK(nearestStep(liveW));
     }
-    grip.addEventListener("pointerup", stop);
-    grip.addEventListener("pointercancel", stop);
+    window.addEventListener("pointerup", stop);
+    window.addEventListener("pointercancel", stop);
+    /* 指標離開瀏覽器視窗之後放開,`pointerup` 不一定回得來 —— 補這一條收尾。 */
+    window.addEventListener("blur", stop);
   })();
   /* 使用者說「不對」的那一下。這是整條退路唯一的觸發點 ——
      沒有人按,就一次查詢都不會發出去(那一端每查一次都要錢)。 */

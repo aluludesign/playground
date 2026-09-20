@@ -22,15 +22,62 @@ async function until(fn, tries) {
 var STEPS = [360, 480, 620, 800], MINMAIN = 320;
 var iw = w.innerWidth;
 var want = function (k) { return Math.max(260, Math.min(STEPS[k - 1], iw - MINMAIN)); };
+/* **量 `--drawer`,不要量 `getBoundingClientRect()`。**
+
+   `applyDrawer()` 是同步寫進 `--drawer` 的,那是**狀態**;
+   而 `.sheet` 上有 `transition: width .18s`,所以 rect 讀到的是**動畫跑到一半的值**。
+
+   這害我把一個會動的修法判成壞的。量到的(診斷探針):
+
+   | | css 變數 | rect |
+   | --- | --- | --- |
+   | 放開當下 | **480px** | 520 |
+   | 350ms 後 | 480px | 480 |
+
+   而且它是**間歇的**:探針前面做得越多,`--virtual-time-budget` 剩得越少,
+   過場就越可能完全不推進,rect 於是一直停在拖曳時那個值。
+   第一版探針(斷言少)過了,這一版(斷言多)沒過,**而程式是好的**。
+
+   判準:**量一個有過場動畫的東西時,先問你要的是狀態還是畫面。**
+   要狀態就讀來源(CSS 變數、dataset、localStorage);
+   要畫面就得等動畫結束,而那在虛擬時間下不保證會發生。 */
 function drawerPx() {
-  return Math.round(d.getElementById("map-sheet").getBoundingClientRect().width);
+  var v = w.getComputedStyle(d.documentElement).getPropertyValue("--drawer").trim();
+  return Math.round(parseFloat(v) || 0);
 }
-function drag(toWidth) {
+/* **拖曳要照真人的事件路徑走,不是三個事件都丟在握把上。**
+
+   第一版就是那樣寫的,9 條全過,而 Lulu 在真的瀏覽器上拖一次就翻掉了 ——
+   放開之後抽屜停在原地,沒有吸附。
+
+   量出來的對照(這支探針自己跑的):
+
+   | 在哪裡放開 | 結果 |
+   | --- | --- |
+   | 握把上 | 700 → 吸到 640 ✓ |
+   | **body 上** | **500 → 500,完全沒有吸附** |
+
+   而且 `grip.hasPointerCapture(1)` 回 **false** —— `setPointerCapture` 失敗了,
+   而它包在 try/catch 裡,**失敗是無聲的**。
+   拖曳一開始游標就離開那條 14px 的握把了,所以「放開落在握把上」
+   本來就是少數情況 —— 第一版的探針量的是一條沒有人會走的路。
+
+   **判準(給下一個要測互動的人):** 合成事件對「點一下」夠用;
+   對**拖曳**不夠,因為拖曳的語意有一半在「指標抓取」和「事件落在誰身上」,
+   而那正是合成事件最不像真人的地方。**把落點當成變數測一次**,
+   兩種落點結果不同,就代表你的測法本身是那個結果的成因之一。 */
+var pid = 0;
+function drag(toWidth, releaseOn) {
   var grip = d.getElementById("map-grip");
   var x = iw - toWidth;
-  ["pointerdown", "pointermove", "pointerup"].forEach(function (t) {
-    grip.dispatchEvent(new w.PointerEvent(t, { clientX: x, bubbles: true, cancelable: true, pointerId: 1 }));
-  });
+  pid++;
+  var mk = function (t, cx) {
+    return new w.PointerEvent(t, { clientX: cx, bubbles: true, cancelable: true, pointerId: pid, isPrimary: true });
+  };
+  grip.dispatchEvent(mk("pointerdown", iw - Math.round(d.getElementById("map-sheet").getBoundingClientRect().width)));
+  /* 移動丟在 window 上 —— 真人的游標這時早就不在握把上了 */
+  w.dispatchEvent(mk("pointermove", x));
+  (releaseOn === "grip" ? grip : d.body).dispatchEvent(mk("pointerup", x));
 }
 
 (async function () {
@@ -57,34 +104,50 @@ function drag(toWidth) {
       ? "測得到(四檔在這個寬度下不同寬)"
       : "**恆真,沒測到東西** —— 這個寬度下四檔被夾成同一個值 " + want(2) + "px";
     var mid23 = (want(2) + want(3)) / 2;
-    drag(Math.round(mid23) - 30);
-    await sleep(350);
+    drag(Math.round(mid23) - 30, "body");
+    await sleep(60);
     ok("拖到第 2、3 檔中間偏小 → 吸到第 2 檔",
       drawerPx() === want(2), { 量到: drawerPx(), 該是: want(2) });
-    drag(Math.round(mid23) + 30);
-    await sleep(350);
+    drag(Math.round(mid23) + 30, "body");
+    await sleep(60);
     ok("拖到第 2、3 檔中間偏大 → 吸到第 3 檔",
       drawerPx() === want(3), { 量到: drawerPx(), 該是: want(3) });
 
-    drag(50);
-    await sleep(350);
+    drag(50, "body");
+    await sleep(60);
     ok("往最窄拖 → 停在第 1 檔,不會消失",
       drawerPx() === want(1), { 量到: drawerPx(), 該是: want(1) });
-    drag(iw);
-    await sleep(350);
+    drag(iw, "body");
+    await sleep(60);
     ok("往最寬拖 → 停在第 4 檔,而且版面還留得到 " + MINMAIN + "px",
       drawerPx() === want(4) && iw - drawerPx() >= MINMAIN - 1,
       { 量到: drawerPx(), 該是: want(4), 剩下: iw - drawerPx() });
 
     /* 每一檔都要記得住:存的是檔位不是像素,重開抽屜要回到同一檔。 */
+    /* **落點對照:兩種放開方式要得到同一個結果。**
+       不同的話,測法本身就是結果的成因之一(第一版正是如此)。 */
+    drag(Math.round((want(1) + want(2)) / 2) + 20, "grip");
+    await sleep(60);
+    var onGrip = drawerPx();
+    drag(Math.round((want(1) + want(2)) / 2) + 20, "body");
+    await sleep(60);
+    ok("在握把上放開、在別的元素上放開 → 吸到同一檔(落點不可以改變結果)",
+      onGrip === drawerPx() && drawerPx() === want(2),
+      { 握把上: onGrip, body上: drawerPx(), 該是: want(2) });
+
     out.存的k = w.localStorage.getItem("tokyo5-drawer");
     ok("存的是檔位(1–4),不是像素", /^[1-4]$/.test(out.存的k || ""), out.存的k);
+    /* **期望值不要寫死檔位。** 第一版寫 `want(4)`,因為當時最後一次拖曳是拖到最寬;
+       後來在它前面插了「落點對照」那組,檔位變成 2,而斷言沒跟著改 ——
+       **紅的是斷言過期,不是程式壞掉**。改成「回到剛才那一個」就不會再過期。 */
+    var beforeClose = drawerPx();
     d.getElementById("map-sheet-x").click();
     await sleep(120);
     d.getElementById("day-map-btn").click();
     await until(function () { return !d.getElementById("map-sheet").hidden; });
-    await sleep(350);
-    ok("關掉再打開 → 回到同一檔", drawerPx() === want(4), { 量到: drawerPx(), 該是: want(4) });
+    await sleep(60);
+    ok("關掉再打開 → 回到關掉之前那一檔",
+      drawerPx() === beforeClose, { 關掉前: beforeClose, 打開後: drawerPx() });
   } catch (e) {
     out.爆掉了 = String((e && e.stack) || e);
   }
