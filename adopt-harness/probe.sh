@@ -1,6 +1,7 @@
 #!/bin/sh
 # 在真實 DOM 上量東西。
-#   ./probe.sh <js檔>      例:./probe.sh probes/labels.js
+#   ./probe.sh <js檔>              例:./probe.sh probes/labels.js
+#   WIDTH=390 ./probe.sh <js檔>    在手機寬度量(見下面 WIDTH 那段)
 #
 # 為什麼要有這支:`ADOPTION.md`「工具還缺什麼」的第 1 條 —— 那一節的每個陷阱
 # (canvas 不觸發網頁字體、fonts.check() 說謊、unicode-range 說不出本機字體、
@@ -28,7 +29,13 @@ if ! mkdir "$LOCK" 2>/dev/null; then
   exit 2
 fi
 echo "pid $$ · $(date '+%Y-%m-%d %H:%M:%S') · probe $(basename "$JS")" > "$LOCK/owner"
-trap 'rm -rf "$LOCK"; [ -n "${SRV:-}" ] && kill "$SRV" 2>/dev/null; true' EXIT INT TERM
+# `A && B` 不能是這裡的最後一句,而且末尾補一個 `; true` 擋不住 —— set -e 在 trap
+# 裡面照樣有效,kill 失敗時整個 `[ ] && kill` 複合句就是失敗,trap 在那裡中止,
+# 後面的 true 根本沒跑到,腳本於是**成功收工卻回傳 1**。
+# (shoot.sh 正常結束時會先 kill 一次 SRV,所以 trap 跑到時那個 pid 一定是死的
+#  —— 也就是說這兩支腳本每一次成功都回傳 1,而輸出被 pipe 掉就看不見。)
+# block-03 在 PROVENANCE 那個區塊修過同一個坑,三行外的 trap 裡還有一個。
+trap 'rm -rf "$LOCK"; if [ -n "${SRV:-}" ]; then kill "$SRV" 2>/dev/null || true; fi' EXIT INT TERM
 
 if [ -f "$SRC/app.css" ]; then
   ( cd "$H/../design-system" && ./build.sh ../tokyo-trip/app.css ../tokyo-trip/retro-modern.built.css ) >/dev/null
@@ -52,11 +59,18 @@ cd "$H/.work" && python3 -m http.server $PORT >/dev/null 2>&1 &
 SRV=$!
 sleep 1
 
-# 探針跑在 1100px 寬:桌機版把 <details class="board"> 之類的東西打開,盤點才涵蓋得到。
+# 預設跑在 1100px 寬:桌機版把 <details class="board"> 之類的東西打開,盤點才涵蓋得到。
 # 但 ——「量得到」不等於「截得到」,見 block-02-mono 登記的陷阱第 1 條。
+#
+# WIDTH= 可以改寬度,而這不是方便功能,是正確性:`index.html` 有一整段
+# @media (max-width:640px) 的覆寫,而**九張裡有七張是 390px**(含 08 / 09 這兩張
+# 表單圖)。只能在 1100px 量的探針,量到的是那七張根本看不到的那一套值 ——
+# block-04 的主角就是 :521 那條手機覆寫,在 1100px 上它不存在。
+#   WIDTH=390 ./probe.sh probes/inputs.js
+WIDTH=${WIDTH:-1100}
 {
   echo '<!doctype html><meta charset="utf-8"><body style="margin:0">'
-  echo '<iframe id="f" src="/index.html" style="width:1100px;height:900px;border:0"></iframe>'
+  echo '<iframe id="f" src="/index.html" style="width:'"$WIDTH"'px;height:900px;border:0"></iframe>'
   echo '<pre id="r"></pre><script>'
   echo 'document.getElementById("f").onload = function(){'
   echo '  var d = this.contentDocument, w = this.contentWindow;'

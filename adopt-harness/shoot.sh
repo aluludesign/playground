@@ -27,7 +27,13 @@ if ! mkdir "$LOCK" 2>/dev/null; then
 fi
 echo "pid $$ · $(date '+%Y-%m-%d %H:%M:%S') · 標籤 $LABEL" > "$LOCK/owner"
 # 中途死掉也要放鎖,順便把 http server 收乾淨(原本只在正常結束時 kill)。
-trap 'rm -rf "$LOCK"; [ -n "${SRV:-}" ] && kill "$SRV" 2>/dev/null; true' EXIT INT TERM
+# `A && B` 不能是這裡的最後一句,而且末尾補一個 `; true` 擋不住 —— set -e 在 trap
+# 裡面照樣有效,kill 失敗時整個 `[ ] && kill` 複合句就是失敗,trap 在那裡中止,
+# 後面的 true 根本沒跑到,腳本於是**成功收工卻回傳 1**。
+# (shoot.sh 正常結束時會先 kill 一次 SRV,所以 trap 跑到時那個 pid 一定是死的
+#  —— 也就是說這兩支腳本每一次成功都回傳 1,而輸出被 pipe 掉就看不見。)
+# block-03 在 PROVENANCE 那個區塊修過同一個坑,三行外的 trap 裡還有一個。
+trap 'rm -rf "$LOCK"; if [ -n "${SRV:-}" ]; then kill "$SRV" 2>/dev/null || true; fi' EXIT INT TERM
 
 # 先重編再截圖。Tailwind 是 content-driven —— markup 用了新的 utility 而沒重編,
 # 那個 class 就不存在,樣式安靜消失。這件事必須是工具的一部分,不是人要記得的。
