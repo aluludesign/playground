@@ -38,54 +38,51 @@ Lulu 要的是「網站真的變成 retro-modern 的樣子」,不只是色調統
 
 ## 現在做到哪
 
+**這張表只記「哪一塊做完了」,不記「哪一塊上線了」。** 理由見下一節。
+
 | 狀態 | |
 | --- | --- |
-| ✅ 移除深色模式 | `ef364ce`,已上線 |
-| ✅ 309 條 CSS 包進 `@layer components` | `e890cf0`,視覺零改變,已上線 |
-| ✅ 接線(載入 design-system) | `b43a2f7`,視覺零改變,**已上線** |
-| ✅ 第一塊:`.chip` → `.rm-chip` | `c43340e`,只有花費頁變,**已上線** |
+| ✅ 移除深色模式 | `ef364ce` |
+| ✅ 309 條 CSS 包進 `@layer components` | `e890cf0`,視覺零改變 |
+| ✅ 接線(載入 design-system) | `b43a2f7`,視覺零改變 |
+| ✅ 第一塊:`.chip` → `.rm-chip` | `c43340e`,只有花費頁變 |
 | ✅ 正向斷言驗完 + 工具修正 | 見「補救:正向斷言」 |
-| ✅ `--font-mono` 的 CJK fallback | 補在 **tokyo-trip 自己那個 `--font-mono`** 上(不是 design-system)。九張全變,逐項對帳見 `block-02-mono.md`。**尚未推送** |
-| ⏸ 下一塊 | 建議 `.fld label` → `rm-label`(mono 已修好,不再是阻礙)。**還沒開始** |
+| ✅ `--font-mono` 的 CJK fallback | 補在 **tokyo-trip 自己那個 `--font-mono`** 上(不是 design-system)。九張全變,逐項對帳見 `block-02-mono.md` |
+| ✅ 第三塊:`.fld label` → `rm-label` | 七張零差異、08/09 變,對帳命中 7 落空 0 清單外 0。連帶修好 harness 兩個缺口、新增兩支工具。見 `block-03-label.md` |
+| ⏸ 下一塊 | 建議 `.fld input/select/textarea` → `rm-input`,理由見「怎麼挑一塊」。**還沒開始** |
 | ⏸ 字型 | **排最後**,見下 |
 
-### 線上現在是什麼
+### 線上現在是什麼:這份文件不回答這個問題
 
-**`origin/main` = `9262c9a`。接線和第一塊都已經推上去、也上線了。**
+**以前這裡寫著答案,而那個答案過期了兩次。**
 
-那五個人現在看到的是**載入了 design-system、花費頁用 `.rm-chip` 的版本**。
+第一次寫成「還沒推的:接線和第一塊」,寫下之後又推了一次,沒回頭更新。
+第二次寫成「`origin/main` = `9262c9a`、mono 尚未推送」,而 mono 那時早就上線,
+**那五個人已經看得到了**。兩次都是同一個結構問題:
+**把一個每次 push 都會變的事實,寫進一份不會自己更新的文件。**
 
-> **不要從未推送清單反推。** 這一段曾經寫成「還沒推的:接線和第一塊」,而那是錯的 ——
-> 寫下之後又推了一次,沒回頭更新。那會讓人對「現在線上是什麼」整個錯位,
-> 而那是判斷任何事情的起點。
->
-> 要知道線上有什麼,直接問:
->
-> ```sh
-> git rev-parse origin/main
-> git merge-base --is-ancestor <commit> origin/main && echo 已上線
-> curl -s https://playground-beta-liart.vercel.app/ | grep -o "rm-chip"
-> ```
->
-> 上面那三行在 2026-09-19 跑出來的答案是:`9262c9a`、四個 commit 全部已上線、
-> `rm-chip` 出現 3 次。**這份文件裡任何「線上是什麼」的敘述都要當成可能過期的。**
+而且第二次過期的時候,這一段下面就已經寫著「不要從未推送清單反推、要自己跑這三行」——
+**文件自己知道答案會過期,卻還是把答案留在上面。** 警告擋不住一個結構上就會壞的東西。
+
+所以現在這裡不留答案,只留產生答案的方法:
+
+```sh
+git rev-parse origin/main
+git merge-base --is-ancestor <commit> origin/main && echo 已上線
+curl -s https://playground-beta-liart.vercel.app/ | grep -o "rm-chip"
+```
+
+**每一輪開工前自己跑一次。** 如果你正想在這份文件裡寫下它們的輸出 —— 不要,
+那就是前兩次過期的寫法。
 
 **推不推是 Lulu 的決定,不是接手的人的。**
 
 ### 下一步的順序
 
-1. **`--font-mono` 的中文 fallback** —— 這件事的優先序被提前了。原本以為它還沒上線,
-   實際上花費頁的中文分類標籤現在就是 fallback 字體,那五個人看得到。
-   修法會改變**站上每一處 mono 中日文**的長相(不只 `.rm-chip`,共 19 個元素),
-   九張截圖全部會動,要自己驗一輪(預期差異事前登記)。
-
-   > **這裡原本寫成「等 design-system 修」,那是錯的。** design-system 的
-   > `--font-mono` 已經補上 CJK(`7214658`),重編之後九張**零差異** ——
-   > 因為 `tokyo-trip/index.html:30` 的**無層級 `:root`** 自己定義了 `--font-mono`,
-   > 無層級一律贏過 `@layer theme`,那個修正到不了任何元素。
-   > 要生效就得改 tokyo-trip 自己那一行。完整的辨識方法寫在
-   > `block-01-chip.md`,這一輪的登記與結果在 `block-02-mono.md`。
-2. 挑第二塊。判準見「怎麼挑一塊」。**建議 `.fld label` → `rm-label`**,理由見那一節
+1. **等協調者排序。** design-system 那邊要先做建置時的 token 撞名檢查,
+   那件事會影響之後每一塊(它決定 `--color-ink` 這種同名 token 由誰說了算)。
+   **第四塊不要自己開始。**
+2. 第四塊:建議 `.fld input/select/textarea` → `rm-input`。判準見「怎麼挑一塊」
 3. 字型**最後才做**。理由:字型一換,九張截圖全部不一樣;排在前面的話,後面每一塊
    都是在一個剛剛大幅變動過的基準上比對。排最後,前面每一塊都還能跟乾淨的基準比
 
@@ -101,13 +98,23 @@ Lulu 要的是「網站真的變成 retro-modern 的樣子」,不只是色調統
 
 ```
 shoot.sh        逐頁截 9 張圖(手機 + 桌機),每張附一條正向斷言
+probe.sh        在真實 DOM 上量東西,跑 probes/*.js,結果以 JSON 印出
+probes/         探針腳本。labels.js 是範本:盤點 + 逐項 computed 值 + 離群值
 fixture.py      固定的假資料 + 凍結時鐘
-pngdiff.py      逐像素比對,回報差異位置
+pngdiff.py      逐像素比對,回報差異位置與**列群**
+crop.py         把兩張圖的同一段 y 並排切出來,中間畫紅線 —— 用眼睛確認
 wrap-layer.py   一次性的,把內嵌樣式包進 @layer components(已經用過了)
 shots/          產出,不進版控(一組約 1.8MB,每輪重生)
 block-01-chip.md  第一塊的預測清單 + 實際結果,可以當範本
+block-02-mono.md  mono 中文後援那一輪(不是組件轉換,是修回歸)
+block-03-label.md 第三塊,附兩個工具缺口的修法與驗證
 ADOPTION.md     這份
 ```
+
+**`shoot.sh` 和 `probe.sh` 共用一把鎖,同一時間只有一隻跑得動。** 見「工具的陷阱 6」。
+
+`probe.sh` 跟 `shoot.sh` 站在同一個地基上(同樣先重編、同樣灌 `fixture.py`),
+所以**探針量到的數字和截圖是同一個世界**。沒有這一點,兩邊對不上帳。
 
 用法:
 
@@ -123,14 +130,15 @@ python3 pngdiff.py shots/a/01-plan-mobile.png shots/b/01-plan-mobile.png
 
 `block-02-mono` 那一輪列的,協調者同意做但排在之後。寫在這裡免得再被重新發現一次:
 
-1. **把「在真實 DOM 上量東西」的探針收進 `adopt-harness/`**(最有價值的一項)。
-   下面那節「量字體的四個陷阱」全部是文件,**沒有一支工具體現它們** ——
-   陷阱是文件、工具是程式碼,下一個人想問「這個元素的 computed font-family 是什麼」
-   還是得從零寫一支。`block-02-mono` 那一輪寫過一支(盤點 + `fonts` 狀態 + 逐字元類別
-   逐像素比對),但它留在暫存目錄裡,沒進 repo,現在已經沒了。
-2. **`pngdiff.py` 要給區域,不只給 y 範圍。** 現在只回報「差異出現在 y=a..b」,
-   要對帳「這個差異是哪個元素」必須自己寫分群 + 裁切 + 看圖。
-   那是 `block-02-mono` 那一輪花最多時間的部分。
+1. ✅ **把「在真實 DOM 上量東西」的探針收進 `adopt-harness/`** —— `block-03-label`
+   那一輪做了,就是 `probe.sh` + `probes/`。
+   > 這一項是個**累犯**:至少兩輪各自寫過一支一次性探針,寫完都留在暫存目錄裡弄丟,
+   > 下一個人又從零寫。收進 repo 才算修好。
+   > 但「量字體的四個陷阱」仍然只有文件、沒有對應的探針 ——
+   > 想量字體的人要自己照 `block-02-mono.md` 的做法寫一支 `probes/fonts.js`。
+2. 🔸 **`pngdiff.py` 要給區域** —— 做了一半。現在會把連續的列切成**列群**
+   (「11 群」比「y=793..2089」有用得多:分得出「一整片往下推」和「四個分開的小塊」)。
+   **還沒給 x 方向的區域**,所以「這個差異是哪個元素」還是要靠 `crop.py` 切出來看。
 3. **這份文件加目錄**,並把「這份文件為什麼住在 `adopt-harness/`」的故事
    移到「工具怎麼用」之後。那個故事有價值,但現在擋在所有可操作的東西前面。
 
@@ -147,8 +155,14 @@ python3 pngdiff.py shots/a/01-plan-mobile.png shots/b/01-plan-mobile.png
 
 **要截某個 commit 的樣子,先 `git stash` 你的改動。**
 
-每組截圖旁邊有 `PROVENANCE.txt`,記了截圖當下的 HEAD、工作樹有幾個檔沒提交、stash 幾筆。
+每組截圖旁邊有 `PROVENANCE.txt`,記了截圖當下的 HEAD、**整個 repo** 有幾個檔沒提交、
+其中幾個會被烘進圖(`tokyo-trip/` 與 `design-system/`)、相依的 HEAD 與髒不髒、stash 幾筆。
 事後回頭看得出這批是站在哪裡截的。
+
+> **它以前只數 `tokyo-trip/`。** `git -C "$SRC" status --porcelain -- .` 的 `-- .`
+> 把範圍限死在那個目錄,而 build 是從 `design-system/` 編出來的 ——
+> 「一輪進行中 design-system 凍結」那條規則因此長期**沒有任何儀器在背後撐著**。
+> `block-03-label` 那一輪修好,並且故意留一個髒改動驗過它真的會講出來。
 
 ### 2. 時鐘要凍,而且凍的方式本身會把 app 弄壞
 
@@ -292,6 +306,35 @@ document.fonts.forEach(f => console.log(f.family, f.status, f.unicodeRange))
 讓任何一列的差異都只代表那一列自己的字形變了。
 對帳站上的差異時,也要分清楚「這個像素差是字形差,還是被前面的中文推走的」。
 
+### 6. 這套工具自己不能兩隻同時跑
+
+**症狀:截圖一半是你的、一半是別人的,而兩邊都沒有錯誤訊息。**
+
+`shoot.sh` 碰的每一樣東西都是共用的:
+
+```
+PORT=8999                                  單一硬編碼的埠
+rm -rf "$H/.work" && mkdir -p "$H/.work"   單一共用目錄,而且第一件事就是 rm -rf 它
+build.sh → tokyo-trip/retro-modern.built.css   直接寫進共用工作樹裡被追蹤的檔
+```
+
+後跑的那隻會 `rm -rf` 掉前一隻**正在用的**工作目錄。前一隻於是對著半個目錄、
+或別人的產出拍照。**這正是這整套工具存在的理由(無聲失敗),卻長在工具自己身上。**
+
+已修:開頭用 `mkdir`(原子的)搶一把 `.lock`,搶不到就印出持有者並 `exit 2`。
+`probe.sh` 共用同一把。
+
+> **「持有 harness」是一把鎖,不只是一個習慣。** 它比「凍結 design-system」更基本 ——
+> 凍結管的是相依,這條管的是工具本身。這個 repo 同時有好幾個 session 在動,
+> 開跑之前先確認沒有別人在截。
+
+**附帶一條,很少見但會浪費你半小時:腳本執行中不要改腳本自己。**
+sh 是按**位元組位移**邊讀邊執行的。我在第一隻還在跑的時候編輯了 `shoot.sh`,
+位移一偏,那一隻就在半行的地方報 `syntax error near unexpected token`。
+**檔案本身沒壞**,是跑到一半的那個行程被我改掉了 —— 看起來卻像是你剛剛把腳本改壞了。
+
+---
+
 ---
 
 ---
@@ -393,15 +436,25 @@ document.fonts.forEach(f => console.log(f.family, f.status, f.unicodeRange))
 
 ## 基準:哪幾組還能用
 
+`shots/` 不進版控,所以這張表講的是**如果它們還在**。被刪掉就重跑,
+但重跑出來的是「現在的工作目錄」,不是當初那個 commit。
+
 | 組 | 狀態 |
 | --- | --- |
-| `shots/final` | ✅ 目前的乾淨基準,九張全 `✓`,連跑兩輪逐位元組相同 |
+| `shots/label` | ✅ **最新的乾淨基準**,第三塊之後,九張全 `✓` |
+| `shots/pre-label` | ✅ 第三塊之前(`8b4ee7c`,工作樹乾淨),九張全 `✓` |
+| `shots/pre-mono` / `mono-cjk` | 第二塊的前後,仍然有效 |
+| `shots/final` | 第一塊之後的乾淨基準,九張全 `✓` |
 | `shots/block01` | ⚠ **06 / 07 作廢**(網路產物),01–05、08、09 仍然有效 |
 | `shots/wired` | ⚠ 同上 |
 | `shots/negctl2` | 負向對照的證據,九張全 `✗`,不是基準 |
 
-**下一塊如果會動到地圖,基準要用 `shots/final`,不要用 `block01`。**
-其餘七張兩邊逐位元組相同,用哪個都行。
+**下一塊的基準用 `shots/label`。** 會動到地圖的話絕對不要用 `block01`。
+
+> **別人遞給你的基準要自己驗一次。** `block-03-label` 那一輪接手時拿到
+> `shots/pre-label`,做法是在同一個乾淨 HEAD 重截一組,用 `cmp` 確認九張逐位元組相同。
+> 那不只證明「這個基準能用」,同時證明**harness 今天在這台機器上仍然是決定性的** ——
+> 每一輪都該做,成本只有一次截圖。
 
 `shots/` 不進版控,被刪掉就重跑一次 —— 但重跑出來的是「現在的工作目錄」,
 不是當初那個 commit,見「工具的陷阱 1」。
@@ -442,15 +495,20 @@ document.fonts.forEach(f => console.log(f.family, f.status, f.unicodeRange))
 - **最小、最獨立、最容易單獨看到**
 - **而且 design-system 裡要有語意對得上的組件**
 - **而且不要卡在別人還沒修的東西上**
+- **而且要問一句:它出現在哪一張截圖裡?**
 
 第二個判準比第一個重要。挑一塊在 design-system 裡沒有對應組件的,就會變成
 「用 utility 手工拼出一個外觀」—— 那驗不到我們要驗的東西(組件在真實頁面上長得對不對)。
 
-第三個是這一輪加的:`rm-chip`、`rm-overline`、`rm-day-pin` 都吃 `--font-mono`,
-而 mono 沒有 CJK fallback 還沒修。**那幾塊應該等修好再碰**,不然這一輪的差異
-之後會被下一輪的字型修正再翻一次,兩輪都難歸因。
-(mono 的 CJK fallback 在 `block-02-mono` 那一輪補上了 —— **補在 tokyo-trip 自己的
-`:root` 上**,不是 design-system 那一份。)
+第三個曾經擋掉三塊:`rm-chip`、`rm-overline`、`rm-day-pin` 都吃 `--font-mono`,
+而當時 mono 沒有 CJK fallback。**那個阻礙已經解除**(`block-02-mono` 補在
+**tokyo-trip 自己的 `:root`** 上,不是 design-system 那一份)。
+
+**第四個是 `block-03-label` 那一輪學到的。** 那一塊改了 32 個標籤,
+**九張截圖只看得到 9 個**,其餘 23 個躲在沒有被打開過的表單和對話框裡。
+不是不能做,但要**事前就知道自己驗得到多少**,並且在該輪的
+「沒有驗到的事」裡寫清楚 —— 而不是做完才發現覆蓋率只有三成。
+挑一塊之前,先對著九張截圖問:**這一塊會出現在哪幾張?**
 
 可用的組件(`design-system/retro-modern.css` 的 `@layer components`):
 
@@ -461,30 +519,26 @@ rm-day-pin  rm-divider(--dashed)  rm-input  rm-label  rm-overline
 rm-row  rm-stack  rm-toast
 ```
 
-### 第二塊的建議:`.fld label` → `rm-label`
+### 第四塊的建議:`.fld input/select/textarea` → `rm-input`
 
-還沒開始(等 mono 修好)。理由:
+還沒開始(**等協調者排序 —— design-system 要先做 token 撞名檢查**)。理由:
 
-1. **語意一對一**:兩邊都是表單欄位標籤,沒有任何要用 utility 手工拼的部分
-2. **最小**:來源端只有一條規則 —— `.fld label{font-size:11px; color:var(--muted); letter-spacing:.05em;}`
-3. **範圍最窄**:只出現在 08、09 兩張截圖上。九張裡有七張**必須**零差異,好驗
-4. **不吃 `--font-mono`**(`rm-label` 用 `--font-sans`),所以它是少數不必等 mono 的塊
-5. **接得下去**:做完之後第三塊自然是 `.fld input/select/textarea` → `rm-input`,
-   同樣的兩張截圖、同樣的對照
+1. **語意一對一**:兩邊都是表單輸入框
+2. **同樣的兩張截圖**:只出現在 08、09,七張必須零差異,好驗
+3. **地基剛理乾淨**:第三塊已經把 `.fld` 的內部間距收斂成一套
+   (`gap:0` + `rm-label` 自己的 margin),`rm-input` 接上去不會再有 margin 疊 gap 的問題
+4. 來源端是 `index.html:419`(第三塊之後的行號)那條
+   `.fld input,.fld select,.fld textarea{...}`,外加 :520 手機版的覆寫 ——
+   **比第三塊大,`input[type=time]`、`input[type=date]` 還有各自的微調要一起看**
 
-要事前登記的預期變化(開工時寫進 `block-02-label.md`):
+### 第三塊做完了,但它留下一件事沒做
 
-| 屬性 | 現在 | 之後 |
-| --- | --- | --- |
-| font-size | 11px | 0.8125rem = 13px |
-| color | `var(--muted)` | `var(--color-ink)`,**變深** |
-| font-weight | 400 | 700,**變粗** |
-| letter-spacing | .05em | 0,**變窄** |
-| 欄位間距 | `.fld` 的 `gap:4px` | `rm-label` 另有 `margin-bottom:.375rem`,**疊上去 → 撐開 6px** |
+`.who` 成員膠囊(「誰分攤」那排)現在是**被刻意凍住的舊樣子**:
+它的 `color:var(--muted)` 和 `letter-spacing:.05em` 本來是從 `.fld label` 漏下去的,
+第三塊移除那條規則時手動補回 `.who label`,**不是因為那樣好看,是因為那一輪不該碰它**。
 
-最後那一項最容易漏掉,也最可能被事後歸因成「版面壞了」。
-要不要同時把 `.fld` 的 gap 歸零,是那一輪要先決定的事。
-成本:markup 要在 32 個 `<label>` 上加 class。
+要讓它吃 design-system 是獨立的一塊,而且**要先讓截圖看得到它** ——
+九張裡沒有任何一張打開過 `#exp-form` 或 `#exp-edit-overlay`,現在驗不了。
 
 **排除掉的**:`.btn` → `rm-btn`(九張全會變、七個變體要對應,太大);
 `.day` → `rm-day-pin`(語意不對 —— `rm-day-pin` 是 28×28 的圓形號碼牌,`.day` 是整張日卡。
@@ -576,6 +630,21 @@ backdrop-filter   bg-paper\/50   text-ink\/70
 **逐位元組相同**。這個故事比結論有價值:
 **掃描範圍的邊界不只約束程式碼,也約束你寫在那個資料夾裡的每一個字。**
 
+### 而上面那句「跑一次就會變 modified」害過一次,要更正
+
+那個症狀當時是真的(產出跟原始碼對不上),搬走文件之後**已經不成立**了。
+但那句話留在這裡,而且它做的事比過期更糟:
+
+`design-system/` 一髒,`tokyo-trip/retro-modern.built.css` 就會跟著變。
+那個檔在舊版出處紀錄的範圍內 —— 換句話說,**「凍結被打破了」這件事一直有一個訊號,
+而這份文件親手把那個訊號標成了噪音。**
+
+> **那比「紀錄範圍太窄」嚴重得多。範圍窄是遺漏;教人忽略,是主動拆掉一道還在運作的防線。**
+
+現在的出處紀錄會單獨列出相依的狀態,不必再靠產出檔去推。
+但這件事值得記住,因為它會再發生:**在文件裡寫「這個訊號可以忽略」之前,
+先確認它真的只有噪音的意思。**
+
 ---
 
 ## 走鐘防護
@@ -600,4 +669,11 @@ backdrop-filter   bg-paper\/50   text-ink\/70
   發現另一隻已經落盤了兩個檔。**放行不等於工作樹狀態的保證,自己重讀。**
 - **`DECISIONS.md` 一次只有一隻能寫**,要先拿鎖
 - **一輪轉換進行中,design-system 凍結**。相依一動,差異就無法歸因。
-  開始一塊之前跟協調者說,做完回報才解凍
+  開始一塊之前跟協調者說,做完回報才解凍。
+  **現在出處紀錄會單獨記相依的狀態**,凍結有沒有被打破,事後查得到
+- **同一時間只有一隻能持有 harness**(`shoot.sh` / `probe.sh`)。
+  它們共用 `.work/`、共用埠、共用產出檔 —— 腳本自己有鎖會擋,但排隊還是要先講。
+  見「工具的陷阱 6」
+- **開工前先問協調者「現在有誰在動哪裡」**。實際發生過:兩隻 session 被指派了
+  **同一塊**,差四分鐘,兩邊都要改 `tokyo-trip/index.html` 和同一份 `block-03-label.md`。
+  擋下來的不是工具,是**動手之前先回報**這個習慣
