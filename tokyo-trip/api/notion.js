@@ -351,10 +351,48 @@ module.exports = async (req, res) => {
       const id = req.query && req.query.id;
       if (!id) return res.status(400).json({ error: "缺少 id" });
       let body = typeof req.body === "string" ? JSON.parse(req.body || "{}") : (req.body || {});
-      /* 沒通行碼的人只能按 +1,不能改掉別人願望的內容 */
-      if (shape.open && !keyOK) {
+      /* ---------- 沒有通行碼的人可以改自己那一筆願望的內容 ----------
+         以前這裡夾成「除了 `votes` 什麼都不准動」。Lulu 的規則是
+         「加願望的人可以重新編輯自己那一筆」,而**要編輯的正是那三個沒有通行碼的人** ——
+         所以夾制不能拿掉,但夾制的**對象**要換。
+
+         **這一條的邊界是「wishes、而且不改歸屬」,不是「只有本人能改」。**
+
+         伺服器驗不了身分:前端的「我是誰」是 localStorage 裡的一個字串(`tokyo5-me`),
+         誰都能設成任何人,而 A 改自己那一筆和 A 改 B 那一筆,**送到這裡的兩個請求
+         長得一模一樣**。所以這裡**不寫一段假裝驗得了身分的程式**
+         (跟 `wishAsksForItsOwnPlace` 同一堵牆,只是這一次擋得住的更少)。
+
+         它擋得住的只有一件事:**`by` 改不掉**。那一個欄位是前端 `.mine` 紫框、
+         「改」那顆按鈕、以及上面那條 geocode 窄路**三者共同的地基** ——
+         能改它的話,那三個東西都可以被從底下抽掉。
+
+         **「誰許的誰能改」是介面上的規則,不是鎖。** 下一個人不要在它上面疊東西。
+         真的需要鎖的話,那要先有一個伺服器驗得了的身分,而這個站沒有。 */
+      if (shape.open) {
         const now = shape.out(await notion("/pages/" + id));
-        body = { title: now.title, place: now.place, note: now.note, by: now.by, votes: body.votes };
+        /* **沒送的欄位要留著原值,不能當成「改成空的」。**
+           `wishIn()` 是整份覆寫(Notion 的 properties 給什麼寫什麼),而 `+1` 那條路
+           只送 `{ votes }` —— 照字面寫回去的話,按一次 +1 就會把標題、地點、備註
+           全部清空。**這不是假想的**:上面那個舊版本之所以要把 `now.*` 抄進來,
+           就是同一件事,只是它順便把「不准改」和「沒有送」壓成了同一種。
+           分開之後才講得清楚:`by` 是**不准改**,其餘是**沒送就不動**。
+
+           **這一段對兩條路都要跑,不是只跑在沒通行碼那條。** 舊版把它寫在
+           `!keyOK` 裡面,所以**管理員按一次 +1 就會清掉那筆願望的標題、地點、
+           備註和「誰許的」** —— 而畫面上不會有任何錯誤。那個保護當初是寫成
+           一個「限制」(限制沒權限的人只能改票),於是唯一被那個限制豁免的人,
+           也同時被那個保護豁免了。**權限高的人反而沒有防護,那是寫法造成的,
+           不是有意的。** 兩條路的差別只在 `by` 能不能改。
+           代價:每次願望的 PATCH 多讀一次 Notion。+1 和編輯都不是高頻動作。 */
+        const keep = (sent, was) => (sent === undefined ? was : sent);
+        body = {
+          title: keep(body.title, now.title),
+          place: keep(body.place, now.place),
+          note: keep(body.note, now.note),
+          by: keyOK ? keep(body.by, now.by) : now.by,
+          votes: keep(body.votes, now.votes),
+        };
       }
       const page = await notion("/pages/" + id, {
         method: "PATCH",

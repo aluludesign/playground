@@ -482,6 +482,13 @@
     .seek-out .said{padding:9px 11px; font-size:12.5px; color:var(--muted);}
     /* 已標定是「好消息」,跟查詢中／查無用同一個槽但要分得出來 */
     .seek-out .said.ok{color:var(--ink);}
+    /* 用 id 不用 class:走鐘防護掃的是「用了但沒有規則的 class」,id 不在它的範圍裡,
+       所以這一條不會多欠一次重編。
+       `align-self` 是**看了第 13 張截圖才加的**:`.fld` 是 column flex,子元素預設
+       `stretch`,所以這顆按鈕原本跟欄位一樣寬 —— **一個每按一次都要錢的動作,
+       畫得比它上面那個輸入框還醒目**。而把它搬進這裡的理由正是「不要讓人隨手按」。
+       縮成剛好包住文字,它才讀起來像一條退路,而不是這張表的主要動作。 */
+    #we-again{margin-top:8px; align-self:flex-start;}
     .form-ops{display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap;}
 
     /* ---- settle ---- */
@@ -831,6 +838,29 @@
     <div class="ops">
       <button type="submit" class="btn btn-main">存起來</button>
       <button type="button" class="btn btn-ghost btn-sm" id="se-cancel">取消</button>
+    </div>
+  </form>
+</div>
+
+<!-- 自己許的願望,自己改。**不共用上面那張表**:那張有「哪一天」和「時間」,
+     而願望一有日期就不再是願望了(後端 SHAPES.wishes 的 filter 就是「日期為空」,
+     wishIn() 也寫著「絕對不寫日期」)。共用一張表等於讓一次誤觸把願望變成行程。
+     「你是誰」也不在這裡:見 updateWish() 那一段,它是這整條唯一擋得住的東西。 -->
+<div class="overlay" id="wish-edit-overlay" hidden>
+  <form class="signin" id="wish-edit-form">
+    <h2>改我的願望</h2>
+    <div class="fld"><label class="rm-label" for="we-title">想去哪</label>
+      <div class="seek"><input class="rm-input" type="text" id="we-title" required>
+      <button type="button" class="btn btn-sm" data-seek="we-title">搜尋</button></div>
+      <div class="seek-out" id="we-title-out" hidden></div>
+      <!-- 「再查一次」住在這裡,不住在地圖上:它每按一次都要錢,而這個位置
+           把它限制在「我正在編輯我自己那一筆」這個有意圖的情境裡。 -->
+      <button type="button" class="btn btn-sm" id="we-again" hidden>再查一次</button></div>
+    <div class="fld"><label class="rm-label" for="we-note">想說的</label><input class="rm-input" type="text" id="we-note" placeholder="可留白"></div>
+    <div class="err" id="we-err" hidden></div>
+    <div class="ops">
+      <button type="submit" class="btn btn-main">存起來</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="we-cancel">取消</button>
     </div>
   </form>
 </div>
@@ -1278,6 +1308,39 @@
       w.votes = before;
       renderWishes();
       flash("+1 沒成功:" + err.message);
+    }
+  }
+  /* 改自己那一筆的內容。**不走 mayEdit()** —— 它問的是「有沒有通行碼」,
+     而這條路存在的理由正是那三個沒有通行碼的人。判準改成 `mineWish()`。
+
+     **`by` 和 `votes` 一定要一起送回去,即使這裡不讓人改它們。**
+     後端的 `wishIn()` 把 `備註` 寫成 `joinNote(note, votes)`、把 `時間` 寫成 `by` ——
+     漏送哪一個,那一個就會被寫成空的。**這不是防禦性程式碼,是那個資料形狀的要求。**
+
+     **這一條的邊界是「wishes、而且不改歸屬」,不是「只有本人能改」。**
+     伺服器分不出是誰在送這個請求(`tokyo5-me` 是瀏覽器裡的一個字串,誰都能改成
+     任何人),所以它擋得住的只有「把一筆願望的歸屬換掉」。
+     **「誰許的誰能改」是介面上的規則,不是鎖。** 下一個人不要在它上面疊東西。 */
+  async function updateWish(id, patch) {
+    const w = state.wishes.find(x => x.id === id);
+    if (!w) return;
+    if (!mineWish(w)) { flash("只改得動自己許的願望"); return; }
+    const before = { title: w.title, place: w.place, note: w.note };
+    Object.assign(w, patch);
+    renderWishes();
+    if (!online) { saveLocal(); return; }
+    try {
+      const { row } = await api("?resource=wishes&id=" + encodeURIComponent(id), {
+        method: "PATCH",
+        body: JSON.stringify({ title: w.title, place: w.place, note: w.note, by: w.by, votes: w.votes || [] }),
+      });
+      const k = state.wishes.findIndex(x => x.id === id);
+      if (k > -1) state.wishes[k] = row;
+      renderWishes();
+    } catch (err) {
+      Object.assign(w, before);
+      renderWishes();
+      flash("改不成:" + err.message);
     }
   }
   async function removeWish(id) {
@@ -1760,11 +1823,29 @@
     el("map-sheet").dataset.mode = sheetMode || "";
   }
 
-  /* ---- 「再查一次」那一條 ----
+  /* ---- 地圖上那一條 ----
      它只在使用者**點過清單某一列**之後出現 —— 那時候他正盯著某一個點,
      不是這裡標錯了,就是這一筆根本沒標上去,兩種都是他才判斷得出來的事。
      沒點過任何一列時它是 hidden,所以預設的地圖畫面完全沒變。
-     唯讀的人不畫 —— 退路那一端要通行碼,不要畫一顆按下去一定失敗的按鈕。 */
+
+     **說明和動作是兩件事,而以前它們綁在一起。**
+     整條以前只在 `editable() || mineWish()` 才畫,理由是上面那顆「再查一次」要錢。
+     結果:沒有通行碼的人點一列(任何行程、或別人的願望),地圖開了、
+     沒有東西被聚焦、**而完全沒有任何解釋** —— 他分不出「沒挑地點」「查不到」
+     「標到日本以外」是哪一種,而那三句話早就算好了、就在記憶體裡。
+     Lulu 的決定:**那句解釋對所有人顯示。**
+
+     拆開之後的判準:
+       說明(`#map-fix-t`)  讀的是 `item.place/title` 和 `pinOf(item)`,
+                            **零查詢零費用**,所以所有人都畫。
+       「對」(`map-fix-ok`) `confirmPin()` 只改本機那一份快取的 `ok`,不打任何 API,
+                            而它要退場的虛線圈本來就是每台裝置各自的 ——
+                            **作用域一致,就沒有理由分兩種人**。看得到一個自己
+                            弄不掉的標記,那個標記很快就沒有人讀了。
+       「再查一次」(`go`)   要錢,維持有條件 —— 而且這一輪**收窄成只有 `editable()`**:
+                            願望那一半搬進「改我的願望」那個編輯流程了(見 openWishEdit),
+                            在那裡它被限制在「有意圖的、自己的那一筆」上。
+                            **這是一個入口的搬家,所以舊的那個要真的不見。** */
   let fixItem = null, fixKey = null;
   /* **自己許的願望,自己可以修。** 判斷用的是願望清單上那個 `.mine` 的同一個判準
      (`w.by === myName()`)。行程沒有「誰加的」這個欄位(stopOut 裡沒有,Notion 那邊
@@ -1777,7 +1858,8 @@
     fixItem = item || null;
     fixKey = key || null;
     const bar = el("map-fix");
-    if (!fixItem || !(editable() || mineWish(fixItem))) { bar.hidden = true; return; }
+    /* **顯示的判準只剩「有沒有點過某一列」。** 誰在看不影響說明畫不畫。 */
+    if (!fixItem) { bar.hidden = true; return; }
     const what = fixItem.place || fixItem.title;
     const at = pinOf(fixItem);
     /* 只查到大概範圍、而且還**沒有人說過「對」**的時候才問。
@@ -1795,7 +1877,10 @@
          (**注意這跟 regeoItem 先查表不衝突**:那條路要處理的是
           `pins[place]` 已經有一個線上錯座標、表還沒接手的那一種,按鈕在那種
           狀態下是畫得出來的。) */
-    el("map-fix-go").hidden = !fixItem.place || manual;
+    /* `!editable()` 是這一輪加的:沒有通行碼的人改從「改我的願望」那條路進去。
+       行程那一半沒有搬家的地方(行程沒有「誰加的」,編輯行程本來就要通行碼),
+       所以這顆按鈕留著,只是不再對唯讀的人畫。 */
+    el("map-fix-go").hidden = !editable() || !fixItem.place || manual;
     el("map-fix-t").textContent =
         manual && !found ? "「" + at.via + "」在人工確認過的表裡,但不在日本境內 —— 這張圖只畫日本的點"
       : manual ? "「" + at.via + "」用的是人工確認過的座標"
@@ -2107,7 +2192,7 @@
      而且邊打邊搜會把「東京」這種打到一半的字送出去。**按下去才查,是刻意的。** */
   document.addEventListener("keydown", ev => {
     const t = ev.target;
-    if (!t || !t.id || !/^(sf|wf|se)-title$/.test(t.id) || ev.key !== "Enter") return;
+    if (!t || !t.id || !/^(sf|wf|se|we)-title$/.test(t.id) || ev.key !== "Enter") return;
     ev.preventDefault();   /* 不要順手送出整張表單 */
     runSeek(t.id);
   });
@@ -2724,6 +2809,13 @@
           (w.place ? "<span>" + linkify(w.place) + "</span>" : "") +
           (w.note ? "<span>" + linkify(w.note) + "</span>" : "") +
           (names.length ? "<span>" + esc(names.join("、")) + " +1</span>" : "") +
+          /* **自己許的那一筆,自己改。** 判準是 `mineWish()`,跟上面那個 `.mine` 紫框
+             同一個東西 —— 不長第二套。`editable()` 沒有出現在這裡是刻意的:
+             這顆的語意是「我自己那一筆」,管理員要動別人的願望有既有的路
+             (刪掉、加入行程)。
+             借 `.wdel` 的樣式(同一排的次要小字按鈕),不新增 class ——
+             新 class 要重編,而這裡沒有新的樣式需求。 */
+          (mineWish(w) ? '<button type="button" class="wdel" data-edit-wish="' + esc(w.id || "") + '">改</button>' : "") +
           (editable() ? '<button type="button" class="wdel" data-del-wish="' + esc(w.id || "") + '">刪掉</button>' : "") +
           "</div>" +
           '<div class="wops">' +
@@ -3314,8 +3406,104 @@
     }
     const a = ev.target.closest("[data-add-wish]");
     if (a) { addWishToDay(a.dataset.addWish); return; }
+    const e = ev.target.closest("[data-edit-wish]");
+    if (e) { openWishEdit(e.dataset.editWish); return; }
     const d = ev.target.closest("[data-del-wish]");
     if (d) removeWish(d.dataset.delWish);
+  });
+
+  /* --- 改我的願望 --- */
+  let editingWish = null;
+  function showWishEditError(msg) {
+    const box = el("we-err");
+    box.textContent = msg;
+    box.hidden = !msg;
+  }
+  /* 「再查一次」什麼時候畫,跟地圖上那顆同一組條件:
+       沒有 place → 不畫(規則一:沒挑地點就不查,按了只是再問一次同一個錯問題)
+       人工表就是答案 → 不畫(再查只會拿一個比較差的結果去蓋掉人工驗過的座標) */
+  function paintWishAgain(w) {
+    const at = w && w.place ? pinOf(w) : null;
+    el("we-again").hidden = !(w && w.place) || !!(at && at.via);
+  }
+  function openWishEdit(id) {
+    const w = state.wishes.find(x => x.id === id);
+    /* 按鈕本來就只畫在自己那幾筆上,這層是防手動戳 DOM(跟 mayEdit() 同一個用意) */
+    if (!w || !mineWish(w)) return;
+    editingWish = id;
+    el("we-title").value = w.title || "";
+    el("we-note").value = w.note || "";
+    /* **既有的 `place` 要看得見。** 兩欄合併之後畫面上沒有地點欄了,
+       不講出來的話使用者不會知道這一筆已經標定過,而下面那三種情況
+       有一種就是「他沒動標題,所以舊的留著」—— 留著的東西要看得到。 */
+    seekShowExisting("we-title", w.place);
+    paintWishAgain(w);
+    showWishEditError("");
+    el("wish-edit-overlay").hidden = false;
+    el("we-title").focus();
+  }
+  el("we-cancel").addEventListener("click", () => {
+    editingWish = null;
+    showWishEditError("");
+    el("wish-edit-overlay").hidden = true;
+  });
+  el("we-again").addEventListener("click", async () => {
+    const w = state.wishes.find(x => x.id === editingWish);
+    if (!w || !w.place) return;          /* 沒挑地點的不查(規則一),按鈕本來也沒畫 */
+    const btn = el("we-again");
+    const what = w.place;
+    btn.disabled = true;
+    seekSay("we-title", "「" + what + "」查詢中…");
+    try {
+      /* 走的是既有的那一條,一個字都沒改:`regeo()` 會帶 `&wish=<id>`,
+         而後端核對的是「要查的字串就是那一筆願望的地點欄」——
+         **那條窄路本來就是為願望開的**,只是以前的入口在地圖上。 */
+      const hit = await regeoItem(w);
+      /* 誠實講結果。還是找不到就說還是找不到,不要假裝有東西。 */
+      let msg;
+      if (!hit) msg = "「" + what + "」還是找不到 —— 它可能不是一個地名,地圖上不會顯示";
+      else if (hit.manual) msg = "「" + hit.at.via + "」用的是人工確認過的座標" +
+        (inJapan(hit.at) ? " —— 這比線上查得到的準,不用再查" : ",它不在日本境內,這張圖只畫日本的點");
+      else if (!inJapan(hit.at)) msg = "「" + what + "」查到的位置不在日本境內,地圖上不會顯示";
+      else if (hit.area) msg = "「" + what + "」只查到大概的範圍,標的是那一區的中心 —— 地名打完整會更準";
+      else if (hit.same) msg = "「" + what + "」再查一次還是同一個位置";
+      else msg = "「" + what + "」重新標好了";
+      seekSay("we-title", msg);
+      paintWishAgain(w);
+      /* 地圖開著的話讓它跟上。**這句講在編輯框裡,不講在 flash()** ——
+         使用者的眼睛在這張表上,而頁尾那行小字他看不到(上一輪學到的)。 */
+      if (sheetMode === "wish" && !el("map-sheet").hidden) loadSheetMap(true);
+    } catch (e) {
+      seekSay("we-title", "再查一次沒成功:" + e.message);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+  el("wish-edit-form").addEventListener("submit", ev => {
+    ev.preventDefault();
+    if (!editingWish) return;
+    const title = el("we-title").value.trim();
+    if (!title) { showWishEditError("總要寫個地方。"); return; }
+    const id = editingWish;
+    const was = state.wishes.find(x => x.id === id);
+    if (!was) { editingWish = null; el("wish-edit-overlay").hidden = true; return; }
+    const patch = {
+      title: title,
+      /* **三種情況,跟改行程那張表一字不差。** 合併之後地點欄不在畫面上了,
+         照著「空欄位」寫回去等於在使用者沒看到、沒同意的情況下把位置弄丟:
+           剛挑過       → 用挑的
+           沒挑、標題沒動 → 原來那個留著
+           標題改了又沒挑 → 清空(舊的 place 講的是舊的地方,留著會標錯) */
+      place: locatedAt(title) ? title : (title === was.title ? (was.place || "") : ""),
+      note: el("we-note").value.trim(),
+    };
+    editingWish = null;
+    showWishEditError("");
+    el("wish-edit-overlay").hidden = true;
+    updateWish(id, patch);
+    /* 對話框關掉之後蓋住的那一區就是願望清單,所以講在願望那一槽上 ——
+       跟許願和改行程走同一個 checkPlace(),不長第二套。 */
+    checkPlace({ place: patch.place, title: patch.title }, "wish-msg");
   });
 
   async function focusWish(id) {
