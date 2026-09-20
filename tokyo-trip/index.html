@@ -3463,28 +3463,62 @@
   /* 抽屜寬度只有四檔:螢幕的 1/4、2/4、3/4、4/4。存的是「第幾檔」不是像素 ——
      換一台螢幕、轉個方向,同一檔還是同一個比例。 */
   const DRAWLS = "tokyo5-drawer";
-  const quarter = () => window.innerWidth / 4;
+  /* **四檔是固定的像素寬,不是視窗的幾分之幾。**
+
+     以前是 `視窗寬 / 4` 的倍數,於是「吸附到第 2 檔」這件事**不代表一個寬度** ——
+     視窗一變,同一檔就變成另一個寬度。量過(探針,五個寬度):
+     1160px 的視窗給 580、1172px 給 586,而 **1176px 給 294** ——
+     視窗改 4 個像素,抽屜砍一半。
+
+     那不是四捨五入寫錯。舊的預設是 `Math.round(440 / quarter())`,
+     而在 1173px 附近第 1 檔是 293、第 2 檔是 587,**離 440 剛好一樣遠** ——
+     兩檔之間本來就沒有靠近 440 的東西,所以那裡必然有個懸崖。
+     **比例式的檔位撐不住「四個尺寸」這個說法**,換成像素才撐得住。 */
+  const STEPS = [360, 480, 620, 800];
+  /* 視窗裝不下的時候才讓步,而**要保護的是底下的版面,不是抽屜**。
+     抽屜一開 body 就 padding-right 同樣的寬度,所以抽屜多寬,行程清單就少多寬。
+
+     第一版寫的是 `innerWidth * 0.82`,量過之後是錯的:桌機斷點是 641px,
+     而那個夾制要到 585px 以下才生效 —— **它從來碰不到**。
+     641px 的視窗於是吃到整整 480px 的抽屜,只剩 161px 給內容,
+     **比修之前的比例式(那裡剛好給一半)還糟**。
+     改成「至少留 320px 給版面」,窄視窗就平滑地讓步,而不是某一檔突然壓垮它。 */
+  const MINMAIN = 320;
+  const stepPx = k => Math.max(260,
+    Math.min(STEPS[Math.max(1, Math.min(4, k)) - 1], window.innerWidth - MINMAIN));
   let drawK = 0;
   function readDrawK() {
     let k = 0;
     try { k = +localStorage.getItem(DRAWLS) || 0; } catch (_) {}
-    /* 沒設定過就挑最接近 440px 的那一檔 */
-    return Math.max(1, Math.min(4, k || Math.round(440 / quarter())));
+    /* 沒設定過就第 2 檔。**不再從一個目標寬度反推** —— 那是懸崖的來源。 */
+    return Math.max(1, Math.min(4, k || 2));
   }
   function applyDrawer(px) {
     document.documentElement.style.setProperty("--drawer", Math.round(px) + "px");
   }
   function setDrawK(k) {
     drawK = Math.max(1, Math.min(4, k));
-    applyDrawer(drawK * quarter());
+    applyDrawer(stepPx(drawK));
     try { localStorage.setItem(DRAWLS, String(drawK)); } catch (_) {}
     /* 寬度動畫跑完再重畫,不然量到的還是舊寬度 */
     setTimeout(repaintMap, 220);
   }
+  /* 放手時吸到最近那一檔:比的是**像素距離**,不是「除以一檔有多寬」。
+     檔位等寬的時候兩者一樣,不等寬就只有前者對。 */
+  function nearestStep(px) {
+    let best = 1, bestD = Infinity;
+    for (let k = 1; k <= 4; k++) {
+      const dd = Math.abs(stepPx(k) - px);
+      if (dd < bestD) { bestD = dd; best = k; }
+    }
+    return best;
+  }
   /* 抽屜寬度一變,地圖容器也變寬變窄 —— 要重畫才補得滿圖磚 */
   const repaintMap = () => { if (!el("map-sheet").hidden) paintMap(el("map")); };
   window.addEventListener("resize", () => {
-    if (drawK) applyDrawer(drawK * quarter());
+    /* **重算是為了夾住,不是為了跟著縮放。** 檔位選定的寬度要維持不變,
+       只有視窗窄到裝不下時才讓步 —— 那正是 `stepPx()` 裡那個 0.82 在做的事。 */
+    if (drawK) applyDrawer(stepPx(drawK));
     repaintMap();
   });
 
@@ -3505,7 +3539,7 @@
     syncSheetChrome();
     paintLayerBtns();
     if (!drawK) drawK = readDrawK();
-    applyDrawer(drawK * quarter());
+    applyDrawer(stepPx(drawK));
     el("map-sheet").hidden = false;
     document.body.classList.add("drawer-open");
   }
@@ -3551,7 +3585,7 @@
     });
     grip.addEventListener("pointermove", ev => {
       if (!dragging) return;
-      applyDrawer(Math.max(quarter() * 0.6, Math.min(window.innerWidth, window.innerWidth - ev.clientX)));
+      applyDrawer(Math.max(STEPS[0] * 0.6, Math.min(window.innerWidth * 0.82, window.innerWidth - ev.clientX)));
       repaintMap();
     });
     function stop(ev) {
@@ -3559,7 +3593,7 @@
       dragging = false;
       sheet.classList.remove("sizing");
       document.body.classList.remove("sizing-now");
-      setDrawK(Math.round((window.innerWidth - ev.clientX) / quarter()));
+      setDrawK(nearestStep(window.innerWidth - ev.clientX));
     }
     grip.addEventListener("pointerup", stop);
     grip.addEventListener("pointercancel", stop);
