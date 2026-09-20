@@ -275,7 +275,7 @@ shot 11-exp-edit-dialog  390 1100 "d.getElementById('tab-cost').click(); d.query
 # 直接查的話這張圖會變成「非決定性來源」那張表上的新一列。
 # 回的三筆是真的(三間 teamLab,大阪／麻布台／京都),那正是這個功能存在的理由:
 # 一個名字對到三個地方,**要人自己挑**。
-shot 12-place-search     390 1100 "w.fetch=function(u){return String(u).indexOf('nominatim')<0?Promise.reject(new Error('擋掉')):Promise.resolve({ok:true,json:function(){return Promise.resolve([{lat:'34.6111',lon:'135.5205',display_name:'teamLab Botanical Garden, 長居公園, 東住吉區, 大阪市, 大阪府, 日本'},{lat:'35.6620',lon:'139.7434',display_name:'teamLab Borderless Museum, 麻布台ヒルズ, 虎ノ門, 港區, 東京都, 日本'},{lat:'34.9837',lon:'135.7654',display_name:'teamLab BioVortex, 八条通, 下京区, 京都市, 京都府, 日本'}])}})};d.getElementById('add-stop-btn').click();d.getElementById('sf-place').value='teamLab';d.querySelector('[data-seek=sf-place]').click();" \
+shot 12-place-search     390 1100 "w.fetch=function(u){return String(u).indexOf('nominatim')<0?Promise.reject(new Error('擋掉')):Promise.resolve({ok:true,json:function(){return Promise.resolve([{lat:'34.6111',lon:'135.5205',display_name:'teamLab Botanical Garden, 長居公園, 東住吉區, 大阪市, 大阪府, 日本'},{lat:'35.6620',lon:'139.7434',display_name:'teamLab Borderless Museum, 麻布台ヒルズ, 虎ノ門, 港區, 東京都, 日本'},{lat:'34.9837',lon:'135.7654',display_name:'teamLab BioVortex, 八条通, 下京区, 京都市, 京都府, 日本'}])}})};d.getElementById('add-stop-btn').click();d.getElementById('sf-title').value='teamLab';d.querySelector('[data-seek=sf-title]').click();" \
                                   "#stop-form:not([hidden]) .seek-out .hit:3+"
 
 kill $SRV 2>/dev/null || true

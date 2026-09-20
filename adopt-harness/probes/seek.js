@@ -61,9 +61,9 @@ var THREE = [
       Math.abs(pins()["箱根神社"].la - 35.232) < 0.0001, pins()["箱根神社"]);
 
     // 1 ---- 三個地點欄都有搜尋,而且預設不佔畫面 ----
-    ok("加行程有搜尋鈕", !!q('[data-seek="sf-place"]'), null);
-    ok("許願有搜尋鈕", !!q('[data-seek="wf-place"]'), null);
-    ok("改行程有搜尋鈕", !!q('[data-seek="se-place"]'), null);
+    ok("加行程有搜尋鈕(現在掛在合併後的那一欄上)", !!q('[data-seek="sf-title"]'), null);
+    ok("許願有搜尋鈕", !!q('[data-seek="wf-title"]'), null);
+    ok("改行程有搜尋鈕", !!q('[data-seek="se-title"]'), null);
     /* **鉤子不在就早退。** 第一次拿這支去跑「這一輪之前」的程式時,它回傳的是佔位值 ——
        因為 `until()` 在要等的東西永遠不會出現時要空轉 8 秒,好幾條加起來超過
        `--virtual-time-budget`,`#r` 還沒被覆寫頁面就結束了。**探針在它該變紅的那棵樹上
@@ -75,20 +75,20 @@ var THREE = [
 
     ["sf", "wf", "se"].forEach(function (k) {
       ok(k + " 的候選清單預設是 hidden(所以截圖上不存在)",
-        d.getElementById(k + "-place-out").hidden === true, null);
+        d.getElementById(k + "-title-out").hidden === true, null);
     });
 
     // 2 ---- 打關鍵字 → 候選清單 ----
     d.getElementById("add-stop-btn").click();
     await until(function () { return !q("#stop-form").hidden; });
     asked.length = 0; reply = THREE;
-    d.getElementById("sf-place").value = "teamLab";
-    q('[data-seek="sf-place"]').click();
+    d.getElementById("sf-title").value = "teamLab";
+    q('[data-seek="sf-title"]').click();
     ok("按了搜尋 → 真的發出查詢", await until(function () { return asked.length > 0; }), asked);
     ok("列出全部三筆候選(不是自己挑一筆)",
-      await until(function () { return d.querySelectorAll('[data-hit="sf-place"]').length === 3; }),
-      d.querySelectorAll('[data-hit="sf-place"]').length);
-    var first = q('[data-hit="sf-place"]');
+      await until(function () { return d.querySelectorAll('[data-hit="sf-title"]').length === 3; }),
+      d.querySelectorAll('[data-hit="sf-title"]').length);
+    var first = q('[data-hit="sf-title"]');
     ok("每一筆都同時給名字和地址(光看名字分不出兩間同名的)",
       !!first.querySelector("b") && !!first.querySelector("span") &&
       /teamLab/.test(first.querySelector("b").textContent) &&
@@ -101,12 +101,12 @@ var THREE = [
     ok("而且帶了國家代碼", /countrycodes=jp/.test(asked.join(" ")), asked);
 
     // 3 ---- 選一個 ----
-    var second = d.querySelectorAll('[data-hit="sf-place"]')[1];   /* 麻布台那間 */
+    var second = d.querySelectorAll('[data-hit="sf-title"]')[1];   /* 麻布台那間 */
     second.click();
     await sleep(60);
-    ok("選了之後地點欄換成那個名字",
-      d.getElementById("sf-place").value === "teamLab Borderless Museum",
-      d.getElementById("sf-place").value);
+    ok("選了之後那一欄換成挑到的名字",
+      d.getElementById("sf-title").value === "teamLab Borderless Museum",
+      d.getElementById("sf-title").value);
     var saved = pins()["teamLab Borderless Museum"];
     ok("座標同時寫進快取(這一筆從此不會再被查)",
       !!saved && Math.abs(saved.la - 35.6620) < 0.001 && Math.abs(saved.lo - 139.7434) < 0.001, saved);
@@ -116,29 +116,29 @@ var THREE = [
 
     // 4 ---- 查無要誠實說 ----
     asked.length = 0; reply = [];
-    d.getElementById("sf-place").value = "泡溫泉";
-    q('[data-seek="sf-place"]').click();
+    d.getElementById("sf-title").value = "泡溫泉";
+    q('[data-seek="sf-title"]').click();
     ok("查無 → 說找不到,而且給下一步怎麼辦",
-      await until(function () { return /找不到/.test(d.getElementById("sf-place-out").textContent); }),
-      d.getElementById("sf-place-out").textContent);
+      await until(function () { return /找不到/.test(d.getElementById("sf-title-out").textContent); }),
+      d.getElementById("sf-title-out").textContent);
     ok("查無 → 一筆候選都不畫(不要退而求其次給一個)",
-      d.querySelectorAll('[data-hit="sf-place"]').length === 0, null);
-    ok("查無 → 地點欄維持使用者打的字,沒有被動過",
-      d.getElementById("sf-place").value === "泡溫泉", d.getElementById("sf-place").value);
+      d.querySelectorAll('[data-hit="sf-title"]').length === 0, null);
+    ok("查無 → 那一欄維持使用者打的字,沒有被動過",
+      d.getElementById("sf-title").value === "泡溫泉", d.getElementById("sf-title").value);
 
     // 5 ---- 空字串不發查詢 ----
     asked.length = 0;
-    d.getElementById("sf-place").value = "";
-    q('[data-seek="sf-place"]').click();
+    d.getElementById("sf-title").value = "";
+    q('[data-seek="sf-title"]').click();
     await sleep(120);
     ok("沒打字就按搜尋 → 一次查詢都不發", asked.length === 0, asked);
-    ok("而且講了要先打字", /先打幾個字/.test(d.getElementById("sf-place-out").textContent),
-      d.getElementById("sf-place-out").textContent);
+    ok("而且講了要先打字", /先打幾個字/.test(d.getElementById("sf-title-out").textContent),
+      d.getElementById("sf-title-out").textContent);
 
     // 6 ---- Enter 搜尋,而且不會順手送出表單 ----
     var stopsBefore = d.querySelectorAll("#route .stop").length;
     asked.length = 0; reply = THREE;
-    var inp = d.getElementById("sf-place");
+    var inp = d.getElementById("sf-title");
     inp.value = "teamLab";
     inp.dispatchEvent(new w.KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
     ok("Enter 會搜尋", await until(function () { return asked.length > 0; }), asked);
@@ -147,6 +147,81 @@ var THREE = [
       d.querySelectorAll("#route .stop").length === stopsBefore && !q("#stop-form").hidden,
       { 之前: stopsBefore, 之後: d.querySelectorAll("#route .stop").length });
 
+    // 8 ---- 兩欄合併:挑過的才有 place,沒挑的就是沒有 ----
+    /* **這是整個合併的支點。** 「只有挑過的才上地圖」不是靠新規則做到的,
+       是靠**只有挑過的時候才寫 `place`** —— 而「沒有 place 就不查、不上地圖」
+       是本來就在的規則。所以這三條測的是那個落點,不是地圖那條路。 */
+    function stops() {
+      try { return (JSON.parse(w.localStorage.getItem("tokyo5-v1") || "{}").stops) || []; }
+      catch (e) { return []; }
+    }
+    ok("舊的地點欄真的不存在了(不是只藏起來)",
+      !d.getElementById("sf-place") && !d.getElementById("wf-place") && !d.getElementById("se-place"), null);
+
+    var n0 = stops().length;
+    asked.length = 0; reply = THREE;
+    if (q("#stop-form").hidden) d.getElementById("add-stop-btn").click();
+    await until(function () { return !q("#stop-form").hidden; });
+    d.getElementById("sf-time").value = "10:00";
+    d.getElementById("sf-title").value = "teamLab";
+    q('[data-seek="sf-title"]').click();
+    await until(function () { return d.querySelectorAll('[data-hit="sf-title"]').length === 3; });
+    d.querySelectorAll('[data-hit="sf-title"]')[1].click();
+    await sleep(60);
+    ok("挑完之後狀態列說「已標定」,而且印的是地址(他剛從三間裡挑了一間)",
+      /已標定/.test(d.getElementById("sf-title-out").textContent) &&
+      /麻布台/.test(d.getElementById("sf-title-out").textContent),
+      d.getElementById("sf-title-out").textContent);
+    q("#stop-form button[type=submit]").click();
+    ok("挑過的送出之後,place 等於挑到的那個名字",
+      await until(function () {
+        var t = stops()[stops().length - 1];
+        return stops().length === n0 + 1 && t && t.place === "teamLab Borderless Museum";
+      }), stops()[stops().length - 1]);
+    ok("而且 title 和 place 是同一個字(合併之後它們本來就是同一件事)",
+      stops()[stops().length - 1].title === stops()[stops().length - 1].place,
+      stops()[stops().length - 1]);
+
+    // 沒挑的:place 必須是空的
+    var n1 = stops().length;
+    asked.length = 0;
+    d.getElementById("add-stop-btn").click();
+    await until(function () { return !q("#stop-form").hidden; });
+    d.getElementById("sf-time").value = "11:00";
+    d.getElementById("sf-title").value = "泡溫泉";
+    q("#stop-form button[type=submit]").click();
+    ok("沒挑就送出 → place 是空的(程式不再自己拿那幾個字去猜)",
+      await until(function () {
+        var t = stops()[stops().length - 1];
+        return stops().length === n1 + 1 && t && t.title === "泡溫泉" && t.place === "";
+      }), stops()[stops().length - 1]);
+    ok("沒挑就送出 → 一次查詢都不發",
+      asked.length === 0, asked);
+    ok("而且講的是「按搜尋挑一個」,不是「補上地點」(畫面上已經沒有地點欄了)",
+      await until(function () { return /還沒挑地點/.test(q("#stop-msg").textContent); }) &&
+      /搜尋/.test(q("#stop-msg").textContent) && !/補上地點/.test(q("#stop-msg").textContent),
+      q("#stop-msg").textContent);
+
+    // 9 ---- 編輯:既有的 place 看得見,而且不會被悄悄丟掉 ----
+    /* **合併最容易出事的地方。** 地點欄從畫面上消失了,如果送出時照著空欄位寫回去,
+       那一筆本來標好的位置就在使用者沒看到、沒同意的情況下不見了。 */
+    var target = [].slice.call(d.querySelectorAll("#route [data-edit-stop]"))[0];
+    if (target) {
+      target.click();
+      await until(function () { return !q("#edit-overlay").hidden; });
+      var before = stops().find(function (x) { return x.id === target.getAttribute("data-edit-stop"); });
+      ok("打開編輯:本來就有位置的那一筆,狀態列講得出來",
+        !before.place || /已標定/.test(d.getElementById("se-title-out").textContent),
+        { place: before.place, 槽: d.getElementById("se-title-out").textContent });
+      d.getElementById("se-note").value = "只改備註";
+      q("#edit-form button[type=submit]").click();
+      await sleep(120);
+      var after = stops().find(function (x) { return x.id === before.id; });
+      ok("只改備註、標題沒動 → 原來的位置留著(沒有被悄悄丟掉)",
+        after && after.place === before.place, { 之前: before.place, 之後: after && after.place });
+    } else {
+      ok("找得到可編輯的行程", false, "#route 裡沒有 [data-edit-stop]");
+    }
   } catch (e) {
     out.爆掉了 = String((e && e.stack) || e);
   }

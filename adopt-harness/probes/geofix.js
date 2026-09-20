@@ -64,6 +64,22 @@ w.fetch = function (url, init) {
 };
 
 function pins() { return JSON.parse(w.localStorage.getItem("tokyo5-pin3") || "{}"); }
+
+/* **兩欄合併之後,要讓一筆資料有 `place`,只剩這一條路:搜尋並挑選。**
+   以前這支探針到處在 `#wf-place` / `#sf-place` 上打字 —— 那兩個欄位不存在了,
+   而那不是改個 id 就好:**「打字打出一個 place」這件事本身被刪掉了**,
+   那正是「只有挑過的才上地圖」那個決定的內容。
+   所以這裡把它換成使用者真正會走的那條路,量到的東西因此更接近真的。 */
+async function pickPlace(prefix, name, lat, lon) {
+  var keep = osmReply;
+  osmReply = [{ lat: String(lat), lon: String(lon), display_name: name + ", 東京都, 日本" }];
+  q('[data-seek="' + prefix + '-title"]').click();
+  await until(function () { return d.querySelectorAll('[data-hit="' + prefix + '-title"]').length > 0; });
+  q('[data-hit="' + prefix + '-title"]').click();
+  await sleep(50);
+  osmReply = keep;
+  return name;
+}
 function pinsOf(k) { return pins()[k]; }
 function bar() { return q("#map-fix"); }
 function barText() { return q("#map-fix-t").textContent; }
@@ -214,7 +230,7 @@ function approxPins() {
     ok("找得到合羽橋那一列", !!kappa, null);
     kappa.click();
     ok("沒填地點 → 那一條講的是「沒填地點,不會出現在地圖上」",
-      await until(function () { return /合羽橋.*沒填地點/.test(barText()); }), barText());
+      await until(function () { return /合羽橋.*還沒挑地點/.test(barText()); }), barText());
     ok("沒填地點 → 不畫「再查一次」(按了也只是再問一次同一個錯問題,而且要錢)",
       q("#map-fix-go").hidden === true, q("#map-fix-go").outerHTML);
     ok("沒填地點 → 也不畫「對」", q("#map-fix-ok").hidden === true, null);
@@ -265,19 +281,20 @@ function approxPins() {
     flashes.length = 0; asked.length = 0;
     osmReply = [{ lat: "35.6812", lon: "139.7671" }];   /* 先讓它有一顆 pin */
     q("#add-wish-btn").click();
-    q("#wf-title").value = "看夜景";
-    q("#wf-place").value = "某某展望台";
+    q("#wf-title").value = "某某展望台";
+    /* 挑一個,這一筆才會有 place —— 合併之後「打字打出一個地點」已經不存在 */
+    await pickPlace("wf", "某某展望台", "35.6812", "139.7671");
     q("#wf-by").value = "hsieh_chinhui";
     q("#wf-submit").click();
     await until(function () {
       return [].slice.call(d.querySelectorAll("#wish-list [data-wish]"))
-        .some(function (r) { return /看夜景/.test(r.textContent); });
+        .some(function (r) { return /某某展望台/.test(r.textContent); });
     });
     ok("查得到的地點 → 送出時一句話都不講(不吵)",
       q("#wish-msg").hidden === true, q("#wish-msg").outerHTML);
     var night = [].slice.call(d.querySelectorAll("#wish-list [data-wish]"))
-      .filter(function (r) { return /看夜景/.test(r.textContent); })[0];
-    ok("找得到看夜景那一列", !!night, null);
+      .filter(function (r) { return /某某展望台/.test(r.textContent); })[0];
+    ok("找得到某某展望台那一列", !!night, null);
     night.click();
     ok("有標上去的願望問的是「不在這裡?」",
       await until(function () { return /某某展望台.*不在這裡/.test(barText()); }), barText());
@@ -358,14 +375,13 @@ function approxPins() {
     flashes.length = 0;
     q("#add-wish-btn").click();
     q("#wf-title").value = "多喝水";
-    q("#wf-place").value = "";
     q("#wf-by").value = "hsieh_chinhui";
     q("#wf-submit").click();
     /* **話改講在許願表單那一槽上,不在頁尾的 #sync。** 上一輪這裡看的是 flashes ——
        而那正是問題二:訊息真的有發,只是發在頁面最底下 10.5px 的小字上,
        使用者在表單上按送出,眼睛在表單。位置的部分量在第 12 段。 */
     ok("許願沒填地點 → 講的是「不會出現在地圖上」和「補上地點就會」",
-      await until(function () { return /沒填地點.*地圖上不會有它.*補上地點/.test(q("#wish-msg").textContent); }),
+      await until(function () { return /還沒挑地點.*地圖上不會有它.*搜尋/.test(q("#wish-msg").textContent); }),
       { 槽: q("#wish-msg").textContent, 頁尾: flashes });
     ok("許願沒填地點 → 照樣存下去(這是告知不是驗證)",
       d.querySelectorAll("#wish-list [data-wish]").length === nWishBefore + 1,
@@ -378,10 +394,9 @@ function approxPins() {
     q("#add-stop-btn").click();
     q("#sf-time").value = "16:00";
     q("#sf-title").value = "早點睡";
-    q("#sf-place").value = "";
     q("#stop-form button[type=submit]").click();
     ok("加行程沒填地點 → 同一句話(同一個 checkPlace,不是第二套機制)",
-      await until(function () { return /早點睡.*沒填地點/.test(q("#stop-msg").textContent); }),
+      await until(function () { return /早點睡.*還沒挑地點/.test(q("#stop-msg").textContent); }),
       { 槽: q("#stop-msg").textContent, 頁尾: flashes });
     ok("加行程沒填地點 → 照樣存下去",
       d.querySelectorAll("#route .stop").length === nStopBefore + 1,
@@ -482,47 +497,45 @@ function approxPins() {
        表有沒有接住一個字串,**看得見的證據是「有沒有發出線上查詢」**。 */
     flashes.length = 0; asked.length = 0;
     var osmB11c = osm.length;
-    osmReply = [{ lat: "35.6267", lon: "139.7745" }];   /* 台場,線上那家答得出來 */
+    /* **兩欄合併之後這一段的判準換了,而那是語意真的變了,不是改個選擇器。**
+       以前「富士電視台」填在地點欄,拆掉 `富士` 之後它會**掉到線上查詢**,
+       所以當時的證據是「有沒有發出查詢」。
+       現在打了字而沒挑 = 沒有 `place`,而規則一不准自動查 —— **一次都不會發**。
+       所以判準變成「**表有沒有接住它**」:接住就有 pin,沒接住就沒有 pin。 */
     q("#add-wish-btn").click();
-    q("#wf-title").value = "看電視台";
-    q("#wf-place").value = "富士電視台";
+    q("#wf-title").value = "富士電視台";
     q("#wf-by").value = "hsieh_chinhui";
     q("#wf-submit").click();
     await until(function () {
       return [].slice.call(d.querySelectorAll("#wish-list [data-wish]"))
-        .some(function (r) { return /看電視台/.test(r.textContent); });
+        .some(function (r) { return /富士電視台/.test(r.textContent); });
     });
-    await until(function () { return osm.length > osmB11c; });
-    ok("表不再接住「富士電視台」→ 它掉到線上查詢(表接住的話一次都不會發)",
-      osm.length > osmB11c, { 之前: osmB11c, 送出的: osm.slice(osmB11c) });
-    ok("而且問的就是那個字串", /%E5%AF%8C%E5%A3%AB|富士/.test(osm.slice(osmB11c).join(" ")),
-      osm.slice(osmB11c));
-    /* **等的是「答案存好」,不是「查詢送出」。** 第一版等 `osm.length` 變多就斷言,
-       而那時 fetch 才剛送出,`pins` 還沒寫 —— 量到 undefined。
-       今天第三次同型的錯了:**等待條件要選在你要量的那個東西身上。** */
-    ok("拿到的是線上那家的答案(台場),不是表裡的河口湖",
-      await until(function () { return !!pinsOf("富士電視台"); }) &&
-      Math.abs(pinsOf("富士電視台").la - 35.6267) < 0.01 && !pinsOf("富士電視台").via,
-      pinsOf("富士電視台"));
+    await sleep(200);
+    ok("表不再接住「富士電視台」→ 它沒有 pin(拆掉 `富士` 的效果)",
+      !pinsOf("富士電視台"), pinsOf("富士電視台"));
+    ok("而且沒挑就是沒挑 —— 一次線上查詢都不發(規則一)",
+      osm.length === osmB11c, osm.slice(osmB11c));
+    ok("送出時講的是「還沒挑地點」,不是默默什麼都不做",
+      await until(function () { return /富士電視台.*還沒挑地點/.test(q("#wish-msg").textContent); }),
+      q("#wish-msg").textContent);
 
     /* 另一半:拆 key 不能把它本來該接住的東西一起拆掉。
-       「富士山」「河口湖」要照樣命中,而命中的證據同樣是**一次查詢都不發**。 */
+       「富士山」照樣要命中人工表 —— 而命中的證據是**它拿得到 pin,而且一次查詢都不發**。
+       (這一筆的 place 是空的,所以走的是 pinForItem 第三步:標題比對人工表。) */
     var osmB11d = osm.length;
     q("#add-wish-btn").click();
-    q("#wf-title").value = "爬山";
-    q("#wf-place").value = "富士山 五合目";
+    q("#wf-title").value = "富士山 五合目";
     q("#wf-by").value = "hsieh_chinhui";
     q("#wf-submit").click();
     await until(function () {
       return [].slice.call(d.querySelectorAll("#wish-list [data-wish]"))
-        .some(function (r) { return /爬山/.test(r.textContent); });
+        .some(function (r) { return /富士山/.test(r.textContent); });
     });
     await sleep(300);
-    ok("「富士山 五合目」仍然被表接住(一次查詢都不發)",
+    ok("「富士山 五合目」仍然被表接住 —— 一次查詢都不發",
       osm.length === osmB11d, osm.slice(osmB11d));
-    ok("而且拿到的是表裡河口湖那組座標",
-      !!pinsOf("富士山 五合目") && Math.abs(pinsOf("富士山 五合目").la - 35.517) < 0.001,
-      pinsOf("富士山 五合目"));
+    ok("而且它講的不是「還沒挑地點」(表接住了,那句話會是假的)",
+      !/富士山.*還沒挑地點/.test(q("#wish-msg").textContent), q("#wish-msg").textContent);
 
     // 12 ---- 問題二:那句話講在使用者眼睛所在的地方 ----
     /* 上一輪那三句走的是 flash() → <footer> 裡的 #sync,10.5px 的小字。
@@ -543,7 +556,6 @@ function approxPins() {
     flashes.length = 0;
     q("#add-wish-btn").click();
     q("#wf-title").value = "早點睡";
-    q("#wf-place").value = "";
     q("#wf-by").value = "hsieh_chinhui";
     /* **要量的是「使用者的眼睛在哪」,而那是表單所在的位置,要在按下去之前量。**
        兩個踩過的坑都在這三行裡:
@@ -559,10 +571,10 @@ function approxPins() {
     q("#wf-submit").click();
     ok("許願沒填地點 → 話講在許願表單那一槽上",
       await until(function () { return q("#wish-msg").hidden === false; }), q("#wish-msg").outerHTML);
-    ok("而且文案沒變(還是「不會有它」+「補上地點就會」)",
-      /沒填地點.*地圖上不會有它.*補上地點/.test(q("#wish-msg").textContent), q("#wish-msg").textContent);
+    ok("而且文案沒變(還是「不會有它」+「按搜尋挑一個」)",
+      /還沒挑地點.*地圖上不會有它.*搜尋/.test(q("#wish-msg").textContent), q("#wish-msg").textContent);
     ok("**不再寫到頁尾那行小字** —— 同一句話只有一個出口",
-      !flashed(/沒填地點/), flashes);
+      !flashed(/還沒挑地點/), flashes);
     ok("用的是站上現成的 .note,沒有長出第三套提示機制",
       !!q("#wish-msg .note"), q("#wish-msg").innerHTML);
     /* 「講在眼睛所在的地方」是可以量的:比一比那句話離送出鈕多遠、離頁尾那行多遠。 */
@@ -590,36 +602,33 @@ function approxPins() {
     q("#add-stop-btn").click();
     q("#sf-time").value = "17:00";
     q("#sf-title").value = "多喝水";
-    q("#sf-place").value = "";
     q("#stop-form button[type=submit]").click();
     ok("加行程沒填地點 → 話講在行程表單那一槽上",
       await until(function () { return q("#stop-msg").hidden === false; }), q("#stop-msg").outerHTML);
-    ok("加行程那一句也不再寫到頁尾", !flashed(/沒填地點/), flashes);
+    ok("加行程那一句也不再寫到頁尾", !flashed(/還沒挑地點/), flashes);
     ok("它在 DOM 上的位置是「表單和行程列表之間」",
       q("#stop-form").nextElementSibling === q("#stop-msg") &&
       q("#stop-msg").nextElementSibling === q("#route"), null);
 
-    /* 「查不到」也是送出當下要讀到的 —— 協調者要我順便判斷,答案是一樣的。 */
-    osmReply = [];
-    flashes.length = 0;
-    q("#add-stop-btn").click();
-    ok("再打開表單 → 上一句話收掉了(不留成背景)", q("#stop-msg").hidden === true, q("#stop-msg").outerHTML);
-    q("#sf-time").value = "18:00";
-    q("#sf-title").value = "找一家店";
-    q("#sf-place").value = "查不到的那種地方";
-    q("#stop-form button[type=submit]").click();
-    ok("「查不到」也講在槽上,不講在頁尾",
-      await until(function () { return q("#stop-msg").hidden === false && /查不到/.test(q("#stop-msg").textContent); }),
-      q("#stop-msg").textContent);
-    ok("「查不到」那句沒有同時寫到頁尾", !flashed(/查不到/), flashes);
+    /* **「查不到」那一段拿掉了,而且它不是搬走,是變成到不了。**
+       兩欄合併之後,送出時要有 `place` 只有一條路:從候選清單挑一個 ——
+       而**挑到的東西必定有座標**(座標就是跟著候選一起來的)。
+       所以「有 place 但查不到」這個狀態,新增的那一刻再也產生不出來。
 
-    /* 「不在日本境內」:地點欄填 TPE 桃園 T1,人工表直接命中,一次查詢都不發。 */
+       那句話的程式還留著,因為**舊資料到得了**:合併之前存下來的那些 place,
+       在編輯時送出會走同一個 `checkPlace()`(`index.html:3256`)。
+       要測它得在 fixture 裡種一筆查不到的舊資料,而那會多出一項行程、
+       改掉天數計數,連帶動到 01 / 02 兩張截圖 —— **為了測一條legacy路徑去改基準,
+       代價大於它買到的東西**。登記在 `merge-place-field.md` 的「沒有驗到的」。
+
+       「不在日本境內」那條測得到,而且**判準換了**:以前靠地點欄填 `TPE 桃園 T1`,
+       現在填在標題上 —— `pinForItem` 第三步會拿標題去比對人工表,一次查詢都不發。 */
     flashes.length = 0;
     var netB12 = asked.length + osm.length;
     q("#add-stop-btn").click();
+    ok("再打開表單 → 上一句話收掉了(不留成背景)", q("#stop-msg").hidden === true, q("#stop-msg").outerHTML);
     q("#sf-time").value = "19:00";
-    q("#sf-title").value = "回程報到";
-    q("#sf-place").value = "TPE 桃園 T1";
+    q("#sf-title").value = "TPE 桃園 T1";
     q("#stop-form button[type=submit]").click();
     ok("「不在日本境內」也講在槽上",
       await until(function () { return /不在日本境內/.test(q("#stop-msg").textContent); }),
