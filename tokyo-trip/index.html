@@ -497,6 +497,10 @@
     .seek .btn.seek-strong{background:var(--color-accent); border-color:var(--color-accent);
       color:var(--color-accent-ink); font-weight:700;}
     .seek-out .said.hint{color:var(--color-accent); font-weight:600;}
+    .seek-out .seek-ok{margin-left:8px; padding:3px 12px; border:1.5px solid var(--color-accent);
+      border-radius:999px; background:none; color:var(--color-accent); font:inherit; font-size:12.5px;
+      font-weight:700; cursor:pointer;}
+    .seek-out .seek-ok:hover,.seek-out .seek-ok:focus-visible{background:var(--color-accent); color:var(--color-accent-ink);}
     .seek-out{margin-top:6px; border:1px solid var(--line); border-radius:10px; overflow:hidden; background:var(--surface);}
     .seek-out .hit{display:block; width:100%; text-align:left; padding:9px 11px; border:0; border-top:1px solid var(--line);
       background:none; font:inherit; color:inherit; cursor:pointer;}
@@ -2249,7 +2253,9 @@
   function seekSay(id, msg, hint) {
     const box = seekBox(id);
     if (!box) return;
-    box.innerHTML = msg ? '<div class="said' + (hint ? " hint" : "") + '">' + esc(msg) + "</div>" : "";
+    box.innerHTML = msg ? '<div class="said' + (hint ? " hint" : "") + '">' + esc(msg) +
+      (hint === "ok" ? ' <button type="button" class="seek-ok" data-arm="' + id + '">好</button>' : "") +
+      "</div>" : "";
     box.hidden = !msg;
   }
 
@@ -2282,8 +2288,12 @@
      不然「泡溫泉」用掉的三段會算在「大江戶溫泉物語」頭上,
      使用者換了說法卻發現自己已經在花錢那一段。 */
   const seekLast = {};
-  const HINT_WORDS = "試試加入車站或地點名 —— 例如「teamLab 豐洲」。";
-  const HINT_STRONG = "還是沒有找到嗎?試試「強力搜」。";
+  /* **升到強力搜是使用者點頭,不是按滿次數。** 他按了「好」這裡才變 true。
+     沒有這一步的話,那顆按鈕會自己在某個時刻變成花錢的 —— 而使用者不會知道
+     是哪一刻變的。**要錢的那一段要有一個明確的「我同意」。** */
+  const seekArmed = {};
+  const HINT_WORDS = "沒找到?試試加入地點名 —— 例如「teamLab 豐洲」。";
+  const HINT_STRONG = "還是沒有找到嗎?試試強力搜?";
 
   function seekBtn(id) { return document.querySelector('[data-seek="' + id + '"]'); }
 
@@ -2293,13 +2303,14 @@
   function paintSeekBtn(id) {
     const b = seekBtn(id);
     if (!b) return;
-    const strong = (seekTries[id] || 0) >= 3 && !onSnapshot();
+    const strong = !!seekArmed[id] && !onSnapshot();
     b.textContent = strong ? "強力搜" : "搜尋";
     b.classList.toggle("seek-strong", strong);
   }
 
   function seekReset(id) {
     seekTries[id] = 0;
+    seekArmed[id] = false;
     paintSeekBtn(id);
   }
 
@@ -2313,9 +2324,12 @@
        探針第一次跑就撞到:候選 0 筆,因為一個空結果蓋掉了有內容的那個。 */
     const b0 = seekBtn(id);
     if (b0 && b0.disabled) return;
-    /* 換了字 = 新的一輪,從免費開始。 */
-    if (seekLast[id] !== q) { seekTries[id] = 0; seekLast[id] = q; }
-    const strong = (seekTries[id] || 0) >= 3 && !onSnapshot();
+    /* **改字不歸零。** 第一版一改字就重來 —— 而提示叫的就是「加地點名」,
+       照做的人段數永遠回到 0,**走不到那顆「好」**。Lulu 回報「看不懂觸發點」,
+       原因就是這個:照提示做的人觸發不了它。
+       還在找同一個地方就繼續累積;真正的「新的一輪」是強力搜失敗之後(見下)。 */
+    seekLast[id] = q;
+    const strong = !!seekArmed[id] && !onSnapshot();
     seekTries[id] = (seekTries[id] || 0) + 1;
     /* **段數一加就重畫按鈕,不等查詢回來。** 等回來才畫的話,使用者按下去
        之後要盯著一顆沒反應的按鈕等一秒多,而他會再按一次。 */
@@ -2352,15 +2366,19 @@
           "只是它不會出現在地圖上。換個說法的話會重新找一次。", true);
         return;
       }
-      seekSay(id, "「" + q + "」找不到。" + seekHint(id), true);
+      /* **查無這條路也要走同一個產生器。** 第一版在這裡把提示當純文字接上去,
+         於是那顆「好」沒被畫出來 —— 而「查無」正是最需要它的時刻。
+         同一句話有兩個產生它的地方,就會有一個先過期。 */
+      const nb = seekBox(id);
+      nb.innerHTML = '<div class="said hint">' + esc("「" + q + "」找不到。") + "</div>" + hintHTML(id);
+      nb.hidden = false;
       return;
     }
     const box = seekBox(id);
     /* **提示排在候選之前。** 第一版擺在清單最後面 —— 而候選有六筆的時候
        它在螢幕外,使用者根本不會捲到那裡。那句話的用途是「這一輪沒挑到的話下一步做什麼」,
        它要在使用者決定「這些都不是」的**當下**就在視線裡。 */
-    box.innerHTML =
-      (seekHint(id) ? '<div class="said hint">' + esc(seekHint(id)) + "</div>" : "") +
+    box.innerHTML = hintHTML(id) +
       res.map((r, i) =>
         '<button type="button" class="hit" data-hit="' + id + '" data-i="' + i + '">' +
         "<b>" + esc(hitName(r)) + "</b><span>" + esc(hitAddr(r)) + "</span></button>").join("");
@@ -2370,10 +2388,24 @@
 
   /* 提示跟著段數走。**第 1 次不給提示** —— 那時候還沒有「找不到」這件事,
      提早講等於預設使用者會失敗。 */
+  /* 提示那一格。問到「要不要花錢」那一段時,**旁邊要有一顆可以按的「好」** ——
+     一句問句而沒有地方回答,使用者只會再按一次搜尋,而那一按是免費的,
+     他會以為「它問我但我按了沒用」。 */
+  function hintHTML(id) {
+    const h = seekHint(id);
+    if (!h) return "";
+    const arm = h === HINT_STRONG;
+    return '<div class="said hint">' + esc(h) +
+      (arm ? ' <button type="button" class="seek-ok" data-arm="' + id + '">好</button>' : "") +
+      "</div>";
+  }
+
   function seekHint(id) {
     const n = seekTries[id] || 0;
-    if (n >= 3 && !onSnapshot()) return HINT_STRONG;
-    if (n >= 2) return HINT_WORDS;
+    /* 第 1 次搜完就給「加地點名」—— 那是使用者這時候唯一能自己做的事。
+       第 2 次還沒挑到,才問要不要花錢。**已經點過頭的就不再問。** */
+    if (n >= 2 && !onSnapshot() && !seekArmed[id]) return HINT_STRONG;
+    if (n >= 1) return HINT_WORDS;
     return "";
   }
 
@@ -2392,13 +2424,17 @@
          「可能是今天的查詢次數用完了,或是網路不順」—— 那是我編的。
 
          Lulu 在 preview 上按下去「都沒東西」,真正的原因是
-         **preview 部署沒有 `GEOCODE_KEY`**(那把金鑰只設在 Production),
-         而伺服器明明白白回了「伺服器還沒設定 GEOCODE_KEY」——
+         **preview 部署沒有那把地名查詢的金鑰**(它只設在 Production),
+         而伺服器明明白白回了「伺服器還沒設定…」——
          **是我把那句話吃掉,換成一個聽起來很合理的原因。**
 
          這個專案一路在拆的就是這種東西:用一個猜測蓋掉一個明確的訊號。
          而這次那個猜測特別壞 —— 它指向「額度用完」,會讓人去查帳單,
-         而真正該做的是去 Vercel 加一個環境變數。 */
+         而真正該做的是去 Vercel 把那個環境變數也給 Preview。
+
+         (**這段註解本來寫了那個環境變數的名字,被 geofix 的斷言擋下來。**
+          那條斷言守的是「前端不要出現金鑰的變數名」—— 名字本身不是秘密,
+          但那是一道刻意畫的線,**不該為了我的註解好讀就把線挪開**。) */
       return { 錯: String((e && e.message) || e) };
     }
   }
@@ -2451,6 +2487,16 @@
   }
 
   document.addEventListener("click", ev => {
+    /* 按了「好」= 我同意花這筆錢。按鈕立刻變成「強力搜」,**而這一下不查任何東西** ——
+       花錢的仍然是下一下,他看著一顆已經變了樣的按鈕再按。 */
+    const arm = ev.target.closest && ev.target.closest("[data-arm]");
+    if (arm) {
+      const aid = arm.getAttribute("data-arm");
+      seekArmed[aid] = true;
+      paintSeekBtn(aid);
+      seekSay(aid, "好 —— 按「強力搜」再找一次。", true);
+      return;
+    }
     const go = ev.target.closest && ev.target.closest("[data-seek]");
     if (go) { runSeek(go.getAttribute("data-seek")); return; }
     const hit = ev.target.closest && ev.target.closest("[data-hit]");

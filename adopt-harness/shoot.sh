@@ -330,13 +330,15 @@ shot 13-wish-edit        390 1000 "d.getElementById('wishbox').open=true; d.quer
 # 「我改好了」和「你看得到我改成什麼樣」是兩件事。
 #
 # 樁裝在這裡,所以這張圖不碰網路(跟 12 同一個做法)。
-# 連按三次:第 1 段沒提示、第 2 段出現提示、第 3 段按鈕變橘。
+# 連按兩次再點「好」:第 1 次給「加地點名」、第 2 次問「要不要強力搜」、
+# 點了「好」按鈕才變橘。**升級是使用者點頭,不是按滿次數** —— 所以這張圖
+# 要拍的是「他點過頭之後」的樣子。
 #
 # **斷言只能檢查「表單開著、搜尋鈕在」,檢查不到提示本身。**
 # 斷言那一趟是在 JS 開跑後固定 900ms 檢查的,而三次搜尋要排 3×1100ms 的佇列
 # (Nominatim 的使用條款),再快也趕不上。**登記成工具缺口:斷言的等待時間
 # 應該能逐張指定**,不然「需要多步驟才到得了的狀態」永遠只能用弱斷言守。
-shot 14-seek-strong      390 1000 "(async function(){var R=[{lat:'35.6',lon:'139.7',display_name:'某個地方, 東京都, 日本'}];w.fetch=function(u){return String(u).indexOf('nominatim')<0?Promise.reject(new Error('擋掉')):Promise.resolve({ok:true,json:function(){return Promise.resolve(R)}})};d.getElementById('add-stop-btn').click();d.getElementById('sf-title').value='泡溫泉';var b=d.querySelector('[data-seek=sf-title]');var nap=function(){return new Promise(function(r){w.setTimeout(r,50)})};for(var i=0;i<3;i++){b.click();for(var k=0;k<40&&!b.disabled;k++){await nap()}for(var m=0;m<120&&b.disabled;m++){await nap()}}})();" \
+shot 14-seek-strong      390 1000 "(async function(){var R=[{lat:'35.6',lon:'139.7',display_name:'某個地方, 東京都, 日本'}];w.fetch=function(u){return String(u).indexOf('nominatim')<0?Promise.reject(new Error('擋掉')):Promise.resolve({ok:true,json:function(){return Promise.resolve(R)}})};d.getElementById('add-stop-btn').click();d.getElementById('sf-title').value='泡溫泉';var b=d.querySelector('[data-seek=sf-title]');var nap=function(){return new Promise(function(r){w.setTimeout(r,50)})};for(var i=0;i<2;i++){b.click();for(var k=0;k<40&&!b.disabled;k++){await nap()}for(var m=0;m<120&&b.disabled;m++){await nap()}}var okb=d.querySelector('[data-arm=sf-title]');if(okb){okb.click();await nap();await nap()}})();" \
                                   "#stop-form:not([hidden]) [data-seek]:1+"
 
 kill $SRV 2>/dev/null || true
