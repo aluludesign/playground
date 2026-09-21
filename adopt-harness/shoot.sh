@@ -315,8 +315,14 @@ shot 12-place-search     390 1100 "w.fetch=function(u){return String(u).indexOf(
 #   #we-again           **「再查一次」真的搬到這裡了**。它是這一輪的入口搬家,
 #                       而搬家最容易的失敗是舊的拿掉了、新的沒接上。
 #                       (w2 的快取座標沒有 via,所以這一筆的按鈕該是畫出來的。)
+# **`#we-again` 那一條斷言換掉了。** 那顆「再查一次」在 `feat/search-escalate`
+# 被收進搜尋按鈕的第 3 段,元素不存在了 —— 斷言改成「這張表裡有一顆搜尋鈕」。
+#
+# 留著不改的話,它會在一個**正確的改動**上變紅,而下一個人看到紅燈的第一反應
+# 是把改動退回去。那跟陷阱 12 是同一件事的另一半:
+# **斷言不只會保護舊的 bug,也會保護舊的設計。**
 shot 13-wish-edit        390 1000 "d.getElementById('wishbox').open=true; d.querySelector('[data-edit-wish]').click();" \
-                                  "#wish-edit-overlay:not([hidden]) .rm-input:2+,#wish-edit-overlay .seek-out .said.ok:1+,#we-again:not([hidden]):1+"
+                                  "#wish-edit-overlay:not([hidden]) .rm-input:2+,#wish-edit-overlay .seek-out .said.ok:1+,#wish-edit-overlay [data-seek]:1+"
 
 kill $SRV 2>/dev/null || true
 rm -rf "$H/.work"

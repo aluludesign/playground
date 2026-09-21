@@ -487,6 +487,9 @@
     .seek{display:flex; gap:6px; align-items:stretch;}
     .seek .rm-input{flex:1; min-width:0;}
     .seek .btn{flex:none; white-space:nowrap;}
+    /* 第 3 段的樣子。**要看得出來跟剛才那顆不一樣** —— 那一下要花錢,
+       而使用者唯一會停下來的理由是「這顆長得不一樣了」。 */
+    .seek .btn.seek-strong{background:var(--accent); border-color:var(--accent); color:#fff; font-weight:700;}
     .seek-out{margin-top:6px; border:1px solid var(--line); border-radius:10px; overflow:hidden; background:var(--surface);}
     .seek-out .hit{display:block; width:100%; text-align:left; padding:9px 11px; border:0; border-top:1px solid var(--line);
       background:none; font:inherit; color:inherit; cursor:pointer;}
@@ -505,7 +508,6 @@
        `stretch`,所以這顆按鈕原本跟欄位一樣寬 —— **一個每按一次都要錢的動作,
        畫得比它上面那個輸入框還醒目**。而把它搬進這裡的理由正是「不要讓人隨手按」。
        縮成剛好包住文字,它才讀起來像一條退路,而不是這張表的主要動作。 */
-    #we-again{margin-top:8px; align-self:flex-start;}
     .form-ops{display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap;}
 
     /* ---- settle ---- */
@@ -872,7 +874,7 @@
       <div class="seek-out" id="we-title-out" hidden></div>
       <!-- 「再查一次」住在這裡,不住在地圖上:它每按一次都要錢,而這個位置
            把它限制在「我正在編輯我自己那一筆」這個有意圖的情境裡。 -->
-      <button type="button" class="btn btn-sm" id="we-again" hidden>再查一次</button></div>
+      </div>
     <div class="fld"><label class="rm-label" for="we-note">想說的</label><input class="rm-input" type="text" id="we-note" placeholder="可留白"></div>
     <div class="err" id="we-err" hidden></div>
     <div class="ops">
@@ -2249,24 +2251,109 @@
     if (box) { box.innerHTML = ""; box.hidden = true; }
   }
 
+  /* ---- 三段式:免費 → 提示 → 強力搜 ----
+
+     **「再查一次」這個概念在這裡消失,變成同一顆按鈕的第三段。**
+
+     它原本的用途是「程式自己猜錯了,換一家重猜」—— 而兩欄合併之後
+     **程式不再自己猜**(沒挑就沒有 pin),那個用途沒有了。剩下的真實需求是
+     「免費那家找不到,我想換一家再找」,而那是搜尋流程裡的一步,不是另一個功能。
+
+     段數 = **按了搜尋、但沒有從候選裡挑走任何一個**的次數。挑了就歸零。
+
+       1  候選清單                                    免費(Nominatim)
+       2  ＋「試試加入車站或地點名」                    免費
+       3  ＋「還是沒有找到嗎?」,按鈕變鮮明、字變「強力搜」  下一按才走 Google
+
+     **第 3 段只是換掉按鈕,不會自己去花錢。** 要花錢的那一下永遠是使用者
+     看著一顆長得不一樣的按鈕、再按一次。這是「要錢的動作藏在刻意的操作後面」
+     那條原則在這個流程裡的落點。
+
+     **畫面上不講「改用 Google」**(Lulu 的決定):使用者不需要知道背後換了哪一家。 */
+  const seekTries = {};
+  const HINT_WORDS = "試試加入車站或地點名 —— 例如「teamLab 豐洲」。";
+  const HINT_STRONG = "還是沒有找到嗎?試試「強力搜」。";
+
+  function seekBtn(id) { return document.querySelector('[data-seek="' + id + '"]'); }
+
+  /* 按鈕的樣子跟著段數走。**快照模式下永遠不升到第 3 段** ——
+     那是一份凍結的副本,在上面開一個花錢的動作沒有意義,而且
+     `wish-edit` 那一輪剛把這扇門關上(`mayEditWish` 的 `!onSnapshot()`)。 */
+  function paintSeekBtn(id) {
+    const b = seekBtn(id);
+    if (!b) return;
+    const strong = (seekTries[id] || 0) >= 3 && !onSnapshot();
+    b.textContent = strong ? "強力搜" : "搜尋";
+    b.classList.toggle("seek-strong", strong);
+  }
+
+  function seekReset(id) {
+    seekTries[id] = 0;
+    paintSeekBtn(id);
+  }
+
   async function runSeek(id) {
     const input = el(id);
     const q = input ? input.value.trim() : "";
     if (!q) { seekSay(id, "先打幾個字,再按搜尋。"); return; }
+    /* **一次只跑一個。** 免費那家排在 1100ms 的佇列上(Nominatim 的使用條款),
+       所以連按會讓好幾個查詢同時在飛,而先回來的會把後回來的蓋掉 ——
+       使用者看到的是「我按了最後一次,畫面卻是前一次的結果」。
+       探針第一次跑就撞到:候選 0 筆,因為一個空結果蓋掉了有內容的那個。 */
+    const b0 = seekBtn(id);
+    if (b0 && b0.disabled) return;
+    const strong = (seekTries[id] || 0) >= 3 && !onSnapshot();
+    seekTries[id] = (seekTries[id] || 0) + 1;
+    /* **段數一加就重畫按鈕,不等查詢回來。** 等回來才畫的話,使用者按下去
+       之後要盯著一顆沒反應的按鈕等一秒多,而他會再按一次。 */
+    paintSeekBtn(id);
+    if (b0) b0.disabled = true;
     seekSay(id, "「" + q + "」搜尋中…");
-    const res = await seekPlace(q);
-    if (!res) { seekSay(id, "連不上地名查詢服務 —— 網路好一點再試,或直接把地點打完整。"); return; }
+    let res;
+    try {
+      res = strong ? await seekStrong(q) : await seekPlace(q);
+    } finally {
+      if (b0) b0.disabled = false;
+    }
+    if (!res) {
+      seekSay(id, strong
+        ? "這次沒查成 —— 可能是今天的查詢次數用完了,或是網路不順。等一下再試。"
+        : "連不上地名查詢服務 —— 網路好一點再試,或直接把地點打完整。");
+      return;
+    }
     if (!res.length) {
       /* **誠實說查無,不要退而求其次給一個。** 那正是這個功能要取代的行為。 */
-      seekSay(id, "「" + q + "」找不到。換個說法試試 —— 店名找不到的話打最近的車站或街區。");
+      seekSay(id, "「" + q + "」找不到。" + seekHint(id));
       return;
     }
     const box = seekBox(id);
     box.innerHTML = res.map((r, i) =>
       '<button type="button" class="hit" data-hit="' + id + '" data-i="' + i + '">' +
-      "<b>" + esc(hitName(r)) + "</b><span>" + esc(hitAddr(r)) + "</span></button>").join("");
+      "<b>" + esc(hitName(r)) + "</b><span>" + esc(hitAddr(r)) + "</span></button>").join("") +
+      (seekHint(id) ? '<div class="said">' + esc(seekHint(id)) + "</div>" : "");
     box.hidden = false;
     box._hits = res;
+  }
+
+  /* 提示跟著段數走。**第 1 次不給提示** —— 那時候還沒有「找不到」這件事,
+     提早講等於預設使用者會失敗。 */
+  function seekHint(id) {
+    const n = seekTries[id] || 0;
+    if (n >= 3 && !onSnapshot()) return HINT_STRONG;
+    if (n >= 2) return HINT_WORDS;
+    return "";
+  }
+
+  /* 第 3 段走的那一家。**跟「再查一次」以前走的是同一條後端路徑,一個字都沒改**
+     —— 差別只在前端怎麼決定要不要走它,以及送出去的是輸入框裡的字。
+     回傳格式對齊 `seekPlace()`(一個陣列),所以上面那段畫候選的程式不用分兩套。 */
+  async function seekStrong(q) {
+    try {
+      const r = await api("?resource=geocode&q=" + encodeURIComponent(q) +
+        "&cc=" + encodeURIComponent(regionFor(q).cc));
+      if (!r || !r.found) return [];
+      return [{ lat: String(r.la), lon: String(r.lo), display_name: r.label || q }];
+    } catch (_) { return null; }
   }
 
   /* 選了一個:地點欄換成那個名字,座標**同時**寫進快取,所以這一筆從此不會再被查。
@@ -2282,6 +2369,9 @@
        使用者剛剛才從三間同名的裡面挑了一間,他要看到的是自己挑的是哪一間。 */
     pins[name] = { la: +r.lat, lo: +r.lon, by: "pick", at: hitAddr(r) };
     savePins();
+    /* 挑到了 = 這一輪找東西結束。段數歸零,按鈕變回「搜尋」 ——
+       不歸零的話,下一次換個地方找會從第 3 段開始,直接把人推到花錢那一段。 */
+    seekReset(id);
     seekMark(id, name);
   }
 
@@ -3108,7 +3198,11 @@
 
   /* --- 行程 --- */
   /* 再打開表單 = 使用者要做下一件事了,上一次那句話可以收了。 */
-  el("add-stop-btn").addEventListener("click", () => { sayHere("stop-msg", ""); toggleForm("stop-form"); });
+  /* 打開表單 = 要找下一個東西。**段數和候選清單都歸零** ——
+     留著的話,下一筆會從上一筆的段數接下去,可能直接是「強力搜」。 */
+  el("add-stop-btn").addEventListener("click", () => {
+    sayHere("stop-msg", ""); seekReset("sf-title"); seekClear("sf-title"); toggleForm("stop-form");
+  });
   el("sf-cancel").addEventListener("click", () => toggleForm("stop-form", false));
   el("stop-form").addEventListener("submit", ev => {
     ev.preventDefault();
@@ -3439,6 +3533,7 @@
     /* **既有的 `place` 要看得見,不然合併等於把它藏起來然後悄悄丟掉。**
        標定過的那幾筆(挑過的、或以前查到座標的)在狀態列上講出來,
        使用者不動它就留著,重新搜尋挑一個就換掉。 */
+    seekReset("se-title");
     seekShowExisting("se-title", s.place);
     showEditError("");
     el("edit-overlay").hidden = false;
@@ -3499,6 +3594,7 @@
     box.hidden = !msg;
   }
   el("add-wish-btn").addEventListener("click", () => {
+    seekReset("wf-title"); seekClear("wf-title");
     fillWishWho();
     sayHere("wish-msg", "");
     showWishError("");
@@ -3554,10 +3650,23 @@
   /* 「再查一次」什麼時候畫,跟地圖上那顆同一組條件:
        沒有 place → 不畫(規則一:沒挑地點就不查,按了只是再問一次同一個錯問題)
        人工表就是答案 → 不畫(再查只會拿一個比較差的結果去蓋掉人工驗過的座標) */
-  function paintWishAgain(w) {
-    const at = w && w.place ? pinOf(w) : null;
-    el("we-again").hidden = !(w && w.place) || !!(at && at.via);
-  }
+  /* **`paintWishAgain()` 和 `#we-again` 拿掉了。**
+
+     那顆「再查一次」在這張表裡的工作,現在由搜尋按鈕的第 3 段做。
+     它以前有三層條件,逐一交代去了哪裡:
+
+       有 place 才畫        → 不再需要。第 3 段的觸發條件不是「這筆已經有地點」,
+                             是「免費那家連找兩次都沒挑到」,而那跟有沒有地點無關。
+       人工表命中就不畫      → **這一層是真的沒了,而且是刻意的**。它當初的意思是
+                             「表比線上準,再查只會拿差的蓋掉好的」—— 但那講的是
+                             **拿存著的地點去重查**。第 3 段送的是使用者剛打的字,
+                             他明擺著在找別的東西,沒有理由攔他。
+       快照模式不畫         → **搬進 `paintSeekBtn()` 和 `runSeek()` 了**,
+                             兩邊都有 `!onSnapshot()`。這一層一定要跟著搬:
+                             在一份凍結的副本上開一個花錢的動作,是 `wish-edit`
+                             那一輪剛關上的門。
+
+     (`regeoItem()` 沒有動 —— 地圖那顆「再查一次」還在用它,見下面那一則。) */
   function openWishEdit(id) {
     const w = state.wishes.find(x => x.id === id);
     /* 按鈕本來就只畫在自己那幾筆上,這層是防手動戳 DOM(跟 mayEdit() 同一個用意)。
@@ -3570,7 +3679,9 @@
        不講出來的話使用者不會知道這一筆已經標定過,而下面那三種情況
        有一種就是「他沒動標題,所以舊的留著」—— 留著的東西要看得到。 */
     seekShowExisting("we-title", w.place);
-    paintWishAgain(w);
+    /* 每次打開都從第 1 段開始。上一次找東西的段數留著的話,
+       下一筆願望會從「強力搜」開場 —— 直接把人推到花錢那一段。 */
+    seekReset("we-title");
     showWishEditError("");
     el("wish-edit-overlay").hidden = false;
     el("we-title").focus();
@@ -3583,38 +3694,6 @@
     el("wish-edit-overlay").hidden = true;
   }
   el("we-cancel").addEventListener("click", closeWishEdit);
-  el("we-again").addEventListener("click", async () => {
-    const w = state.wishes.find(x => x.id === editingWish);
-    if (!w || !w.place) return;          /* 沒挑地點的不查(規則一),按鈕本來也沒畫 */
-    const btn = el("we-again");
-    const what = w.place;
-    btn.disabled = true;
-    seekSay("we-title", "「" + what + "」查詢中…");
-    try {
-      /* 走的是既有的那一條,一個字都沒改:`regeo()` 會帶 `&wish=<id>`,
-         而後端核對的是「要查的字串就是那一筆願望的地點欄」——
-         **那條窄路本來就是為願望開的**,只是以前的入口在地圖上。 */
-      const hit = await regeoItem(w);
-      /* 誠實講結果。還是找不到就說還是找不到,不要假裝有東西。 */
-      let msg;
-      if (!hit) msg = "「" + what + "」還是找不到 —— 它可能不是一個地名,地圖上不會顯示";
-      else if (hit.manual) msg = "「" + hit.at.via + "」用的是人工確認過的座標" +
-        (inJapan(hit.at) ? " —— 這比線上查得到的準,不用再查" : ",它不在日本境內,這張圖只畫日本的點");
-      else if (!inJapan(hit.at)) msg = "「" + what + "」查到的位置不在日本境內,地圖上不會顯示";
-      else if (hit.area) msg = "「" + what + "」只查到大概的範圍,標的是那一區的中心 —— 地名打完整會更準";
-      else if (hit.same) msg = "「" + what + "」再查一次還是同一個位置";
-      else msg = "「" + what + "」重新標好了";
-      seekSay("we-title", msg);
-      paintWishAgain(w);
-      /* 地圖開著的話讓它跟上。**這句講在編輯框裡,不講在 flash()** ——
-         使用者的眼睛在這張表上,而頁尾那行小字他看不到(上一輪學到的)。 */
-      if (sheetMode === "wish" && !el("map-sheet").hidden) loadSheetMap(true);
-    } catch (e) {
-      seekSay("we-title", "再查一次沒成功:" + e.message);
-    } finally {
-      btn.disabled = false;
-    }
-  });
   el("wish-edit-form").addEventListener("submit", ev => {
     ev.preventDefault();
     if (!editingWish) return;

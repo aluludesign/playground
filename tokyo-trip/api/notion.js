@@ -231,32 +231,17 @@ async function listAll(shape) {
   return rows;
 }
 
-/* ---------- 沒有通行碼也能重查:只限「某一筆願望自己填的地點」 ----------
-   Lulu 的規則是「任何人自己加的行程可以自己再修改」。願望做得到(wishOut 有 `by`,
-   而且許願本來就是開放的,見 SHAPES.wishes 的 open:true);行程做不到
-   (stopOut 沒有任何「誰加的」欄位),所以這一條只開願望那一半。
+/* ---------- 這裡曾經有一道窄路,拆掉了 ----------
+   `wishAsksForItsOwnPlace(id, q)`:沒有通行碼的人也能打 geocode,條件是
+   「查的字串必須就是那筆願望已經存著的地點」。它不驗身分(驗不了),
+   改成**限制被問的是什麼**。
 
-   **這不是身分驗證,不要當成身分驗證。** 前端的「我是誰」是 localStorage 裡的
-   一個字串(tokyo5-me),誰都能設成任何人,伺服器驗不了 —— 所以這裡不寫一段
-   假裝驗得了的程式,改成**限制被問的是什麼**:要查的字串必須就是那一筆願望的
-   「地點」欄,而那一筆必須真的是願望(沒有日期)、而且真的住在這個資料庫裡。
+   **拆掉的理由不是它壞了,是它的前提消失了。** 它只在「被問的東西是資料庫裡
+   已經有的」時候成立,而搜尋的本質是問一個還沒存進去的字 —— 兩者不相容。
+   成本改由 Google 金鑰的每日上限擋(見下面 geocode 那一段)。
 
-   它買到的:這個端點不能被拿去當免費的地名查詢服務 —— 能查的字串只有
-   已經寫在願望表裡的那些。
-   它沒買到的:有人對同一筆狂按,額度照樣會被燒。**那個上限要在服務那一端設**
-   (Lulu 的帳號),程式解決不了,寫在這裡免得下一個人以為它解決了。 */
-const bare = s => String(s || "").replace(/-/g, "").toLowerCase();
-async function wishAsksForItsOwnPlace(id, q) {
-  if (!id) return false;
-  let page;
-  try { page = await notion("/pages/" + encodeURIComponent(String(id))); } catch (_) { return false; }
-  const parent = (page && page.parent && page.parent.database_id) || "";
-  if (bare(parent) !== bare(DB.itinerary)) return false;
-  const p = page.properties || {};
-  if (dat(p["日期"])) return false;                 /* 有日期的是行程,不是願望 */
-  const place = txt(p["地點"]).trim();
-  return !!place && place === q;
-}
+   `git log -S wishAsksForItsOwnPlace` 找得回完整實作。 */
+
 
 /* ---------- 入口 ---------- */
 module.exports = async (req, res) => {
@@ -302,15 +287,27 @@ module.exports = async (req, res) => {
     const q = String((req.query && req.query.q) || "").trim();
     if (!q) return res.status(400).json({ error: "沒有要查的字串" });
     if (q.length > 120) return res.status(400).json({ error: "要查的字串太長" });
-    /* 通行碼那條照舊。沒帶的話還有一條窄路:重查某一筆願望自己填的地點 ——
-       前端只有在「這是我許的願望」時才會走它,而伺服器能驗的是**被問的是什麼**。
-       見上面 wishAsksForItsOwnPlace 的那一段。 */
-    const no = denyWrite();
-    if (no && !(await wishAsksForItsOwnPlace(req.query && req.query.wish, q))) {
-      return res.status(no.status).json({ error: no.error });
-    }
+    /* **這一條不再要通行碼,而那道窄路整個拆掉了。**
+
+       以前是:要嘛有通行碼,要嘛「你查的字必須就是那筆願望已經存著的地點」
+       (`wishAsksForItsOwnPlace`)。那道檢查的用意從來不是驗身分(伺服器驗不了),
+       是**擋成本** —— 不讓這個要錢的端點被任意字串打。
+
+       **它跟搜尋在根本上不相容。** 那道檢查只在「被問的東西是資料庫裡已經有的」
+       時候成立,而**搜尋的本質就是問一個還沒存進去的字**。所以合併之後
+       它會把那三個沒有通行碼的人每一次都擋掉 —— 而「免費那家找不到,
+       換一家再找」正是這個功能存在的理由,擋掉它等於把功能拿掉。
+
+       **成本改由 Google 那把金鑰自己擋:`v3 requests per day = 500`**
+       (Lulu 2026-09-20 設的,在 Google Cloud Console 的 Quotas 裡)。
+       那是 Google 強制執行的硬上限,比我們在這裡寫任何程式都可靠 ——
+       超過就是 Google 拒絕,不是她的卡被刷。以牌價每千次約 US$5 估,
+       最壞情況一天約 US$2.5。
+
+       **剩下的風險是額度被故意用光**(那天大家都搜不了),不是帳單失控。
+       要做到得先知道這個沒公開的網址。五個人的行程網站,這個取捨是她拍板的。 */
     if (!process.env.GEOCODE_KEY) {
-      return res.status(503).json({ error: "伺服器還沒設定 GEOCODE_KEY,再查一次目前不能用" });
+      return res.status(503).json({ error: "伺服器還沒設定 GEOCODE_KEY,強力搜目前不能用" });
     }
     /* 國家代碼只收兩個字母,不讓查詢字串以外的東西跑進 URL */
     const cc = /^[a-z]{2}$/.test(String((req.query && req.query.cc) || "")) ? req.query.cc : "jp";
@@ -361,11 +358,11 @@ module.exports = async (req, res) => {
          伺服器驗不了身分:前端的「我是誰」是 localStorage 裡的一個字串(`tokyo5-me`),
          誰都能設成任何人,而 A 改自己那一筆和 A 改 B 那一筆,**送到這裡的兩個請求
          長得一模一樣**。所以這裡**不寫一段假裝驗得了身分的程式**
-         (跟 `wishAsksForItsOwnPlace` 同一堵牆,只是這一次擋得住的更少)。
+         (`wishAsksForItsOwnPlace` 當初撞的是同一堵牆,只是這一次擋得住的更少)。
 
-         它擋得住的只有一件事:**`by` 改不掉**。那一個欄位是前端 `.mine` 紫框、
-         「改」那顆按鈕、以及上面那條 geocode 窄路**三者共同的地基** ——
-         能改它的話,那三個東西都可以被從底下抽掉。
+         它擋得住的只有一件事:**`by` 改不掉**。那一個欄位是前端 `.mine` 紫框
+         和「改」那顆按鈕**共同的地基** —— 能改它的話,那兩個都可以被從底下抽掉。
+         (geocode 那條窄路以前也站在同一個地基上,現在拆了,所以這裡少一個。)
 
          **「誰許的誰能改」是介面上的規則,不是鎖。** 下一個人不要在它上面疊東西。
          真的需要鎖的話,那要先有一個伺服器驗得了的身分,而這個站沒有。 */
