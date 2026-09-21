@@ -1,0 +1,18 @@
+{
+  "id": "./",
+  "name": "東京五人行",
+  "short_name": "東京五人行",
+  "description": "2026 年 10 月東京六日遊的行程規劃、花費紀錄與五人分帳結算。",
+  "lang": "zh-Hant",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F1F2F6",
+  "theme_color": "#F1F2F6",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
