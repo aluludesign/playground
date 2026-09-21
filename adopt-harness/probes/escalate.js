@@ -26,7 +26,7 @@ w.fetch = function (u, init) {
     var a = osmReply;
     return Promise.resolve({ ok: true, json: function () { return Promise.resolve(a); } });
   }
-  if (url.indexOf("resource=geocode") >= 0) {
+  if (url.indexOf("resource=places") >= 0) {
     goo.push(url);
     var b = gooReply;
     /* `gooStatus` 不是 200 的時候模擬伺服器回錯誤 —— `api()` 會 throw,
@@ -101,12 +101,15 @@ async function press(id) {
     ok("而且它告訴你下一步做什麼", boxText("sf-title").indexOf("按「強力搜」") >= 0, boxText("sf-title"));
 
     // ---- 按下強力搜才走 Google ----
-    gooReply = { found: true, la: 35.6267, lo: 139.7745, label: "富士電視台, 台場", precision: "exact" };
+    gooReply = { list: [{ la: 35.6267, lo: 139.7745, label: "富士電視台", addr: "東京都港區台場" },
+                 { la: 35.66, lo: 139.79, label: "富士電視台 球體展望室", addr: "東京都港區台場 2-4-8" }] };
     await press("sf-title");
     ok("按「強力搜」才問 Google", goo.length === 1, { google: goo.length });
     ok("而且那一下不再問免費那家", osm.length === 2, { osm: osm.length });
-    ok("Google 的結果照樣畫成可以挑的候選",
-      d.querySelectorAll('[data-hit="sf-title"]').length === 1,
+    /* **Places 回多筆,而那正是換掉 Geocoding 的理由。**
+       Geocoding 只回一筆,所以「三間 teamLab 讓你挑」這件事它做不到。 */
+    ok("Google 的結果照樣畫成可以挑的候選,而且是**多筆**",
+      d.querySelectorAll('[data-hit="sf-title"]').length === 2,
       d.querySelectorAll('[data-hit="sf-title"]').length);
 
     // ---- 挑到 → 全部歸零 ----
@@ -116,7 +119,7 @@ async function press(id) {
     ok("挑到之後那一欄換成挑到的名字", inp.value === "富士電視台", inp.value);
 
     // ---- 強力搜也找不到:退回免費,並說「找不到也沒關係」 ----
-    osm.length = 0; goo.length = 0; osmReply = []; gooReply = { found: false };
+    osm.length = 0; goo.length = 0; osmReply = []; gooReply = { list: [] };
     inp.value = "查不到的那種";
     await press("sf-title"); await press("sf-title");
     d.querySelector('[data-arm="sf-title"]').click();
@@ -146,10 +149,10 @@ async function press(id) {
     await press("wf-title"); await press("wf-title");
     d.querySelector('[data-arm="wf-title"]').click();
     await sleep(60);
-    gooStatus = 503; gooReply = { error: "伺服器還沒設定 GEOCODE_KEY,強力搜目前不能用" };
+    gooStatus = 503; gooReply = { error: "地點查詢服務說:Places API has not been used in project…" };
     await press("wf-title");
     ok("伺服器講得出原因時,畫面轉述它的原話",
-      boxText("wf-title").indexOf("GEOCODE_KEY") >= 0, boxText("wf-title"));
+      boxText("wf-title").indexOf("Places API") >= 0, boxText("wf-title"));
     ok("**不會換成自己編的原因**(例如「次數用完了」)",
       boxText("wf-title").indexOf("次數用完") < 0, boxText("wf-title"));
     gooStatus = 200;

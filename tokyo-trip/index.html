@@ -2414,10 +2414,16 @@
      回傳格式對齊 `seekPlace()`(一個陣列),所以上面那段畫候選的程式不用分兩套。 */
   async function seekStrong(q) {
     try {
-      const r = await api("?resource=geocode&q=" + encodeURIComponent(q) +
+      /* **打 `places` 不是 `geocode`。** 後者是「地址 → 座標」,會把店名解析成
+         整個行政區(量過:「一蘭拉麵 新宿」回整個新宿區、「藏前 咖啡」回台東區藏前)。
+         前者才是「關鍵字 → 一串地點」,**而且回多筆** —— 跟免費那家同一個形狀,
+         所以下面畫候選那段不用分兩套。 */
+      const r = await api("?resource=places&q=" + encodeURIComponent(q) +
         "&cc=" + encodeURIComponent(regionFor(q).cc));
-      if (!r || !r.found) return [];
-      return [{ lat: String(r.la), lon: String(r.lo), display_name: r.label || q }];
+      return ((r && r.list) || []).map(x => ({
+        lat: String(x.la), lon: String(x.lo),
+        display_name: x.addr ? x.label + ", " + x.addr : x.label,
+      }));
     } catch (e) {
       /* **把伺服器講的原話帶出來,不要換成自己猜的。**
          第一版這裡是 `catch (_) { return null; }`,而顯示的是

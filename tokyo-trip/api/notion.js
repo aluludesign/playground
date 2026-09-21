@@ -279,6 +279,64 @@ module.exports = async (req, res) => {
   /* 地名再查一次:使用者說「這個 pin 不對」時才走。不碰 Notion。
      跟寫入同一條規則(要通行碼)—— 這一條每查一次都要錢,付錢的是 Lulu 的信用卡,
      公開的 GET 端點等於把額度開給全世界。前端也只在可編輯時才畫那顆按鈕。 */
+  /* ---------- 關鍵字找地點:Places Text Search ----------
+
+     **跟上面那條 `geocode` 不是同一件事,不要合併。**
+     Geocoding 的設計目的是「地址 → 座標」,所以它把店名當地址解析 ——
+     量過:「一蘭拉麵 新宿」回的是整個新宿區,「藏前 咖啡」回的是台東區藏前。
+     **它不是不準,是它回答的是另一個問題。**
+
+     Places Text Search 才是「打關鍵字、回一串有名字有地址的地點」那個,
+     而那正是搜尋框要的東西。用的是 Places API (New):
+     POST /v1/places:searchText,金鑰走標頭,要回什麼欄位用 FieldMask 指定
+     —— **欄位要得越少越便宜**,所以只要名字、地址、座標。 */
+  if (resource === "places") {
+    if (req.method !== "GET") {
+      res.setHeader("Allow", "GET");
+      return res.status(405).json({ error: "不支援的方法" });
+    }
+    const q = String((req.query && req.query.q) || "").trim();
+    if (!q) return res.status(400).json({ error: "沒有要查的字串" });
+    if (q.length > 120) return res.status(400).json({ error: "要查的字串太長" });
+    if (!process.env.GEOCODE_KEY) {
+      return res.status(503).json({ error: "伺服器還沒設定地名查詢的金鑰,強力搜目前不能用" });
+    }
+    const cc = /^[a-z]{2}$/.test(String((req.query && req.query.cc) || "")) ? req.query.cc : "jp";
+    try {
+      const r = await fetch("https://places.googleapis.com/v1/places:searchText", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Goog-Api-Key": process.env.GEOCODE_KEY,
+          "X-Goog-FieldMask": "places.displayName,places.formattedAddress,places.location",
+        },
+        body: JSON.stringify({
+          textQuery: q,
+          languageCode: "zh-TW",
+          regionCode: cc.toUpperCase(),
+          maxResultCount: 6,
+        }),
+      });
+      const body = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        /* **把 Google 說的話帶出去,不要換成自己猜的。**
+           API 沒開、金鑰沒權限、額度用完 —— 這三種的處置完全不同,
+           而它們只有在原話裡才分得出來。 */
+        const why = (body && body.error && body.error.message) || ("HTTP " + r.status);
+        return res.status(r.status === 403 ? 403 : 502).json({ error: "地點查詢服務說:" + why });
+      }
+      const list = (body.places || []).map(x => ({
+        la: x.location && x.location.latitude,
+        lo: x.location && x.location.longitude,
+        label: (x.displayName && x.displayName.text) || "",
+        addr: x.formattedAddress || "",
+      })).filter(x => typeof x.la === "number" && typeof x.lo === "number" && x.label);
+      return res.status(200).json({ list: list });
+    } catch (e) {
+      return res.status(502).json({ error: "連不上地點查詢服務" });
+    }
+  }
+
   if (resource === "geocode") {
     if (req.method !== "GET") {
       res.setHeader("Allow", "GET");
