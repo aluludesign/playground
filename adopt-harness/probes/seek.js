@@ -261,15 +261,15 @@ var THREE = [
       wishRow(/港灣未來/) && wishRow(/港灣未來/).className);
 
     /* 10a2 ---- 改別人那一筆的時候,畫面要先講出來那是誰的 ----
-       願望清單上只有自己那幾筆有紫框,別人的那幾筆**沒有標名字** ——
-       所以管理員打開表單看到的,是一個跟自己那一筆長得一模一樣的框。
+       清單那一列印得出「佳瑜 許的」,**但這張表蓋住了那一列** —— 打開之後
+       畫面上只剩兩個欄位,跟自己那一筆的長得一模一樣。
        沒有這一條的話,「改得動別人的」和「不小心改掉別人的」之間沒有東西。 */
     d.querySelector('#wish-list [data-edit-wish="w1"]').click();   /* w1 是 chang_chiayu 許的 */
     await until(function () { return !q("#wish-edit-overlay").hidden; });
     ok("改別人的 → 標題改口(不再說「我的」)", q("#we-head").textContent === "改別人的願望",
       q("#we-head").textContent);
-    ok("改別人的 → 那一條出現,而且點得出是誰",
-      q("#we-whose").hidden === false && q("#we-whose").textContent.indexOf("chang_chiayu") >= 0,
+    ok("改別人的 → 那一條出現,而且印的是顯示名(佳瑜),不是 id",
+      q("#we-whose").hidden === false && q("#we-whose").textContent.indexOf("佳瑜") >= 0,
       { hidden: q("#we-whose").hidden, 字: q("#we-whose").textContent });
     ok("而且講明了改完歸屬不變(表單裡沒有「你是誰」這一欄,by 原樣送回去)",
       /還是算他許的/.test(q("#we-whose").textContent), q("#we-whose").textContent);

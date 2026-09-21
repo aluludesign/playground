@@ -303,9 +303,16 @@ shot 12-place-search     390 1100 "w.fetch=function(u){return String(u).indexOf(
 # 13:「改我的願望」。理由跟 10 / 11 同形 —— **沒有截圖的介面等於沒有人看過**,
 # 而 block-05 那一輪一打開 #exp-form 就當場發現十顆膠囊壞了、壞了兩輪。
 #
-# fixture 的 tokyo5-me 是 hsieh_chinhui,而 w2(「橫濱 港灣未來」)正是他許的 ——
-# 所以整份清單裡只有那一筆有 `[data-edit-wish]`,`querySelector` 不會挑錯。
-# **那不是巧合,是這張圖要證的事的一半**:別人的願望沒有那顆按鈕。
+# fixture 的 tokyo5-me 是 hsieh_chinhui,而 w2(「橫濱 港灣未來」)正是他許的。
+#
+# **這裡以前寫的是「整份清單裡只有那一筆有 [data-edit-wish],querySelector 不會挑錯」,
+# 而那個前提在「管理員改得動任何人的願望」之後沒了。** 三筆都有「改」,
+# `querySelector` 挑到的變成 w1(teamLab,沒有地點)—— 於是 `.said.ok` 那條斷言紅了,
+# 而它紅得對:這張圖本來就是要拍「既有的 place 講出來」,拍到一筆沒有 place 的等於沒拍到。
+# 現在直接指名 `w2`,跟清單上有幾顆「改」無關。
+#
+# 「別人的願望沒有那顆按鈕」那件事**搬到 probes/geofix.js 的 14e** —— 那裡是唯讀
+# (沒有通行碼)的情境,那條規則只在那裡還成立。
 #
 # 三條斷言各自釘一件事:
 #   .rm-input:2+        兩個欄位真的畫出來了(標題 + 想說的)
@@ -321,7 +328,7 @@ shot 12-place-search     390 1100 "w.fetch=function(u){return String(u).indexOf(
 # 留著不改的話,它會在一個**正確的改動**上變紅,而下一個人看到紅燈的第一反應
 # 是把改動退回去。那跟陷阱 12 是同一件事的另一半:
 # **斷言不只會保護舊的 bug,也會保護舊的設計。**
-shot 13-wish-edit        390 1000 "d.getElementById('wishbox').open=true; d.querySelector('[data-edit-wish]').click();" \
+shot 13-wish-edit        390 1000 "d.getElementById('wishbox').open=true; d.querySelector('[data-edit-wish=w2]').click();" \
                                   "#wish-edit-overlay:not([hidden]) .rm-input:2+,#wish-edit-overlay .seek-out .said.ok:1+,#wish-edit-overlay [data-seek]:1+"
 
 # 14:第 3 段的樣子 —— 橘色提示 + 「強力搜」按鈕。
@@ -341,15 +348,28 @@ shot 13-wish-edit        390 1000 "d.getElementById('wishbox').open=true; d.quer
 shot 14-seek-strong      390 1000 "(async function(){var R=[{lat:'35.6',lon:'139.7',display_name:'某個地方, 東京都, 日本'}];w.fetch=function(u){return String(u).indexOf('nominatim')<0?Promise.reject(new Error('擋掉')):Promise.resolve({ok:true,json:function(){return Promise.resolve(R)}})};d.getElementById('add-stop-btn').click();d.getElementById('sf-title').value='泡溫泉';var b=d.querySelector('[data-seek=sf-title]');var nap=function(){return new Promise(function(r){w.setTimeout(r,50)})};for(var i=0;i<2;i++){b.click();for(var k=0;k<40&&!b.disabled;k++){await nap()}for(var m=0;m<120&&b.disabled;m++){await nap()}}var okb=d.querySelector('[data-arm=sf-title]');if(okb){okb.click();await nap();await nap()}})();" \
                                   "#stop-form:not([hidden]) [data-seek]:1+"
 
+# 15:改**別人**那一筆的樣子 —— 暖色那一條說得出是誰許的。
+# 理由跟 13 / 14 同形:這條提示是「管理員改得動任何人的願望」唯一的煞車,
+# 而**沒有截圖的介面等於沒有人看過**。
+#
+# **理由要寫準**:清單那一列印得出「佳瑜 許的」(renderWishes 的 `.by`),別人的
+# 願望不是沒有名字 —— 是**這張表蓋住了那一列**。打開之後畫面上只剩兩個欄位,
+# 跟自己那一筆長得一模一樣。這一張要證的就是「不一樣」。
+#
+# w1(teamLab)是 chang_chiayu(佳瑜)許的,而 fixture 的 tokyo5-me 是 hsieh_chinhui(阿輝)。
+# 兩條斷言:那一條真的沒有 hidden、而且標題改口了(不再說「我的」)。
+shot 15-wish-edit-other  390 1000 "d.getElementById('wishbox').open=true; d.querySelector('[data-edit-wish=w1]').click();" \
+                                  "#wish-edit-overlay:not([hidden]) #we-whose:not([hidden]):1+,#wish-edit-overlay .note:1+"
+
 # 16:**上膛之前**那句話 —— 句子裡那三個字是橘紅、加粗、有底線的按鈕。
 # 14 那張拍的是按下去**之後**,所以這句問話本身一直沒有人看過,
 # 而它才是這一輪真正改掉的東西(旁邊一顆「好」→ 句子裡的連結)。
 #
 # 跟 14 同一段腳本,只是**不點下去**。顏色由這張回答,探針只量得到 class。
 #
-# **編號從 16 起跳不是手滑**:15 給了 `feat/admin-edit-wish` 的
-# `15-wish-edit-other`,那支還沒合併。兩支都叫 15 的話,合併之後會有兩個檔名
-# 撞在一起,而 `shoot.sh` 不會抱怨 —— 它只是後寫的蓋掉先寫的。
+# **編號從 16 起跳不是手滑**:15 當初留給了 `feat/admin-edit-wish`,兩支分開做的時候
+# 都叫 15 的話合併會撞檔名,而 `shoot.sh` 不會抱怨 —— 它只是後寫的蓋掉先寫的。
+# (那支現在就在上面,兩張並存,洞補起來了。)
 #
 # **斷言只能問「這一頁有東西嗎」,問不了那句話在不在。** 斷言那一趟在動作後 900ms 量,
 # 而兩次搜尋走的是 Nominatim 那條有節流的佇列,900ms 到不了第 2 段。
