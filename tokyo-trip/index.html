@@ -1092,6 +1092,19 @@
                下次連上網重新拉一次就整個不見 —— 而且沒有任何地方會說一句。
        沒副本  從沒連上過後端(GitHub Pages 那份),動的是自己的瀏覽器 → 照樣能改。 */
   const editable = () => (online ? canEdit : !snapAt);
+  /* **`editable()` 同時回答兩個問題**,而它們不是同一件事:
+       「你沒有通行碼」   ← online 那一邊的 canEdit
+       「你在看一份副本」 ← 離線那一邊的 snapAt
+     有些入口只該尊重其中一個。「改我的願望」就是:它**刻意繞過**前者
+     (這條路存在的理由正是那三個沒有通行碼的人),但它**不能繞過後者** ——
+     副本是凍結的,`saveLocal()` 開頭就 return,而 `updateWish()` 照樣
+     `Object.assign` + 重繪,所以畫面看起來存好了、重新整理就沒了。
+     那是一個**新的、我們自己造的無聲失敗**。
+
+     所以把後者拆出來給它一個名字,**`editable()` 的定義一個字都不動** ——
+     它現在的定義是對的,而且別的東西(加行程、刪掉、地圖上那顆「再查一次」)
+     都還靠著它同時管兩件事。 */
+  const onSnapshot = () => !online && !!snapAt;
 
   /* 分類在 Notion 用中文,程式內部用代號 */
   const CAT_TO_NOTION = { transport: "交通", stay: "住宿", food: "餐飲", sight: "景點", shop: "購物", other: "其他" };
@@ -1227,6 +1240,16 @@
   function mayEdit() {
     if (editable()) return true;
     flash("唯讀模式 —— 要編輯請先用通行碼登入");
+    return false;
+  }
+  /* 「改我的願望」那條路的寫入閘門。**形狀跟 mayEdit() 一樣**:能寫回 true,
+     不能寫就講一句再回 false。它問的**不是**「你有沒有通行碼」(那條路存在的
+     理由正是那三個沒有的人),而是「你在看的是不是一份凍結的副本」。
+     送出的 handler 和 updateWish() 兩層共用它 —— 所以那句話只有一份,
+     不會變成第二套訊息機制。 */
+  function mayWriteWish() {
+    if (!onSnapshot()) return true;
+    flash("這是離線副本,改了存不下來 —— 連上網之後會換成最新的");
     return false;
   }
   async function addExpense(e) {
@@ -1386,6 +1409,10 @@
     const w = state.wishes.find(x => x.id === id);
     if (!w) return;
     if (!mineWish(w)) { flash("只改得動自己許的願望"); return; }
+    /* **副本是凍結的。** 少了這一行,下面的 Object.assign + renderWishes() 會讓
+       畫面看起來改成功,而 saveLocal() 開頭 `if (online || snapAt) return;`
+       什麼都沒寫 —— 重新整理就沒了,而且沒有任何地方會說一句。 */
+    if (!mayWriteWish()) return;
     const before = { title: w.title, place: w.place, note: w.note };
     Object.assign(w, patch);
     renderWishes();
@@ -1516,6 +1543,16 @@
       const rn = el("rename-form");
       if (rn) rn.hidden = true;
     }
+    /* 「改」的判準不是 `editable()`,所以它不能掛在上面那個 `if (!on)` 裡:
+       線上唯讀(有連線、沒通行碼)時那張表**該**留著,那正是這條路存在的理由。
+       只有切進快照模式才要收。
+
+       **這條路現在走不到**:唯一把 snapAt 設起來的是 goLocal(),而 goLocal()
+       只在開機那一趟 goOnline() 失敗時跑,那時候不可能有表開著。
+       留著是因為它便宜,而且「唯讀時把會改資料的入口收起來」本來就是這個
+       函式的工作 —— 下一個人加一條「連線斷了就 goLocal()」的路時,
+       不會順手造出「表開著、按存起來、無聲失敗」那個組合。 */
+    if (onSnapshot()) closeWishEdit();
   }
 
   function renderCloudBar() {
@@ -1939,6 +1976,16 @@
      它是**介面層**的規則,不是身分驗證:tokyo5-me 是瀏覽器裡的一個字串,
      伺服器驗不了它。後端那一條放行的判準是「被問的是什麼」,見 api/notion.js。 */
   const mineWish = it => !!(it && it.by && it.by === myName());
+  /* **「改」要同時滿足兩件事:是我許的,而且不是在看一份凍結的副本。**
+     `mineWish()` 單獨拿來當判準的時候,快照模式下橫幅說「不能編輯」、
+     「加行程」和「刪掉」都不見了,「改」卻還在,點下去表單真的開 ——
+     而按「存起來」是無聲失敗(見 onSnapshot 那一段)。
+     兩邊的設計意圖在這裡都保住了:沒有通行碼的人照樣改得動自己的願望,
+     而沒有人編輯得了一份凍結的副本。
+
+     `mineWish()` 本身**留著不動**:`.mine` 那個紫框問的是「這是誰許的」,
+     那是一個事實,跟現在能不能寫沒有關係。 */
+  const mayEditWish = w => mineWish(w) && !onSnapshot();
   function paintFix(item, key, found) {
     fixItem = item || null;
     fixKey = key || null;
@@ -2900,7 +2947,7 @@
              (刪掉、加入行程)。
              借 `.wdel` 的樣式(同一排的次要小字按鈕),不新增 class ——
              新 class 要重編,而這裡沒有新的樣式需求。 */
-          (mineWish(w) ? '<button type="button" class="wdel" data-edit-wish="' + esc(w.id || "") + '">改</button>' : "") +
+          (mayEditWish(w) ? '<button type="button" class="wdel" data-edit-wish="' + esc(w.id || "") + '">改</button>' : "") +
           (editable() ? '<button type="button" class="wdel" data-del-wish="' + esc(w.id || "") + '">刪掉</button>' : "") +
           "</div>" +
           '<div class="wops">' +
@@ -3513,8 +3560,9 @@
   }
   function openWishEdit(id) {
     const w = state.wishes.find(x => x.id === id);
-    /* 按鈕本來就只畫在自己那幾筆上,這層是防手動戳 DOM(跟 mayEdit() 同一個用意) */
-    if (!w || !mineWish(w)) return;
+    /* 按鈕本來就只畫在自己那幾筆上,這層是防手動戳 DOM(跟 mayEdit() 同一個用意)。
+       判準跟畫按鈕那裡同一個 `mayEditWish()` —— 不要一邊畫、一邊開,用兩套規則。 */
+    if (!w || !mayEditWish(w)) return;
     editingWish = id;
     el("we-title").value = w.title || "";
     el("we-note").value = w.note || "";
@@ -3527,11 +3575,14 @@
     el("wish-edit-overlay").hidden = false;
     el("we-title").focus();
   }
-  el("we-cancel").addEventListener("click", () => {
+  /* 收掉這張表。用函式宣告(會被提升),所以 renderEditAbility() 呼叫得到 ——
+     它住在這個檔案上面一千行的地方。 */
+  function closeWishEdit() {
     editingWish = null;
     showWishEditError("");
     el("wish-edit-overlay").hidden = true;
-  });
+  }
+  el("we-cancel").addEventListener("click", closeWishEdit);
   el("we-again").addEventListener("click", async () => {
     const w = state.wishes.find(x => x.id === editingWish);
     if (!w || !w.place) return;          /* 沒挑地點的不查(規則一),按鈕本來也沒畫 */
@@ -3567,6 +3618,10 @@
   el("wish-edit-form").addEventListener("submit", ev => {
     ev.preventDefault();
     if (!editingWish) return;
+    /* **送出這一側也要擋,而且要擋在這裡**,不能只靠 updateWish() 裡那一行:
+       這個 handler 在 updateWish() 之後還會跑 `checkPlace()`(那會去查地名),
+       而在一份凍結的副本上,那整件事從第一步就不該發生。 */
+    if (!mayWriteWish()) { closeWishEdit(); return; }
     const title = el("we-title").value.trim();
     if (!title) { showWishEditError("總要寫個地方。"); return; }
     const id = editingWish;
