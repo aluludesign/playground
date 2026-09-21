@@ -1,6 +1,6 @@
 # 固定的測試資料。天氣和座標都預先灌進快取,跑截圖時不連網查 ——
 # 否則每次的天氣數字都不一樣,比對會被那個淹沒,看不出 CSS 有沒有壞。
-import json
+import json, os
 STOPS = [
  {"id":"s1","day":"2026-10-05","time":"09:00","title":"淺草寺參拜","place":"淺草寺","note":"想看繪馬"},
  {"id":"s2","day":"2026-10-05","time":"11:30","title":"合羽橋道具街","place":"","note":""},
@@ -60,11 +60,33 @@ CLOCK = """<script>(function(){
 })();</script>
 """ % FREEZE
 
+# SNAP=1 時多灌一份「離線副本」(index.html 的 tokyo5-snap)。
+#
+# 預設不灌,而這件事是刻意的:灌了的話每一張截圖都會變成「離線 · 唯讀」那一套
+# ——「加行程」「改」那些按鈕全部消失,十四張基準圖一次全紅。
+# 所以它是一個開關,跟 SRC= / WIDTH= / PREFLIGHT= 同一個家族:
+#   SNAP=1 ./probe.sh probes/pwa.js
+#
+# 副本裡故意多一筆 LS 沒有的行程。兩份資料長得一樣的話,探針沒辦法分辨
+# 「畫面上顯示的是副本」還是「副本根本沒被讀到、顯示的是 LS」——
+# 那兩種情況的畫面會一模一樣,而後者正是要防的 bug。
+SNAP_ONLY = {"id":"snap1","day":"2026-10-05","time":"16:30",
+             "title":"只有離線副本裡才有的行程","place":"","note":""}
+SNAP_AT = "2026-09-19T01:30:00Z"   # 凍住的時鐘往前 1.5 小時
+
+def snap():
+    d = dict(STATE)
+    d["stops"] = STOPS + [SNAP_ONLY]
+    return {"at": SNAP_AT, "data": d}
+
 def seed():
     j = lambda o: json.dumps(json.dumps(o, ensure_ascii=False))
+    extra = ("localStorage.setItem('tokyo5-snap',"+j(snap())+");"
+             if os.environ.get("SNAP") else "")
     return CLOCK + ("<script>try{"
       "localStorage.setItem('tokyo5-v1',"+j(STATE)+");"
       "localStorage.setItem('tokyo5-wx',"+j(WX)+");"
       "localStorage.setItem('tokyo5-pin3',"+j(PINS)+");"
       "localStorage.setItem('tokyo5-me','hsieh_chinhui');"
+      + extra +
       "}catch(e){}</script>\n")

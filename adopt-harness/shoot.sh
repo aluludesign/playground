@@ -74,6 +74,22 @@ if [ -f "$SRC/app.css" ]; then
   fi
 fi
 
+# 埠先確認沒有人佔。佔住的話 python3 -m http.server 會立刻失敗(而它被丟進背景、
+# 輸出又導去 /dev/null,所以一個字都不會出現),Chrome 去打那個埠拿到的是**別人的**
+# 伺服器 —— 通常是上一輪留下來、服務目錄早就被刪掉的孤兒,回 404。
+# 然後這支腳本會說「探針沒有回傳任何東西(JS 可能在 iframe 裡就掛了)」,
+# 把人送去查一支完全正常的探針。實際發生過,查了兩輪才發現埠上躺著兩隻
+# 跑在 /tmp/wt-dr2/.work(已刪除)的 server。
+# 孤兒的成因是 trap 裡的 kill 失敗:worktree 那邊跑的腳本,鎖和 .work 都在
+# 它自己的目錄下,主樹這邊看不到,所以連「有人在跑」都問不出來。
+if lsof -nP -iTCP:$PORT -sTCP:LISTEN >/dev/null 2>&1; then
+  echo "✗ 埠 $PORT 已經有人在聽,這次不跑。" >&2
+  lsof -nP -iTCP:$PORT -sTCP:LISTEN 2>/dev/null | sed 's/^/  /' >&2
+  echo "  如果那是上一輪留下來的孤兒(對應的 .work 目錄已經不在了),就:" >&2
+  echo "    kill \$(lsof -tnP -iTCP:$PORT -sTCP:LISTEN)" >&2
+  exit 4
+fi
+
 rm -rf "$H/.work" "$OUT" && mkdir -p "$H/.work" "$OUT"
 cp -r "$SRC/." "$H/.work/"
 
@@ -146,7 +162,13 @@ i = s.rindex("<script>")
 open(p, "w", encoding="utf-8").write(s[:i] + fx.seed() + s[i:])
 PY
 
-cd "$H/.work" && python3 -m http.server $PORT >/dev/null 2>&1 &
+# `cd X && python3 ... &` 的 $! 是**那個子 shell** 的 pid,不是 python 的 ——
+# `&&` 讓 shell 一定要留著子 shell 去判斷前一句的結果,python 是它的子行程。
+# 所以 trap 裡的 kill "$SRV" 殺掉子 shell,python 原地變孤兒繼續聽著那個埠,
+# 而且 kill 回 0,看起來收乾淨了。下一輪起不來,Chrome 打到孤兒身上拿 404,
+# 腳本則說「探針沒有回傳任何東西」。兩隻活了好幾小時的孤兒就是這樣來的。
+# 加一個 exec:子 shell 被 python 取代,$! 拿到的就是 python 自己。
+( cd "$H/.work" && exec python3 -m http.server $PORT >/dev/null 2>&1 ) &
 SRV=$!
 sleep 1
 
