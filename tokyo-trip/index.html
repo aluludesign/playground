@@ -2320,9 +2320,11 @@
   /* **後面那三個字是一顆按鈕,所以不寫在這裡。** 見 hintHTML()。 */
   const HINT_STRONG = "還是沒有找到嗎?試試";
   const NOTE_OK_WITHOUT = "沒找到也可以許願哦,只是不會出現在地圖上。";
-  /* 強力搜跑過了沒。**跟 seekArmed 不是同一件事**:armed 是「等著花錢」,
-     used 是「花過了」。armed 跑完一次就卸下,used 要留到這一格關掉為止 —— 
-     那句退路的話是講給「花過錢還是沒找到」的人聽的。 */
+  /* 強力搜按過了沒。**跟 seekArmed 不是同一件事**:
+       `seekArmed`      = 下一按要不要花錢 —— 花掉就卸下
+       `seekUsedStrong` = 他走到最後一段了沒 —— 留到這一格關掉為止
+     **後者跟「錢有沒有真的花掉」無關**:伺服器拒絕、連不上,錢都沒花到,
+     但他按過了、手上什麼都沒有,那句退路的話就該出現。 */
   const seekUsedStrong = {};
 
   function seekBtn(id) { return document.querySelector('[data-seek="' + id + '"]'); }
@@ -2380,12 +2382,24 @@
     } finally {
       if (b0) b0.disabled = false;
     }
+    /* **出錯的時候不卸下上膛,而那是刻意的。**
+       下面「只給用一次」卸的是**花掉的那一次**;這兩條路一毛錢都沒花到 ——
+       `res.錯` 是伺服器明講的拒絕(例如金鑰沒設),`!res` 是連不上。
+       逼他重走兩次沒挑到、再點一次那三個字才能重試,是在懲罰一個不是他造成的失敗。
+
+       **但 `seekUsedStrong` 要點起來。** 他確實按過強力搜了,而且手上什麼都沒有 ——
+       那正是最需要知道「沒找到也可以許願」的人。
+       所以這兩個旗標問的不是同一件事:
+         `seekArmed`      = 下一按要不要花錢
+         `seekUsedStrong` = 他走到最後一段了沒(跟花沒花到錢無關) */
     if (res && res.錯) {
       /* 伺服器說得出原因就照講。講不出來(連不上)才退回泛泛的那句。 */
+      seekUsedStrong[id] = true;
       seekSay(id, "這次沒查成 —— " + res.錯, true);
       return;
     }
     if (!res) {
+      seekUsedStrong[id] = true;
       seekSay(id, "連不上地名查詢服務 —— 網路好一點再試,或直接把地點打完整。", true);
       return;
     }

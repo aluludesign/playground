@@ -18,6 +18,10 @@ async function until(fn, tries) {
   return false;
 }
 var osm = [], goo = [], osmReply = [], gooReply = { found: false }, gooStatus = 200;
+/* **連不上跟伺服器拒絕是兩條不同的路。** `gooStatus !== 200` 走的是
+   「伺服器講得出原因」那條(`res.錯`);`gooThrow` 讓 fetch 自己倒掉,
+   走的是 `!res` 那條 —— 兩條各有自己的 return,不能只測一條就當測過。 */
+var gooThrow = false;
 var realFetch = w.fetch.bind(w);
 w.fetch = function (u, init) {
   var url = String(u);
@@ -28,6 +32,7 @@ w.fetch = function (u, init) {
   }
   if (url.indexOf("resource=places") >= 0) {
     goo.push(url);
+    if (gooThrow) return Promise.reject(new Error("斷線"));
     var b = gooReply;
     /* `gooStatus` 不是 200 的時候模擬伺服器回錯誤 —— `api()` 會 throw,
        而「throw 之後使用者看到什麼」正是這一輪咬到 Lulu 的那條路。 */
@@ -181,6 +186,24 @@ async function press(id) {
       boxText("wf-title").indexOf("Places API") >= 0, boxText("wf-title"));
     ok("**不會換成自己編的原因**(例如「次數用完了」)",
       boxText("wf-title").indexOf("次數用完") < 0, boxText("wf-title"));
+    /* **出錯這條路上,那兩個旗標各自該怎樣。**
+       這一段以前只問「訊息有沒有照轉」,沒有問按鈕停在哪、退路那句在不在 ——
+       而「只給用一次」是在**找到**和**零筆**兩條路上實作的,出錯這條當時漏掉了。 */
+    ok("出錯 → 按鈕**留在**「強力搜」(這一下一毛錢都沒花到,不該逼他重走一輪)",
+      btn("wf-title").textContent === "強力搜", btn("wf-title").textContent);
+    ok("而且輸入框也還上著膛", d.getElementById("wf-title").classList.contains("seek-armed"),
+      d.getElementById("wf-title").className);
+    ok("但退路那句要出現 —— 他按過了,而且手上什麼都沒有",
+      boxText("wf-title").indexOf("也可以許願") >= 0, boxText("wf-title"));
+    ok("而且伺服器的原話沒有被退路那句擠掉(兩句都在)",
+      boxText("wf-title").indexOf("Places API") >= 0 && boxText("wf-title").indexOf("也可以許願") >= 0,
+      boxText("wf-title"));
+    /* 連不上那條(`!res`)跟上面那條是不同的分支,各自有自己的 return —— 分開問一次。 */
+    gooStatus = 0; gooReply = null; gooThrow = true;
+    await press("wf-title");
+    ok("連不上 → 退路那句一樣要出現(不是只有伺服器講得出話的時候才講)",
+      boxText("wf-title").indexOf("也可以許願") >= 0, boxText("wf-title"));
+    gooThrow = false;
     gooStatus = 200;
 
     // ---- 舊的那顆按鈕真的不見了 ----
