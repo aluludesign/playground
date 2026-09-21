@@ -1,0 +1,3 @@
+# 只擋本機產物。不寫成 .claude/ —— 那會連以後想共用的 settings.json 一起無聲吃掉。
+.claude/settings.local.json
+.claude/worktrees/
