@@ -5,7 +5,24 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>東京五人行</title>
 <meta name="description" content="2026 年 10 月東京六日遊的行程規劃、花費紀錄與五人分帳結算。">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗼</text></svg>">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="icon" href="icon-192.png" sizes="192x192" type="image/png">
+
+<!-- 加到主畫面之後才會用到的東西。
+     `manifest` 管 Android 和桌機:名字、圖示、開起來沒有網址列。
+     iOS 到現在還是只認 apple- 開頭那幾個,兩套都要寫,不能二選一。
+     圖示不能再用內嵌的 emoji SVG —— 那個在分頁上很好用,但 iOS 加到主畫面時
+     會拿它去縮,縮出來是一顆歪掉的小鐵塔配一大圈白邊。 -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#F1F2F6">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="東京五人行">
+<!-- default:狀態列維持淺色底黑字,跟頁面最上面那塊 --paper 接得起來。
+     black-translucent 會讓內容鑽到瀏海底下,而這個版面的標題列是 sticky 的。 -->
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;500;700&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap">
 <!-- design-system 的產出。這支是編出來的,不要手改 —— 改 app.css 或 design-system/ 再重編。
@@ -778,7 +795,7 @@
       <button class="btn btn-sm btn-ghost" id="reset-btn" type="button">清除本機紀錄</button>
       <input type="file" id="import-file" accept="application/json,.json" hidden>
     </div>
-    <p style="margin-top:10px; line-height:1.55">紀錄存在這台裝置的瀏覽器裡。要跟其他人對帳,按「匯出備份」把 JSON 傳給對方,對方用「匯入備份」讀進去。</p>
+    <p style="margin-top:10px; line-height:1.55" id="backup-note"></p>
   </footer>
 </div>
 
@@ -1054,14 +1071,27 @@
   /* ================= 儲存:Notion 優先,連不上就退回本機 ================= */
   const LS = "tokyo5-v1";
   const KEYLS = "tokyo5-key";
+  /* 最後一次從 Notion 讀到的東西,連同讀到的時間。離線時拿它來顯示。
+     跟 LS 是**兩個不同的東西**,不共用一個 key:
+       LS      這台裝置自己的那份紀錄(從沒連上過後端時才用,例如 GitHub Pages 那份)
+       SNAPLS  五個人共用的那份紀錄的副本,唯讀
+     混在一起的話,離線改的東西會蓋掉副本,下次連上網再拉一次就無聲消失。 */
+  const SNAPLS = "tokyo5-snap";
   const CFG = window.TRIP_CONFIG || {};
   const API = (CFG.apiBase || "").replace(/\/$/, "") + "/api/notion";
   let storageOK = true;
   let online = false;
   let tripKey = "";
-  /* 連著 Notion 時,沒通行碼就只能看。離線模式動的是自己的瀏覽器,不必擋。 */
+  /* 離線時手上這份副本是什麼時候抓的(ISO 字串);沒有副本就是空字串。 */
+  let snapAt = "";
+  /* 連著 Notion 時,沒通行碼就只能看。 */
   let canEdit = false;
-  const editable = () => !online || canEdit;
+  /* 離線分兩種,能不能編輯不一樣:
+       有副本  顯示的是五個人共用的那份紀錄 → **唯讀**。
+               改了也傳不回 Notion,而畫面上看起來像改成功了,
+               下次連上網重新拉一次就整個不見 —— 而且沒有任何地方會說一句。
+       沒副本  從沒連上過後端(GitHub Pages 那份),動的是自己的瀏覽器 → 照樣能改。 */
+  const editable = () => (online ? canEdit : !snapAt);
 
   /* 分類在 Notion 用中文,程式內部用代號 */
   const CAT_TO_NOTION = { transport: "交通", stay: "住宿", food: "餐飲", sight: "景點", shop: "購物", other: "其他" };
@@ -1124,9 +1154,40 @@
     return { version: 3, rate: state.rate, names: state.names, expenses: state.expenses, stops: state.stops, wishes: state.wishes };
   }
   function saveLocal() {
-    if (online) return;
+    /* snapAt 有值 = 現在顯示的是共用紀錄的副本,不是這台裝置自己的紀錄。
+       少了這個條件,離線瀏覽會把別人的資料寫進 LS,之後就分不出哪份是自己的。 */
+    if (online || snapAt) return;
     try { localStorage.setItem(LS, JSON.stringify(snapshot())); }
     catch (_) { storageOK = false; }
+  }
+
+  /* --- 離線副本 --- */
+  /* 每次成功讀到 Notion 就存一份下來,連同時間。
+     沒有這一步的話,離線打開看到的是 SEED —— 一筆機票、零行程。
+     而網站會顯示得很正常,因為「空的行程」和「還沒有行程」長得一模一樣。 */
+  function saveSnap() {
+    try {
+      localStorage.setItem(SNAPLS, JSON.stringify({ at: new Date().toISOString(), data: snapshot() }));
+      snapAt = "";   /* 線上時不用它,留著會讓 editable() 誤判成唯讀 */
+    } catch (_) { storageOK = false; }
+  }
+  function loadSnap() {
+    let raw = null;
+    try { raw = localStorage.getItem(SNAPLS); } catch (_) { storageOK = false; }
+    if (!raw) return null;
+    let d = null;
+    try { d = JSON.parse(raw); } catch (_) { return null; }
+    /* 舊版本或壞掉的副本當作沒有,寧可退回「這台裝置自己的紀錄」那條路。
+       半個副本比沒有副本糟:它看起來是真的。 */
+    if (!d || !d.at || !d.data || !Array.isArray(d.data.stops)) return null;
+    return d;
+  }
+  /* 「10/05 14:20」。要講的是「多舊」,所以不印年份也不印秒。 */
+  function snapWhen(iso) {
+    const t = new Date(iso);
+    if (isNaN(t)) return "";
+    const p = n => String(n).padStart(2, "0");
+    return p(t.getMonth() + 1) + "/" + p(t.getDate()) + " " + p(t.getHours()) + ":" + p(t.getMinutes());
   }
   function sortExpenses() {
     state.expenses.sort((a, b) => (a.date || "").localeCompare(b.date || "") || (a.createdAt || "").localeCompare(b.createdAt || ""));
@@ -1393,6 +1454,9 @@
     state.stops = st.rows.filter(r => r.day).map(stopFromRow);
     state.wishes = wi.rows;
     sortExpenses();
+    /* 三個請求都回來了才存,存的是完整的一份。
+       放在 api() 那層各存各的話,其中一個失敗就會留下一份殘缺的副本。 */
+    saveSnap();
   }
 
   let pullTimer = null;
@@ -1436,6 +1500,17 @@
       const b = el(id);
       if (b) b.hidden = !on;
     });
+    /* 這段字本來寫死「紀錄存在這台裝置的瀏覽器裡」。三種模式只有一種成立,
+       而另外兩種它照樣印 —— 連著 Notion 的人讀到的是一句假話。
+       而且「匯入備份」在唯讀時是藏起來的,說明卻還在教人按它。 */
+    const note = el("backup-note");
+    if (note) {
+      note.textContent = online
+        ? "紀錄存在 Notion,五個人共用同一份。「匯出備份」拿到的是現在畫面上這份的 JSON。"
+        : snapAt
+          ? "這是離線副本,改不了也傳不回去。連上網之後會自動換成最新的。"
+          : "紀錄存在這台裝置的瀏覽器裡。要跟其他人對帳,按「匯出備份」把 JSON 傳給對方,對方用「匯入備份」讀進去。";
+    }
     if (!on) {
       ["stop-form", "exp-form"].forEach(id => { const f = el(id); if (f) f.hidden = true; });
       const rn = el("rename-form");
@@ -1447,8 +1522,13 @@
     const bar = el("cloudbar");
     bar.hidden = false;
     bar.className = "cloudbar " + (online ? "on" : "off");
+    /* 離線的兩種要分開講,而且**一定要講出時間**。
+       「離線模式」四個字對拿著副本的人是錯的:他看到的是真的行程,
+       只是舊的。不說多舊,他會拿三天前的版本去趕車。 */
     el("cloud-msg").textContent = !online
-      ? "離線模式 —— 紀錄只存在這台裝置"
+      ? (snapAt
+          ? "離線 · 這是 " + snapWhen(snapAt) + " 讀到的資料 · 不能編輯"
+          : "離線模式 —— 紀錄只存在這台裝置")
       : canEdit
         ? "已連上 Notion · 管理員 · 五個人共用同一份紀錄"
         : "已連上 Notion";
@@ -1480,7 +1560,12 @@
     online = false;
     canEdit = false;
     el("signin-overlay").hidden = true;
-    loadLocal();
+    /* 有副本就顯示副本 —— 那才是五個人的行程。沒有才退回這台裝置自己的紀錄。
+       順序不能反:反過來的話,連過 Notion 的裝置離線會看到 SEED 的空行程,
+       而且看起來完全正常。 */
+    const snap = loadSnap();
+    if (snap) { snapAt = snap.at; apply(snap.data); }
+    else { snapAt = ""; loadLocal(); }
     fillPeopleControls();
     render();
     renderEditAbility();
@@ -3651,28 +3736,73 @@
   /* 抽屜寬度只有四檔:螢幕的 1/4、2/4、3/4、4/4。存的是「第幾檔」不是像素 ——
      換一台螢幕、轉個方向,同一檔還是同一個比例。 */
   const DRAWLS = "tokyo5-drawer";
-  const quarter = () => window.innerWidth / 4;
+  /* **四檔是固定的像素寬,不是視窗的幾分之幾。**
+
+     以前是 `視窗寬 / 4` 的倍數,於是「吸附到第 2 檔」這件事**不代表一個寬度** ——
+     視窗一變,同一檔就變成另一個寬度。量過(探針,五個寬度):
+     1160px 的視窗給 580、1172px 給 586,而 **1176px 給 294** ——
+     視窗改 4 個像素,抽屜砍一半。
+
+     那不是四捨五入寫錯。舊的預設是 `Math.round(440 / quarter())`,
+     而在 1173px 附近第 1 檔是 293、第 2 檔是 587,**離 440 剛好一樣遠** ——
+     兩檔之間本來就沒有靠近 440 的東西,所以那裡必然有個懸崖。
+     **比例式的檔位撐不住「四個尺寸」這個說法**,換成像素才撐得住。 */
+  /* **四檔是視窗的比例,上限 3/4。** 固定像素試過了,而 Lulu 的回報很直接:
+     「最寬是螢幕的 3/4,現在是 1/2」—— 800px 在 1600 的螢幕上就是一半。
+     大螢幕買到的空間應該進得了抽屜,而寫死的像素把它擋在外面。
+
+     **但不是回到舊的 `k/4`。** 舊的上限是 4/4(整個視窗),而且預設檔是
+     從 440px 反推的 —— 那才是懸崖的來源(見下面 `readDrawK`)。
+     現在是 1/4 到 3/4 之間四等分,上限就是 3/4,預設寫死第 2 檔。 */
+  const FRACS = [1 / 4, 5 / 12, 7 / 12, 3 / 4];
+  /* 視窗裝不下的時候才讓步,而**要保護的是底下的版面,不是抽屜**。
+     抽屜一開 body 就 padding-right 同樣的寬度,所以抽屜多寬,行程清單就少多寬。
+
+     第一版寫的是 `innerWidth * 0.82`,量過之後是錯的:桌機斷點是 641px,
+     而那個夾制要到 585px 以下才生效 —— **它從來碰不到**。
+     641px 的視窗於是吃到整整 480px 的抽屜,只剩 161px 給內容,
+     **比修之前的比例式(那裡剛好給一半)還糟**。
+     改成「至少留 320px 給版面」,窄視窗就平滑地讓步,而不是某一檔突然壓垮它。 */
+  /* 底下的版面至少留這麼寬。**240 而不是 320**:3/4 那一檔在 1100px 的視窗上
+     只剩 275px 給版面,而那一檔是使用者自己選的 —— 夾制是防止版面被壓垮,
+     不是替他決定要多寬。窄到連 240 都留不住才讓步。 */
+  const MINMAIN = 240;
+  const stepPx = k => Math.max(240,
+    Math.min(window.innerWidth * FRACS[Math.max(1, Math.min(4, k)) - 1],
+             window.innerWidth - MINMAIN));
   let drawK = 0;
   function readDrawK() {
     let k = 0;
     try { k = +localStorage.getItem(DRAWLS) || 0; } catch (_) {}
-    /* 沒設定過就挑最接近 440px 的那一檔 */
-    return Math.max(1, Math.min(4, k || Math.round(440 / quarter())));
+    /* 沒設定過就第 2 檔。**不再從一個目標寬度反推** —— 那是懸崖的來源。 */
+    return Math.max(1, Math.min(4, k || 2));
   }
   function applyDrawer(px) {
     document.documentElement.style.setProperty("--drawer", Math.round(px) + "px");
   }
   function setDrawK(k) {
     drawK = Math.max(1, Math.min(4, k));
-    applyDrawer(drawK * quarter());
+    applyDrawer(stepPx(drawK));
     try { localStorage.setItem(DRAWLS, String(drawK)); } catch (_) {}
     /* 寬度動畫跑完再重畫,不然量到的還是舊寬度 */
     setTimeout(repaintMap, 220);
   }
+  /* 放手時吸到最近那一檔:比的是**像素距離**,不是「除以一檔有多寬」。
+     檔位等寬的時候兩者一樣,不等寬就只有前者對。 */
+  function nearestStep(px) {
+    let best = 1, bestD = Infinity;
+    for (let k = 1; k <= 4; k++) {
+      const dd = Math.abs(stepPx(k) - px);
+      if (dd < bestD) { bestD = dd; best = k; }
+    }
+    return best;
+  }
   /* 抽屜寬度一變,地圖容器也變寬變窄 —— 要重畫才補得滿圖磚 */
   const repaintMap = () => { if (!el("map-sheet").hidden) paintMap(el("map")); };
   window.addEventListener("resize", () => {
-    if (drawK) applyDrawer(drawK * quarter());
+    /* **重算是為了夾住,不是為了跟著縮放。** 檔位選定的寬度要維持不變,
+       只有視窗窄到裝不下時才讓步 —— 那正是 `stepPx()` 裡那個 0.82 在做的事。 */
+    if (drawK) applyDrawer(stepPx(drawK));
     repaintMap();
   });
 
@@ -3693,7 +3823,7 @@
     syncSheetChrome();
     paintLayerBtns();
     if (!drawK) drawK = readDrawK();
-    applyDrawer(drawK * quarter());
+    applyDrawer(stepPx(drawK));
     el("map-sheet").hidden = false;
     document.body.classList.add("drawer-open");
   }
@@ -3730,27 +3860,44 @@
   (function initGrip() {
     const grip = el("map-grip"), sheet = el("map-sheet");
     let dragging = false;
+    /* **拖曳中最後看到的那個寬度。** 放開時不再從 `ev.clientX` 反推 ——
+       `pointercancel` 的座標可能是 0(那會吸到最寬那一檔),而在視窗外放開時
+       座標也不可靠。記下來的這個值是我們自己算的,永遠對。 */
+    let liveW = 0;
     grip.addEventListener("pointerdown", ev => {
       dragging = true;
+      liveW = sheet.getBoundingClientRect().width;
       sheet.classList.add("sizing");
       document.body.classList.add("sizing-now");
+      /* 抓得到最好(移動會集中送過來),**抓不到也不影響收尾** —— 收尾綁在 window 上。
+         以前這個 try/catch 是無聲的,而抓不到就等於整個拖曳沒有結束的那一刻。 */
       try { grip.setPointerCapture(ev.pointerId); } catch (_) {}
       ev.preventDefault();
     });
-    grip.addEventListener("pointermove", ev => {
+    /* **移動和放開都綁在 window 上,不是綁在那條 14px 的握把上。**
+       量到的(探針,真的把 pointerup 丟在 body 上):
+       在握把上放開 → 700 吸到 640;**在別的元素上放開 → 停在 500,完全沒有吸附**。
+       而 `setPointerCapture` 回報 `false` —— 它失敗了,而 try/catch 把那件事吞掉。
+       拖曳一開始游標就離開那 14px 了,所以「放開落在握把上」本來就是少數情況。
+       Lulu 在真的瀏覽器上拖一次就翻出來了,而我的探針把三個事件都丟在握把上,
+       量到的是一條沒有人會走的路。 */
+    window.addEventListener("pointermove", ev => {
       if (!dragging) return;
-      applyDrawer(Math.max(quarter() * 0.6, Math.min(window.innerWidth, window.innerWidth - ev.clientX)));
+      liveW = Math.max(window.innerWidth * 0.15, Math.min(window.innerWidth * 0.82, window.innerWidth - ev.clientX));
+      applyDrawer(liveW);
       repaintMap();
     });
-    function stop(ev) {
+    function stop() {
       if (!dragging) return;
       dragging = false;
       sheet.classList.remove("sizing");
       document.body.classList.remove("sizing-now");
-      setDrawK(Math.round((window.innerWidth - ev.clientX) / quarter()));
+      setDrawK(nearestStep(liveW));
     }
-    grip.addEventListener("pointerup", stop);
-    grip.addEventListener("pointercancel", stop);
+    window.addEventListener("pointerup", stop);
+    window.addEventListener("pointercancel", stop);
+    /* 指標離開瀏覽器視窗之後放開,`pointerup` 不一定回得來 —— 補這一條收尾。 */
+    window.addEventListener("blur", stop);
   })();
   /* 使用者說「不對」的那一下。這是整條退路唯一的觸發點 ——
      沒有人按,就一次查詢都不會發出去(那一端每查一次都要錢)。 */
@@ -3850,6 +3997,19 @@
       document.body.appendChild(bar);
     }, 0);
   })();
+
+  /* --- service worker --- */
+  /* 只在 https 下註冊,**這不是保險,是正確性**。
+     adopt-harness 的 shoot.sh / probe.sh 是拿 python3 -m http.server 跑在
+     http://localhost 上的,而 localhost 也算安全來源 —— service worker 裝得起來。
+     裝起來之後它會跨越好幾次執行活著,下一輪截圖拿到的可能是上一輪快取的
+     index.html:比對照樣全綠,而綠的是上一份程式。
+     這個 repo 的每一件工具都在防同一件事,不要讓工具自己變成源頭。
+     要在本機試 service worker,用 `vercel dev` 或直接看正式網址。 */
+  if ("serviceWorker" in navigator && location.protocol === "https:") {
+    /* 失敗不擋任何事:註冊不起來只是沒有離線,網站照常跑。 */
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  }
 
   state.day = initialDay();
   switchTab("plan");
