@@ -860,14 +860,14 @@ function approxPins() {
       rowsOf(wmMine) === 1, out.唯讀下那一排);
 
     // 14f ---- 唯讀的人真的改得動自己那一筆,而且送出去的形狀是對的 ----
-    /* 先在**同一筆**(對照組那一筆)上看「再查一次」有沒有接上 ——
-       入口搬家最容易的失敗是舊的拿掉了、新的沒接上,而那兩件事要在同一筆上問。 */
+    /* 「再查一次」原本在這裡問兩次(這一筆畫得出來、人工表那一筆畫不出來)。
+       `#we-again` 在 search-escalate 那一輪退場,兩條都刪,改由 `probes/escalate.js` 接手。
+       **而它們刪掉之前是會拋例外的** —— null.hidden —— 所以 14f 之後的斷言
+       每一輪都沒跑到,而結論照樣印「全部通過」,筆記照抄成「geofix 150 全過」。 */
     mineRow.querySelector("[data-edit-wish]").click();
     ok("「改」打得開",
       await until(function () { return q("#wish-edit-overlay").hidden === false; }),
       q("#wish-edit-overlay").outerHTML.slice(0, 120));
-    ok("**「再查一次」在這裡**(入口搬家的另一半:地圖上沒有了,這裡有)",
-      q("#we-again").hidden === false, q("#we-again").outerHTML);
     q("#we-cancel").click();
 
     /* 換到 w2 測送出的形狀:它有備註和票,漏送哪一個看得出來。
@@ -879,8 +879,6 @@ function approxPins() {
     await until(function () { return q("#wish-edit-overlay").hidden === false; });
     ok("既有的 place 在狀態列上講出來了(合併之後它只活在這一行)",
       /已標定/.test(q("#we-title-out").textContent), q("#we-title-out").textContent);
-    ok("人工表就是答案的那一筆 → 編輯框裡也不畫「再查一次」(跟地圖上同一條規則)",
-      q("#we-again").hidden === true, { 按鈕: q("#we-again").outerHTML, 快取: pins()["港灣未來"] });
     q("#we-note").value = "改過了";
     q("#wish-edit-form button[type=submit]").click();
     ok("送出去了(唯讀的人動得了自己那一筆)",
@@ -905,7 +903,13 @@ function approxPins() {
   } catch (e) {
     out.爆掉了 = String((e && e.stack) || e);
   }
-  out.結論 = out.沒過的.length ? out.沒過的.length + " 項沒過" : "全部通過";
+  /* **爆掉了不算通過。** `沒過的` 是空的,只代表「跑到的那些都過了」——
+     中途拋例外的話後面的斷言一條都沒跑,而沒跑的不會進 `沒過的`。
+     舊式子不看 `爆掉了`,於是一次中途爆炸印出來的是「全部通過」。
+     `seek` 就這樣把 `#we-again` 退場後少跑的四條蓋掉了,而筆記照抄成「52 全過」。 */
+  out.結論 = out.爆掉了
+    ? "✗ 中途爆掉,跑到第 " + log.length + " 條就停了 —— 後面的沒跑到"
+    : out.沒過的.length ? out.沒過的.length + " 項沒過" : "全部通過";
   document.getElementById("r").textContent = JSON.stringify(out, null, 2);
 })();
 

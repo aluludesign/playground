@@ -319,33 +319,29 @@ var THREE = [
     ok("座標跟著候選一起存下來,而且標記成「人親手選的」",
       !!saved2 && saved2.by === "pick" && Math.abs(saved2.la - 35.662) < 0.001, saved2);
 
-    // 10e ---- 「再查一次」在編輯框裡,不在別的地方 ----
+    // 10e ---- 取消關得掉 ----
+    /* 這一節本來還有三條在測「再查一次」(有 place 才畫、沒 place 不畫、硬戳也不發查詢)。
+       `#we-again` 在 search-escalate 那一輪整顆退場了 —— 它的前提消失,不是被簡化掉 ——
+       所以那三條跟著刪,新的行為由 `probes/escalate.js` 接手。
+
+       **留下來的是「取消關得掉」**:它跟那顆按鈕無關,只是排在它後面。
+       刪掉之前它已經好幾輪沒跑到 —— `q("#we-again")` 是 null,`.hidden` 一讀就拋例外,
+       而結論式子當時不看 `爆掉了`,印出來仍然是「全部通過」。
+       **拿掉一個功能的時候,要跟著搜的是「誰在測它」,不只是「誰在用它」。** */
     d.querySelector("#wish-list [data-edit-wish]").click();
     await until(function () { return !q("#wish-edit-overlay").hidden; });
-    ok("有 place 的那一筆:「再查一次」畫出來了(入口搬家的另一半)",
-      q("#we-again").hidden === false, q("#we-again").outerHTML);
-    /* 取消掉再開一筆沒有 place 的 —— 規則一:沒挑地點就不查,連按鈕都不該畫。
-       w2 現在有 place,所以先把它的標題改掉、不挑,讓它回到沒有 place。 */
-    q("#we-title").value = "隨便一個不是地名的字";
-    q("#wish-edit-form button[type=submit]").click();
-    await until(function () {
-      var x = wishes().find(function (y) { return y.id === "w2"; });
-      return x && x.place === "";
-    });
-    d.querySelector("#wish-list [data-edit-wish]").click();
-    await until(function () { return !q("#wish-edit-overlay").hidden; });
-    ok("沒有 place 的那一筆:**不畫「再查一次」**(規則一,按了只是再問一次同一個錯問題)",
-      q("#we-again").hidden === true, q("#we-again").outerHTML);
-    var netB = asked.length;
-    q("#we-again").click();            /* 硬戳 DOM 也不該送出去 */
-    await sleep(60);
-    ok("而且硬戳它一次查詢都不發", asked.length === netB, { 之前: netB, 之後: asked.length });
     q("#we-cancel").click();
     ok("取消關得掉", q("#wish-edit-overlay").hidden === true, null);
   } catch (e) {
     out.爆掉了 = String((e && e.stack) || e);
   }
-  out.結論 = out.沒過的.length ? out.沒過的.length + " 項沒過" : "全部通過";
+  /* **爆掉了不算通過。** `沒過的` 是空的,只代表「跑到的那些都過了」——
+     中途拋例外的話後面的斷言一條都沒跑,而沒跑的不會進 `沒過的`。
+     舊式子不看 `爆掉了`,於是一次中途爆炸印出來的是「全部通過」。
+     `seek` 就這樣把 `#we-again` 退場後少跑的四條蓋掉了,而筆記照抄成「52 全過」。 */
+  out.結論 = out.爆掉了
+    ? "✗ 中途爆掉,跑到第 " + log.length + " 條就停了 —— 後面的沒跑到"
+    : out.沒過的.length ? out.沒過的.length + " 項沒過" : "全部通過";
   document.getElementById("r").textContent = JSON.stringify(out, null, 2);
 })();
 

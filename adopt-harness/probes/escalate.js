@@ -162,7 +162,13 @@ async function press(id) {
   } catch (e) {
     out.爆掉了 = String((e && e.stack) || e);
   }
-  out.結論 = out.沒過的.length ? out.沒過的.length + " 項沒過" : "全部通過";
+  /* **爆掉了不算通過。** `沒過的` 是空的,只代表「跑到的那些都過了」——
+     中途拋例外的話後面的斷言一條都沒跑,而沒跑的不會進 `沒過的`。
+     舊式子不看 `爆掉了`,於是一次中途爆炸印出來的是「全部通過」。
+     `seek` 就這樣把 `#we-again` 退場後少跑的四條蓋掉了,而筆記照抄成「52 全過」。 */
+  out.結論 = out.爆掉了
+    ? "✗ 中途爆掉,跑到第 " + log.length + " 條就停了 —— 後面的沒跑到"
+    : out.沒過的.length ? out.沒過的.length + " 項沒過" : "全部通過";
   document.getElementById("r").textContent = JSON.stringify(out, null, 2);
 })();
 
