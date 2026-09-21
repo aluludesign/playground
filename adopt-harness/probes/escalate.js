@@ -116,6 +116,60 @@ async function press(id) {
     await sleep(60);
     ok("關掉再打開 → 回到第 1 段", btn("wf-title").textContent === "搜尋", btn("wf-title").textContent);
 
+    // ---- 提示的顏色和位置(Lulu 回報「超不明顯」) ----
+    /* **位置比顏色更關鍵。** 第一版把提示擺在候選清單最後面 —— 候選有六筆的時候
+       它在螢幕外,而那句話的用途正是「這些都不是的話,下一步做什麼」,
+       它要在使用者做那個判斷的當下就在視線裡。 */
+    osm.length = 0; goo.length = 0;
+    osmReply = [{ lat: "35.6", lon: "139.7", display_name: "某個地方, 東京都, 日本" }];
+    d.getElementById("add-stop-btn").click();
+    await until(function () { return !q("#stop-form").hidden; });
+    var inp2 = d.getElementById("sf-title");
+    inp2.value = "找不到的東西";
+    await press("sf-title"); await press("sf-title");
+    var box2 = d.getElementById("sf-title-out");
+    var hintEl = box2.querySelector(".said.hint");
+    var firstHit = box2.querySelector("[data-hit]");
+    ok("提示有出現,而且帶著 hint 這個樣式(橘色那一組)", !!hintEl, box2.innerHTML.slice(0, 120));
+    ok("**提示排在候選之前**,不是清單最後面",
+      !!hintEl && !!firstHit &&
+      (hintEl.compareDocumentPosition(firstHit) & 4) !== 0,
+      { 提示在前: !!hintEl && !!firstHit });
+    ok("提示用的是設計系統的橘,不是站上的深藍",
+      w.getComputedStyle(hintEl).color === "rgb(213, 76, 21)", w.getComputedStyle(hintEl).color);
+    await press("sf-title");
+    ok("第 3 段的按鈕也是同一個橘",
+      w.getComputedStyle(btn("sf-title")).backgroundColor === "rgb(213, 76, 21)",
+      w.getComputedStyle(btn("sf-title")).backgroundColor);
+
+    // ---- 強力搜也找不到,而且字沒改 → 退回免費,並說「找不到也沒關係」 ----
+    gooReply = { found: false };
+    osm.length = 0; goo.length = 0;
+    await press("sf-title");
+    ok("強力搜真的送出去了", goo.length === 1, { google: goo.length });
+    ok("找不到 → 按鈕退回「搜尋」(再按一次會是同一個字問同一家,那是白花錢)",
+      btn("sf-title").textContent === "搜尋", btn("sf-title").textContent);
+    ok("而且講的是「還是可以許願」,不是「再試試」",
+      boxText("sf-title").indexOf("還是可以許願") >= 0 &&
+      boxText("sf-title").indexOf("不會出現在地圖上") >= 0, boxText("sf-title"));
+    osm.length = 0; goo.length = 0;
+    await press("sf-title");
+    ok("退回之後再按一次,問的是免費那家(不會又花一次錢)",
+      osm.length === 1 && goo.length === 0, { osm: osm.length, google: goo.length });
+
+    // ---- 改了字 → 重新一輪 ----
+    /* **退回之後段數重新累積,所以要按兩次才回到第 3 段**(上面那次「再按一次」
+       已經是第 1 次了)。第一版寫 3 次 —— 而第 3 次就是強力搜本身,它找不到之後
+       又退回一次,量到的是「搜尋」。**紅的是斷言算錯,不是程式。** */
+    await press("sf-title"); await press("sf-title");
+    ok("同一個字連按,確實又升到第 3 段", btn("sf-title").textContent === "強力搜", btn("sf-title").textContent);
+    inp2.value = "換個說法";
+    osm.length = 0; goo.length = 0;
+    await press("sf-title");
+    ok("**改了字 → 從免費重新一輪**(上一個字用掉的段數不算在新的頭上)",
+      osm.length === 1 && goo.length === 0, { osm: osm.length, google: goo.length });
+    ok("而且按鈕退回「搜尋」", btn("sf-title").textContent === "搜尋", btn("sf-title").textContent);
+
     // ---- 舊的那顆按鈕真的不見了 ----
     ok("`#we-again`(再查一次)不存在了", !d.getElementById("we-again"), "還在");
   } catch (e) {

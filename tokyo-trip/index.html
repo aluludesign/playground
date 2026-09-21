@@ -488,8 +488,15 @@
     .seek .rm-input{flex:1; min-width:0;}
     .seek .btn{flex:none; white-space:nowrap;}
     /* 第 3 段的樣子。**要看得出來跟剛才那顆不一樣** —— 那一下要花錢,
-       而使用者唯一會停下來的理由是「這顆長得不一樣了」。 */
-    .seek .btn.seek-strong{background:var(--accent); border-color:var(--accent); color:#fff; font-weight:700;}
+       而使用者唯一會停下來的理由是「這顆長得不一樣了」。
+
+       **用設計系統的 `--color-accent`(橘),不是站上自己的 `--accent`(深藍)。**
+       第一版寫了後者 —— 它在這個站裡是「主要動作」的顏色(送出、加入這天),
+       而這一顆要講的是**例外**,跟那些擺在一起看不出差別。Lulu 回報「是藍色」。
+       小字提示同一個顏色:它們是同一件事的兩半,不同色會讀成兩件事。 */
+    .seek .btn.seek-strong{background:var(--color-accent); border-color:var(--color-accent);
+      color:var(--color-accent-ink); font-weight:700;}
+    .seek-out .said.hint{color:var(--color-accent); font-weight:600;}
     .seek-out{margin-top:6px; border:1px solid var(--line); border-radius:10px; overflow:hidden; background:var(--surface);}
     .seek-out .hit{display:block; width:100%; text-align:left; padding:9px 11px; border:0; border-top:1px solid var(--line);
       background:none; font:inherit; color:inherit; cursor:pointer;}
@@ -688,7 +695,7 @@
         <div class="grid2">
           <div class="fld"><label class="rm-label" for="sf-time">時間</label><input class="rm-input" type="time" id="sf-time" required></div>
           <div class="fld"><label class="rm-label" for="sf-title">去哪／做什麼</label>
-            <div class="seek"><input class="rm-input" type="text" id="sf-title" placeholder="淺草寺" required>
+            <div class="seek"><input class="rm-input" type="text" id="sf-title" placeholder="地名/車站/建築物/活動名等" required>
             <button type="button" class="btn btn-sm" data-seek="sf-title">搜尋</button></div>
             <div class="seek-out" id="sf-title-out" hidden></div></div>
         </div>
@@ -716,7 +723,7 @@
         <form class="form" id="wish-form" hidden>
           <div class="grid2">
             <div class="fld"><label class="rm-label" for="wf-title">想去哪</label>
-              <div class="seek"><input class="rm-input" type="text" id="wf-title" placeholder="teamLab" required>
+              <div class="seek"><input class="rm-input" type="text" id="wf-title" placeholder="地名/車站/建築物/活動名等" required>
               <button type="button" class="btn btn-sm" data-seek="wf-title">搜尋</button></div>
               <div class="seek-out" id="wf-title-out" hidden></div></div>
           </div>
@@ -2239,10 +2246,10 @@
 
   function seekBox(id) { return el(id + "-out"); }
 
-  function seekSay(id, msg) {
+  function seekSay(id, msg, hint) {
     const box = seekBox(id);
     if (!box) return;
-    box.innerHTML = msg ? '<div class="said">' + esc(msg) + "</div>" : "";
+    box.innerHTML = msg ? '<div class="said' + (hint ? " hint" : "") + '">' + esc(msg) + "</div>" : "";
     box.hidden = !msg;
   }
 
@@ -2271,6 +2278,10 @@
 
      **畫面上不講「改用 Google」**(Lulu 的決定):使用者不需要知道背後換了哪一家。 */
   const seekTries = {};
+  /* 上一次真的送出去查的那個字。**改了字就是換一個目標,段數要從頭算** ——
+     不然「泡溫泉」用掉的三段會算在「大江戶溫泉物語」頭上,
+     使用者換了說法卻發現自己已經在花錢那一段。 */
+  const seekLast = {};
   const HINT_WORDS = "試試加入車站或地點名 —— 例如「teamLab 豐洲」。";
   const HINT_STRONG = "還是沒有找到嗎?試試「強力搜」。";
 
@@ -2302,6 +2313,8 @@
        探針第一次跑就撞到:候選 0 筆,因為一個空結果蓋掉了有內容的那個。 */
     const b0 = seekBtn(id);
     if (b0 && b0.disabled) return;
+    /* 換了字 = 新的一輪,從免費開始。 */
+    if (seekLast[id] !== q) { seekTries[id] = 0; seekLast[id] = q; }
     const strong = (seekTries[id] || 0) >= 3 && !onSnapshot();
     seekTries[id] = (seekTries[id] || 0) + 1;
     /* **段數一加就重畫按鈕,不等查詢回來。** 等回來才畫的話,使用者按下去
@@ -2323,14 +2336,31 @@
     }
     if (!res.length) {
       /* **誠實說查無,不要退而求其次給一個。** 那正是這個功能要取代的行為。 */
-      seekSay(id, "「" + q + "」找不到。" + seekHint(id));
+      if (strong) {
+        /* **強力搜也找不到,而且字沒改 → 這一輪到此為止。**
+           段數歸零、按鈕退回「搜尋」,因為再按一次會是同一個字問同一家,
+           **那是白花錢**。要往下走只有一條路:換個說法,而那會自動開新的一輪。
+
+           而且這時候要講的不是「再試試」,是**「找不到也沒關係」** ——
+           願望本來就可以沒有地點(「多喝水」「早點睡」),
+           使用者卡在這裡最需要知道的是「我可以就這樣送出去」。 */
+        seekReset(id);
+        seekSay(id, "抱歉,找不到「" + q + "」這個地點。還是可以許願 —— " +
+          "只是它不會出現在地圖上。換個說法的話會重新找一次。", true);
+        return;
+      }
+      seekSay(id, "「" + q + "」找不到。" + seekHint(id), true);
       return;
     }
     const box = seekBox(id);
-    box.innerHTML = res.map((r, i) =>
-      '<button type="button" class="hit" data-hit="' + id + '" data-i="' + i + '">' +
-      "<b>" + esc(hitName(r)) + "</b><span>" + esc(hitAddr(r)) + "</span></button>").join("") +
-      (seekHint(id) ? '<div class="said">' + esc(seekHint(id)) + "</div>" : "");
+    /* **提示排在候選之前。** 第一版擺在清單最後面 —— 而候選有六筆的時候
+       它在螢幕外,使用者根本不會捲到那裡。那句話的用途是「這一輪沒挑到的話下一步做什麼」,
+       它要在使用者決定「這些都不是」的**當下**就在視線裡。 */
+    box.innerHTML =
+      (seekHint(id) ? '<div class="said hint">' + esc(seekHint(id)) + "</div>" : "") +
+      res.map((r, i) =>
+        '<button type="button" class="hit" data-hit="' + id + '" data-i="' + i + '">' +
+        "<b>" + esc(hitName(r)) + "</b><span>" + esc(hitAddr(r)) + "</span></button>").join("");
     box.hidden = false;
     box._hits = res;
   }
