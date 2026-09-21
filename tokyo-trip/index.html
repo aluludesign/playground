@@ -3474,7 +3474,14 @@
      而在 1173px 附近第 1 檔是 293、第 2 檔是 587,**離 440 剛好一樣遠** ——
      兩檔之間本來就沒有靠近 440 的東西,所以那裡必然有個懸崖。
      **比例式的檔位撐不住「四個尺寸」這個說法**,換成像素才撐得住。 */
-  const STEPS = [360, 480, 620, 800];
+  /* **四檔是視窗的比例,上限 3/4。** 固定像素試過了,而 Lulu 的回報很直接:
+     「最寬是螢幕的 3/4,現在是 1/2」—— 800px 在 1600 的螢幕上就是一半。
+     大螢幕買到的空間應該進得了抽屜,而寫死的像素把它擋在外面。
+
+     **但不是回到舊的 `k/4`。** 舊的上限是 4/4(整個視窗),而且預設檔是
+     從 440px 反推的 —— 那才是懸崖的來源(見下面 `readDrawK`)。
+     現在是 1/4 到 3/4 之間四等分,上限就是 3/4,預設寫死第 2 檔。 */
+  const FRACS = [1 / 4, 5 / 12, 7 / 12, 3 / 4];
   /* 視窗裝不下的時候才讓步,而**要保護的是底下的版面,不是抽屜**。
      抽屜一開 body 就 padding-right 同樣的寬度,所以抽屜多寬,行程清單就少多寬。
 
@@ -3483,9 +3490,13 @@
      641px 的視窗於是吃到整整 480px 的抽屜,只剩 161px 給內容,
      **比修之前的比例式(那裡剛好給一半)還糟**。
      改成「至少留 320px 給版面」,窄視窗就平滑地讓步,而不是某一檔突然壓垮它。 */
-  const MINMAIN = 320;
-  const stepPx = k => Math.max(260,
-    Math.min(STEPS[Math.max(1, Math.min(4, k)) - 1], window.innerWidth - MINMAIN));
+  /* 底下的版面至少留這麼寬。**240 而不是 320**:3/4 那一檔在 1100px 的視窗上
+     只剩 275px 給版面,而那一檔是使用者自己選的 —— 夾制是防止版面被壓垮,
+     不是替他決定要多寬。窄到連 240 都留不住才讓步。 */
+  const MINMAIN = 240;
+  const stepPx = k => Math.max(240,
+    Math.min(window.innerWidth * FRACS[Math.max(1, Math.min(4, k)) - 1],
+             window.innerWidth - MINMAIN));
   let drawK = 0;
   function readDrawK() {
     let k = 0;
@@ -3599,7 +3610,7 @@
        量到的是一條沒有人會走的路。 */
     window.addEventListener("pointermove", ev => {
       if (!dragging) return;
-      liveW = Math.max(STEPS[0] * 0.6, Math.min(window.innerWidth * 0.82, window.innerWidth - ev.clientX));
+      liveW = Math.max(window.innerWidth * 0.15, Math.min(window.innerWidth * 0.82, window.innerWidth - ev.clientX));
       applyDrawer(liveW);
       repaintMap();
     });

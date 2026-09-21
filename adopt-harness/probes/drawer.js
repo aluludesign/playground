@@ -19,9 +19,13 @@ async function until(fn, tries) {
   for (var i = 0; i < (tries || 120); i++) { if (fn()) return true; await sleep(50); }
   return false;
 }
-var STEPS = [360, 480, 620, 800], MINMAIN = 320;
+/* 跟 index.html 的 `FRACS` / `MINMAIN` 一字不差。**抄一份是有代價的**:
+   那邊改了這邊沒跟上,斷言會紅而程式是對的(這一輪就發生過一次,
+   見「關掉再打開」那條的註解)。留著是因為探針要能獨立算出期望值 ——
+   從程式裡讀的話,程式錯了期望值也跟著錯,那就不是斷言了。 */
+var FRACS = [1 / 4, 5 / 12, 7 / 12, 3 / 4], MINMAIN = 240;
 var iw = w.innerWidth;
-var want = function (k) { return Math.max(260, Math.min(STEPS[k - 1], iw - MINMAIN)); };
+var want = function (k) { return Math.round(Math.max(240, Math.min(iw * FRACS[k - 1], iw - MINMAIN))); };
 /* **量 `--drawer`,不要量 `getBoundingClientRect()`。**
 
    `applyDrawer()` 是同步寫進 `--drawer` 的,那是**狀態**;
@@ -119,7 +123,8 @@ function drag(toWidth, releaseOn) {
       drawerPx() === want(1), { 量到: drawerPx(), 該是: want(1) });
     drag(iw, "body");
     await sleep(60);
-    ok("往最寬拖 → 停在第 4 檔,而且版面還留得到 " + MINMAIN + "px",
+    out.最寬是螢幕的幾分之幾 = (want(4) / iw).toFixed(3) + "(該是 0.750,除非被夾制)";
+    ok("往最寬拖 → 停在第 4 檔(= 螢幕的 3/4),而且版面還留得到 " + MINMAIN + "px",
       drawerPx() === want(4) && iw - drawerPx() >= MINMAIN - 1,
       { 量到: drawerPx(), 該是: want(4), 剩下: iw - drawerPx() });
 
