@@ -2328,10 +2328,13 @@
     } finally {
       if (b0) b0.disabled = false;
     }
+    if (res && res.錯) {
+      /* 伺服器說得出原因就照講。講不出來(連不上)才退回泛泛的那句。 */
+      seekSay(id, "這次沒查成 —— " + res.錯, true);
+      return;
+    }
     if (!res) {
-      seekSay(id, strong
-        ? "這次沒查成 —— 可能是今天的查詢次數用完了,或是網路不順。等一下再試。"
-        : "連不上地名查詢服務 —— 網路好一點再試,或直接把地點打完整。");
+      seekSay(id, "連不上地名查詢服務 —— 網路好一點再試,或直接把地點打完整。", true);
       return;
     }
     if (!res.length) {
@@ -2383,7 +2386,21 @@
         "&cc=" + encodeURIComponent(regionFor(q).cc));
       if (!r || !r.found) return [];
       return [{ lat: String(r.la), lon: String(r.lo), display_name: r.label || q }];
-    } catch (_) { return null; }
+    } catch (e) {
+      /* **把伺服器講的原話帶出來,不要換成自己猜的。**
+         第一版這裡是 `catch (_) { return null; }`,而顯示的是
+         「可能是今天的查詢次數用完了,或是網路不順」—— 那是我編的。
+
+         Lulu 在 preview 上按下去「都沒東西」,真正的原因是
+         **preview 部署沒有 `GEOCODE_KEY`**(那把金鑰只設在 Production),
+         而伺服器明明白白回了「伺服器還沒設定 GEOCODE_KEY」——
+         **是我把那句話吃掉,換成一個聽起來很合理的原因。**
+
+         這個專案一路在拆的就是這種東西:用一個猜測蓋掉一個明確的訊號。
+         而這次那個猜測特別壞 —— 它指向「額度用完」,會讓人去查帳單,
+         而真正該做的是去 Vercel 加一個環境變數。 */
+      return { 錯: String((e && e.message) || e) };
+    }
   }
 
   /* 選了一個:地點欄換成那個名字,座標**同時**寫進快取,所以這一筆從此不會再被查。

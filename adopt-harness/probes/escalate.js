@@ -17,7 +17,7 @@ async function until(fn, tries) {
   for (var i = 0; i < (tries || 120); i++) { if (fn()) return true; await sleep(50); }
   return false;
 }
-var osm = [], goo = [], osmReply = [], gooReply = { found: false };
+var osm = [], goo = [], osmReply = [], gooReply = { found: false }, gooStatus = 200;
 var realFetch = w.fetch.bind(w);
 w.fetch = function (u, init) {
   var url = String(u);
@@ -29,7 +29,12 @@ w.fetch = function (u, init) {
   if (url.indexOf("resource=geocode") >= 0) {
     goo.push(url);
     var b = gooReply;
-    return Promise.resolve({ ok: true, json: function () { return Promise.resolve(b); } });
+    /* `gooStatus` 不是 200 的時候模擬伺服器回錯誤 —— `api()` 會 throw,
+       而「throw 之後使用者看到什麼」正是這一輪咬到 Lulu 的那條路。 */
+    return Promise.resolve({
+      ok: gooStatus === 200, status: gooStatus,
+      json: function () { return Promise.resolve(b); },
+    });
   }
   return realFetch(u, init);
 };
@@ -169,6 +174,21 @@ async function press(id) {
     ok("**改了字 → 從免費重新一輪**(上一個字用掉的段數不算在新的頭上)",
       osm.length === 1 && goo.length === 0, { osm: osm.length, google: goo.length });
     ok("而且按鈕退回「搜尋」", btn("sf-title").textContent === "搜尋", btn("sf-title").textContent);
+
+    // ---- 伺服器回錯誤時,要轉述它的原話 ----
+    /* **這條就是咬到 Lulu 的那條。** preview 沒有 `GEOCODE_KEY`,伺服器明白回了
+       「伺服器還沒設定 GEOCODE_KEY」,而第一版的 `catch (_)` 把它吃掉,
+       換成我編的「可能是今天的查詢次數用完了」——
+       **那會讓人去查帳單,而該做的是去 Vercel 加一個環境變數。** */
+    inp2.value = "某個查不到的";
+    await press("sf-title"); await press("sf-title"); await press("sf-title");
+    gooStatus = 503; gooReply = { error: "伺服器還沒設定 GEOCODE_KEY,強力搜目前不能用" };
+    await press("sf-title");
+    ok("伺服器講得出原因時,畫面轉述它的原話",
+      boxText("sf-title").indexOf("GEOCODE_KEY") >= 0, boxText("sf-title"));
+    ok("**不會換成自己編的原因**(例如「次數用完了」)",
+      boxText("sf-title").indexOf("次數用完") < 0, boxText("sf-title"));
+    gooStatus = 200;
 
     // ---- 舊的那顆按鈕真的不見了 ----
     ok("`#we-again`(再查一次)不存在了", !d.getElementById("we-again"), "還在");
