@@ -897,13 +897,16 @@
      「你是誰」也不在這裡:見 updateWish() 那一段,它是這整條唯一擋得住的東西。 -->
 <div class="overlay" id="wish-edit-overlay" hidden>
   <form class="signin" id="wish-edit-form">
-    <h2>改我的願望</h2>
+    <h2 id="we-head">改我的願望</h2>
+    <!-- 改別人那一筆的時候才出現。用現成的 .note(暖色底),不是 muted 的說明文字 ——
+         它要被看到,不是被讀過去。 -->
+    <div class="note" id="we-whose" hidden></div>
     <div class="fld"><label class="rm-label" for="we-title">想去哪</label>
       <div class="seek"><input class="rm-input" type="text" id="we-title" required>
       <button type="button" class="btn btn-sm" data-seek="we-title">搜尋</button></div>
       <div class="seek-out" id="we-title-out" hidden></div>
-      <!-- 「再查一次」住在這裡,不住在地圖上:它每按一次都要錢,而這個位置
-           把它限制在「我正在編輯我自己那一筆」這個有意圖的情境裡。 -->
+      <!-- 候選清單。「再查一次」以前住在這裡,`search-escalate` 那一輪整顆退場了
+           (前提消失:程式不再自己猜),花錢的那一下改成搜尋的第 3 段。 -->
       </div>
     <div class="fld"><label class="rm-label" for="we-note">想說的</label><input class="rm-input" type="text" id="we-note" placeholder="可留白"></div>
     <div class="err" id="we-err" hidden></div>
@@ -1434,7 +1437,9 @@
   async function updateWish(id, patch) {
     const w = state.wishes.find(x => x.id === id);
     if (!w) return;
-    if (!mineWish(w)) { flash("只改得動自己許的願望"); return; }
+    /* **跟畫按鈕那裡同一個判準。** 只放寬其中一邊的話,管理員點得開表單、
+       填得完、按下存起來才被這一行擋掉 —— 而那時候他已經把字打完了。 */
+    if (!mineWish(w) && !editable()) { flash("只改得動自己許的願望"); return; }
     /* **副本是凍結的。** 少了這一行,下面的 Object.assign + renderWishes() 會讓
        畫面看起來改成功,而 saveLocal() 開頭 `if (online || snapAt) return;`
        什麼都沒寫 —— 重新整理就沒了,而且沒有任何地方會說一句。 */
@@ -2002,8 +2007,13 @@
      而沒有人編輯得了一份凍結的副本。
 
      `mineWish()` 本身**留著不動**:`.mine` 那個紫框問的是「這是誰許的」,
-     那是一個事實,跟現在能不能寫沒有關係。 */
-  const mayEditWish = w => mineWish(w) && !onSnapshot();
+     那是一個事實,跟現在能不能寫沒有關係。
+
+     **管理員那一半是後來加的。** `editable()` 進來以後這個判準回答的是
+     「我許的,或者我拿得出通行碼」—— 跟隔壁「刪掉」用的是同一個 `editable()`,
+     不長第二套。**而「刪掉」沒有跟著放寬**:改得動別人的願望和刪得掉別人的願望
+     不是同一件事,前者留得下痕跡(改完還是他許的),後者不留。 */
+  const mayEditWish = w => (mineWish(w) || editable()) && !onSnapshot();
 
   async function loadSheetMap(force) {
     if (el("map-sheet").hidden || !sheetMode) { sheetKey = null; return; }
@@ -3708,6 +3718,17 @@
        判準跟畫按鈕那裡同一個 `mayEditWish()` —— 不要一邊畫、一邊開,用兩套規則。 */
     if (!w || !mayEditWish(w)) return;
     editingWish = id;
+    /* **改別人那一筆的時候要講出來,而且要在動手之前講。** 願望清單上只有自己
+       那幾筆有紫框,別人的那幾筆沒有標名字 —— 管理員打開表單看到的是一個
+       跟自己那一筆長得一模一樣的框。不講的話,他會以為那是他自己的。
+
+       歸屬不會因為被改而換手:這張表裡沒有「你是誰」這一欄,`updateWish()`
+       原樣把 `by` 送回去(後端的 `wishIn()` 要求它)。所以這句話講的是事實。 */
+    const mine = mineWish(w);
+    el("we-head").textContent = mine ? "改我的願望" : "改別人的願望";
+    const whose = el("we-whose");
+    whose.hidden = mine;
+    if (!mine) whose.textContent = "這是 " + (w.by || "別人") + " 許的。改完還是算他許的。";
     el("we-title").value = w.title || "";
     el("we-note").value = w.note || "";
     /* **既有的 `place` 要看得見。** 兩欄合併之後畫面上沒有地點欄了,

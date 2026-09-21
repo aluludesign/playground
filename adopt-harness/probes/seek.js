@@ -237,21 +237,55 @@ var THREE = [
     d.getElementById("wishbox").open = true;
     await sleep(60);
 
-    // 10a ---- 入口只長在自己那幾筆上 ----
+    /* 10a ---- 入口:有通行碼就每一筆都改得動,而紫框沒有跟著放寬 ----
+       **這一段以前斷言的是「三筆裡只有一筆有『改』」,那是舊規則。**
+       管理員改得動任何人的願望之後,`mayEditWish()` 回答的是
+       「我許的,或者我拿得出通行碼」—— 而這支探針跑在有通行碼的情境裡。
+       「只有自己那筆有『改』」那一條沒有消失,它搬到 `geofix` 的 14e 去了 ——
+       那裡才是唯讀(沒有通行碼)的情境,規則的邊界要在邊界上量。 */
     var edits = d.querySelectorAll("#wish-list [data-edit-wish]");
-    ok("「改」只出現在自己許的那幾筆上(三筆願望裡只有一筆是我的)",
-      edits.length === 1, [].map.call(d.querySelectorAll("#wish-list [data-wish]"), function (r) {
-        return r.textContent.slice(0, 10) + ":" + (r.querySelector("[data-edit-wish]") ? "有" : "無");
+    var shape = [].map.call(d.querySelectorAll("#wish-list [data-wish]"), function (r) {
+      return r.textContent.slice(0, 10) + ":" + (r.querySelector("[data-edit-wish]") ? "有" : "無");
+    });
+    ok("有通行碼 → 三筆願望每一筆都有「改」(不只自己那一筆)", edits.length === 3, shape);
+    ok("自己那一筆當然也有", !!wishRow(/港灣未來/) && !!wishRow(/港灣未來/).querySelector("[data-edit-wish]"), shape);
+    /* **這兩件事在這一輪分家了,所以要各量一次。** 以前「改」和 `.mine` 是同一個
+       判準,寫成一條斷言;現在「改」問的是「我能不能寫」,`.mine` 問的是
+       「這是誰許的」—— 後者是一個事實,不會因為我有通行碼就變多。 */
+    var mines = d.querySelectorAll("#wish-list .wish.mine");
+    ok("而紫框沒有跟著放寬 —— 三筆裡仍然只有一筆是我許的", mines.length === 1,
+      [].map.call(d.querySelectorAll("#wish-list [data-wish]"), function (r) {
+        return r.textContent.slice(0, 10) + ":" + (r.classList.contains("mine") ? "紫" : "－");
       }));
-    ok("而且它就長在自己那一筆上(不是隨便一筆)",
-      !!wishRow(/港灣未來/) && !!wishRow(/港灣未來/).querySelector("[data-edit-wish]"), null);
-    ok("「改」跟 `.mine` 的紫框是同一個判準(同一列同時有這兩個)",
-      !!wishRow(/港灣未來/) && wishRow(/港灣未來/).classList.contains("mine"),
+    ok("而且紫的就是自己那一筆", !!wishRow(/港灣未來/) && wishRow(/港灣未來/).classList.contains("mine"),
       wishRow(/港灣未來/) && wishRow(/港灣未來/).className);
+
+    /* 10a2 ---- 改別人那一筆的時候,畫面要先講出來那是誰的 ----
+       願望清單上只有自己那幾筆有紫框,別人的那幾筆**沒有標名字** ——
+       所以管理員打開表單看到的,是一個跟自己那一筆長得一模一樣的框。
+       沒有這一條的話,「改得動別人的」和「不小心改掉別人的」之間沒有東西。 */
+    d.querySelector('#wish-list [data-edit-wish="w1"]').click();   /* w1 是 chang_chiayu 許的 */
+    await until(function () { return !q("#wish-edit-overlay").hidden; });
+    ok("改別人的 → 標題改口(不再說「我的」)", q("#we-head").textContent === "改別人的願望",
+      q("#we-head").textContent);
+    ok("改別人的 → 那一條出現,而且點得出是誰",
+      q("#we-whose").hidden === false && q("#we-whose").textContent.indexOf("chang_chiayu") >= 0,
+      { hidden: q("#we-whose").hidden, 字: q("#we-whose").textContent });
+    ok("而且講明了改完歸屬不變(表單裡沒有「你是誰」這一欄,by 原樣送回去)",
+      /還是算他許的/.test(q("#we-whose").textContent), q("#we-whose").textContent);
+    q("#we-cancel").click();
+
+    d.querySelector('#wish-list [data-edit-wish="w2"]').click();   /* w2 是我自己許的 */
+    await until(function () { return !q("#wish-edit-overlay").hidden; });
+    ok("改自己的 → 那一條不出現(不要對每個人都嚷嚷)", q("#we-whose").hidden === true,
+      { hidden: q("#we-whose").hidden, 字: q("#we-whose").textContent });
+    ok("改自己的 → 標題還是「改我的願望」", q("#we-head").textContent === "改我的願望",
+      q("#we-head").textContent);
+    q("#we-cancel").click();
 
     // 10b ---- 情況二:沒挑、標題沒動 → 原來那個留著 ----
     var w2before = wishes().find(function (x) { return x.id === "w2"; });
-    d.querySelector("#wish-list [data-edit-wish]").click();
+    d.querySelector('#wish-list [data-edit-wish="w2"]').click();
     ok("「改」打得開", await until(function () { return !q("#wish-edit-overlay").hidden; }),
       q("#wish-edit-overlay").outerHTML.slice(0, 120));
     ok("標題帶進去了", q("#we-title").value === "橫濱 港灣未來", q("#we-title").value);
@@ -281,7 +315,7 @@ var THREE = [
     // 10c ---- 情況三:標題改了又沒挑 → 清空 ----
     /* 舊的 place 講的是舊的地方,留著會把新標題標到錯的位置上 ——
        那正是這整串(泡溫泉→鳥取、港灣未來→福井)要根除的東西。 */
-    d.querySelector("#wish-list [data-edit-wish]").click();
+    d.querySelector('#wish-list [data-edit-wish="w2"]').click();
     await until(function () { return !q("#wish-edit-overlay").hidden; });
     q("#we-title").value = "橫濱 中華街";
     q("#wish-edit-form button[type=submit]").click();
@@ -294,7 +328,7 @@ var THREE = [
       w2c.place === "", { title: w2c.title, place: w2c.place });
 
     // 10d ---- 情況一:挑過 → 用挑的,座標跟著候選一起來 ----
-    d.querySelector("#wish-list [data-edit-wish]").click();
+    d.querySelector('#wish-list [data-edit-wish="w2"]').click();
     await until(function () { return !q("#wish-edit-overlay").hidden; });
     reply = THREE;
     q("#we-title").value = "teamLab";
@@ -328,7 +362,7 @@ var THREE = [
        刪掉之前它已經好幾輪沒跑到 —— `q("#we-again")` 是 null,`.hidden` 一讀就拋例外,
        而結論式子當時不看 `爆掉了`,印出來仍然是「全部通過」。
        **拿掉一個功能的時候,要跟著搜的是「誰在測它」,不只是「誰在用它」。** */
-    d.querySelector("#wish-list [data-edit-wish]").click();
+    d.querySelector('#wish-list [data-edit-wish="w2"]').click();
     await until(function () { return !q("#wish-edit-overlay").hidden; });
     q("#we-cancel").click();
     ok("取消關得掉", q("#wish-edit-overlay").hidden === true, null);
