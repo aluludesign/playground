@@ -1097,6 +1097,8 @@ for c in be3e0ef 97deeca; do git show $c:adopt-harness/api-geocode-test.js; done
 
 | 組 | 狀態 |
 | --- | --- |
+| `shots/esc-clean` | ✅ **最新的乾淨基準**(`7a8f42e`,搜尋三段式那一輪之後,**14 張**,第 14 張 `14-seek-strong` 是新的)。與 `shots/sync-post` 比:九張逐位元組相同,`11` 落在已登記雙穩態(8px / 6 列),`12` `13` 是這一輪改的畫面,**`08` 差 34 列是提示字從「淺草寺」換成「地名/車站/建築物/活動名等」** —— 預期內,但那一輪的筆記寫的是「只有 13 變」,漏了它 |
+| `shots/esc` … `shots/esc5` | ⚠ **都不是基準**:五組全部在工作樹有 2–4 個檔未提交的狀態下截的,而且最新的 `esc5` 停在 `31b9bfd`(落後分支頂端三個 commit)、14 張。留著當過程紀錄。**「那一輪截過圖」不等於「那一輪留下了基準」** |
 | `shots/sync-post` | ✅ **最新的乾淨基準**(`18b7525` = `origin/main` 併進 `feat/wish-edit` 之後,工作樹乾淨,**13 張**)。同步之後重截的一組,`13-wish-edit` 在裡面。**「快照模式下的『改』」那一輪拿它當基準,13 張逐位元組零差異** |
 | `shots/sync-pre` | 🔸 同步**之前**那一組(`cf93f82`,13 張)。留著當「合併進來的東西改了什麼畫面」的左邊 |
 | `shots/sync-mainonly` | ⚠ 負向對照,不是基準:`SRC=` 指到 `main`(`6fc932f`)的 worktree。**檔案有 13 個,但 `main` 上沒有許願編輯**(查過:`git show main:tokyo-trip/index.html | grep -c data-edit-wish` → `0`),所以第 13 張拍到的是一張沒有那張表的畫面,它那三條斷言在那一組上是 `✗`。**`shoot.sh` 永遠產 13 個檔,檔案存在不代表那一張有東西** —— 跟 `shots/expform-pre-*` 同一種 |
@@ -1129,7 +1131,7 @@ for c in be3e0ef 97deeca; do git show $c:adopt-harness/api-geocode-test.js; done
 | `shots/wired` | ⚠ 同上 |
 | `shots/negctl2` | 負向對照的證據,九張全 `✗`,不是基準 |
 
-**下一塊的基準用 `shots/sync-post`**(最新的一組,**13 張**,`18b7525`,工作樹乾淨)。
+**下一塊的基準用 `shots/esc-clean`**(最新的一組,**14 張**,`7a8f42e`,工作樹乾淨)。
 會動到地圖的話絕對不要用 `block01`。
 
 > 這一行以前寫的是 `shots/merge3`(12 張),而在那之後至少又有四輪
