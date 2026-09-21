@@ -302,6 +302,19 @@ module.exports = async (req, res) => {
       return res.status(503).json({ error: "伺服器還沒設定地名查詢的金鑰,強力搜目前不能用" });
     }
     const cc = /^[a-z]{2}$/.test(String((req.query && req.query.cc) || "")) ? req.query.cc : "jp";
+
+    /* **新版試不成就試舊版,而且兩邊的錯誤都留著。**
+
+       Google 有兩個 Places:`places.googleapis.com`(新)和
+       `maps.googleapis.com/maps/api/place`(舊)。兩個都開得起來,
+       **但金鑰可以個別限制能打哪一個** —— Lulu 兩個都開了,新版仍然回
+       「are blocked」,那是金鑰的 API restrictions 沒放行,不是 API 沒開。
+
+       與其要人去 Console 猜是哪一層擋的,這裡兩個都試。
+       **失敗的時候把兩邊講的話都帶出去** —— 只留一邊的話,
+       下一個人看到的又會是一個不完整的訊號。 */
+    const want = "強力搜";
+    let newErr = "", oldErr = "";
     try {
       const r = await fetch("https://places.googleapis.com/v1/places:searchText", {
         method: "POST",
@@ -311,30 +324,42 @@ module.exports = async (req, res) => {
           "X-Goog-FieldMask": "places.displayName,places.formattedAddress,places.location",
         },
         body: JSON.stringify({
-          textQuery: q,
-          languageCode: "zh-TW",
-          regionCode: cc.toUpperCase(),
-          maxResultCount: 6,
+          textQuery: q, languageCode: "zh-TW",
+          regionCode: cc.toUpperCase(), maxResultCount: 6,
         }),
       });
       const body = await r.json().catch(() => ({}));
-      if (!r.ok) {
-        /* **把 Google 說的話帶出去,不要換成自己猜的。**
-           API 沒開、金鑰沒權限、額度用完 —— 這三種的處置完全不同,
-           而它們只有在原話裡才分得出來。 */
-        const why = (body && body.error && body.error.message) || ("HTTP " + r.status);
-        return res.status(r.status === 403 ? 403 : 502).json({ error: "地點查詢服務說:" + why });
+      if (r.ok) {
+        return res.status(200).json({ list: (body.places || []).map(x => ({
+          la: x.location && x.location.latitude,
+          lo: x.location && x.location.longitude,
+          label: (x.displayName && x.displayName.text) || "",
+          addr: x.formattedAddress || "",
+        })).filter(x => typeof x.la === "number" && typeof x.lo === "number" && x.label) });
       }
-      const list = (body.places || []).map(x => ({
-        la: x.location && x.location.latitude,
-        lo: x.location && x.location.longitude,
-        label: (x.displayName && x.displayName.text) || "",
-        addr: x.formattedAddress || "",
-      })).filter(x => typeof x.la === "number" && typeof x.lo === "number" && x.label);
-      return res.status(200).json({ list: list });
-    } catch (e) {
-      return res.status(502).json({ error: "連不上地點查詢服務" });
-    }
+      newErr = (body && body.error && body.error.message) || ("HTTP " + r.status);
+    } catch (e) { newErr = "連不上"; }
+
+    try {
+      const u = "https://maps.googleapis.com/maps/api/place/textsearch/json?query=" +
+        encodeURIComponent(q) + "&language=zh-TW&region=" + cc +
+        "&key=" + encodeURIComponent(process.env.GEOCODE_KEY);
+      const r2 = await fetch(u);
+      const b2 = await r2.json().catch(() => ({}));
+      if (r2.ok && (b2.status === "OK" || b2.status === "ZERO_RESULTS")) {
+        return res.status(200).json({ list: (b2.results || []).slice(0, 6).map(x => ({
+          la: x.geometry && x.geometry.location && x.geometry.location.lat,
+          lo: x.geometry && x.geometry.location && x.geometry.location.lng,
+          label: x.name || "",
+          addr: x.formatted_address || "",
+        })).filter(x => typeof x.la === "number" && typeof x.lo === "number" && x.label) });
+      }
+      oldErr = (b2 && (b2.error_message || b2.status)) || ("HTTP " + r2.status);
+    } catch (e) { oldErr = "連不上"; }
+
+    return res.status(502).json({
+      error: want + "兩家都沒成:新版說「" + newErr + "」;舊版說「" + oldErr + "」",
+    });
   }
 
   if (resource === "geocode") {
