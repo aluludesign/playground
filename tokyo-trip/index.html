@@ -3410,7 +3410,15 @@
         wxLine(TOKYO, d.date) + "</button>";
     }).join("");
     const cur = el("days").querySelector('[aria-pressed="true"]');
-    if (cur && cur.scrollIntoView) cur.scrollIntoView({ block: "nearest", inline: "center" });
+    if (cur && cur.scrollIntoView) {
+      const centre = () => cur.scrollIntoView({ block: "nearest", inline: "center" });
+      centre();
+      /* **字體是外部資源,它可能晚一步才到。** 到了之後每張日期卡都變寬,
+         而剛剛那個置中是照舊寬度算的 —— 整排就停在一個偏掉的位置,
+         選到的那一天半截在畫面外。網路慢的時候才看得到,所以它一直沒被抓到:
+         同一個 commit 連拍兩次,這一排會停在兩個不同的地方。 */
+      if (document.fonts && document.fonts.status !== "loaded") document.fonts.ready.then(centre);
+    }
   }
 
   const LAST_DAY = "2026-10-08";

@@ -187,14 +187,14 @@ document.getElementById('f').onload = function(){
   var s = d.createElement('style');
   s.textContent = '*,*::before,*::after{transition:none!important;animation:none!important}';
   d.head.appendChild(s);
-  // 地圖圖磚是外部資源,載入時機和內容都不保證一致。擋掉之後
+  // 地圖圖磚是外部資源,載入時機和內容都不保證一致。
+  // **原本這裡是「等它載進來再把 src 換掉」,那是一場賽跑,而且會輸** ——
+  // 同一個 commit 連拍兩次,有一次換成功(一片灰),有一次真的圖磚上了畫面。
+  // 比對就在一個什麼都沒改的地方看到 612px 的差異。
+  // 改成一條 CSS:不管圖磚什麼時候到、到了幾張,它一律不顯示,沒有時間差。
   // 標記的位置、標籤的讓位這些「我的 CSS 管的事」照樣看得到。
-  var mo = new w.MutationObserver(function(){
-    d.querySelectorAll('img.tile[src^="http"]').forEach(function(i){
-      i.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAO7u7////yH5BAAAAAAALAAAAAABAAEAAAICRAEAOw==';
-    });
-  });
-  mo.observe(d.documentElement, {subtree:true, childList:true, attributes:true, attributeFilter:['src']});
+  s.textContent += 'img[src*="tile.openstreetmap.org"]{visibility:hidden!important}'
+    + '.map,.seek-out .hit .thumb{background:#ececec!important}';
   setTimeout(function(){ try{ $4 }catch(e){} }, 1200);
 };
 </script>
