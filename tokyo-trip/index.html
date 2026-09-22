@@ -582,6 +582,23 @@
       text-decoration-thickness:1px; text-underline-offset:2.5px;}
     .lnk:hover{color:var(--accent); text-decoration-style:solid;}
     .wish .wdel{background:none; border:0; color:var(--muted); cursor:pointer; font-size:11px; padding:2px 4px;}
+    /* 左滑之後才出現的那一排,在卡片最底下。預設完全不佔位置 ——
+       **收起來的時候版面要跟以前一樣**,不然每一張卡都會為了一個看不見的東西變高。 */
+    .wish .wswipe{grid-column:1/-1; display:none; gap:8px; margin-top:8px; padding-top:8px;
+      border-top:1px solid var(--line);}
+    .wish.revealed .wswipe{display:flex; animation:wsw-in .16s ease-out;}
+    @keyframes wsw-in{from{opacity:0; transform:translateY(-4px);} to{opacity:1; transform:none;}}
+    @media (prefers-reduced-motion:reduce){ .wish.revealed .wswipe{animation:none;} }
+    .wish .wsw{flex:1; padding:7px 10px; border:1px solid var(--line); border-radius:8px;
+      background:var(--surface); color:var(--ink); font-size:12.5px; font-weight:600; cursor:pointer;}
+    .wish .wsw:hover{background:var(--accent-soft);}
+    /* 刪除用警告色,而且**跟編輯不是同一個重量** —— 兩顆長得一樣的話,
+       左滑露出來的那一刻就又回到「哪一顆是哪一顆」要看清楚的問題。 */
+    .wish .wsw-del{color:var(--warn,#b3261e); border-color:var(--warn,#b3261e);}
+    .wish .wsw-del:hover{background:var(--warn,#b3261e); color:#fff;}
+    /* 滑動中把卡片本身推一點,給一個「有東西在後面」的回饋 */
+    .wish.swiping{transition:none;}
+    .wish{transition:transform .16s ease-out;}
     .wish-hint{font-size:11px; color:var(--muted); margin-bottom:10px;}
     /* **搬到標頭之後不再是「邀請」,是跟「＋加行程」對等的動作按鈕。**
        原本它在清單底下、無框置中、`margin:0 auto 15px` 那一套 —— 那是給
@@ -3443,9 +3460,15 @@
              (刪掉、加入行程)。
              借 `.wdel` 的樣式(同一排的次要小字按鈕),不新增 class ——
              新 class 要重編,而這裡沒有新的樣式需求。 */
-          (mayEditWish(w) ? '<button type="button" class="wdel" data-edit-wish="' + esc(w.id || "") + '">改</button>' : "") +
-          (editable() ? '<button type="button" class="wdel" data-del-wish="' + esc(w.id || "") + '">刪掉</button>' : "") +
           "</div>" +
+          /* **「改」和「刪掉」搬到左滑才出現的那一排。**
+             它們以前跟「誰許的」「+1 了誰」擠在同一行小字裡,而那一行是**用讀的**,
+             不是用按的 —— 手指掃過去就誤觸,而「刪掉」誤觸沒有回頭路。
+             現在要先左滑才露出來,是一個**刻意的動作**,不會順手發生。 */
+          ((mayEditWish(w) || editable()) ? '<div class="wswipe">' +
+            (mayEditWish(w) ? '<button type="button" class="wsw" data-edit-wish="' + esc(w.id || "") + '">編輯</button>' : "") +
+            (editable() ? '<button type="button" class="wsw wsw-del" data-del-wish="' + esc(w.id || "") + '">刪除</button>' : "") +
+            "</div>" : "") +
           '<div class="wops">' +
           '<button type="button" class="vote' + (voted ? " on" : "") + '" data-vote="' + esc(w.id || "") + '">' +
           '<svg class="i" aria-hidden="true"><use href="#i-thumbs-up"></use></svg>' + votes.length + "</button>" +
@@ -4640,6 +4663,63 @@
     window.addEventListener("pointercancel", stop);
     /* 指標離開瀏覽器視窗之後放開,`pointerup` 不一定回得來 —— 補這一條收尾。 */
     window.addEventListener("blur", stop);
+  })();
+
+  /* ---- 願望小卡:左滑才露出「編輯／刪除」 ----
+     **為什麼要多這一個動作**:那兩顆以前跟「誰許的」「+1 了誰」擠在同一行小字裡,
+     而那一行是用讀的、不是用按的 —— 手指掃過去就誤觸,而「刪掉」誤觸沒有回頭路。
+     左滑是一個**要刻意做**的動作,不會順手發生。
+
+     用 pointer 事件,所以滑鼠拖也算 —— 這一條不分版本,桌機上一樣要先滑才露出來。
+     **同一時間只露一張**:兩張都開著的話,下一個「刪除」按到哪一張要看清楚,
+     而這整件事就是為了不必看清楚。 */
+  (function () {
+    const list = el("wish-list");
+    if (!list) return;
+    let card = null, x0 = 0, y0 = 0, dx = 0, decided = "";
+    function closeAll(except) {
+      [].forEach.call(list.querySelectorAll(".wish.revealed"), c => {
+        if (c !== except) c.classList.remove("revealed");
+      });
+    }
+    list.addEventListener("pointerdown", ev => {
+      /* 按在按鈕上就不要當成滑 —— 那是要按它,不是要滑卡片。 */
+      if (ev.target.closest("button,a")) return;
+      card = ev.target.closest(".wish");
+      if (!card) return;
+      x0 = ev.clientX; y0 = ev.clientY; dx = 0; decided = "";
+    });
+    list.addEventListener("pointermove", ev => {
+      if (!card) return;
+      dx = ev.clientX - x0;
+      const dy = ev.clientY - y0;
+      /* **先決定這是橫的還是直的,決定了就不再改。** 不分的話,想捲清單的人
+         會在卡片上留下一排打開的動作鈕,而他根本沒有要做那件事。 */
+      if (!decided && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) {
+        decided = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
+        if (decided === "x") card.classList.add("swiping");
+      }
+      if (decided !== "x") return;
+      ev.preventDefault();
+      /* 只跟到 -64,再滑也不會更多 —— 它是一個開關,不是一個可以拉到任意位置的東西。 */
+      const shift = Math.max(-64, Math.min(0, dx));
+      card.style.transform = "translateX(" + shift + "px)";
+    });
+    function endSwipe() {
+      if (!card) return;
+      const c = card; card = null;
+      c.classList.remove("swiping");
+      c.style.transform = "";
+      if (decided !== "x") return;
+      if (dx < -40) { closeAll(c); c.classList.add("revealed"); }
+      else if (dx > 40) c.classList.remove("revealed");
+    }
+    list.addEventListener("pointerup", endSwipe);
+    list.addEventListener("pointercancel", endSwipe);
+    /* 點別的地方就收起來 —— 露著的那一排是暫時的狀態,不該一直留在畫面上。 */
+    document.addEventListener("pointerdown", ev => {
+      if (!ev.target.closest(".wish")) closeAll(null);
+    }, true);
   })();
 
   /* ---- 手機:清單那張 sheet 的三段式收合(iOS「尋找」那種) ----

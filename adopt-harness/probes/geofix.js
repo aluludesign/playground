@@ -673,6 +673,42 @@ function pinsOf(k) { return pins()[k]; }
     ok("唯讀 → 「刪掉」不在(那一顆本來就是管理員的)",
       !mineRow.querySelector("[data-del-wish]"), null);
 
+    /* ---- 「編輯／刪除」要左滑才露出來 ----
+       **它們以前跟「誰許的」「+1 了誰」擠在同一行小字裡**,而那一行是用讀的、
+       不是用按的 —— 手指掃過去就誤觸,而「刪掉」誤觸沒有回頭路。
+       這幾條守的是:預設看不到、要一個刻意的橫向動作才出現、
+       而且**直著滑(想捲清單)不可以觸發** —— 不分的話,捲一次清單就會留下
+       一排打開的動作鈕,而他根本沒有要做那件事。 */
+    ok("那兩顆不在那行小字裡了(不會被掃到)",
+      !mineRow.querySelector(".wm [data-edit-wish], .wm [data-del-wish]"),
+      mineRow.querySelector(".wm").textContent.trim());
+    var sw = mineRow.querySelector(".wswipe");
+    ok("它們在一排預設收起來的動作列裡",
+      !!sw && w.getComputedStyle(sw).display === "none",
+      sw && w.getComputedStyle(sw).display);
+    function swipe(card, from, to, dy) {
+      function pe(t, x, y) {
+        return new w.PointerEvent(t, { clientX: x, clientY: y, pointerId: 5,
+          bubbles: true, cancelable: true, pointerType: "touch" });
+      }
+      var r = card.getBoundingClientRect(), y = r.top + Math.min(10, r.height / 2);
+      card.dispatchEvent(pe("pointerdown", r.left + from, y));
+      card.dispatchEvent(pe("pointermove", r.left + to, y + (dy || 0)));
+      card.dispatchEvent(pe("pointerup", r.left + to, y + (dy || 0)));
+    }
+    swipe(mineRow, 200, 100, 0);
+    await sleep(120);
+    ok("左滑 → 露出「編輯」和「刪除」",
+      mineRow.classList.contains("revealed") && w.getComputedStyle(sw).display !== "none",
+      { revealed: mineRow.classList.contains("revealed") });
+    swipe(mineRow, 100, 200, 0);
+    await sleep(120);
+    ok("右滑 → 收回去", !mineRow.classList.contains("revealed"), null);
+    swipe(mineRow, 200, 195, 80);
+    await sleep(120);
+    ok("**直著滑不會觸發**(那是要捲清單,不是要動這張卡)",
+      !mineRow.classList.contains("revealed"), null);
+
     /* **這一條是被截圖逼出來的。** 05 那張(離線,`editable()` 為 true)顯示:
        「改」和「刪掉」同時出現時,`.wm` 那一排(flex-wrap)裝不下,
        「刪掉」被擠到第二行,那張卡因此高了 51px。
