@@ -127,6 +127,36 @@ async function drag(dy) {
       w.getComputedStyle(d.querySelector(".cols > .col:not(#wishbox)")).display !== "none",
       { 許願: w.getComputedStyle(d.getElementById("wishbox")).display });
 
+    /* ---- 開對話框不可以把底板抽走 ----
+       **這一條是一個回報逼出來的,而且回報看起來像另一件事。**
+       她說「許願時在對話框按取消,回到頁面地圖不見」,還說「按把手內容會消失」——
+       兩句話聽起來是兩個 bug,實際上是同一個:開對話框前會把地圖收掉。
+
+       那條規則是舊模型留下的:以前手機的地圖是 z70,會整片蓋住對話框。
+       翻過來之後地圖是 z1 的背景,對話框本來就在它上面,收它只剩壞處 ——
+       **而且沒有人會再打開它**。底板一抽走,收合 sheet 就變成「內容消失」。 */
+    d.getElementById("add-wish-btn").click();
+    await until(function () { return !d.getElementById("wish-add-overlay").hidden; });
+    await sleep(200);
+    ok("開「許願」對話框時,地圖還在(它是底,不該被收走)",
+      !d.getElementById("map-sheet").hidden, d.getElementById("map-sheet").hidden);
+    ok("而且對話框在地圖上面(所以本來就不必收它)",
+      +w.getComputedStyle(d.getElementById("wish-add-overlay")).zIndex >
+      +w.getComputedStyle(d.getElementById("map-sheet")).zIndex,
+      { 對話框: w.getComputedStyle(d.getElementById("wish-add-overlay")).zIndex,
+        地圖: w.getComputedStyle(d.getElementById("map-sheet")).zIndex });
+    d.getElementById("wf-cancel").click();
+    await sleep(300);
+    ok("按取消回到頁面,地圖還在", !d.getElementById("map-sheet").hidden,
+      d.getElementById("map-sheet").hidden);
+    /* 收到剩一條的時候,底下露出來的必須是地圖 —— 不然「收起來」就等於「清空」。 */
+    await drag(-9000);
+    var mid = d.elementFromPoint(Math.round(w.innerWidth / 2), Math.round(w.innerHeight / 2));
+    ok("收到剩一條時,畫面中央是地圖(不是頁面本身)",
+      !!mid && !!mid.closest("#map-sheet"),
+      mid && (mid.id || String(mid.className) || mid.tagName));
+    await drag(0);
+
     // ---- 分頁列永遠按得到 ----
     var planTab = d.getElementById("tab-plan"), pb = planTab.getBoundingClientRect();
     var hitTab = d.elementFromPoint(Math.round(pb.left + pb.width / 2), Math.round(pb.top + pb.height / 2));
