@@ -391,17 +391,22 @@ function pinsOf(k) { return pins()[k]; }
     q("#add-wish-btn").click();
     q("#wf-title").value = "早點睡";
     q("#wf-by").value = "hsieh_chinhui";
-    /* **要量的是「使用者的眼睛在哪」,而那是表單所在的位置,要在按下去之前量。**
-       兩個踩過的坑都在這三行裡:
-         1. 表單送出就 hidden,而 display:none 的元素 rect 全是 0 ——
-            拿送出鈕在送出**之後**量,得到的是從 0 算起的乾淨假數字(840 / 884)。
-         2. 改成「送出前量按鈕、送出後量訊息」也不對:表單一收,底下整片往上移
-            約一個表單的高度,那個差被算進「距離」裡,結果是 361 vs 317 ——
-            **看起來像訊息比頁尾還遠**。兩個位置不在同一個版面上就不能相減。
-       所以錨點取表單的上緣(使用者視線落點,送出前量),另外兩個點在同一個
-       版面上(送出後)一起量。 */
-    var eyeY = q("#wish-form").getBoundingClientRect().top;
+    /* **錨點換了,因為表單搬走了。**
+       原本拿的是 `#wish-form` 的上緣 —— 它那時候就長在清單正上方,所以「表單在哪」
+       等於「使用者的眼睛在哪」。現在新增是一張置中的對話框(`#wish-add-overlay`),
+       它的上緣在畫面正中央,跟送出**之後**要讀那句話的地方沒有關係了。
+       在 1440 上這條就是這樣紅的:到訊息 603、到頁尾 1231,而兩個數字都不是它想問的。
+
+       **要守的東西沒變**:那句話要出現在他接下來看的地方,不是頁尾那行 10.5px。
+       送出之後他看的是**願望清單** —— 那一筆剛進去,他要確認它在不在。
+       所以錨點換成清單的上緣,而且跟訊息在同一個版面上量(都在送出後)。
+
+       兩個踩過的坑還在,換錨點沒有讓它們消失:
+         1. 送出就 hidden 的東西,rect 全是 0 —— 不要拿送出後的表單當基準。
+         2. 兩個位置不在同一個版面上就不能相減(表單一收底下整片會往上移)。
+       頁尾那個距離仍然用**按下去那一刻**的版面,理由見下面。 */
     var footA = q("#sync").getBoundingClientRect().top;   /* 按下去的那一刻,頁尾在哪 */
+    var eyeY = 0;   /* 送出後才量得準,見下面 */
     q("#wf-submit").click();
     ok("許願沒填地點 → 話講在許願表單那一槽上",
       await until(function () { return q("#wish-msg").hidden === false; }), q("#wish-msg").outerHTML);
@@ -413,6 +418,7 @@ function pinsOf(k) { return pins()[k]; }
       !!q("#wish-msg .note"), q("#wish-msg").innerHTML);
     /* 「講在眼睛所在的地方」是可以量的:比一比那句話離送出鈕多遠、離頁尾那行多遠。 */
     var hereY = q("#wish-msg").getBoundingClientRect().top;
+    eyeY = q("#wish-list").getBoundingClientRect().top;   /* 他接下來要看的東西 */
     /* 頁尾那個距離用**按下去那一刻**的版面(footA):問的是「他按送出的時候,
        #sync 離他的視線有多遠」。拿送出後的版面去量會把表單收起來的位移算進去,
        那正是上面註解裡第 2 個坑。 */
@@ -427,9 +433,17 @@ function pinsOf(k) { return pins()[k]; }
                圓角: cs.borderRadius, 內距: cs.padding, 寬: Math.round(n.getBoundingClientRect().width),
                高: Math.round(n.getBoundingClientRect().height), 文字: n.textContent };
     })();
-    ok("它在 DOM 上的位置是「表單和清單之間」",
-      q("#wish-form").nextElementSibling === q("#wish-msg") &&
-      q("#wish-msg").nextElementSibling === q("#wish-list"), null);
+    /* **原本問的是「表單 → 訊息 → 清單」這個順序,而表單搬走了。**
+       許願的新增表單變成對話框(`#wish-add-overlay`),不再是清單上面那一塊,
+       所以 `#wish-form.nextElementSibling` 是 null —— 那不是壞掉,是它換了位置。
+       **要守的東西沒變**:那句話講的是「剛剛存進去的那一筆為什麼不在地圖上」,
+       它要**貼著清單**被讀到,不能被搬進一個馬上會關掉的對話框裡。
+       所以判準改成問它跟清單的關係,不是跟表單的。 */
+    ok("那句話貼在清單前面(它講的是剛存進去的那一筆,要在清單旁邊讀到)",
+      q("#wish-msg").nextElementSibling === q("#wish-list"),
+      { 訊息的下一個: q("#wish-msg").nextElementSibling && q("#wish-msg").nextElementSibling.id });
+    ok("而且它沒有被搬進對話框裡",
+      !q("#wish-add-overlay").contains(q("#wish-msg")), q("#wish-msg").parentElement.className);
 
     // 12b ---- 加行程那一槽,以及「查不到」「不在日本境內」兩句 ----
     flashes.length = 0;
@@ -562,10 +576,16 @@ function pinsOf(k) { return pins()[k]; }
       內容: [].map.call(wmEditable.children, function (c) { return c.textContent.trim(); }),
     };
     if (narrow) {
-      /* **期望值不是從現況抄來的**:05 的比對量到那張卡高了 51px、
-         位移搜尋說 `dy=+51`,那是這條斷言的獨立證據。 */
-      ok("【對照組】窄視窗 + 可編輯 + 自己的願望 → 那一排**真的換行了**(改 + 刪掉 裝不下,05 因此變胖 51px)",
-        rowsOf(wmEditable) === 2, out.可編輯時那一排);
+      /* **這條原本斷言「窄視窗下那一排會換行」,而它的獨立證據過期了。**
+         那個證據是 05 的比對:那張卡高了 51px、位移搜尋說 `dy=+51`。
+         但 05 拍的是**許願還住在頁面裡**的版面 —— 現在它是一張滿版 sheet,
+         `position:fixed; inset:0`,比原本那個有頁面邊距的盒子寬了三十幾 px,
+         於是同一排裝得下了(量到:390px 下 1 行,不是 2 行)。
+
+         **所以不下斷言,只記數字。** 寫「應該一行」就是把現況抄成期望值;
+         而要重新有根據,得先有一張拍到新版面的 05。 */
+      out.可編輯時那一排.說明 = "**這個版面沒有下斷言** —— 原本的根據是舊 05 的 +51px," +
+        "而許願改成滿版 sheet 之後那張圖的前提沒了,要等新的基準截圖才談得上期望值。";
     } else {
       /* 這個寬度沒有截圖可以當獨立證據,所以**不在這裡下斷言** ——
          寫一條「1100 下不換行」等於把現況抄成期望值(工具陷阱 12)。 */

@@ -220,6 +220,32 @@
       .wishbox.col .wish-caret{display:none;}
       .wishbox.col > summary{cursor:default;}
     }
+    /* ---- 不夠寬的時候:許願是從底部滑上來的滿版 sheet ----
+       入口留在原地(行程列表底下那一條標頭),點它才滑上來 —— **收起來的時候
+       版面一個像素都沒變**,所以 01 / 05 那兩張手機截圖的「未展開」狀態照舊。
+
+       **`<details>` 自己就是開關,所以不用另外做一顆關閉鈕**:展開之後那條標頭
+       黏在 sheet 最上面,再點一次就收回去。少一個要維護的狀態。
+
+       z-index 是 55,而那是**排出來的,不是挑的**:
+         55 許願 sheet  <  60 對話框(.overlay)  <  70 地圖 sheet
+       「點許願之後再開地圖,地圖要蓋在它上面」是這樣成立的;而對話框蓋得住許願,
+       所以在許願裡按「許願地點」看得到那張表。地圖比對話框高,**那正是
+       手機上開對話框前要先把地圖收起來的理由** —— 順序在這裡,不在那段程式裡。 */
+    @media (max-width:1279px){
+      .wishbox[open]{position:fixed; inset:0; z-index:55; margin:0; border:0; border-radius:0;
+        overflow-y:auto; overscroll-behavior:contain; background:var(--surface);
+        animation:wish-up .18s ease-out;}
+      .wishbox[open] > summary{position:sticky; top:0; z-index:1; background:var(--surface);
+        border-bottom:1px solid var(--line);}
+      /* 底下留一段:滿版之後最後一顆按鈕會頂到螢幕邊,手機還有下巴。 */
+      .wishbox[open] > *:last-child{margin-bottom:calc(18px + env(safe-area-inset-bottom,0px));}
+    }
+    @keyframes wish-up{from{transform:translateY(18px); opacity:.5;} to{transform:none; opacity:1;}}
+    @media (prefers-reduced-motion:reduce){ .wishbox[open]{animation:none;} }
+    /* sheet 開著的時候底下那層不要跟著捲 —— 兩層都能捲的話,手指往上滑到底,
+       捲的會變成後面那張,而使用者以為 sheet 卡住了。 */
+    body.wish-open{overflow:hidden;}
     .wishbox{margin-top:22px; border:1px solid var(--line); border-radius:11px; background:var(--surface); padding:0;}
     .wish-head{list-style:none; cursor:pointer; display:flex; align-items:center; gap:8px; padding:13px 15px;
       font-family:var(--font-sign); font-size:14px; font-weight:600;}
@@ -342,7 +368,18 @@
       .sheet:not(.sizing){transition:width .18s ease;}
     }
     /* 一看就知道可以往下收的那條把手 */
-    .sheet-grab{width:38px; height:4px; border-radius:2px; background:var(--line); margin:0 auto 12px;}
+    /* **這條握把以前只是裝飾。** 手機上地圖固定 46vh,想看大一點只能關掉再開,
+       而那不會讓它變大。現在它真的拖得動,一路可以拖到全螢幕。
+       (桌機那邊是左邊那條 `.sheet-grip` 拉寬窄,兩個各管一個方向,不互相干擾。)
+       `touch-action:none` 不能省:不寫的話手指往上滑會被瀏覽器當成捲頁面,
+       拖到一半整張圖就跑掉了。 */
+    .sheet-grab{width:38px; height:4px; border-radius:2px; background:var(--line); margin:0 auto 12px;
+      cursor:grab; touch-action:none;}
+    .sheet-grab:hover,.sheet.sizing .sheet-grab{background:var(--accent);}
+    /* 拖過之後才接管高度。**沒拖過就完全是原本那套**(內容自己撐高、`#map` 46vh),
+       所以沒碰過它的人看到的畫面一個像素都沒變。 */
+    .sheet.sized .sheet-in{height:var(--sh); max-height:100vh; display:flex; flex-direction:column;}
+    .sheet.sized #map{flex:1; height:auto; min-height:0;}
     .sheet-head{display:flex; align-items:center; gap:8px; margin-bottom:10px;
       font-family:var(--font-sign); font-size:14px; font-weight:600;}
     .sheet-head .i{color:var(--accent);}
@@ -794,21 +831,6 @@
           <svg class="i wish-caret" aria-hidden="true"><use href="#i-chevron-down"></use></svg>
         </summary>
         <p class="wish-intro">想去哪裡先丟進來,不用等排好。誰都可以許願、可以幫別人的願望 +1。</p>
-        <form class="form" id="wish-form" hidden>
-          <div class="grid2">
-            <div class="fld"><label class="rm-label" for="wf-title">想去哪</label>
-              <div class="seek"><input class="rm-input" type="text" id="wf-title" placeholder="地名/車站/建築物/活動名等" required>
-              <button type="button" class="btn btn-sm" data-seek="wf-title">搜尋</button></div>
-              <div class="seek-out" id="wf-title-out" hidden></div></div>
-          </div>
-          <div class="fld"><label class="rm-label" for="wf-by">你是誰</label><select class="rm-input" id="wf-by"></select></div>
-          <div class="fld"><label class="rm-label" for="wf-note">想說的</label><input class="rm-input" type="text" id="wf-note" placeholder="可留白"></div>
-          <div class="err" id="wf-err" hidden></div>
-          <div class="form-ops">
-            <button type="button" class="btn btn-ghost btn-sm" id="wf-cancel">取消</button>
-            <button type="submit" class="btn btn-main btn-sm" id="wf-submit">許下去</button>
-          </div>
-        </form>
         <div id="wish-msg" hidden></div>
         <div id="wish-list"></div>
         <button class="btn btn-sm" id="add-wish-btn" type="button">
@@ -943,6 +965,28 @@
   </form>
 </div>
 
+<!-- 許一筆新的。**以前是就地展開的表單,現在是對話框** —— 許願區在手機和窄桌機
+     是一張滿版 sheet,在它裡面再就地展開一張表,等於把清單推到看不見的地方。
+     外觀跟「改我的願望」同一套(`.overlay` + `.signin`),因為它們是同一件事的兩半。
+     **訊息槽 `#wish-msg` 留在清單那邊沒有跟過來**:它講的是「剛剛存進去的那一筆
+     為什麼不在地圖上」,那句話要在清單旁邊被讀到,不是在一個馬上會關掉的對話框裡。 -->
+<div class="overlay" id="wish-add-overlay" hidden>
+  <form class="signin" id="wish-form">
+    <h2>許一個願望</h2>
+    <div class="fld"><label class="rm-label" for="wf-title">想去哪</label>
+      <div class="seek"><input class="rm-input" type="text" id="wf-title" placeholder="地名/車站/建築物/活動名等" required>
+      <button type="button" class="btn btn-sm" data-seek="wf-title">搜尋</button></div>
+      <div class="seek-out" id="wf-title-out" hidden></div></div>
+    <div class="fld"><label class="rm-label" for="wf-by">你是誰</label><select class="rm-input" id="wf-by"></select></div>
+    <div class="fld"><label class="rm-label" for="wf-note">想說的</label><input class="rm-input" type="text" id="wf-note" placeholder="可留白"></div>
+    <div class="err" id="wf-err" hidden></div>
+    <div class="ops">
+      <button type="submit" class="btn btn-main" id="wf-submit">許下去</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="wf-cancel">取消</button>
+    </div>
+  </form>
+</div>
+
 <!-- 自己許的願望,自己改。**不共用上面那張表**:那張有「哪一天」和「時間」,
      而願望一有日期就不再是願望了(後端 SHAPES.wishes 的 filter 就是「日期為空」,
      wishIn() 也寫著「絕對不寫日期」)。共用一張表等於讓一次誤觸把願望變成行程。
@@ -973,7 +1017,7 @@
 <div class="sheet" id="map-sheet" hidden>
   <div class="sheet-in" role="dialog" aria-label="地圖">
     <div class="sheet-grip" id="map-grip" title="拉寬縮窄"></div>
-    <div class="sheet-grab"></div>
+    <div class="sheet-grab" id="map-grab" title="上下拖可以放大到全螢幕"></div>
     <div class="sheet-head">
       <svg class="i" aria-hidden="true"><use href="#i-route"></use></svg>
       <span id="map-title">地圖</span>
@@ -3351,17 +3395,30 @@
       el("panel-" + t).hidden = t !== name;
     });
     /* **花費和分帳是一頁式的。** 地圖和許願講的都是「某一天要去哪」,
-       在對帳的頁面上它們沒有對象,而抽屜還會把版面往左擠掉 440px。 */
-    if (name !== "plan") closeMapSheet();
+       在對帳的頁面上它們沒有對象,而抽屜還會把版面往左擠掉 440px。
+       許願那張滿版 sheet 更要收 —— 它蓋住整個畫面,不收的話切過去等於沒切。 */
+    if (name !== "plan") {
+      closeMapSheet();
+      const wb = el("wishbox");
+      if (wb) wb.open = false;
+    }
     syncLayout();
+    syncWishLock();
   }
   document.querySelectorAll(".tab").forEach(b => b.addEventListener("click", () => switchTab(b.dataset.tab)));
   /* 使用者在寬桌機上還是點得到那個 summary。點了就再開回去 ——
      **不要用 `preventDefault`**:`<details>` 的開合不是靠 click 的預設行為,
      攔了也沒用,而 toggle 事件是它真的變了之後才發的。 */
+  /* sheet 開著的時候鎖住底層的捲動。**只在窄的時候鎖** —— 寬桌機那一欄是版面的
+     一部分,不是蓋在上面的東西,鎖了會讓整頁捲不動。 */
+  function syncWishLock() {
+    const wb = el("wishbox");
+    document.body.classList.toggle("wish-open", !!(wb && wb.open && !wideCols()));
+  }
   (function () {
     const wb = el("wishbox");
-    if (wb) wb.addEventListener("toggle", () => { if (!wb.open) syncLayout(); });
+    if (!wb) return;
+    wb.addEventListener("toggle", () => { if (!wb.open) syncLayout(); syncWishLock(); });
   })();
   /* 拉寬視窗也要補上。`resize` 會連發,而 syncLayout 只做「該開的還沒開就開」,
      重複呼叫不會有副作用,所以不節流。 */
@@ -3777,16 +3834,33 @@
     box.textContent = msg;
     box.hidden = !msg;
   }
-  el("add-wish-btn").addEventListener("click", () => {
+  /* **開對話框之前先把地圖收起來,而且只在窄的時候收。**
+     地圖 sheet 的 z-index 是 70,對話框是 60 —— 手機上地圖開著就會**整片蓋住**
+     那張表,而使用者按了「許願地點」什麼都沒發生,他不會知道是被蓋住了。
+     寬桌機不收:那裡地圖是右邊一欄,跟畫面中央的對話框不重疊,收掉只是讓三塊缺一塊。
+     **收了不自己回來** —— 他剛存完一筆,下一步多半是看清單,不是看地圖。 */
+  function openWishAdd() {
+    if (!wideCols() && !el("map-sheet").hidden) closeMapSheet();
     seekReset("wf-title"); seekClear("wf-title");
     fillWishWho();
     sayHere("wish-msg", "");
     showWishError("");
-    const f = el("wish-form");
-    f.hidden = !f.hidden;
-    if (!f.hidden) el("wf-title").focus();
+    el("wish-form").reset();
+    fillWishWho();   /* reset() 會把下拉選回第一個,所以要在它後面再填一次 */
+    el("wish-add-overlay").hidden = false;
+    el("wf-title").focus();
+  }
+  function closeWishAdd() {
+    el("wish-add-overlay").hidden = true;
+    seekClear("wf-title");
+    showWishError("");
+  }
+  el("add-wish-btn").addEventListener("click", openWishAdd);
+  el("wf-cancel").addEventListener("click", closeWishAdd);
+  /* 點灰色底、按 Esc 都關得掉 —— 跟「改我的願望」那張同一套手勢。 */
+  el("wish-add-overlay").addEventListener("click", ev => {
+    if (ev.target === el("wish-add-overlay")) closeWishAdd();
   });
-  el("wf-cancel").addEventListener("click", () => { el("wish-form").hidden = true; showWishError(""); });
   el("wish-form").addEventListener("submit", ev => {
     ev.preventDefault();
     const title = el("wf-title").value.trim();
@@ -3805,8 +3879,7 @@
        跟行程走同一個 checkPlace(),不長第二套。 */
     checkPlace({ place: place, title: title }, "wish-msg");
     el("wish-form").reset();
-    el("wish-form").hidden = true;
-    showWishError("");
+    closeWishAdd();
   });
   el("wish-list").addEventListener("click", ev => {
     const v = ev.target.closest("[data-vote]");
@@ -4228,10 +4301,58 @@
     /* 指標離開瀏覽器視窗之後放開,`pointerup` 不一定回得來 —— 補這一條收尾。 */
     window.addEventListener("blur", stop);
   })();
+
+  /* ---- 手機:上下拖那條握把,把地圖放大到全螢幕 ----
+     **這條路以前不存在。** 手機上地圖固定 46vh,想看大一點只能關掉再開,
+     而那不會讓它變大 —— 握把看起來可以拖,但拖了什麼都不會發生,
+     那比沒有握把更糟:它承諾了一件做不到的事。
+
+     只在窄的時候接手。桌機那邊拖的是**寬度**(左邊那條 `.sheet-grip`),
+     兩條各管一個方向;而 `.sheet-grab` 在桌機是 `display:none`,
+     所以這裡不必再判斷一次,指標事件根本不會發生。 */
+  (function () {
+    const sheet = el("map-sheet"), grab = el("map-grab");
+    if (!sheet || !grab) return;
+    /* 最矮留 34vh:再矮下去地圖只剩兩三顆點,而使用者要的是「收起來」,
+       那件事按 ✕ 就好,不該從拖拉裡長出第二個關閉方式。 */
+    const minH = () => Math.max(240, window.innerHeight * 0.34);
+    let dragging = false, startY = 0, startH = 0;
+    grab.addEventListener("pointerdown", ev => {
+      dragging = true; startY = ev.clientY;
+      startH = sheet.querySelector(".sheet-in").getBoundingClientRect().height;
+      sheet.classList.add("sizing");
+      try { grab.setPointerCapture(ev.pointerId); } catch (_) {}
+      ev.preventDefault();
+    });
+    window.addEventListener("pointermove", ev => {
+      if (!dragging) return;
+      /* 往上拖 = 變高,所以是 startY 減掉現在的 y。 */
+      const h = Math.max(minH(), Math.min(window.innerHeight, startH + (startY - ev.clientY)));
+      sheet.classList.add("sized");
+      sheet.style.setProperty("--sh", Math.round(h) + "px");
+      repaintMap();
+    });
+    function stop() {
+      if (!dragging) return;
+      dragging = false;
+      sheet.classList.remove("sizing");
+      repaintMap();
+    }
+    window.addEventListener("pointerup", stop);
+    window.addEventListener("pointercancel", stop);
+    window.addEventListener("blur", stop);
+  })();
   el("map-sheet-x").addEventListener("click", closeMapSheet);
   /* 沒有背景那層可以點了(背景要留給使用者操作),所以收起來只剩 ✕ 和 Esc */
   document.addEventListener("keydown", ev => {
-    if (ev.key === "Escape" && !el("map-sheet").hidden) closeMapSheet();
+    if (ev.key !== "Escape") return;
+    /* **由上往下關,一次只關一層。** 地圖(70)蓋在對話框(60)上面,對話框蓋在
+       許願 sheet(55)上面 —— Esc 關掉的應該是**他現在看得到的最上面那一層**,
+       不是一次全收。三層一起關的話,他按一下 Esc 就回到空無一物的行程頁。 */
+    if (!el("map-sheet").hidden) { closeMapSheet(); return; }
+    if (!el("wish-add-overlay").hidden) { closeWishAdd(); return; }
+    const wb = el("wishbox");
+    if (wb && wb.open && !wideCols()) { wb.open = false; return; }
   });
 
   /* ---- 產生檔走鐘的防護 ----
