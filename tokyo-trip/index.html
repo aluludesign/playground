@@ -259,22 +259,32 @@
        z-index 54:比許願 sheet(55)低一階 —— 展開之後那條標頭是 sheet 自己的
        黏頭,不需要再有一條浮在外面。比地圖(70)低很多,所以**地圖開著會蓋住它**,
        那跟「地圖蓋在許願上面」是同一條規則,不是例外。 */
-    @media (max-width:640px){
+    /* ---- 收起來的時候,那條標頭釘在底部 ----
+       **釘的是「內容區」的底部,不是螢幕的底部。** 手機上那兩件事一樣;
+       窄桌機上不一樣 —— 地圖是右邊的抽屜,那條要在它左邊結束,
+       不然它會從地圖底下穿過去,而使用者看到的是一條被切掉一半的東西。 */
+    @media (max-width:1279px){
       .wishbox:not([open]){margin:0; border:0; background:none;}
-      /* **坐在分頁列上面,不是坐在畫面底部。** 手機的分頁列(行程／搭機／花費／分帳)
-         本來就是 `position:fixed; bottom:0`,第一版我也寫 `bottom:0`,結果整條導覽
-         被蓋掉 —— 而畫面看起來只是「少了一排東西」,不像有人壓在上面。
-         `--tabh` 是量出來的:那一列有安全區內距,寫死會在有下巴的機型上差一截。 */
       .wishbox:not([open]) > summary{position:fixed; left:0; right:0; bottom:var(--tabh,0px);
         z-index:54; background:var(--surface); border-top:1px solid var(--line); border-radius:0;
         padding-bottom:13px;
         box-shadow:0 -2px 10px rgba(20,26,45,.07);}
+    }
+    @media (max-width:640px){
+      /* **坐在分頁列上面,不是坐在畫面底部。** 手機的分頁列(行程／搭機／花費／分帳)
+         本來就是 `position:fixed; bottom:0`,第一版我也寫 `bottom:0`,結果整條導覽
+         被蓋掉 —— 而畫面看起來只是「少了一排東西」,不像有人壓在上面。
+         `--tabh` 是量出來的:那一列有安全區內距,寫死會在有下巴的機型上差一截。 */
+      .wishbox:not([open]) > summary{padding-bottom:13px;}
       /* `.wrap` 本來就留了分頁列的高度,這裡再補許願那條的 —— 兩條都是浮在上面的。 */
       .wrap{padding-bottom:calc(78px + var(--wishbar,0px) + env(safe-area-inset-bottom,0px));}
     }
-    /* 窄桌機(641–1279):地圖是右邊的抽屜,所以讓開寬度,高度整條到底。 */
+    /* 窄桌機(641–1279):地圖是右邊的抽屜,**收起來的那條和展開的 sheet 都讓開它的寬度**。
+       桌機沒有底部分頁列(分頁在上面),所以 `--tabh` 是 0,那條就貼著畫面底部。 */
     @media (min-width:641px) and (max-width:1279px){
       body.drawer-open .wishbox[open]{right:var(--drawer,440px); bottom:0;}
+      body.drawer-open .wishbox:not([open]) > summary{right:var(--drawer,440px);}
+      .wrap{padding-bottom:calc(18px + var(--wishbar,0px));}
     }
     @keyframes wish-up{from{transform:translateY(18px); opacity:.5;} to{transform:none; opacity:1;}}
     @media (prefers-reduced-motion:reduce){ .wishbox[open]{animation:none;} }
@@ -3470,11 +3480,12 @@
   function syncWishBar() {
     const wb = el("wishbox"), sum = wb && wb.querySelector("summary");
     const tabs = document.querySelector(".tabs");
+    /* **只有手機的分頁列浮在底部**,桌機那排在上面 —— 所以 `--tabh` 只在手機有值。 */
     const phone = window.innerWidth <= 640;
-    /* 分頁列的高度要先量,那條才知道自己該坐多高 —— 順序不能反。 */
     const th = (phone && tabs) ? Math.round(tabs.getBoundingClientRect().height) : 0;
     document.documentElement.style.setProperty("--tabh", th + "px");
-    const h = (!wb || wb.open || !phone || !sum)
+    /* 那條在**所有沒有三欄的寬度**都釘著,不只手機 —— 窄桌機也是它。 */
+    const h = (!wb || wb.open || wideCols() || !sum)
       ? 0 : Math.round(sum.getBoundingClientRect().height);
     document.documentElement.style.setProperty("--wishbar", h + "px");
   }
