@@ -261,13 +261,16 @@
        那跟「地圖蓋在許願上面」是同一條規則,不是例外。 */
     @media (max-width:640px){
       .wishbox:not([open]){margin:0; border:0; background:none;}
-      .wishbox:not([open]) > summary{position:fixed; left:0; right:0; bottom:0; z-index:54;
-        background:var(--surface); border-top:1px solid var(--line); border-radius:0;
-        padding-bottom:calc(13px + env(safe-area-inset-bottom,0px));
+      /* **坐在分頁列上面,不是坐在畫面底部。** 手機的分頁列(行程／搭機／花費／分帳)
+         本來就是 `position:fixed; bottom:0`,第一版我也寫 `bottom:0`,結果整條導覽
+         被蓋掉 —— 而畫面看起來只是「少了一排東西」,不像有人壓在上面。
+         `--tabh` 是量出來的:那一列有安全區內距,寫死會在有下巴的機型上差一截。 */
+      .wishbox:not([open]) > summary{position:fixed; left:0; right:0; bottom:var(--tabh,0px);
+        z-index:54; background:var(--surface); border-top:1px solid var(--line); border-radius:0;
+        padding-bottom:13px;
         box-shadow:0 -2px 10px rgba(20,26,45,.07);}
-      /* 底下讓出那條的高度,不然行程的最後一列永遠被壓著。
-         **高度是量出來的**(`--wishbar`):字級和安全區都會改變它,寫死會在某支手機上差幾 px。 */
-      body{padding-bottom:var(--wishbar,0px);}
+      /* `.wrap` 本來就留了分頁列的高度,這裡再補許願那條的 —— 兩條都是浮在上面的。 */
+      .wrap{padding-bottom:calc(78px + var(--wishbar,0px) + env(safe-area-inset-bottom,0px));}
     }
     /* 窄桌機(641–1279):地圖是右邊的抽屜,所以讓開寬度,高度整條到底。 */
     @media (min-width:641px) and (max-width:1279px){
@@ -3466,7 +3469,12 @@
      不再浮在外面,底下也就不必讓位。 */
   function syncWishBar() {
     const wb = el("wishbox"), sum = wb && wb.querySelector("summary");
-    const h = (!wb || wb.open || window.innerWidth > 640 || !sum)
+    const tabs = document.querySelector(".tabs");
+    const phone = window.innerWidth <= 640;
+    /* 分頁列的高度要先量,那條才知道自己該坐多高 —— 順序不能反。 */
+    const th = (phone && tabs) ? Math.round(tabs.getBoundingClientRect().height) : 0;
+    document.documentElement.style.setProperty("--tabh", th + "px");
+    const h = (!wb || wb.open || !phone || !sum)
       ? 0 : Math.round(sum.getBoundingClientRect().height);
     document.documentElement.style.setProperty("--wishbar", h + "px");
   }
