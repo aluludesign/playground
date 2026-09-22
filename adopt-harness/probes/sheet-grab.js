@@ -264,6 +264,30 @@ async function drag(dy) {
       !!target && d.querySelectorAll("[data-wish].on").length === 1 &&
       d.querySelectorAll(".map .pin.on").length === 1,
       { 聚焦: d.getElementById("map")._focus, 亮的列: d.querySelectorAll("[data-wish].on").length });
+    /* **聚焦要把那個點放到「看得見的那一塊」的中央,不是地圖元素的中央。**
+       手機上清單 sheet 蓋住地圖下半部 —— 照元素置中的話那個點會落在 sheet 後面,
+       畫面上看起來是「按了小卡,地圖動了一下,但要找的東西不在」。
+       **兩個 sheet 高度都量**:可見範圍差很多,只量一個的話另一個錯了沒人知道。 */
+    function centreErr() {
+      var mr2 = d.getElementById("map").getBoundingClientRect();
+      var sr2 = d.getElementById("panel-plan").getBoundingClientRect();
+      var pin = d.querySelector(".map .pin.on");
+      if (!pin) return null;
+      var pr = pin.getBoundingClientRect();
+      var top = mr2.top, bot = Math.min(mr2.bottom, sr2.top);
+      return { 差: Math.abs(Math.round(pr.top + pr.height / 2 - (top + bot) / 2)),
+               在範圍裡: pr.top >= top - 1 && pr.bottom <= bot + 1 };
+    }
+    var cA = centreErr();
+    ok("聚焦之後那個點落在可見範圍的中央(不是躲在 sheet 後面)",
+      !!cA && cA.在範圍裡 && cA.差 <= 4, cA);
+    await drag(-9000);
+    if (target) { target.click(); await sleep(600); target.click(); await sleep(700); }
+    var cB = centreErr();
+    ok("sheet 收起來之後再聚焦,一樣落在可見範圍的中央", !!cB && cB.在範圍裡 && cB.差 <= 4, cB);
+    await drag(0);
+    await sleep(300);
+
     var nBefore = d.querySelectorAll(".map .pin").length;
     if (target) { target.click(); await sleep(500); }
     ok("再點同一張 → 退出來,回到沒有選的樣子",

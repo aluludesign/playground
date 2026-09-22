@@ -3232,11 +3232,26 @@
 
   /* 點時間軸／許願清單的某一列 → 地圖移到那個點上。第 n 個標記同時亮起來,
      清單那一列也亮,兩邊看得出是同一個東西。 */
+  /* 清單那張 sheet 蓋住地圖下半部多少 —— 手機上它是 `position:fixed` 疊在地圖上,
+     桌機上它是版面裡的一欄、不重疊,所以回 0。 */
+  function mapCoveredBottom(box) {
+    const sh = el("panel-plan");
+    if (!sh || getComputedStyle(sh).position !== "fixed") return 0;
+    const r = box.getBoundingClientRect(), s = sh.getBoundingClientRect();
+    return Math.max(0, Math.min(r.height, r.bottom - Math.max(r.top, s.top)));
+  }
+
   function focusPin(box, at, key) {
     if (!box._v || !at) return false;
     box._v.z = Math.max(box._v.z, 14);
     box._v.cx = projX(at.lo, box._v.z);
-    box._v.cy = projY(at.la, box._v.z);
+    /* **要置中的是「看得到的那一塊」,不是整個地圖元素。**
+       手機上清單 sheet 蓋住下半部,照元素置中的話那個點會落在 sheet 後面 ——
+       畫面上看起來就是「按了小卡,地圖動了一下,但要找的東西不在」。
+
+       `paintMap` 把 `cy` 畫在元素的垂直中央,所以把中心往下推「被蓋住的一半」,
+       那個點就會浮到可見範圍的中央。蓋住 0 的時候(桌機)這一項是 0,行為不變。 */
+    box._v.cy = projY(at.la, box._v.z) + mapCoveredBottom(box) / 2 / TILE;
     box._focus = key;
     paintMap(box);
     return true;
