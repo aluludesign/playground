@@ -1,4 +1,5 @@
-// 手機上地圖那條握把:上下拖,一路拖到全螢幕。
+// 手機上浮在底部的那幾層:分頁列、許願那條、地圖 sheet —— 誰蓋誰,誰還按得到。
+// 以及地圖那條握把:上下拖,一路拖到全螢幕。
 //
 // 為什麼另外開一支而不是加進 drawer.js:**那支量的是寬度,這支量的是高度**,
 // 而且兩者活在不同的寬度regime —— drawer.js 的檔頭寫著它測 1100 和 641,
@@ -33,6 +34,33 @@ function pt(type, y) {
       document.getElementById("r").textContent = JSON.stringify(out, null, 2);
       return;
     }
+    /* ---- 底部那幾層的順序 ----
+       手機上分頁列(行程／搭機／花費／分帳)是 `position:fixed; bottom:0`,
+       而許願那條也釘在底部。**第一版兩條都寫 `bottom:0`,整條導覽被蓋掉** ——
+       而畫面看起來只是「少了一排東西」,不像有人壓在上面。
+
+       **判準用 `elementFromPoint`,不用幾何。** 兩個矩形不重疊不等於按得到:
+       中間可能還有第三層、或是有 `pointer-events` 的東西蓋著。
+       直接問「這個點按下去會碰到誰」,那就是使用者的手指會碰到的東西。 */
+    var tabs = d.querySelector(".tabs");
+    var wishBar = d.querySelector("#wishbox > summary");
+    ok("手機上分頁列是浮在底部的(這一段的前提)",
+      w.getComputedStyle(tabs).position === "fixed", w.getComputedStyle(tabs).position);
+    var tb = tabs.getBoundingClientRect(), wr = wishBar.getBoundingClientRect();
+    ok("許願那條坐在分頁列**上面**,不是蓋在它身上",
+      wr.bottom <= tb.top + 1, { 許願那條下緣: Math.round(wr.bottom), 分頁列上緣: Math.round(tb.top) });
+    var planTab = d.getElementById("tab-plan");
+    var pb = planTab.getBoundingClientRect();
+    var hitTab = d.elementFromPoint(Math.round(pb.left + pb.width / 2), Math.round(pb.top + pb.height / 2));
+    ok("「行程」那顆分頁按下去真的碰得到它(不是碰到蓋在上面的東西)",
+      !!hitTab && (hitTab === planTab || planTab.contains(hitTab)),
+      hitTab && (hitTab.tagName.toLowerCase() + (hitTab.id ? "#" + hitTab.id : "")));
+    var hitWish = d.elementFromPoint(Math.round(wr.left + wr.width / 2), Math.round(wr.top + wr.height / 2));
+    ok("許願那條按下去也碰得到它自己",
+      !!hitWish && (hitWish === wishBar || wishBar.contains(hitWish)),
+      hitWish && (hitWish.tagName.toLowerCase() + (hitWish.className ? "." + String(hitWish.className).trim().split(/\s+/).join(".") : "")));
+    ok("而且那條會報幾個願望", /\d/.test(wishBar.textContent), wishBar.textContent.trim());
+
     var sheet = d.getElementById("map-sheet"), grab = d.getElementById("map-grab");
     d.getElementById("day-map-btn").click();
     ok("地圖打得開", await until(function () { return !sheet.hidden; }), sheet.hidden);

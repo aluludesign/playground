@@ -88,6 +88,19 @@ function drag(toWidth, releaseOn) {
   await sleep(0);   /* 陷阱 14-a:同步跑完的話結論會被 probe.sh 的佔位值蓋掉 */
   try {
     out.視窗寬 = iw;
+    /* **這一支是桌機的題目,窄視窗不要跑。**
+       它量的是右邊那個抽屜的四檔寬度,而 641 以下根本沒有抽屜 —— `.sheet` 是
+       底部 sheet,`--drawer` 仍有值但沒有意義,於是「版面至少留得到 240px」
+       必然紅(390 減掉 240 只剩 150)。**那是拿錯尺去量,不是壞掉。**
+       我自己在一輪裡踩了兩次,所以擋在這裡:紅燈要留給真的壞掉的東西。
+       手機上那條握把(量的是高度)由 `probes/sheet-grab.js` 負責。 */
+    if (iw <= 640) {
+      out.說明 = "**這個寬度沒有量** —— 這一支量的是桌機抽屜的寬度,要 WIDTH=1100 或 641;" +
+        "手機上那條握把是 probes/sheet-grab.js。";
+      out.結論 = "跳過(不是手機的題目)";
+      document.getElementById("r").textContent = JSON.stringify(out, null, 2);
+      return;
+    }
     d.getElementById("day-map-btn").click();
     ok("抽屜打得開", await until(function () { return !d.getElementById("map-sheet").hidden; }), null);
     await sleep(400);
@@ -153,6 +166,42 @@ function drag(toWidth, releaseOn) {
     await sleep(60);
     ok("關掉再打開 → 回到關掉之前那一檔",
       drawerPx() === beforeClose, { 關掉前: beforeClose, 打開後: drawerPx() });
+
+    /* ---- 抽屜佔走的寬度,許願那一塊要讓開 ----
+       **只在 641–1279 量。** 1280 以上是三欄版面,許願是版面裡的一欄、不是浮的;
+       641 以下沒有抽屜。這一段問的是中間那段寬度:抽屜是右邊一塊 `position:fixed`
+       的東西,而許願(收起來那條、展開的 sheet)也是 fixed —— **兩個 fixed 不會
+       自動互相閃避**,誰也不知道誰在哪,只能各自算。
+
+       算錯的下場是「看得到但按不到」:那條從抽屜底下穿過去,右半截在地圖下面,
+       而畫面上它看起來就是一條完整的橫條。 */
+    if (iw >= 641 && iw < 1280) {
+      var wb = d.getElementById("wishbox"), sum = wb.querySelector("summary");
+      if (d.getElementById("map-sheet").hidden) {
+        d.getElementById("day-map-btn").click();
+        await until(function () { return !d.getElementById("map-sheet").hidden; });
+      }
+      await sleep(150);
+      var mr = d.getElementById("map-sheet").getBoundingClientRect();
+      var br = sum.getBoundingClientRect();
+      ok("收起來那條是釘在底部的(不是躺在頁面裡)",
+        w.getComputedStyle(sum).position === "fixed", w.getComputedStyle(sum).position);
+      ok("而且它停在抽屜左邊,沒有從抽屜底下穿過去",
+        br.right <= mr.left + 1, { 那條右緣: Math.round(br.right), 抽屜左緣: Math.round(mr.left) });
+      /* 幾何不重疊不等於按得到 —— 直接問那個點會碰到誰。 */
+      var hit = d.elementFromPoint(Math.round(br.left + br.width / 2), Math.round(br.top + br.height / 2));
+      ok("那條按下去碰得到它自己", !!hit && (hit === sum || sum.contains(hit)),
+        hit && (hit.tagName.toLowerCase() + (hit.id ? "#" + hit.id : "")));
+      wb.open = true;
+      await sleep(200);
+      var wr = wb.getBoundingClientRect();
+      ok("展開之後那張 sheet 也停在抽屜左邊(寬度是扣掉地圖剩下的)",
+        wr.right <= mr.left + 1, { sheet右緣: Math.round(wr.right), 抽屜左緣: Math.round(mr.left) });
+      wb.open = false;
+    } else {
+      out.許願讓開抽屜 = "**這個寬度沒有量** —— 1280 以上許願是版面裡的一欄不是浮的," +
+        "641 以下沒有抽屜。要量這一段用 WIDTH=900。";
+    }
   } catch (e) {
     out.爆掉了 = String((e && e.stack) || e);
   }
