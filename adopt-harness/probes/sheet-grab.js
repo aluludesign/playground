@@ -120,6 +120,20 @@ async function drag(dy) {
       w.getComputedStyle(d.querySelector(".cols > .col:not(#wishbox)")).display === "none",
       { 許願: w.getComputedStyle(d.getElementById("wishbox")).display,
         行程: w.getComputedStyle(d.querySelector(".cols > .col:not(#wishbox)")).display });
+    /* **那條標頭不再是開關。** `#wishbox` 底層還是 `<details>`,而在這個版面裡
+       「看行程還是看許願」是分頁在決定的 —— 那個收合開關已經沒有意義,
+       但它還在:點一下整塊許願就收起來,使用者看到的是「內容整個不見了」。
+       **開關要嘛有用,要嘛不要在。** */
+    var sum = d.getElementById("wishbox").querySelector("summary");
+    var wl = d.getElementById("wish-list");
+    sum.click();
+    await sleep(250);
+    ok("點那條標頭不會把整塊許願收起來",
+      d.getElementById("wishbox").open && wl.getBoundingClientRect().height > 10,
+      { open: d.getElementById("wishbox").open, 清單高: Math.round(wl.getBoundingClientRect().height) });
+    ok("而且它看起來就不可點(游標不是 pointer)",
+      w.getComputedStyle(sum).cursor === "default", w.getComputedStyle(sum).cursor);
+
     d.getElementById("tab-plan").click();
     await sleep(400);
     ok("切回「行程」→ sheet 裡換回行程清單",

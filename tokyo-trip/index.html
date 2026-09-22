@@ -371,6 +371,9 @@
         overflow:visible; animation:none; border:0; background:none; margin:0;}
       body[data-view="wish"] #wishbox > summary{position:static; border:0; background:none; padding-left:0;}
       body[data-view="wish"] .wish-caret{display:none;}
+      /* 收合的箭頭藏了,游標也要跟著改 —— 一個看起來可以點、點了沒事的標題,
+         比一個明顯不能點的標題更讓人懷疑自己按錯了。 */
+      body[data-view="wish"] #wishbox > summary{cursor:default;}
       body[data-view="plan"] .wishbox:not([open]) > summary,
       body[data-view="wish"] .wishbox:not([open]) > summary{position:static;}
       /* sheet 自己就是捲動容器,`.wrap` 不必再為那條浮起來的許願 bar 讓位 */
@@ -3611,6 +3614,14 @@
      許願那一欄是 `<details>`,使用者點得到 summary;地圖是抽屜,預設沒開。
      兩個都在這裡補上,而不是靠使用者自己開。 */
   function syncLayout() {
+    /* **手機的「許願」分頁也關不掉。** 那裡「看行程還是看許願」是分頁在決定,
+       底層那個 `<details>` 的開關已經沒有意義 —— 而它還在,點那條標頭會把整塊收起來,
+       使用者看到的是「內容整個不見了」。開關要嘛有用,要嘛不要在。 */
+    if (window.innerWidth <= 640 && state.tab === "wish") {
+      const w0 = el("wishbox");
+      if (w0 && !w0.open) w0.open = true;
+      return;
+    }
     const three = wideCols() && state.tab === "plan";
     if (!three) return;
     const wb = el("wishbox");
