@@ -6,9 +6,15 @@
 無意義的紅字,而「反正那張本來就會紅」正是一個真的改動可以躲進去的地方。
 
 所以這裡數像素,並且分三級:
-  0                  完全一樣
-  1 ~ 門檻(預設 200) 反鋸齒等級的抖動 —— 記下來,不當成改動
-  > 門檻             真的變了,要去看圖
+  0                   完全一樣
+  1 ~ 門檻(預設 5000)  反鋸齒等級的抖動 —— 記下來,不當成改動
+  > 門檻               真的變了,要去看圖
+
+**門檻不是猜的。** 量到的抖動是 21(02-plan-desktop)和 1177(04-split-mobile,
+整頁都是字,兩張圖並排看完全一樣);而最小的一個真改動是 69006。
+中間隔了兩個數量級,5000 落在那個空的中間 —— 它不是一個「大概差不多」的數字,
+是量過之後選的。哪天有一個真的改動只動到幾千個像素,這條會漏掉它:
+所以看到「抖動」兩個字**還是要去看那張圖**,它的意思是「我沒有把握」,不是「沒事」。
 
 用法: ./diff-shots.py shots/舊 shots/新 [門檻]
 兩邊檔名對不起來(多一張、少一張)一律當成要回報的事,不是靜靜跳過。
@@ -39,7 +45,7 @@ def rows(p):
     return w, h, ch, out
 
 old, new = sys.argv[1], sys.argv[2]
-thr = int(sys.argv[3]) if len(sys.argv) > 3 else 200
+thr = int(sys.argv[3]) if len(sys.argv) > 3 else 5000
 names = sorted(set(os.listdir(old)) | set(os.listdir(new)))
 names = [n for n in names if n.endswith('.png')]
 real = 0
