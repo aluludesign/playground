@@ -632,6 +632,27 @@ function pinsOf(k) { return pins()[k]; }
     ok("而且 editable() 真的是 false(加行程的按鈕被收起來了)",
       q("#add-stop-btn").hidden === true, q("#add-stop-btn").outerHTML.slice(0, 100));
 
+    /* ---- 不可編輯的時候,收的是對話框那一層,不是裡面那張卡 ----
+       **這一條是被一個線上才會發生的 bug 逼出來的,而且它在這支探針裡躲了四輪。**
+
+       `renderEditAbility()` 在 `!editable()` 時會收起就地展開的表單。加行程那張
+       在 `8371075` 之後變成對話框裡的卡片(`#stop-add-overlay` > `#stop-form`),
+       而那段程式照舊去藏 `#stop-form` —— 結果是**一層霧霧的遮罩,裡面什麼都沒有**。
+
+       而且**沒有人會把它設回來**:舊的 `toggleForm()` 每次打開都 `hidden=false`,
+       對話框那條路只動外層。所以那一下是永久的。
+
+       **為什麼四輪都沒抓到**:這一段只在 `!editable()` 時跑,而這支探針前面每一段
+       都是離線模式(`editable()` 恆為 true)。**唯一走得到這條路的地方就是這裡** ——
+       14a 把 session 切成了那三個沒有通行碼的人。 */
+    ok("唯讀之後,加行程那張**卡片**沒有被藏起來(藏的該是對話框那一層)",
+      q("#stop-form").hidden === false, { stop_form_hidden: q("#stop-form").hidden });
+    ok("唯讀之後,許願那張卡片也沒有被藏起來",
+      q("#wish-form").hidden === false, { wish_form_hidden: q("#wish-form").hidden });
+    ok("而且兩層對話框本身是收起來的(唯讀時不該有東西開著)",
+      q("#stop-add-overlay").hidden === true && q("#wish-add-overlay").hidden === true,
+      { stop: q("#stop-add-overlay").hidden, wish: q("#wish-add-overlay").hidden });
+
     /* ---- 14b / 14c / 14d 退場(mapfix-retire) ----
        這三小段量的是那條小字在唯讀下的行為:別人的願望有沒有解釋、自己的願望
        說明在不在、「再查一次」搬走了沒、「對」的判準裡有沒有身分。

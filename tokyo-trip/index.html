@@ -1744,7 +1744,19 @@
           : "紀錄存在這台裝置的瀏覽器裡。要跟其他人對帳,按「匯出備份」把 JSON 傳給對方,對方用「匯入備份」讀進去。";
     }
     if (!on) {
-      ["stop-form", "exp-form"].forEach(id => { const f = el(id); if (f) f.hidden = true; });
+      /* **收的是對話框那一層,不是裡面那張卡。**
+         `#stop-form` 以前是就地展開的表單,藏它就等於收起來;現在它是
+         `#stop-add-overlay` 裡面的卡片 —— 藏它只會留下一層霧霧的遮罩,
+         **裡面什麼都沒有**,而使用者看到的是「按了加行程,畫面糊掉但沒東西」。
+         (`exp-form` 還是就地展開的,所以它留在原本那條路上。)
+
+         而且沒有人會把它設回來:舊的 `toggleForm()` 每次打開都會 `hidden=false`,
+         對話框那條路只動外層。所以這一下是**永久的** —— 只要曾經有一刻不可編輯
+         (連上 Notion 但還沒驗通行碼就是這種),那張卡就再也不出現。
+         **驗收環境永遠是離線可編輯,所以這一行從來沒跑到,四次都重現不出來。** */
+      closeStopAdd();
+      closeWishAdd();
+      const ef = el("exp-form"); if (ef) ef.hidden = true;
       const rn = el("rename-form");
       if (rn) rn.hidden = true;
     }
@@ -3568,6 +3580,9 @@
     sayHere("stop-msg", "");
     seekReset("sf-title"); seekClear("sf-title");
     el("stop-form").reset();
+    /* **保險。** 上面那條路已經不藏這張卡了,但這個檔案有五年的歷史,
+       而「藏了沒人設回來」的代價是一個無聲的空遮罩。開的時候自己確認一次,便宜。 */
+    el("stop-form").hidden = false;
     el("stop-add-overlay").hidden = false;
     el("sf-time").focus();
   }
@@ -3995,6 +4010,7 @@
     showWishError("");
     el("wish-form").reset();
     fillWishWho();   /* reset() 會把下拉選回第一個,所以要在它後面再填一次 */
+    el("wish-form").hidden = false;   /* 同上,保險 */
     el("wish-add-overlay").hidden = false;
     el("wf-title").focus();
   }
