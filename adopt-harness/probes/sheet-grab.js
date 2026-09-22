@@ -249,6 +249,34 @@ async function drag(dy) {
     ok("而且願望的點一顆都沒少(退出來不是篩掉)",
       d.querySelectorAll(".map .pin").length === nBefore,
       { 之前: nBefore, 之後: d.querySelectorAll(".map .pin").length });
+    /* **行程小卡也要能切換,而且取消要回到預設視野。**
+       兩件事第一版都漏了:只做了願望、而且取消只把亮的拿掉,地圖還停在剛才
+       湊近看的位置 —— 使用者要的是「退出來看整片」,看到的是「不亮了但還是這麼近」。
+
+       行程那邊還有一個更安靜的坑:手機上地圖放的是全部天數,點叫 `p<日期>-<序>`,
+       而點擊處理寫死去找 `d<序>` —— **兩邊用不同的判準算同一件事**,
+       於是點了行程小卡什麼都不會發生。畫哪些點和找哪一顆現在共用 `planFiltered()`。 */
+    d.getElementById("tab-plan").click();
+    await sleep(600);
+    var mp = d.getElementById("map");
+    var v0 = { z: mp._v.z, cx: +mp._v.cx.toFixed(2) };
+    var srows = d.querySelectorAll("#route .stop"), shit = null;
+    for (var si = 0; si < srows.length; si++) {
+      srows[si].click();
+      await sleep(600);
+      if (mp._focus) { shit = srows[si]; break; }
+    }
+    ok("點行程小卡 → 地圖聚焦到那一個點", !!shit && !!mp._focus && !!mp._focus.length,
+      { 聚焦: mp._focus });
+    if (shit) { shit.click(); await sleep(700); }
+    ok("再點同一張 → 取消聚焦", !mp._focus, { 聚焦: mp._focus });
+    /* **回到預設視野,不只是不亮了。** 比的是縮放和中心,不是有沒有 class。 */
+    ok("而且地圖縮回預設視野(跟沒選之前一樣)",
+      mp._v.z === v0.z && +mp._v.cx.toFixed(2) === v0.cx,
+      { 之前: v0, 現在: { z: mp._v.z, cx: +mp._v.cx.toFixed(2) } });
+    d.getElementById("tab-wish").click();
+    await sleep(500);
+
     ok("「這天的地圖」那顆在手機上不在了(地圖是底,它沒有作用)",
       w.getComputedStyle(d.getElementById("day-map-btn")).display === "none",
       w.getComputedStyle(d.getElementById("day-map-btn")).display);

@@ -2304,8 +2304,7 @@
          「這張圖只能回答我已經選好的那個問題」。想看整趟怎麼分布,沒有地方可以看。
          點了某一天才篩成那一天;切回「行程」分頁會重新放全部(`dayPicked` 歸零)。
          桌機維持原樣:那裡地圖是要自己打開的一塊,打開的當下就是在看某一天。 */
-      const filterToDay = window.innerWidth > 640 || dayPicked;
-      if (sheetMode === "day" && filterToDay) {
+      if (sheetMode === "day" && planFiltered()) {
         const today = DAYS.find(x => x.date === state.day);
         dayList(state.day).forEach((x, i) => out.push({
           item: x, k: "d" + i, n: i + 1, cls: "plan", color: today ? today.color : "",
@@ -2681,6 +2680,10 @@
   /* 「使用者主動點了某一天」跟「state.day 有值」是兩件事 —— state.day 永遠有值
      (預設是第一天),所以不能拿它來判斷「有沒有挑過」。 */
   let dayPicked = false;
+  /* **畫哪些點、和點下去要找哪一顆,必須用同一個判準。**
+     兩邊各寫一次的話,手機上地圖畫的是 `p<日期>-<序>`、而點擊去找 `d<序>`,
+     於是點了小卡什麼都不會發生 —— 而那看起來像「聚焦壞了」。 */
+  const planFiltered = () => window.innerWidth > 640 || dayPicked;
   const seekArmed = {};
   const HINT_WORDS = "沒找到?試試加入地點名 —— 例如「teamLab 豐洲」。";
   /* **後面那三個字是一顆按鈕,所以不寫在這裡。** 見 hintHTML()。 */
@@ -3168,8 +3171,8 @@
 
   /* 同一列在不同模式下對應到不同的標記:行程模式它是主角 d,許願模式裡它是背景的 p */
   function stopKey(day, i) {
-    if (sheetMode === "day") return day === state.day ? "d" + i : null;
-    if (sheetMode === "wish") return "p" + day + "-" + i;
+    if (sheetMode === "day" && planFiltered()) return day === state.day ? "d" + i : null;
+    if (sheetMode) return "p" + day + "-" + i;
     return null;
   }
   function hotPin(key) {
@@ -4154,11 +4157,17 @@
     const n = +row.dataset.n;
     const item = dayList(state.day)[n - 1];
     if (!item) return;
+    /* 這一顆在圖上叫什麼,跟「有沒有篩成某一天」有關 —— 用同一個判準算,不要寫死。 */
+    const key = stopKey(state.day, n - 1) || ("d" + (n - 1));
+    /* **這個判斷要在重畫之前。** 第一版寫在 `loadSheetMap(true)` 後面,
+       而那一步會把 `_focus` 洗掉 —— 於是「已經亮著了嗎」永遠是否,
+       再點一次只會再聚焦一次,看起來就是「取消沒有作用」。 */
+    if (el("map") && el("map")._focus === key) { await unfocusMap(); return; }
     openMapSheet("day");
     await loadSheetMap(true);
     const at = pinOf(item);
     if (!at || !inJapan(at)) { flash("「" + item.title + "」在地圖上沒有位置"); return; }
-    if (focusPin(el("map"), at, "d" + (n - 1))) {
+    if (focusPin(el("map"), at, key)) {
       [].forEach.call(el("route").children, r => r.classList.toggle("on", r === row));
     }
   });
@@ -4440,11 +4449,17 @@
   /* 點小卡 → 地圖移到那個點並亮起來;**再點同一張 → 取消,回到全部願望都在的樣子**。
      以前只有「選進去」沒有「退出來」——要看回整片,得去點別的地方或換分頁,
      而那是**用一個副作用去達成一件他直接想做的事**。 */
-  function unfocusWish() {
+  /* **取消聚焦 = 回到預設視野,不只是把亮的拿掉。**
+     只清 `_focus` 再重畫的話,地圖還停在剛才湊近看的那個縮放和位置 ——
+     使用者要的是「退出來看整片」,而他看到的是「那個點不亮了,但還是這麼近」。
+     重新取景要走 `loadSheetMap(true)` → `drawMap()`,那裡才有算縮放的那一段。 */
+  async function unfocusMap() {
     const box = el("map");
-    if (box) { box._focus = null; paintMap(box); }
-    [].forEach.call(el("wish-list").querySelectorAll("[data-wish]"),
-      r => r.classList.remove("on"));
+    if (box) box._focus = null;
+    const wl = el("wish-list"), rt = el("route");
+    if (wl) [].forEach.call(wl.querySelectorAll("[data-wish]"), r => r.classList.remove("on"));
+    if (rt) [].forEach.call(rt.children, r => r.classList.remove("on"));
+    await loadSheetMap(true);
   }
 
   async function focusWish(id) {
@@ -4453,7 +4468,7 @@
     if (i < 0) return;
     /* 已經亮著的那一張再點一次 = 退出來。**判準是地圖上正在聚焦誰**,
        不是另外記一個變數 —— 兩份狀態就會有一份先過期。 */
-    if (el("map") && el("map")._focus === "w" + i) { unfocusWish(); return; }
+    if (el("map") && el("map")._focus === "w" + i) { await unfocusMap(); return; }
     openMapSheet("wish");
     await loadSheetMap(true);
     const at = pinOf(list[i]);
