@@ -1085,6 +1085,24 @@ for c in be3e0ef 97deeca; do git show $c:adopt-harness/api-geocode-test.js; done
 
 ---
 
+## 探針:各支現在幾條,以及在哪個寬度量的
+
+> **條數要連寬度一起寫。** `sheet-grab` 用預設寬度跑會回一個空的
+> `{說明: "非同步"}` —— 不是紅燈,是**沒有結論**,而那很容易被當成 0 條通過。
+> 它的檔頭寫著 `WIDTH=390`,因為它量的是高度,那幾條在寬畫面下本來就不成立。
+
+| 探針 | 條數 | 寬度 | 量的時候 |
+| --- | --- | --- | --- |
+| `seek` | 63 | 預設 | `026c0e1` |
+| `geofix` | 78 | 預設 | `026c0e1` |
+| `escalate` | 46 | 預設 | `026c0e1` |
+| `drawer` | 14 | 預設 | `026c0e1` |
+| `sheet-grab` | **12** | **`WIDTH=390`** | `026c0e1` |
+
+`drawer` 和 `geofix` 在別的寬度下條數不一樣(`drawer` 在 1440 是 10、≤640 整支跳過;
+`geofix` 在 390/1440 是 77)。**這張表只登記我自己量過的那一組**,
+別的寬度要用的人自己跑一次 —— 這個 repo 已經因為抄別人的數字吃過虧。
+
 ## 基準:哪幾組還能用
 
 `shots/` 不進版控,所以這張表講的是**如果它們還在**。被刪掉就重跑,
@@ -1097,6 +1115,8 @@ for c in be3e0ef 97deeca; do git show $c:adopt-harness/api-geocode-test.js; done
 
 | 組 | 狀態 |
 | --- | --- |
+| `shots/base18` | ✅ **最新的乾淨基準**(`026c0e1` = `fix/one-baseline-name` 疊在 `01e0575` 上,**18 張**,01–18 連號,18 張全 `✓`,工作樹乾淨、烘進圖的未提交檔 0 個)。那一支**只動文件、一行程式都沒改**,所以這組等同於 `01e0575`(main)的樣子 |
+| `shots/adminwish-on-main` | ⚠ **作廢**:16 張,而 `feat/hit-thumbnail` 那一輪之後完整一組是 18 張(多了 `17-plan-three-cols`、`18-wish-add`),**而且版面大改** —— 機票搬到新的「搭機」分頁、加行程和加願望變成對話框、許願在窄畫面是底部 sheet。`01` `02` `05` `08` 跟它差很多,拿它對帳會在一堆正確的改動上報差異 |
 | `shots/adminwish-on-main` | ✅ **最新的乾淨基準**(`aa212b8`,`feat/admin-edit-wish` rebase 到 `0ed4fe9` 之後,**16 張**,01–16 連號無洞)。`15-wish-edit-other` 和 `16-seek-hint` 是這兩輪各自加的,以前分在兩條分支上 |
 | `shots/mapfix-retire` | ⚠ **不是 main 的基準,雖然它看起來最新**。它在 `feat/mapfix-retire` 上截的,而那條從 `ad57b82` 長出來 —— **PR #2(搜尋升級流程改版)不在裡面**,所以只有 14 張、沒有 15/16,而且 `14-seek-strong` 拍到的是改版**前**的樣子。拿它對帳會在一個正確的改動上看到 3% 的差異。它證明的是「`#map-fix` 拆掉之後版面沒破」,僅此而已 |
 | `shots/adminwish` | ⚠ **作廢**:`53e09d9` 那個 commit 在 rebase 之後已經不存在,而且它是疊在 `#map-fix` 還在的世界上截的。它量到的東西(`05` 差 2.6% 是三筆都長出「改」、`13` 差 69 列是對話框**後面**那張模糊清單多了一顆)在 `shots/adminwish-on-main` 上重新量過,結論一樣。**這一列以前是 ✅「最新的乾淨基準」,而作廢那一列是後來加上去的,兩列並存過一陣子** —— 見下面那一則 |
@@ -1134,7 +1154,7 @@ for c in be3e0ef 97deeca; do git show $c:adopt-harness/api-geocode-test.js; done
 | `shots/wired` | ⚠ 同上 |
 | `shots/negctl2` | 負向對照的證據,九張全 `✗`,不是基準 |
 
-**下一塊的基準用 `shots/adminwish-on-main`**(最新的一組,**16 張**,`aa212b8`,工作樹乾淨)。
+**下一塊的基準用 `shots/base18`**(最新的一組,**18 張**,`026c0e1`,工作樹乾淨)。
 會動到地圖的話絕對不要用 `block01`。
 
 > 這一行以前寫的是 `shots/merge3`(12 張),而在那之後至少又有四輪
