@@ -37,6 +37,8 @@ ROW = re.compile(r"^\|\s*`(shots/[^`]+)`\s*\|\s*(.)")
 
 
 def main(path):
+    text = io.open(path, encoding="utf-8").read()
+    ptr_ok, ptr_msg = one_pointer(path, text)
     rows = {}
     for n, line in enumerate(io.open(path, encoding="utf-8"), 1):
         m = ROW.match(line)
@@ -49,15 +51,37 @@ def main(path):
 
     bad = [(k, v) for k, v in rows.items() if len({s for _, s in v}) > 1]
     total = sum(len(v) for v in rows.values())
-    if not bad:
+    if not bad and ptr_ok:
         print("✓ %d 個名字、%d 列,沒有一個名字有兩個相反的判決。" % (len(rows), total))
+        print(ptr_msg)
         return 0
+    if not ptr_ok:
+        print(ptr_msg, file=sys.stderr)
+    if not bad:
+        return 1
     print("✗ 同一個名字有相反的判決 —— 加一列不等於撤回一列:", file=sys.stderr)
     for name, hits in bad:
         where = "、".join("第 %d 行 %s" % (n, s) for n, s in hits)
         print("    %s  →  %s" % (name, where), file=sys.stderr)
     return 1
 
+
+
+def one_pointer(path, text):
+    """「下一塊的基準用 ___」只能有一行。
+
+    **這一條是合併教的。** 兩個人各自更新了那一行,位置離得夠遠,git 沒有衝突 ——
+    於是整張表最重要的那一行同時指向兩組不同的圖,而上面那個檢查只看表格列,
+    完全看不到它。「合併乾淨」和「合起來講得通」是兩件事。
+    """
+    hits = [(i + 1, ln.strip()) for i, ln in enumerate(text.split("\n"))
+            if ln.startswith("**下一塊的基準用")]
+    if len(hits) == 1:
+        return True, "✓ 「下一塊的基準用」只有一行:第 %d 行。" % hits[0][0]
+    if not hits:
+        return False, "✗ 找不到「下一塊的基準用 ___」那一行 —— 下一個人不知道該拿哪一組對帳。"
+    return False, ("✗ 「下一塊的基準用」出現 %d 次,而它只能有一個答案:\n" % len(hits)
+                   + "\n".join("    第 %d 行  %s" % (n, t[:70]) for n, t in hits))
 
 if __name__ == "__main__":
     here = __file__.rsplit("/", 1)[0]
