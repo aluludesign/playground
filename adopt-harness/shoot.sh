@@ -391,6 +391,14 @@ shot 16-seek-hint      390 1000 "(async function(){var R=[{lat:'35.6',lon:'139.7
 # 不必點任何東西:寬桌機的行程分頁預設就是三塊,那正是這張要證明的事。
 shot 17-plan-three-cols 1440  900 ""                                            ".stop:3+,.map .pin:3+"
 
+# 18:手機上「許願地點」那張對話框。
+# **以前它不是對話框,是就地展開的表單,所以沒有任何一張圖需要拍它。**
+# 現在它蓋在滿版的許願 sheet 上面,而「蓋在上面」正是要用眼睛確認的事 ——
+# 蓋錯一層(例如被地圖蓋住)在斷言上看起來完全正常:元素在、值也對,只是沒人看得到。
+# 先把許願 sheet 打開再按,拍的才是真的那一層疊在真的那一層上面。
+shot 18-wish-add        390 1000 "d.getElementById('wishbox').open=true; d.getElementById('add-wish-btn').click();" \
+                                  "#wish-add-overlay:not([hidden]) .rm-input:3+"
+
 kill $SRV 2>/dev/null || true
 rm -rf "$H/.work"
 echo "→ $OUT"
