@@ -517,6 +517,9 @@
     .seek-out .hit .thumb{position:relative; flex:0 0 auto; width:56px; height:56px; overflow:hidden;
       border:1px solid var(--line); border-radius:7px; background:var(--surface-2);}
     .seek-out .hit .thumb img{position:absolute; width:256px; height:256px; max-width:none;}
+    /* 照片跟圖磚不一樣:它**填滿**這一格,不是一張大圖挪進觀景窗。
+       `object-fit:cover` 讓長寬比不同的照片不變形 —— 裁掉邊比拉扁好。 */
+    .seek-out .hit .thumb img.shot{inset:0; width:100%; height:100%; object-fit:cover;}
     /* 那個點畫在它**真正**的位置上。框挪到邊界會被夾住,所以點不一定在正中央 ——
        寧可偏一點也不要為了置中而指到錯的地方。 */
     .seek-out .hit .thumb .dot{position:absolute; width:7px; height:7px; margin:-4px 0 0 -4px;
@@ -2272,6 +2275,15 @@
   const THUMB = 56, THUMB_Z = 13;
   function hitThumb(r) {
     const la = +r.lat, lo = +r.lon;
+    /* **強力搜那條路有真的照片,就放照片。** 只有它有 —— 見上面那份量測。
+       網址走自己的後端(`resource=placephoto`),因為 Google 的圖片網址帶著金鑰。
+       **那一下要錢**,而且是跟搜尋分開計費的:六筆候選 = 六次。
+       免費那條路的 `photo` 是空的,一次都不會叫到。
+       `loading="lazy"` 是為了錢不是為了速度:捲不到的那幾列不換圖就不計費。 */
+    if (r.photo) {
+      return '<span class="thumb"><img class="shot" alt="" loading="lazy" src="' +
+        esc(API + "?resource=placephoto&h=112&ref=" + encodeURIComponent(r.photo)) + '"></span>';
+    }
     if (!isFinite(la) || !isFinite(lo)) return "";
     const fx = projX(lo, THUMB_Z), fy = projY(la, THUMB_Z);
     const tx = Math.floor(fx), ty = Math.floor(fy);
@@ -2503,6 +2515,10 @@
       return ((r && r.list) || []).map(x => ({
         lat: String(x.la), lon: String(x.lo),
         display_name: x.addr ? x.label + ", " + x.addr : x.label,
+        /* **只有這條路有照片。** 免費那家沒有照片可以給(量過,見 hitThumb),
+           所以 `photo` 在 `seekPlace()` 回來的那些身上是 undefined ——
+           一列要畫照片還是畫地圖,就靠這個欄位在不在。 */
+        photo: x.photo || "",
       }));
     } catch (e) {
       /* **把伺服器講的原話帶出來,不要換成自己猜的。**
