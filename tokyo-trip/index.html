@@ -524,10 +524,16 @@
       text-underline-offset:2px; cursor:pointer;}
     .seek-out .hint .seek-arm:focus-visible{outline:2px solid var(--color-accent); outline-offset:2px;}
     /* 上膛之後變樣的是**輸入框**,不只是按鈕 —— 要錢的那一下,眼睛和手指都在這裡。
-       底色是 accent 疊 50% 在輸入框自己的底色上。`color-mix` 前面那一行是算好的
-       同一個值:這個專案的 CSS 壞掉不會報錯,不留後路的話舊瀏覽器會拿到透明。 */
-    .seek .rm-input.seek-armed{border-color:var(--color-accent); background:#e39d7d;
-      background:color-mix(in srgb, var(--color-accent) 50%, var(--color-foundation-muslin));}
+       底色是 accent 疊 35% 在輸入框自己的底色上。`color-mix` 前面那一行是算好的
+       同一個值:這個專案的 CSS 壞掉不會報錯,不留後路的話舊瀏覽器會拿到透明。
+
+       **35% 不是挑好看挑出來的,是量出來的下限。** 疊到 50% 的時候底色是 #e39d7d,
+       而框裡的字是 `--color-ink`(#53443d)—— 量到 4.06:1,低於 AA 的 4.5:1。
+       **上膛狀態底下那個框是要打字的**,它不是裝飾色塊,裡面的字得讀得下去。
+       降到 35% 之後是 #e7b69d,同一組字量到 5.12:1。
+       要再往上調之前先量,accent 是橘的,往上加掉得很快。 */
+    .seek .rm-input.seek-armed{border-color:var(--color-accent); background:#e7b69d;
+      background:color-mix(in srgb, var(--color-accent) 35%, var(--color-foundation-muslin));}
     /* 強力搜跑過一次之後才出現的那句。比 .said 再輕一階 —— 它是退路,不是提示。 */
     .seek-out .said.soft{font-size:11.5px; padding-top:2px;}
     /* 已標定是「好消息」,跟查詢中／查無用同一個槽但要分得出來 */
