@@ -847,6 +847,24 @@
     .sync{font-family:var(--font-mono); font-size:10.5px; letter-spacing:.06em;}
 
     /* ---- cloud status + auth ---- */
+    /* 三條線的漢堡。**用三個 span 不用字元或圖示**:這一版的圖示表裡沒有漢堡,
+       而為了一個純裝飾的形狀去長一個 SVG 定義,下一個人還要維護它。 */
+    .hamb{display:flex; flex-direction:column; justify-content:center; gap:4px;
+      width:38px; height:38px; padding:0 9px; margin-left:4px; flex:0 0 auto;
+      background:none; border:1px solid var(--line); border-radius:9px; cursor:pointer;}
+    .hamb span{display:block; height:2px; border-radius:1px; background:var(--ink);}
+    .hamb[aria-expanded="true"]{background:var(--accent-soft); border-color:var(--accent);}
+    /* 選單本身。**貼在頂列下面、靠右**,不是蓋在畫面中央 ——
+       它是「順手處理一下連線」的東西,不是一件要停下來做的事。 */
+    /* **靠齊那顆按鈕,不是靠齊視窗右緣。** 第一版寫 `right:16px`,而桌機的
+       視窗右邊那一塊是地圖抽屜(z70)—— 選單就整個躲在抽屜底下,
+       `elementFromPoint` 量到的是抽屜的 div。按鈕在哪,選單就在哪。
+       z-index 要比抽屜高:它是從按鈕長出來的東西,理當蓋在版面上面。 */
+    .menu-pop{position:absolute; z-index:80; margin-top:-6px;
+      background:var(--surface); border:1px solid var(--line); border-radius:11px;
+      box-shadow:var(--shadow); padding:10px; min-width:260px; max-width:calc(100vw - 32px);}
+    .menu-pop[hidden]{display:none;}
+    .menu-pop .cloudbar{margin:0; background:none; padding:0;}
     .cloudbar{display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:9px 13px; border-radius:8px; font-size:12.5px;
       background:var(--accent-soft); color:var(--ink-2); margin-bottom:14px; border:1px solid var(--line);}
     .cloudbar .led{width:7px; height:7px; border-radius:50%; flex:0 0 auto; background:var(--muted);}
@@ -928,13 +946,19 @@
          留「倒數 N 天」本身就說得完。**頂列越短,地圖和清單就越長。** -->
     <div class="brand"><h1>東京五人行</h1></div>
     <div class="countdown" id="countdown"></div>
+    <!-- 連線狀態和管理員登入／登出收進這裡。**它們是一年按不到幾次的東西**,
+         卻佔掉一整條橫在行程上面 —— 在手機上那一條就是地圖少掉的一截。 -->
+    <button type="button" class="hamb" id="menu-btn" aria-label="選單" aria-expanded="false"
+      aria-controls="menu-pop"><span></span><span></span><span></span></button>
   </header>
+  <div class="menu-pop" id="menu-pop" hidden>
 
 
-  <div class="cloudbar" id="cloudbar" hidden>
-    <span class="led"></span>
-    <span id="cloud-msg"></span>
-    <span class="sp" id="cloud-ops"></span>
+    <div class="cloudbar" id="cloudbar" hidden>
+      <span class="led"></span>
+      <span id="cloud-msg"></span>
+      <span class="sp" id="cloud-ops"></span>
+    </div>
   </div>
 
   <nav class="tabs" role="tablist" aria-label="頁面切換">
@@ -3684,14 +3708,41 @@
      而那看起來像「它自己算錯」,不像「有人忘了通知它」。 */
   /* 底部那條佔掉多少高度。**開著的時候是 0** —— 那時候它是 sheet 的黏頭,
      不再浮在外面,底下也就不必讓位。 */
+  /* ---- 頂列右邊那顆漢堡 ----
+     連線狀態、重新整理、管理員登入／登出收在裡面。**它們原本是一整條橫在行程上面**,
+     而那些是一年按不到幾次的東西 —— 在手機上那一條就是地圖少掉的一截。 */
+  (function () {
+    const btn = el("menu-btn"), pop = el("menu-pop");
+    if (!btn || !pop) return;
+    function open(on) {
+      pop.hidden = !on;
+      btn.setAttribute("aria-expanded", String(!!on));
+      if (on) {
+        /* 貼在頂列下面,靠右對齊那顆按鈕。位置是算的不是寫死的 ——
+           頂列的高度會變(倒數那句話在旅程開始後會變短)。 */
+        const r = btn.getBoundingClientRect();
+        pop.style.top = Math.round(r.bottom + window.scrollY + 6) + "px";
+        pop.style.right = Math.round(window.innerWidth - r.right) + "px";
+      }
+    }
+    btn.addEventListener("click", ev => { ev.stopPropagation(); open(pop.hidden); });
+    /* 點別的地方、按 Esc 都關得掉。**選單裡面點了不關** —— 裡面那幾顆
+       (重新整理、登入)按完還要看結果。 */
+    document.addEventListener("click", ev => {
+      if (pop.hidden) return;
+      if (!ev.target.closest("#menu-pop") && !ev.target.closest("#menu-btn")) open(false);
+    });
+    document.addEventListener("keydown", ev => { if (ev.key === "Escape" && !pop.hidden) open(false); });
+  })();
+
   /* 頁面最上面那一塊(頂列 + 連線狀態那一條)佔掉多少高度。
      地圖靠它決定自己從哪裡開始 —— **那兩樣東西都會變高變矮**:
      連上 Notion 之後那一條會出現、旅程開始之後倒數那句話會變短。 */
   function syncHeadH() {
     const tb = document.querySelector(".topbar");
-    const cb = el("cloudbar");
-    let h = tb ? tb.getBoundingClientRect().bottom : 0;
-    if (cb && !cb.hidden) h = Math.max(h, cb.getBoundingClientRect().bottom);
+    /* **連線那一條不再算進來** —— 它收進漢堡選單了,而選單是 `position:absolute`,
+       浮在上面、不佔版面。只量頂列本身。 */
+    const h = tb ? tb.getBoundingClientRect().bottom : 0;
     document.documentElement.style.setProperty("--headh",
       (window.innerWidth <= 640 ? Math.round(h) : 0) + "px");
   }
@@ -3728,8 +3779,7 @@
     /* 頂列和連線狀態那一條也盯著 —— 它們的高度會變,而地圖的起點跟著它們。 */
     const tb = document.querySelector(".topbar");
     if (tb) new ResizeObserver(syncHeadH).observe(tb);
-    const cb = el("cloudbar");
-    if (cb) new ResizeObserver(syncHeadH).observe(cb);
+
   })();
 
   function syncMapOcc() {

@@ -620,8 +620,21 @@ function pinsOf(k) { return pins()[k]; }
     // 14a ---- 切換到唯讀之前,先確認那條路真的把我們帶過去 ----
     serveNotion = true;
     ok("切換之前是離線模式(對照的起點)", /離線模式/.test(q("#cloud-msg").textContent), q("#cloud-msg").textContent);
+    /* **先打開漢堡選單,因為人就是這樣按的。**
+       連線那幾顆搬進選單之後,`q("#cloud-in").click()` 照樣會觸發 ——
+       對 `display:none` 的元素呼叫 `.click()` 是會動的。於是這一段仍然綠,
+       而**真人得先打開選單**。那種綠燈證明的是「程式接得到」,不是「人到得了」。 */
+    ok("選單預設是收起來的", q("#menu-pop").hidden === true, q("#menu-pop").hidden);
+    q("#menu-btn").click();
+    await sleep(120);
+    ok("按漢堡之後選單打開", q("#menu-pop").hidden === false, q("#menu-pop").hidden);
     var cin = q("#cloud-in");
     ok("畫面上有「連上 Notion」這條路(唯讀是從這裡進去的)", !!cin, q("#cloud-ops").innerHTML);
+    /* 而且它真的按得到 —— 不是只有 DOM 裡有。 */
+    var cr = cin.getBoundingClientRect();
+    var chit = d.elementFromPoint(Math.round(cr.left + cr.width / 2), Math.round(cr.top + cr.height / 2));
+    ok("而且那顆按得到(不是只有程式碰得到)", !!chit && (chit === cin || cin.contains(chit)),
+      chit && (chit.tagName.toLowerCase() + (chit.id ? "#" + chit.id : "")));
     cin.click();
     ok("連上之後是**已連上但不是管理員**(= 那三個人的身分)",
       await until(function () { return /^已連上 Notion$/.test(q("#cloud-msg").textContent); }),
