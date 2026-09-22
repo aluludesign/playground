@@ -353,8 +353,10 @@
 
       /* 天數那一列黏在 sheet 最頂部,底下是握把的高度。
          **兩個檢視都黏**:在行程那頁它是主要的導覽,在許願那頁它是「加到哪一天」。 */
+      /* z-index 要比 sheet 裡任何會捲到它底下的東西高 —— 它是黏住的那一層,
+         底下的東西經過時**一定**要被它蓋住,不然會看到兩層混在一起。 */
       body[data-view="plan"] #days,
-      body[data-view="wish"] #days{position:sticky; top:var(--grabh,20px); z-index:1;
+      body[data-view="wish"] #days{position:sticky; top:var(--grabh,20px); z-index:5;
         background:var(--surface); padding-block:8px; margin-block:0;}
       /* **許願分頁的天數只給管理員看。** 那一列的用途是「把願望排進哪一天」,
          而沒有通行碼的人排不了 —— 給他一排點了沒有作用的東西,比不給更糟。 */
@@ -420,8 +422,11 @@
     .wish-head #add-wish-btn{margin-left:auto;}
     .wish-head .iconbtn{flex:0 0 auto;}
     /* summary 裡的按鈕要自己吃掉點擊,不然點它會連帶把 <details> 開合 ——
-       「按＋許願結果整塊收起來」那種事看起來像沒反應。 */
-    .wish-head button{position:relative; z-index:1;}
+       「按＋許願結果整塊收起來」那種事看起來像沒反應。
+       **但不要墊 z-index。** 墊了之後它們會跟黏在最上面的日期那列同一層,
+       而且排在後面 —— 捲動時「＋許願」和地圖那顆會**浮在日期卡上面**。
+       擋點擊靠的是 `stopPropagation()`,不是圖層。 */
+    .wish-head button{position:relative;}
     .iconbtn.sm{width:27px; height:27px; border-radius:7px;}
     .wishbox[open] .wish-caret{transform:rotate(180deg);}
     .wishbox > *:not(summary){margin:0 15px;}

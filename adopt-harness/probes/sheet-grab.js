@@ -120,6 +120,30 @@ async function drag(dy) {
       w.getComputedStyle(d.querySelector(".cols > .col:not(#wishbox)")).display === "none",
       { 許願: w.getComputedStyle(d.getElementById("wishbox")).display,
         行程: w.getComputedStyle(d.querySelector(".cols > .col:not(#wishbox)")).display });
+    /* **捲動時,黏住的日期列要蓋住底下經過的東西。**
+       「＋許願」和地圖那顆本來浮在日期卡上面 —— 我給它們墊了 `z-index:1`
+       (為了擋 `<details>` 的開合),而那剛好跟黏住的日期列同一層、又排在後面。
+       擋點擊該用 `stopPropagation()`,不是圖層。
+
+       **判準是「那個位置最上面是誰」,不是兩個框有沒有重疊** ——
+       捲到一半本來就會重疊,那是 sticky 的正常行為;要問的是誰蓋住誰。 */
+    (function () {
+      var sh = d.getElementById("panel-plan"), days = d.getElementById("days");
+      var add = d.getElementById("add-wish-btn"), mb = d.getElementById("wish-map-btn");
+      sh.scrollTop = 150;
+      return new Promise(function (r) { w.setTimeout(r, 350); }).then(function () {
+        function topAt(e) {
+          var q = e.getBoundingClientRect();
+          var h = d.elementFromPoint(Math.round(q.left + q.width / 2), Math.round(q.top + q.height / 2));
+          return h && (days === h || days.contains(h));
+        }
+        ok("捲動時「＋許願」被日期列蓋住(它在底下,不是浮在上面)", topAt(add), "add-wish-btn");
+        ok("地圖那顆也一樣", topAt(mb), "wish-map-btn");
+        sh.scrollTop = 0;
+      });
+    })();
+    await sleep(450);
+
     /* **那條標頭不再是開關。** `#wishbox` 底層還是 `<details>`,而在這個版面裡
        「看行程還是看許願」是分頁在決定的 —— 那個收合開關已經沒有意義,
        但它還在:點一下整塊許願就收起來,使用者看到的是「內容整個不見了」。
