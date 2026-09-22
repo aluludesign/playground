@@ -178,6 +178,11 @@ function drag(toWidth, releaseOn) {
     if (iw >= 641 && iw < 1280) {
       var wb = d.getElementById("wishbox");
       var tw = d.getElementById("tab-wish");
+      /* **桌機沒有那顆把手。** 它是手機三段式 sheet 的拖曳handle;
+         在這裡它是一顆長在日期排左上角、按了什麼都不會發生的空按鈕。 */
+      ok("桌機沒有那顆拖曳把手(沒有 sheet,就不要有 sheet 的握把)",
+        w.getComputedStyle(d.getElementById("plan-grab")).display === "none",
+        w.getComputedStyle(d.getElementById("plan-grab")).display);
       ok("窄桌機看得到「許願」分頁", w.getComputedStyle(tw).display !== "none",
         w.getComputedStyle(tw).display);
       var tabs = Array.prototype.slice.call(d.querySelectorAll(".tab"))

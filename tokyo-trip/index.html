@@ -362,6 +362,13 @@
       body[data-view="plan"] .wrap,
       body[data-view="wish"] .wrap{padding-bottom:0;}
     }
+    /* **那顆把手只有手機有。** 它是三段式 sheet 的拖曳handle,而桌機沒有 sheet ——
+       但它是一個 `<button>`,沒有規則的話就以預設樣式長在日期排的左上角:
+       一顆點得到、focus 得到、按了什麼都不會發生的小方塊。
+       (它在 21-wish-narrow 那張截圖上看得見,在那之前沒有任何一張圖拍到過
+       這個寬度的這個角落。) */
+    @media (min-width:641px){ .pg-grab{display:none;} }
+
     @media (prefers-reduced-motion:reduce){ #panel-plan{transition:none;} }
 
     /* ================= 「許願」是一個分頁:手機和窄桌機共用 =================
