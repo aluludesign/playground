@@ -89,11 +89,37 @@ var THREE = [
       await until(function () { return d.querySelectorAll('[data-hit="sf-title"]').length === 3; }),
       d.querySelectorAll('[data-hit="sf-title"]').length);
     var first = q('[data-hit="sf-title"]');
+    /* **這條原本寫 `querySelector("span")`,而那是位置式的選擇器。**
+       加了縮圖之後這一列有三個 span(縮圖、包文字的那層、地址),第一個是空的縮圖,
+       於是斷言紅了 —— 而紅的原因跟「有沒有給地址」一點關係都沒有。
+       改成問地址自己的名字 `.at`。**位置會被下一個人改動,名字不會。** */
     ok("每一筆都同時給名字和地址(光看名字分不出兩間同名的)",
-      !!first.querySelector("b") && !!first.querySelector("span") &&
+      !!first.querySelector("b") && !!first.querySelector(".at") &&
       /teamLab/.test(first.querySelector("b").textContent) &&
-      /大阪/.test(first.querySelector("span").textContent),
+      /大阪/.test(first.querySelector(".at").textContent),
       first.textContent);
+    /* 縮圖那一格:**放的是「它在哪」不是「它長什麼樣」**,理由(免費照片對真的店家
+       命中率 0%)寫在 `hitThumb()` 上面。這裡守的是它有畫出來、而且那個點畫在
+       觀景窗**裡面** —— 點跑到框外就是「指到別的地方」,而那看起來跟沒有點一樣。 */
+    var th = first.querySelector(".thumb");
+    ok("候選左邊有地圖縮圖", !!th && !!th.querySelector("img"), first.innerHTML.slice(0, 200));
+    ok("縮圖只打一張圖磚(不是四張)", th.querySelectorAll("img").length === 1,
+      th.querySelectorAll("img").length);
+    var dot = th.querySelector(".dot"), tb = th.getBoundingClientRect(), db = dot && dot.getBoundingClientRect();
+    ok("那個點落在觀景窗裡面(夾住邊界之後仍然看得到)",
+      !!db && db.left >= tb.left - 1 && db.right <= tb.right + 1 &&
+      db.top >= tb.top - 1 && db.bottom <= tb.bottom + 1,
+      { 框: [Math.round(tb.left), Math.round(tb.top), Math.round(tb.width), Math.round(tb.height)],
+        點: db && [Math.round(db.left), Math.round(db.top)] });
+    ok("三筆候選的縮圖各自指到不同的地方(不是同一張圖配同一個點)",
+      (function () {
+        var seen = {};
+        [].forEach.call(d.querySelectorAll('[data-hit="sf-title"] .thumb img'),
+          function (im) { seen[im.getAttribute("src")] = 1; });
+        return Object.keys(seen).length >= 2;
+      })(),
+      [].map.call(d.querySelectorAll('[data-hit="sf-title"] .thumb img'),
+        function (im) { return im.getAttribute("src"); }));
     /* **硬界線不帶,是這一支最該守住的一條。** pinFor() 帶 bounded=1 是因為程式自己挑;
        這裡是人挑,框起來只會把他要的藏起來。 */
     ok("查詢不帶 bounded=1(人在挑,不需要硬界線)", asked.join(" ").indexOf("bounded") < 0, asked);

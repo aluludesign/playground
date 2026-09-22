@@ -496,14 +496,34 @@
       font-weight:700; cursor:pointer;}
     .seek-out .seek-ok:hover,.seek-out .seek-ok:focus-visible{background:var(--color-accent); color:var(--color-accent-ink);}
     .seek-out{margin-top:6px; border:1px solid var(--line); border-radius:10px; overflow:hidden; background:var(--surface);}
-    .seek-out .hit{display:block; width:100%; text-align:left; padding:9px 11px; border:0; border-top:1px solid var(--line);
+    .seek-out .hit{display:flex; gap:9px; align-items:center; width:100%; text-align:left; padding:9px 11px; border:0; border-top:1px solid var(--line);
       background:none; font:inherit; color:inherit; cursor:pointer;}
     .seek-out .hit:first-child{border-top:0;}
     .seek-out .hit:hover,.seek-out .hit:focus-visible{background:var(--accent-soft);}
+    /* **`min-width:0` 不是裝飾。** flex 項目的預設 `min-width:auto` 不讓它縮到
+       內容以下,於是地址那行不會夾、整列被撐開,縮圖被擠掉。 */
+    .seek-out .hit .txt{display:block; flex:1; min-width:0;}
     .seek-out .hit b{display:block; font-weight:600;}
-    /* 地址那行會很長。夾成兩行,不要讓一筆候選把清單撐到看不完 */
-    .seek-out .hit span{display:-webkit-box; -webkit-line-clamp:2; line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+    /* 地址那行會很長。夾成兩行,不要讓一筆候選把清單撐到看不完。
+       **這條原本寫成 `.hit span`,而這一輪那樣寫會壞。** 這一列現在有三個 span:
+       縮圖 `.thumb`、包文字的 `.txt`、地址。`.txt` 會一起吃到 `-webkit-box` 和
+       兩行的夾子,名字和地址被當成同一塊夾掉 —— 而那看起來只是「地址少了一行」,
+       不像壞掉。**給地址自己的名字,不要靠它排第幾個。** */
+    .seek-out .hit .at{display:-webkit-box; -webkit-line-clamp:2; line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
       font-size:12px; color:var(--muted);}
+    /* 候選左邊那張小圖。**放的是「它在哪」,不是「它長什麼樣」** —— 理由見 hitThumb()。
+       固定尺寸 + overflow:hidden 當觀景窗:圖磚是 256px 的,用位移把要看的那一塊挪進來。
+       先給底色,圖磚還沒到的時候那一格不是白洞,列高也不會跳。 */
+    .seek-out .hit .thumb{position:relative; flex:0 0 auto; width:56px; height:56px; overflow:hidden;
+      border:1px solid var(--line); border-radius:7px; background:var(--surface-2);}
+    .seek-out .hit .thumb img{position:absolute; width:256px; height:256px; max-width:none;}
+    /* 照片跟圖磚不一樣:它**填滿**這一格,不是一張大圖挪進觀景窗。
+       `object-fit:cover` 讓長寬比不同的照片不變形 —— 裁掉邊比拉扁好。 */
+    .seek-out .hit .thumb img.shot{inset:0; width:100%; height:100%; object-fit:cover;}
+    /* 那個點畫在它**真正**的位置上。框挪到邊界會被夾住,所以點不一定在正中央 ——
+       寧可偏一點也不要為了置中而指到錯的地方。 */
+    .seek-out .hit .thumb .dot{position:absolute; width:7px; height:7px; margin:-4px 0 0 -4px;
+      border:1.5px solid #fff; border-radius:50%; background:var(--color-accent); box-shadow:0 0 0 1px rgba(0,0,0,.25);}
     .seek-out .said{padding:9px 11px; font-size:12.5px; color:var(--muted);}
     /* **句子裡那三個字就是按鈕。** 一句問句要有地方回答,而最省事的那個地方
        就在問句裡面 —— 旁邊再擺一顆「好」,等於要人先讀懂問題再去找答案在哪。
@@ -2228,6 +2248,53 @@
   const hitName = r => String(r.display_name || "").split(",")[0].trim();
   const hitAddr = r => String(r.display_name || "").split(",").slice(1).join(",").trim();
 
+  /* 候選左邊那張小圖。**放的是「它在哪」,不是「它長什麼樣」,而那是量出來的。**
+
+     先試過免費的照片:Nominatim 加 `extratags=1` 拿得到 OSM 物件身上的 `wikidata`,
+     再去 Wikidata 讀 `P18` 就有 Commons 的照片,整條加起來只多一次請求。
+     拿她真的會搜的字量了 24 個(2026-09-22):
+
+       地標(晴空塔、淺草寺、teamLab…)     27 筆候選裡 14 筆有照片   52%
+       區域名(日本橋、柴又、人形町…)       高,「日本橋」六筆候選六筆都有
+       **真的店家**(一蘭拉麵 新宿、鬼太郎茶屋、藏前 咖啡、押上溫泉 大黑湯、萬葉俱樂部)
+                                         **0%** —— 而且五個裡有三個連候選都查不到
+
+     **照片在這裡的用途是分辨三間同名的,而那正好是 0% 的那一格。** 所以不放照片。
+     (也不要用 Commons 的「這個座標附近的照片」—— 附近的照片不是這個地方的照片,
+      那是拿一個看起來合理的東西蓋掉「我不知道」。)
+
+     地圖縮圖沒有命中率問題:永遠拿得到、永遠正確,而分辨兩間同名的本來就是靠位置。
+
+     **一列只打一張圖磚。** 算出那個點落在哪一塊,再用位移把它挪進 56px 的觀景窗。
+     挪到圖磚邊界就夾住 —— 點畫在它**真正**的位置上,寧可偏一點,也不要為了置中
+     而讓那個點指到別的地方去。z 是 13(一塊約 4.9 km,窗內約 1 km):再近就每一列
+     都長得像「一條街」,再遠就看不出街廓。要調就改這一個常數。
+
+     強力搜那條路回的形狀跟這裡一樣(`seekStrong` 對齊過 `lat`/`lon`),所以這個槽
+     兩邊共用 —— Google 的照片要接的話接在這裡,不用再開一個位置。 */
+  const THUMB = 56, THUMB_Z = 13;
+  function hitThumb(r) {
+    const la = +r.lat, lo = +r.lon;
+    /* **強力搜那條路有真的照片,就放照片。** 只有它有 —— 見上面那份量測。
+       網址走自己的後端(`resource=placephoto`),因為 Google 的圖片網址帶著金鑰。
+       **那一下要錢**,而且是跟搜尋分開計費的:六筆候選 = 六次。
+       免費那條路的 `photo` 是空的,一次都不會叫到。
+       `loading="lazy"` 是為了錢不是為了速度:捲不到的那幾列不換圖就不計費。 */
+    if (r.photo) {
+      return '<span class="thumb"><img class="shot" alt="" loading="lazy" src="' +
+        esc(API + "?resource=placephoto&h=112&ref=" + encodeURIComponent(r.photo)) + '"></span>';
+    }
+    if (!isFinite(la) || !isFinite(lo)) return "";
+    const fx = projX(lo, THUMB_Z), fy = projY(la, THUMB_Z);
+    const tx = Math.floor(fx), ty = Math.floor(fy);
+    const px = (fx - tx) * TILE, py = (fy - ty) * TILE;
+    const fit = v => Math.max(THUMB - TILE, Math.min(0, v));
+    const ox = fit(Math.round(THUMB / 2 - px)), oy = fit(Math.round(THUMB / 2 - py));
+    return '<span class="thumb"><img alt="" loading="lazy" src="https://tile.openstreetmap.org/' +
+      THUMB_Z + "/" + tx + "/" + ty + '.png" style="left:' + ox + "px; top:" + oy + 'px">' +
+      '<i class="dot" style="left:' + Math.round(px + ox) + "px; top:" + Math.round(py + oy) + 'px"></i></span>';
+  }
+
   function seekBox(id) { return el(id + "-out"); }
 
   /* 花過錢之後才出現。**跟著每一次重畫一起帶出去**,不然它只活到下一句訊息為止。 */
@@ -2403,7 +2470,8 @@
     box.innerHTML = hintHTML(id) +
       res.map((r, i) =>
         '<button type="button" class="hit" data-hit="' + id + '" data-i="' + i + '">' +
-        "<b>" + esc(hitName(r)) + "</b><span>" + esc(hitAddr(r)) + "</span></button>").join("") +
+        hitThumb(r) + '<span class="txt"><b>' + esc(hitName(r)) + '</b><span class="at">' +
+        esc(hitAddr(r)) + "</span></span></button>").join("") +
       seekTail(id);
     box.hidden = false;
     box._hits = res;
@@ -2447,6 +2515,10 @@
       return ((r && r.list) || []).map(x => ({
         lat: String(x.la), lon: String(x.lo),
         display_name: x.addr ? x.label + ", " + x.addr : x.label,
+        /* **只有這條路有照片。** 免費那家沒有照片可以給(量過,見 hitThumb),
+           所以 `photo` 在 `seekPlace()` 回來的那些身上是 undefined ——
+           一列要畫照片還是畫地圖,就靠這個欄位在不在。 */
+        photo: x.photo || "",
       }));
     } catch (e) {
       /* **把伺服器講的原話帶出來,不要換成自己猜的。**

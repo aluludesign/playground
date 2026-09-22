@@ -119,7 +119,10 @@ async function press(id) {
       boxText("sf-title").indexOf("好 ——") < 0, boxText("sf-title"));
 
     // ---- 按下強力搜才走 Google ----
-    gooReply = { list: [{ la: 35.6267, lo: 139.7745, label: "富士電視台", addr: "東京都港區台場" },
+    /* 第一筆帶照片代號、第二筆不帶 —— **兩半都要有人測**:
+       有照片的要換成照片,沒有的要退回地圖縮圖,而不是留一個白格子。 */
+    gooReply = { list: [{ la: 35.6267, lo: 139.7745, label: "富士電視台", addr: "東京都港區台場",
+                          photo: "places/ChIJfujitv/photos/AeJbb3fake" },
                  { la: 35.66, lo: 139.79, label: "富士電視台 球體展望室", addr: "東京都港區台場 2-4-8" }] };
     await press("sf-title");
     ok("按「強力搜」才問 Google", goo.length === 1, { google: goo.length });
@@ -129,6 +132,46 @@ async function press(id) {
     ok("Google 的結果照樣畫成可以挑的候選,而且是**多筆**",
       d.querySelectorAll('[data-hit="sf-title"]').length === 2,
       d.querySelectorAll('[data-hit="sf-title"]').length);
+
+    /* ---- 照片:**金鑰不可以走到前端** ----
+       Google 的圖片網址帶金鑰,所以那張圖一定要經過自己的後端。
+       這一條守的不是「好不好看」,是**那個網址裡有沒有出現不該出現的東西** ——
+       geofix 有一條在守 `GEOCODE_KEY` 這個名字不出現在 HTML 裡,這是同一條線的另一半:
+       名字沒印出來,但如果 src 直接指向 googleapis,金鑰一樣得跟著去。 */
+    var hits = d.querySelectorAll('[data-hit="sf-title"]');
+    var shot = hits[0].querySelector(".thumb img.shot");
+    ok("有照片的那一筆,縮圖換成照片", !!shot, hits[0].innerHTML.slice(0, 220));
+    ok("**照片走自己的後端**(resource=placephoto)",
+      !!shot && /resource=placephoto/.test(shot.getAttribute("src")), shot && shot.getAttribute("src"));
+    ok("**照片的網址不直接指向 Google**(直接指就得把金鑰一起帶過去)",
+      !!shot && !/googleapis\.com|googleusercontent\.com/.test(shot.getAttribute("src")),
+      shot && shot.getAttribute("src"));
+    ok("而且網址裡沒有任何看起來像金鑰的參數",
+      !!shot && !/[?&](key|api_?key)=/i.test(shot.getAttribute("src")), shot && shot.getAttribute("src"));
+    ok("照片是延後載入的(捲不到的那幾列不換圖就不計費)",
+      !!shot && shot.getAttribute("loading") === "lazy", shot && shot.getAttribute("loading"));
+    /* **這一條是給「CSS 壞掉不會報錯」用的。** 照片和圖磚共用同一格,而圖磚那條規則
+       寫死 256×256;`.shot` 要蓋掉它。蓋不過的話畫面上是一張被切掉一角的大圖,
+       而那長得像「照片剛好拍歪」,不像規則沒生效。量的是**照片有沒有填滿那一格**。 */
+    var thumbEl = hits[0].querySelector(".thumb");
+    var sbox = thumbEl.getBoundingClientRect(), tcs = w.getComputedStyle(thumbEl);
+    /* **比的是邊框內側,不是外緣。** 第一版拿 56 去比,量到 54 就紅了 ——
+       而 54 才是對的:`.thumb` 有 1px 邊框,絕對定位的圖填的是邊框裡面那一塊。
+       量錯基準的紅燈跟真的壞掉長得一模一樣,所以把基準算出來,不要用那個常數。 */
+    var bw = parseFloat(tcs.borderLeftWidth) + parseFloat(tcs.borderRightWidth);
+    var bh = parseFloat(tcs.borderTopWidth) + parseFloat(tcs.borderBottomWidth);
+    var sb = shot && shot.getBoundingClientRect(), scs = shot && w.getComputedStyle(shot);
+    ok("照片填滿那一格(沒有被圖磚那條 256px 的規則蓋住)",
+      !!sb && Math.abs(sb.width - (sbox.width - bw)) <= 1 &&
+      Math.abs(sb.height - (sbox.height - bh)) <= 1,
+      { 格內側: [Math.round(sbox.width - bw), Math.round(sbox.height - bh)],
+        圖: sb && [Math.round(sb.width), Math.round(sb.height)] });
+    ok("而且是裁切不是拉扁(object-fit:cover)", !!scs && scs.objectFit === "cover", scs && scs.objectFit);
+    /* 另一半:**沒有照片的那一筆不可以留白格子**,要退回地圖縮圖。 */
+    var noPhoto = hits[1].querySelector(".thumb");
+    ok("沒照片的那一筆退回地圖縮圖(不是空的一格)",
+      !!noPhoto && !noPhoto.querySelector("img.shot") && !!noPhoto.querySelector("img") &&
+      !!noPhoto.querySelector(".dot"), hits[1].innerHTML.slice(0, 220));
 
     /* ---- **只給用一次:找到了也退回去,不必等他挑** ----
        以前是「挑到候選才歸零」。於是查到一串、一筆都不想挑的人,

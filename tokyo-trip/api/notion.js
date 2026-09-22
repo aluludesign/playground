@@ -321,7 +321,10 @@ module.exports = async (req, res) => {
         headers: {
           "Content-Type": "application/json",
           "X-Goog-Api-Key": process.env.GEOCODE_KEY,
-          "X-Goog-FieldMask": "places.displayName,places.formattedAddress,places.location",
+          /* `places.photos` 只是**照片的代號**,拿它不另外計費 —— 真正計費的是
+             底下 `placephoto` 那一段去換圖的那一下。所以這裡一律要,
+             前端要不要顯示、顯示幾張,由前端決定。 */
+          "X-Goog-FieldMask": "places.displayName,places.formattedAddress,places.location,places.photos",
         },
         body: JSON.stringify({
           textQuery: q, languageCode: "zh-TW",
@@ -335,6 +338,9 @@ module.exports = async (req, res) => {
           lo: x.location && x.location.longitude,
           label: (x.displayName && x.displayName.text) || "",
           addr: x.formattedAddress || "",
+          /* 新版的照片代號長「places/XXX/photos/YYY」。**只帶第一張** ——
+             候選清單一列只放得下一張,多帶的那幾張前端不會用到。 */
+          photo: (x.photos && x.photos[0] && x.photos[0].name) || "",
         })).filter(x => typeof x.la === "number" && typeof x.lo === "number" && x.label) });
       }
       newErr = (body && body.error && body.error.message) || ("HTTP " + r.status);
@@ -352,6 +358,9 @@ module.exports = async (req, res) => {
           lo: x.geometry && x.geometry.location && x.geometry.location.lng,
           label: x.name || "",
           addr: x.formatted_address || "",
+          /* 舊版給的是 `photo_reference`,跟新版的代號長得完全不一樣。
+             **前端不該知道這件事**,所以兩邊都叫 `photo`,由 placephoto 那段去分辨。 */
+          photo: (x.photos && x.photos[0] && x.photos[0].photo_reference) || "",
         })).filter(x => typeof x.la === "number" && typeof x.lo === "number" && x.label) });
       }
       oldErr = (b2 && (b2.error_message || b2.status)) || ("HTTP " + r2.status);
@@ -360,6 +369,63 @@ module.exports = async (req, res) => {
     return res.status(502).json({
       error: want + "兩家都沒成:新版說「" + newErr + "」;舊版說「" + oldErr + "」",
     });
+  }
+
+  /* ---- 候選清單上那張 Google 照片 ----
+     **為什麼一定要經過這裡:圖片網址帶著金鑰。** 直接把網址給前端,等於把
+     `GEOCODE_KEY` 印在 HTML 上 —— 那正是 geofix 有一條斷言在守的事。
+
+     **但不把圖片的位元組串過這個函式。** 跟 Google 要「已簽名的短期網址」,
+     然後回 302 讓瀏覽器自己去它的 CDN 拿:金鑰不外流,而這個函式不必搬圖。
+
+     **這一段會花錢,而且是跟搜尋分開計費的。** 一次強力搜本來是 1 次,
+     清單有六筆就變成 1 + 6。所以照片只掛在強力搜那條路上 ——
+     免費那條路一張都不會叫到這裡(它拿到的 `photo` 是空的)。 */
+  if (resource === "placephoto") {
+    if (req.method !== "GET") {
+      res.setHeader("Allow", "GET");
+      return res.status(405).json({ error: "不支援的方法" });
+    }
+    if (!process.env.GEOCODE_KEY) {
+      return res.status(503).json({ error: "伺服器還沒設定地名查詢的金鑰" });
+    }
+    const ref = String((req.query && req.query.ref) || "");
+    /* **白名單,不是黑名單。** 這個參數會被接進一個對外的網址,放任它等於
+       開一個任意轉址的洞。新版的代號是 `places/A/photos/B`,舊版是一長串
+       token —— 兩種都只有英數和 `-_`,所以形狀不合的一律擋掉,不要猜它想幹嘛。 */
+    const isNew = /^places\/[A-Za-z0-9_-]{1,256}\/photos\/[A-Za-z0-9_-]{1,512}$/.test(ref);
+    const isOld = /^[A-Za-z0-9_-]{20,1024}$/.test(ref);
+    if (!isNew && !isOld) return res.status(400).json({ error: "照片代號的形狀不對" });
+    const hRaw = parseInt(String((req.query && req.query.h) || "112"), 10);
+    const h = Math.min(400, Math.max(48, isFinite(hRaw) ? hRaw : 112));
+
+    try {
+      let to = "";
+      if (isNew) {
+        /* `skipHttpRedirect=true` 回的是 JSON 裡的 `photoUri`,不是圖片本身。 */
+        const r = await fetch("https://places.googleapis.com/v1/" + ref +
+          "/media?maxHeightPx=" + h + "&skipHttpRedirect=true", {
+          headers: { "X-Goog-Api-Key": process.env.GEOCODE_KEY },
+        });
+        const b = await r.json().catch(() => ({}));
+        to = (b && b.photoUri) || "";
+      } else {
+        /* 舊版直接回 302,而 `redirect:"manual"` 讓我們讀得到它要轉去哪 ——
+           跟著轉過去的話,圖片就真的從這個函式流過去了。 */
+        const r = await fetch("https://maps.googleapis.com/maps/api/place/photo?maxheight=" + h +
+          "&photo_reference=" + encodeURIComponent(ref) +
+          "&key=" + encodeURIComponent(process.env.GEOCODE_KEY), { redirect: "manual" });
+        to = r.headers.get("location") || "";
+      }
+      if (!/^https:\/\//.test(to)) return res.status(502).json({ error: "拿不到那張照片" });
+      /* 快取這個轉址 = 少打幾次要錢的那一支。簽名的網址本身有期限,
+         所以只放一小時,不要更久。 */
+      res.setHeader("Cache-Control", "public, max-age=3600, s-maxage=3600");
+      res.setHeader("Location", to);
+      return res.status(302).end();
+    } catch (e) {
+      return res.status(502).json({ error: "拿照片的時候連不上" });
+    }
   }
 
   if (resource === "geocode") {
