@@ -135,7 +135,6 @@
       font-family:var(--font-sign); font-size:15px; font-weight:500; color:var(--muted); letter-spacing:.06em; transition:color .15s, border-color .15s;}
     .tab:hover{color:var(--ink-2);}
     .tab[aria-selected="true"]{color:var(--ink); border-bottom-color:var(--accent);}
-    .tab .n{font-family:var(--font-mono); font-size:10px; color:var(--muted); margin-left:5px;}
 
     /* ---- icon(Font Awesome Free,SVG 直接內嵌,不連外) ---- */
     .i{width:1em; height:1em; fill:currentColor; flex:0 0 auto; vertical-align:-.115em;}
@@ -965,7 +964,7 @@
     <button class="tab" role="tab" id="tab-plan" data-tab="plan" aria-selected="true" aria-controls="panel-plan"><svg class="i" aria-hidden="true"><use href="#i-route"></use></svg>行程</button>
     <button class="tab" role="tab" id="tab-wish" data-tab="wish" aria-selected="false" aria-controls="panel-plan"><svg class="i" aria-hidden="true"><use href="#i-star"></use></svg>許願</button>
     <button class="tab" role="tab" id="tab-fly" data-tab="fly" aria-selected="false" aria-controls="panel-fly"><svg class="i" aria-hidden="true"><use href="#i-plane"></use></svg>搭機</button>
-    <button class="tab" role="tab" id="tab-cost" data-tab="cost" aria-selected="false" aria-controls="panel-cost"><svg class="i" aria-hidden="true"><use href="#i-receipt"></use></svg>花費<span class="n" id="tab-cost-n"></span></button>
+    <button class="tab" role="tab" id="tab-cost" data-tab="cost" aria-selected="false" aria-controls="panel-cost"><svg class="i" aria-hidden="true"><use href="#i-receipt"></use></svg>花費</button>
     <button class="tab" role="tab" id="tab-split" data-tab="split" aria-selected="false" aria-controls="panel-split"><svg class="i" aria-hidden="true"><use href="#i-scale-balanced"></use></svg>分帳</button>
   </nav>
 
@@ -3519,7 +3518,6 @@
       tile("行前預訂", twd(total - tripTotal), "機票、住宿等"),
       tile("旅途中", twd(tripTotal), "10/03 起"),
     ].join("");
-    el("tab-cost-n").textContent = state.expenses.length || "";
     el("rate-hint").textContent = "1 JPY = " + state.rate + " TWD";
 
     const sums = CATS.map(c => Object.assign({}, c, { v: state.expenses.filter(e => e.category === c.id).reduce((s, e) => s + toTWD(e), 0) }));
