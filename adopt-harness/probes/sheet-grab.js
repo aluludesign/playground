@@ -56,6 +56,15 @@ async function drag(dy) {
     ok("地圖是開著的(它是底,不是「要打開的東西」)", !map.hidden, map.hidden);
     var mz = +w.getComputedStyle(map).zIndex, sz = +w.getComputedStyle(sheet).zIndex;
     ok("**地圖在清單底下**(這一輪把疊法翻過來了)", mz < sz, { 地圖: mz, 清單: sz });
+    /* **誰都不可以伸到分頁列底下。** `--tabh` 第一次量到 55 而它其實是 79
+       (字體還沒換、第五個分頁還沒排進去),差 24px —— 地圖和清單的底都伸進去,
+       而清單最後一列被蓋掉一截。**畫面上那看起來只是「最後一項有點擠」。** */
+    var tabTop = d.querySelector(".tabs").getBoundingClientRect().top;
+    ok("地圖的底停在分頁列上緣", map.getBoundingClientRect().bottom <= tabTop + 1,
+      { 地圖底: Math.round(map.getBoundingClientRect().bottom), 分頁列上緣: Math.round(tabTop) });
+    ok("清單 sheet 的底也停在那裡(最後一列不會被蓋掉)",
+      sheet.getBoundingClientRect().bottom <= tabTop + 1,
+      { 清單底: Math.round(sheet.getBoundingClientRect().bottom), 分頁列上緣: Math.round(tabTop) });
     var mr = map.getBoundingClientRect();
     ok("地圖鋪滿分頁列以上的整塊(它是背景,不是一條)",
       Math.round(mr.height) > w.innerHeight * 0.8, Math.round(mr.height));

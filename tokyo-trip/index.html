@@ -3615,9 +3615,15 @@
      時間點是猜不準的(動畫、字體、圖層按鈕各有各的節奏),所以不要猜 ——
      盯著那個元素的尺寸,它一變就重量。 */
   (function watchSheetSize() {
+    if (typeof ResizeObserver !== "function") return;
     const inEl = el("map-sheet") && el("map-sheet").querySelector(".sheet-in");
-    if (!inEl || typeof ResizeObserver !== "function") return;
-    new ResizeObserver(() => syncMapOcc()).observe(inEl);
+    if (inEl) new ResizeObserver(() => syncMapOcc()).observe(inEl);
+    /* **分頁列也要盯著。** `--tabh` 第一次量到 55,而它其實是 79 ——
+       量的那一刻字體還沒換、第五個分頁也還沒排進去。差 24px,結果是
+       地圖和清單的底都伸到分頁列底下,**清單最後一列被蓋掉一截**。
+       跟 `--maph` 同一個形狀:時間點猜不準,就不要猜。 */
+    const tabs = document.querySelector(".tabs");
+    if (tabs) new ResizeObserver(() => { syncWishBar(); setDet(planDet); }).observe(tabs);
   })();
 
   function syncMapOcc() {
