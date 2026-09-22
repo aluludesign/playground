@@ -171,6 +171,57 @@ async function drag(dy) {
       mid && (mid.id || String(mid.className) || mid.tagName));
     await drag(0);
 
+    /* ---- 對話框比畫面高的時候,要捲得到底 ----
+       **這一條是一張截圖逼出來的**:搜「溫泉」回六筆候選,整張表比手機螢幕還高,
+       而「你是誰」和送出鈕在畫面外、**而且捲不動**。使用者看到的是一張填不完的表。
+
+       成因是 flex 置中的老坑:`align-items:center` 加上溢出時,項目比容器高的話
+       上緣會溢出到捲不到的地方。改用 `margin:auto` 置中就沒有這件事。
+
+       量的是**捲到底之後那兩個東西碰不碰得到** —— 存不存在不是重點,
+       它們一直都存在。 */
+    (function () {
+      var real = w.fetch.bind(w), six = [];
+      for (var i = 0; i < 6; i++) {
+        six.push({ lat: "35." + (60 + i), lon: "139." + (70 + i),
+          display_name: "溫泉" + i + ", 很長很長的地址, 兵庫縣/兵庫縣, 669-6899, 日本" });
+      }
+      w.fetch = function (u, init) {
+        if (/nominatim/.test(String(u))) {
+          return Promise.resolve({ ok: true, json: function () { return Promise.resolve(six); } });
+        }
+        return real(u, init);
+      };
+    })();
+    d.getElementById("add-wish-btn").click();
+    await until(function () { return !d.getElementById("wish-add-overlay").hidden; });
+    d.getElementById("wf-title").value = "溫泉";
+    d.querySelector('[data-seek="wf-title"]').click();
+    await until(function () { return d.querySelectorAll('[data-hit="wf-title"]').length > 0; });
+    await sleep(300);
+    var ovr = d.getElementById("wish-add-overlay");
+    ok("六筆候選會讓這張表比畫面高(這一條的前提)",
+      d.getElementById("wish-form").getBoundingClientRect().height > w.innerHeight * 0.8,
+      Math.round(d.getElementById("wish-form").getBoundingClientRect().height));
+    ok("而且那一層捲得動", ovr.scrollHeight > ovr.clientHeight,
+      { 內容: ovr.scrollHeight, 可見: ovr.clientHeight });
+    ovr.scrollTop = ovr.scrollHeight;
+    await sleep(200);
+    function reach(e) {
+      var r = e.getBoundingClientRect();
+      if (r.bottom < 0 || r.top > w.innerHeight) return false;
+      var h = d.elementFromPoint(Math.round(r.left + r.width / 2), Math.round(r.top + r.height / 2));
+      return !!h && (h === e || e.contains(h));
+    }
+    ok("捲到底之後,送出鈕按得到", reach(d.getElementById("wf-submit")), "wf-submit");
+    ok("捲到底之後,「你是誰」也選得到", reach(d.getElementById("wf-by")), "wf-by");
+    /* 候選清單自己也要有上限 —— 不然「要挑的」和「要按的」會互相擠掉。 */
+    var so = d.getElementById("wish-form").querySelector(".seek-out");
+    ok("候選清單自己有高度上限、自己捲", so.scrollHeight > so.clientHeight,
+      { 內容: so.scrollHeight, 可見: so.clientHeight });
+    d.getElementById("wf-cancel").click();
+    await sleep(200);
+
     // ---- 分頁列永遠按得到 ----
     var planTab = d.getElementById("tab-plan"), pb = planTab.getBoundingClientRect();
     var hitTab = d.elementFromPoint(Math.round(pb.left + pb.width / 2), Math.round(pb.top + pb.height / 2));

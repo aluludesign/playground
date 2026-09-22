@@ -737,7 +737,10 @@
       border-radius:999px; background:none; color:var(--color-accent); font:inherit; font-size:12.5px;
       font-weight:700; cursor:pointer;}
     .seek-out .seek-ok:hover,.seek-out .seek-ok:focus-visible{background:var(--color-accent); color:var(--color-accent-ink);}
+    /* 候選清單自己有上限。六筆候選會把「你是誰」和送出鈕推到幾百像素外 ——
+       **要挑的東西和要按的東西不該互相擠掉**,清單自己捲就好。 */
     .seek-out{margin-top:6px; border:1px solid var(--line); border-radius:10px; overflow:hidden; background:var(--surface);}
+    .overlay .seek-out{max-height:46vh; overflow-y:auto; overscroll-behavior:contain;}
     .seek-out .hit{display:flex; gap:9px; align-items:center; width:100%; text-align:left; padding:9px 11px; border:0; border-top:1px solid var(--line);
       background:none; font:inherit; color:inherit; cursor:pointer;}
     .seek-out .hit:first-child{border-top:0;}
@@ -871,9 +874,14 @@
     .cloudbar.off .led{background:var(--warn);}
     .cloudbar .sp{margin-left:auto; display:flex; gap:7px;}
 
-    .overlay{position:fixed; inset:0; z-index:60; display:flex; align-items:center; justify-content:center; padding:20px;
+    /* **內容比畫面高的時候要捲得動。**
+       `align-items:center` 加上溢出是 flex 的老坑:項目比容器高時,**上緣溢出到
+       捲不到的地方**,而下緣(送出鈕)也在畫面外 —— 使用者看到一張填不完的表。
+       改用 `margin:auto` 置中:有空間時一樣置中,不夠時就從頂端開始、整層可以捲。 */
+    .overlay{position:fixed; inset:0; z-index:60; display:flex; justify-content:center; padding:20px;
+      overflow-y:auto; overscroll-behavior:contain;
       background:color-mix(in srgb, var(--paper) 86%, transparent); backdrop-filter:blur(6px);}
-    .signin{width:100%; max-width:380px; background:var(--surface); border:1px solid var(--line); border-radius:12px;
+    .signin{margin:auto; width:100%; max-width:380px; background:var(--surface); border:1px solid var(--line); border-radius:12px;
       padding:24px 22px; box-shadow:var(--shadow); display:grid; gap:14px;}
     .signin h2{font-family:var(--font-sign); font-size:19px; letter-spacing:.03em;}
     .signin p{font-size:12.5px; color:var(--muted); line-height:1.55;}
