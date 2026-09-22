@@ -1,21 +1,27 @@
-// 「再查一次」那條退路的前端行為,在真實 DOM 上跑一遍。
+// 地點怎麼標上去、沒標上去的時候怎麼講,在真實 DOM 上跑一遍。
 //
-// 為什麼要有這一支:退路那一端要金鑰,而這個 session 沒有金鑰、也不該有。
-// 沒有它的話,整條路唯一的證據會是「我讀過程式碼」—— 這個 repo 對那種證據的
-// 評價寫在 ADOPTION.md 裡好幾遍了。
+// **這一支本來叫「『再查一次』那條退路的前端行為」,而那條退路整條退場了**
+// (mapfix-retire,2026-09-22:地圖上方那句小字 + 「對」/「再查一次」兩顆鈕)。
+// 退場的理由是前提消失了 —— `merge-place-field` 之後座標是人從候選清單親手挑的,
+// 對一個親手挑的點問「不在這裡?」,問的是一個他剛剛才回答完的問題。
 //
-// 所以它**把 fetch 換成樁**:`?resource=geocode` 那幾筆由這裡回答,其餘原樣放行。
-// 量到的是「伺服器照規格回 X 的時候,前端做了什麼」——
-// **不是**「那個服務真的會回 X」。後者只有 Lulu 設好環境變數之後才驗得到。
+// 所以這一支**退掉了 3–7 段、11/11b 的說明斷言、14b/14c/14d**,整整少了 243 行。
+// 每一處都留著墓碑註解寫清楚「原本量的是什麼、為什麼沒有對象了、什麼東西
+// 因此沒有人在守」—— 退場不該讓證據無聲消失。
 //
-// 這一支是非同步的(要點按鈕、等重畫),所以它自己晚一點覆寫 #r,
+// 留下來的是跟那條小字無關、而且還活著的那些:
+//   - 開場對帳:舊快取裡那些人工表答得出來的 key,一載入就自己修好(1b)
+//   - 規則一:沒填地點的那幾筆,**一次查詢都不該發**。這裡把送出去的 URL
+//     全部記下來事後對帳 —— 「沒發生」要有證據(2 / 9 / 11 / 11c)
+//   - 規則二:送出的當下就講「沒填地點 → 不會上地圖」,而且講在**使用者眼睛
+//     所在的那一槽**上,不是頁尾那行 10.5px 的小字(10 / 12 / 12b / 12c / 13)
+//   - 唯讀的那三個人:有「改」、沒有「刪掉」、那一排不換行、送出去的形狀對(14)
+//
+// 它**把 fetch 換成樁**:`?resource=geocode` 和 `/api/notion` 由這裡回答,
+// Nominatim 那家也擋下來記帳,其餘原樣放行。
+//
+// 這一支是非同步的(要點東西、等重畫),所以它自己晚一點覆寫 #r,
 // 回傳值只是佔位。probe.sh 的 --virtual-time-budget 撐得住。
-//
-// 「沒填地點就不查 + 按『對』」那一輪擴了三段(見 geocode-place-and-confirm.md):
-//   - 規則一:沒填地點的那幾筆,**一次查詢都不該發**,連按鈕都不該畫。
-//     這裡把 Nominatim 的 URL 全部記下來事後對帳 —— 「沒發生」要有證據。
-//   - 規則三:虛線圈要變得回來。按「對」→ 實線、不再問、**而且不打網路**。
-//   - 送出去的 URL 在願望那條路上要帶 `wish=`,行程那條不帶。
 
 var log = [];
 var out = { 步驟: log, 沒過的: [] };
@@ -102,19 +108,16 @@ async function pickPlace(prefix, name, lat, lon) {
   return name;
 }
 function pinsOf(k) { return pins()[k]; }
-function bar() { return q("#map-fix"); }
-function barText() { return q("#map-fix-t").textContent; }
-function approxPins() {
-  return [].map.call(d.querySelectorAll(".map .pin.approx"), function (p) {
-    return { 編號: p.textContent.replace(/約.*/, "").trim(), 標籤: (p.querySelector(".lab") || {}).textContent };
-  });
-}
+/* `bar()` / `barText()` / `approxPins()` 跟著 `#map-fix` 那一條一起退場了。
+   它們讀的是地圖上方那句小字和那兩顆鈕,而那整條在 mapfix-retire 那一輪拆掉了。 */
 
 (async function () {
   try {
-    // 1 ---- 預設:沒點過任何一列,那一條不存在於畫面上 ----
-    ok("#map-fix 在 markup 裡", !!bar(), null);
-    ok("一開始是 hidden", bar().hidden === true, bar().outerHTML.slice(0, 120));
+    // 1 ---- 那條小字整條退場了,所以先確認它真的不在 ----
+    /* 退場的東西要有人守著它別回來 —— 這四個 id 是整條的全部入口。 */
+    ["map-fix", "map-fix-t", "map-fix-ok", "map-fix-go"].forEach(function (id) {
+      ok("`#" + id + "` 不存在了(那條小字和那兩顆鈕已退場)", !d.getElementById(id), id);
+    });
     ok("前端讀不到 GEOCODE_KEY 這個名字",
       d.documentElement.outerHTML.indexOf("GEOCODE_KEY") < 0, "index.html 裡出現了金鑰的環境變數名");
 
@@ -152,7 +155,6 @@ function approxPins() {
     // 2 ---- 從 DAY 那顆按鈕開地圖 = 06 那張截圖的狀態 ----
     q("#day-map-btn").click();
     await until(function () { return d.querySelectorAll(".map .pin").length >= 3; });
-    ok("只開地圖(= 06 / 07 的狀態)時仍然 hidden", bar().hidden === true, barText());
     /* 3 顆而不是 5 顆:合羽橋道具街(行程,沒填地點)和 teamLab(願望,沒填地點)
        以前是**拿標題去查**才有 pin 的,規則一之後它們不該再出現。 */
     ok("地圖有畫出 pin(確認這一輪真的跑起來了)", d.querySelectorAll(".map .pin").length >= 3,
@@ -163,198 +165,19 @@ function approxPins() {
     ok("沒填地點的沒有被標上去(teamLab)",
       !labs.some(function (t) { return /teamLab/.test(t); }), labs);
 
-    // 3 ---- 點一列「有標上去」的 ----
-    var rows = [].slice.call(d.querySelectorAll("#route .stop"));
-    var row = rows.filter(function (r) { return /淺草寺/.test(r.textContent); })[0];
-    ok("找得到淺草寺那一列", !!row, rows.map(function (r) { return r.textContent.slice(0, 12); }));
-    row.click();
-    ok("點過一列之後那一條出現", await until(function () { return bar().hidden === false; }),
-      bar().outerHTML.slice(0, 160));
-    ok("文案問的是「不在這裡?」", /淺草寺.*不在這裡/.test(barText()), barText());
-    ok("文案沒有服務商的名字", !/[Gg]oogle/.test(bar().textContent), bar().textContent);
+    /* ---- 3 到 7 段退場(2026-09-22,mapfix-retire) ----
+       這五段量的是「再查一次」那條退路的前端行為:點一列 → 那條小字出現 →
+       按「再查一次」→ 回概略 → 虛線圈 → 按「對」→ 變實線 → 失敗不弄丟座標 → 收起來就不見。
+       **那條路整條拆掉了**,所以這幾段不是壞了,是測試對象沒了。
 
-    // 4 ---- 再查一次,回「概略」 ----
-    var was = pins()["淺草寺"];
-    reply = { body: { found: true, la: 35.6764, lo: 139.65, precision: "area", label: "日本東京都" } };
-    q("#map-fix-go").click();
-    await until(function () { return (pins()["淺草寺"] || {}).la === 35.6764; });
-    var now = pins()["淺草寺"];
-    ok("查詢真的送出去了", asked.length === 1, asked);
-    ok("送出去的是那個地名", /q=%E6%B7%BA%E8%8D%89%E5%AF%BA/.test(asked[0]), asked[0]);
-    ok("送出去的帶了國家代碼", /cc=jp/.test(asked[0]), asked[0]);
-    ok("快取蓋掉舊的(同一個 key、同一份 tokyo5-pin3)",
-      !!now && now.la === 35.6764 && now.lo === 139.65 && was && was.la !== now.la, { 舊: was, 新: now });
-    ok("概略的那一筆帶 ap 記號", now.ap === 1, now);
-    ok("flash 講了「大概的範圍」", flashed(/只查到大概的範圍/), flashes);
-    ok("flash 沒有服務商的名字", !flashes.some(function (t) { return /[Gg]oogle/.test(t); }), flashes);
-    var ap = approxPins();
-    ok("地圖上那顆 pin 畫成 approx", ap.length === 1, ap);
-    ok("標籤前面加了「約 」", ap.length === 1 && /^約 /.test(ap[0].標籤 || ""), ap);
-    ok("虛線圈真的生效(border-style)",
-      w.getComputedStyle(q(".map .pin.approx")).borderTopStyle === "dashed",
-      w.getComputedStyle(q(".map .pin.approx")).borderTopStyle);
-    ok("行程那條路送出去的 URL 不帶 wish=", asked[0].indexOf("wish=") < 0, asked[0]);
-
-    // 4b ---- 概略之後,那一條要改問「這個位置對嗎」,並且長出「對」 ----
-    ok("概略之後改問「這個位置對嗎」", /淺草寺.*這個位置對嗎/.test(barText()), barText());
-    ok("「對」出現了", q("#map-fix-ok").hidden === false, q("#map-fix-ok").outerHTML);
-    ok("「再查一次」仍然在(「不對」就是再按一次它)", q("#map-fix-go").hidden === false, null);
-
-    // 4c ---- 按「對」:變實線、不再問,而且**不打任何網路** ----
-    var netBefore = asked.length + osm.length;
-    flashes.length = 0;
-    q("#map-fix-ok").click();
-    ok("按「對」之後虛線圈不見了(變實線)",
-      await until(function () { return d.querySelectorAll(".map .pin.approx").length === 0; }),
-      d.querySelectorAll(".map .pin.approx").length);
-    ok("按「對」沒有發出任何請求(它不花錢,所以也不需要通行碼)",
-      asked.length + osm.length === netBefore, { 之前: netBefore, 之後: asked.length + osm.length });
-    ok("確認記在同一份 tokyo5-pin3 的同一筆上(ok:1)", pins()["淺草寺"].ok === 1, pins()["淺草寺"]);
-    ok("概略這件事本身沒有被抹掉(ap 還在)", pins()["淺草寺"].ap === 1, pins()["淺草寺"]);
-    ok("確認過的 pin 是實線",
-      w.getComputedStyle(d.querySelector('.map .pin[data-k="d0"]')).borderTopStyle === "solid",
-      w.getComputedStyle(d.querySelector('.map .pin[data-k="d0"]')).borderTopStyle);
-    ok("「約 」留著(座標仍然是那一區的中心,人只能說「我接受」)",
-      /^約 /.test(d.querySelector('.map .pin[data-k="d0"] .lab').textContent),
-      d.querySelector('.map .pin[data-k="d0"] .lab').textContent);
-    /* 地圖是在 loadSheetMap 裡重畫的,那一條是**之後**才重畫的 ——
-       等虛線圈消失就去問那一條,會早一步(這兩條第一次跑就是這樣紅的)。 */
-    ok("那一條不再問了",
-      await until(function () { return /淺草寺.*不在這裡/.test(barText()); }), barText());
-    ok("「對」收回去了", q("#map-fix-ok").hidden === true, null);
-
-    // 4d ---- 確認過的再按一次「再查一次」:同一個座標 → 確認留著,不重問 ----
-    asked.length = 0; flashes.length = 0;
-    reply = { body: { found: true, la: 35.6764, lo: 139.65, precision: "area", label: "日本東京都" } };
-    q("#map-fix-go").click();
-    ok("再查一次照樣送得出去", await until(function () { return asked.length === 1; }), asked);
-    ok("查回同一個座標 → flash 說還是同一個位置",
-      await until(function () { return flashed(/還是同一個位置/); }), flashes);
-    ok("查回同一個座標 → 那個「對」留著(不再問第二次)", pins()["淺草寺"].ok === 1, pins()["淺草寺"]);
-    ok("查回同一個座標 → 仍然是實線", d.querySelectorAll(".map .pin.approx").length === 0, null);
-    ok("查回同一個座標 → 那一條沒有變回「對嗎」", !/對嗎/.test(barText()), barText());
-
-    // 4e ---- 再查一次,這次回到**別的**概略位置 → 虛線圈回來、重新問 ----
-    flashes.length = 0;
-    reply = { body: { found: true, la: 35.70, lo: 139.70, precision: "area", label: "日本東京都" } };
-    q("#map-fix-go").click();
-    ok("換了座標 → 虛線圈回來",
-      await until(function () { return d.querySelectorAll(".map .pin.approx").length === 1; }),
-      pins()["淺草寺"]);
-    ok("換了座標 → 那個「對」不跟著走(它講的是那個座標,不是那個名字)",
-      pins()["淺草寺"].ok === undefined, pins()["淺草寺"]);
-    ok("換了座標 → 又問一次「這個位置對嗎」", /對嗎/.test(barText()), barText());
-
-    // 4f ---- 沒填地點的那一筆:不查、不畫按鈕、講清楚為什麼不在地圖上 ----
-    asked.length = 0;
-    var kappa = rows.filter(function (r) { return /合羽橋/.test(r.textContent); })[0];
-    ok("找得到合羽橋那一列", !!kappa, null);
-    kappa.click();
-    ok("沒填地點 → 那一條講的是「沒填地點,不會出現在地圖上」",
-      await until(function () { return /合羽橋.*還沒挑地點/.test(barText()); }), barText());
-    ok("沒填地點 → 不畫「再查一次」(按了也只是再問一次同一個錯問題,而且要錢)",
-      q("#map-fix-go").hidden === true, q("#map-fix-go").outerHTML);
-    ok("沒填地點 → 也不畫「對」", q("#map-fix-ok").hidden === true, null);
-    q("#map-fix-go").click();          /* 直接戳 DOM 也不該送出去 */
-    await sleep(100);
-    ok("沒填地點 → 就算硬按也不發查詢", asked.length === 0, asked);
-
-    // 5 ---- 地點欄答得出來的時候,標題那一步不生效 ----
-    /* w2 的標題是「橫濱 港灣未來」,而「橫濱」就寫在 OUTSIDE 那張人工表裡。
-       地點欄(「港灣未來」)在快取裡有答案,所以**輪不到標題** —— 這是這一輪
-       「標題排在地點欄之後」那個順序的機器版證據。順序倒過來的話,這一顆會從
-       快取的 35.4437,139.6380 跳到表裡的 35.444,139.638(差 33 公尺),
-       06 / 07 兩張會多出一個沒有人登記的差異。 */
-    flashes.length = 0; asked.length = 0;
-    var wish = [].slice.call(d.querySelectorAll("#wish-list [data-wish]"))
-      .filter(function (r) { return /港灣未來/.test(r.textContent); })[0];
-    ok("找得到港灣未來那一列", !!wish, null);
-    wish.click();
-    ok("有標上去的願望問的是「不在這裡?」",
-      await until(function () { return /港灣未來.*不在這裡/.test(barText()); }), barText());
-    ok("地點欄答得出來 → 標題那一步不生效(標題含「橫濱」,人工表裡有,但沒有被用)",
-      !/人工確認過/.test(barText()), barText());
-    ok("地點欄答得出來 → 快取那一筆原封不動(沒有被人工表蓋掉)",
-      JSON.stringify(pins()["港灣未來"]) === JSON.stringify({ la: 35.4437, lo: 139.638 }),
-      pins()["港灣未來"]);
-
-    // 5b ---- 「再查一次」要先查人工表:命中就直接用,一次 API 都不打 ----
-    /* 這是 Lulu 那台裝置上的復原路徑。地點欄那一格裡如果躺著一個線上查來的錯座標,
-       而標題在人工表裡 —— 以前按「再查一次」只會用**另一個**線上結果蓋掉它,
-       錯得更確定;現在按下去會在表裡命中,直接換成人工驗過的那一個,而且不花錢。 */
-    var netB5 = asked.length + osm.length;
-    flashes.length = 0;
-    q("#map-fix-go").click();
-    ok("人工表命中 → flash 說用的是人工確認過的座標",
-      await until(function () { return flashed(/人工確認過的座標/); }), flashes);
-    ok("人工表命中 → 一次 API 都沒打(它不花錢,而且比線上準)",
-      asked.length + osm.length === netB5, { 之前: netB5, 之後: asked.length + osm.length });
-    ok("人工表命中 → 地點欄那一格被清掉,讓標題那一步接手",
-      pins()["港灣未來"] === null, pins()["港灣未來"]);
-    ok("人工表命中 → 那一顆 pin 沒有消失(換成表裡的座標)",
-      await until(function () { return /橫濱 港灣未來.*人工確認過的座標/.test(barText()); }), barText());
-    ok("人工表命中 → 「再查一次」收起來(表就是答案,再查只會拿比較差的來蓋)",
-      q("#map-fix-go").hidden === true, q("#map-fix-go").outerHTML);
-
-    // 5c ---- 查無:誠實說,而且不留下一個兩邊都不相信的座標 ----
-    /* 以前這一段用 w2,現在不能用了(5b 那條路把它接走)。改用一筆現造的願望:
-       標題和地點欄都不含人工表裡的任何關鍵字,所以它走的是純粹的線上那條路。 */
-    flashes.length = 0; asked.length = 0;
-    osmReply = [{ lat: "35.6812", lon: "139.7671" }];   /* 先讓它有一顆 pin */
-    q("#add-wish-btn").click();
-    q("#wf-title").value = "某某展望台";
-    /* 挑一個,這一筆才會有 place —— 合併之後「打字打出一個地點」已經不存在 */
-    await pickPlace("wf", "某某展望台", "35.6812", "139.7671");
-    q("#wf-by").value = "hsieh_chinhui";
-    q("#wf-submit").click();
-    await until(function () {
-      return [].slice.call(d.querySelectorAll("#wish-list [data-wish]"))
-        .some(function (r) { return /某某展望台/.test(r.textContent); });
-    });
-    ok("查得到的地點 → 送出時一句話都不講(不吵)",
-      q("#wish-msg").hidden === true, q("#wish-msg").outerHTML);
-    var night = [].slice.call(d.querySelectorAll("#wish-list [data-wish]"))
-      .filter(function (r) { return /某某展望台/.test(r.textContent); })[0];
-    ok("找得到某某展望台那一列", !!night, null);
-    night.click();
-    ok("有標上去的願望問的是「不在這裡?」",
-      await until(function () { return /某某展望台.*不在這裡/.test(barText()); }), barText());
-    var nWish = d.querySelectorAll(".map .pin").length;
-    asked.length = 0; flashes.length = 0;
-    reply = { body: { found: false } };
-    q("#map-fix-go").click();
-    ok("查無 → 誠實說還是找不到", await until(function () { return flashed(/還是找不到/); }), flashes);
-    ok("查無 → 不假裝有結果(那一筆變成 null)", pins()["某某展望台"] === null, pins()["某某展望台"]);
-    ok("查無 → 地圖上少一顆(不留下一個兩邊都不相信的座標)",
-      await until(function () { return d.querySelectorAll(".map .pin").length === nWish - 1; }),
-      { 之前: nWish, 之後: d.querySelectorAll(".map .pin").length });
-    /* 願望那條路要帶 wish=:沒有通行碼的人只走得通「重查自己那筆願望的地點」,
-       而伺服器核對的是**被問的是什麼**(那一筆的地點欄),不是誰在問。 */
-    ok("願望那條路送出去的 URL 帶了 wish=", /[?&]wish=/.test(asked[0] || ""), asked[0]);
-    ok("送出去的還是地點欄那個字串,不是標題",
-      /q=%E6%9F%90%E6%9F%90%E5%B1%95%E6%9C%9B%E5%8F%B0/.test(asked[0] || ""), asked[0]);
-    osmReply = [];
-
-    // 6 ---- 退路整個不能用時,不可以把本來好好的座標弄丟 ----
-    flashes.length = 0;
-    var keep = JSON.stringify(pins()["築地市場"]);
-    var trow = rows.filter(function (r) { return /築地/.test(r.textContent); })[0];
-    trow.click();
-    await until(function () { return /築地/.test(barText()); });
-    reply = { ok: false, status: 503, body: { error: "伺服器還沒設定 GEOCODE_KEY,再查一次目前不能用" } };
-    q("#map-fix-go").click();
-    ok("失敗時 flash 講得出原因", await until(function () { return flashed(/再查一次沒成功/); }), flashes);
-    ok("失敗時舊座標原封不動", JSON.stringify(pins()["築地市場"]) === keep,
-      { 原本: keep, 現在: pins()["築地市場"] });
-    ok("失敗之後按鈕還能再按", q("#map-fix-go").disabled === false, null);
-
-    // 7 ---- 收起來就不見 ----
-    q("#map-sheet-x").click();
-    await sleep(100);
-    ok("收起地圖之後那一條回到 hidden", bar().hidden === true, null);
-    q("#day-map-btn").click();
-    await until(function () { return d.querySelectorAll(".map .pin").length >= 4; });
-    ok("重新從按鈕打開,仍然 hidden(06 的狀態守住了)", bar().hidden === true, null);
+       跟著一起不見的證據,誠實登記在這裡:
+         - 概略 pin(`ap`)那一整套的行為 —— `ap` 全檔只有 `regeoItem()` 會設,
+           它退場之後**新的概略 pin 再也產生不出來**,所以這裡沒有東西可以量。
+           `.pin.approx` 的畫法和 `.approx` 的 CSS 都還留著(舊快取裡可能還有 `ap:1`
+           的資料),第 8 段仍然守著那條 CSS 規則。
+         - 「再查一次」失敗時不弄丟舊座標 —— 入口沒了,這條路走不到。
+         - 願望那條路送 `wish=` 的 URL 形狀 —— 送出的人沒了。
+       這三件事現在**沒有任何探針在守**,要的話得先有新的入口。 */
     out.線上查詢被問了幾次 = osm.length;
 
     // 8 ---- 走鐘防護:新的 class 有沒有對應的 CSS 規則 ----
@@ -371,8 +194,8 @@ function approxPins() {
         });
       })(rules);
     });
-    ok("mapfix 有 CSS 規則(不然走鐘防護會叫)", known.mapfix === 1, null);
-    ok("mf-t 有 CSS 規則", known["mf-t"] === 1, null);
+    /* `mapfix` / `mf-t` 兩條沒有對象了 —— 那兩個 class 隨那條小字一起退場。
+       `approx` 留著:舊快取裡可能還有 `ap:1` 的 pin,它們照樣畫得出虛線圈。 */
     ok("approx 有 CSS 規則", known.approx === 1, null);
     /* 送出當下那句話用的是站上現成的 .note(分帳那條「還沒指定付款人」同一個),
        所以這一輪**沒有新的 class** —— 走鐘防護不該有話說。 */
@@ -442,23 +265,10 @@ function approxPins() {
       .filter(function (r) { return /桃園機場 第一航廈 報到/.test(r.textContent); })[0];
     ok("找得到桃園機場報到那一列", !!tpe, null);
     tpe.click();
-    ok("人工表接回來了:那一條講的是「在人工確認過的表裡」",
-      await until(function () { return /人工確認過的表裡/.test(barText()); }), barText());
-    /* 協調者預期「桃園那顆 pin 回來」——**它不會回來,而且不該回來。**
-       inJapan() 刻意擋掉 la ≤ 30(桃園是 25.080):一張圖同時要裝下台灣和成田,
-       就得縮到看得見鹿兒島。所以回來的是**座標和說法**,不是 pin。 */
-    ok("而且說得出為什麼它還是不在圖上(不在日本境內)", /不在日本境內/.test(barText()), barText());
-    ok("那一條印的是標題那幾個字,不是地點欄那句航班備註",
-      /桃園機場 第一航廈 報到/.test(barText()) && !/MM626/.test(barText()), barText());
-    ok("人工表就是答案 → 不畫「再查一次」", q("#map-fix-go").hidden === true, q("#map-fix-go").outerHTML);
-    ok("也不畫「對」", q("#map-fix-ok").hidden === true, null);
-    q("#map-fix-go").click();          /* 硬戳 DOM 也不該送出去 */
+    /* **這一段原本問的是那條小字講了什麼**(「在人工確認過的表裡」、「不在日本境內」、
+       「不畫再查一次」)—— 那條小字退場了,所以那幾條沒有對象。
+       留下來的是它真正在守的那件事:**這一筆從頭到尾沒有拿航班備註去查過**。 */
     await sleep(100);
-    ok("就算硬按也不發查詢", asked.length === 0, asked);
-    ok("整段沒有多發任何一次線上查詢(以前這一筆每次開地圖就是兩次)",
-      osm.length === osmBefore, osm.slice(osmBefore));
-    /* 「沒發生」要有證據:整趟跑下來所有送出去的 URL 都不可以出現這幾個字。
-       改之前實測是兩次 —— `樂桃 MM626` 和(拆掉前綴之後的)`MM626 建議起飛前 2.5 小時`。 */
     var all2 = osm.concat(asked).join(" ");
     ["樂桃", "%E6%A8%82%E6%A1%83", "MM626", "%E5%BB%BA%E8%AD%B0%E8%B5%B7%E9%A3%9B"].forEach(function (k) {
       ok("整趟沒有任何查詢問過「" + k + "」(那是航班備註,不是地名)", all2.indexOf(k) < 0, all2.slice(0, 500));
@@ -478,33 +288,36 @@ function approxPins() {
       .filter(function (r) { return /MM626 起飛/.test(r.textContent); })[0];
     ok("找得到 MM626 起飛那一列(place = TPE 桃園 T1,關鍵字在地點欄)", !!mm, null);
     mm.click();
-    /* **等的條件必須是「這一列才有的字」。** 第一版等的是 /人工確認過的表裡/ ——
-       而上一列(桃園機場報到)講的就是那句話,於是 until() 在這一列重畫之前
-       就通過了,後面兩條斷言量的是**上一列的字**。第一次跑就抓到,寫下來:
-       畫面上留著的舊字會讓「等到了」跟「換好了」看起來一模一樣。 */
-    ok("地點欄命中表 → 講得出「在人工確認過的表裡」(Lulu 看到的是「沒標上去」)",
-      await until(function () { return /TPE 桃園 T1/.test(barText()); }) &&
-      /人工確認過的表裡/.test(barText()), barText());
-    ok("而且同一句話說得出為什麼它不在圖上", /不在日本境內/.test(barText()), barText());
-    ok("印的是地點欄那幾個字(TPE 桃園 T1),不是標題",
-      /TPE 桃園 T1/.test(barText()) && !/第一航廈/.test(barText()), barText());
-    ok("人工表就是答案 → 不畫「再查一次」(這一顆以前是畫得出來的)",
-      q("#map-fix-go").hidden === true, q("#map-fix-go").outerHTML);
-
-    /* 成田:同一條路,但它**在**日本境內 —— 所以走的是 manual 的另一半分支。
-       兩半都要有人測,不然改壞一半另一半照樣綠。 */
+    await sleep(100);
+    /* 原本這裡問那條小字有沒有印出「TPE 桃園 T1」「在人工確認過的表裡」「不在日本境內」,
+       以及「再查一次」有沒有收起來 —— 整條退場之後那四條沒有對象。
+       **人工表有沒有接住這兩筆,看得見的證據是 pin 和 via,不是那句話。** */
+    ok("地點欄命中人工表 → 那一筆拿得到表裡的座標(TPE 桃園 T1)",
+      !!pins()["TPE 桃園 T1"] && pins()["TPE 桃園 T1"].via === "TPE 桃園 T1",
+      pins()["TPE 桃園 T1"]);
     var nrt = [].slice.call(d.querySelectorAll("#route .stop"))
       .filter(function (r) { return /抵達成田機場/.test(r.textContent); })[0];
     nrt.click();
-    ok("地點欄命中表 + 在日本境內 → 講「用的是人工確認過的座標」",
-      await until(function () { return /NRT 成田 T1/.test(barText()); }) &&
-      /人工確認過的座標/.test(barText()), barText());
-    ok("成田那一條不該說「不在日本境內」", !/不在日本境內/.test(barText()), barText());
-    ok("成田的「再查一次」也收起來(再查只會拿比較差的去蓋人工驗過的)",
-      q("#map-fix-go").hidden === true, q("#map-fix-go").outerHTML);
-    ok("成田那一顆 pin 還在(收起按鈕不等於失去座標)",
-      !!pins()["NRT 成田 T1"] && pins()["NRT 成田 T1"].via === "NRT 成田 T1",
-      pins()["NRT 成田 T1"]);
+    /* **這一條原本斷言的是「`pins["NRT 成田 T1"]` 在快取裡、而且帶 via」,而那是錯的。**
+       量過了:成田在地圖上**有** pin,但那個 key 從來沒進過 `tokyo5-pin3` ——
+       `pinOf` 的第二步直接問 `outsidePin()`,人工表現算現回,不寫快取。
+       (`pinFor` 才會寫,而它走的是另一條路。)
+
+       舊版之所以是綠的,是因為前面幾段的 `regeoItem()` 會把表的值寫回快取 ——
+       **那條路退場之後,這條斷言量的東西就不存在了**。照抄過來只會得到一個
+       紅燈,而它指的不是壞掉,是我問錯問題。
+       改成問看得見的那件事:**表有沒有接住它**,證據是地圖上那顆 pin + 零查詢。 */
+    var osmB11nrt = osm.length, askedB11nrt = asked.length;
+    q("#day-map-btn").click();
+    ok("成田那一筆在地圖上有 pin(人工表接住它,而且它在日本境內)",
+      await until(function () {
+        return [].some.call(d.querySelectorAll(".map .pin .lab"),
+          function (e) { return /抵達成田機場/.test(e.textContent); });
+      }),
+      [].map.call(d.querySelectorAll(".map .pin .lab"), function (e) { return e.textContent; }));
+    ok("而且接住它沒有發出任何查詢(表就是答案,不花錢)",
+      osm.length === osmB11nrt && asked.length === askedB11nrt,
+      { osm: osm.slice(osmB11nrt), geocode: asked.slice(askedB11nrt) });
 
     // 11c ---- 把 `富士` 從表裡拆掉(量測之後改的,見 table-vs-apis.js) ----
     /* `富士` 是子字串比對,所以「富士電視台」(台場)會被拉到河口湖 ——
@@ -685,17 +498,15 @@ function approxPins() {
     out.sayHere字面數 = (d.documentElement.outerHTML.match(/sayHere\(/g) || []).length;
 
     /* ======================================================================
-       14 ---- 說明和動作拆開:那句解釋對**所有人**顯示
+       14 ---- 唯讀的那三個人,在願望清單上看得到什麼、動得了什麼
        ======================================================================
-       Lulu 回報的是:那三個沒有通行碼的人點了一列,地圖開了、沒有東西被聚焦、
-       **而完全沒有任何解釋**。
+       **這一段原本的主旨是「那句解釋對所有人顯示」** —— 而那句解釋住在地圖上方
+       那條小字裡,整條在 mapfix-retire 那一輪退場了,所以主旨那一半沒有對象了。
+       留下來的是同樣重要、而且跟那條小字無關的另一半:**唯讀的人有沒有「改」、
+       有沒有被誤給「刪掉」、那一排會不會換行、以及他改完送出去的形狀對不對。**
 
        **這一段放在最後,因為它是單向的** —— `goOnline()` 之後回不到離線模式
-       (要 reload),而上面每一段量的都是離線那一套。
-
-       先量一次改之前的形狀:現在(離線、editable() 為 true)整條是看得到的。
-       那不是這一輪的成果,是**對照的起點** —— 沒有它,下面那幾條紅了也分不出
-       是「唯讀看不到」還是「整條都壞了」。 */
+       (要 reload),而上面每一段量的都是離線那一套。 */
     function wishRow(re) {
       return [].slice.call(d.querySelectorAll("#wish-list [data-wish]"))
         .filter(function (r) { return re.test(r.textContent); })[0];
@@ -734,11 +545,8 @@ function approxPins() {
 
     /* **這一條是下面那個「不見了」的對照組。** 現在還是離線(`editable()` 為 true),
        同一筆願望、同一顆按鈕**是畫得出來的** —— 沒有這一條,下面那條紅不紅都沒有意義。 */
-    wishRow(new RegExp(CLEAN)).click();
-    await until(function () { return bar().hidden === false; });
-    ok("【對照組】可編輯的時候,這一筆在地圖上**有**「再查一次」",
-      q("#map-fix-go").hidden === false, q("#map-fix-go").outerHTML);
-
+    /* 原本這裡有一條【對照組】:可編輯的時候這一筆在地圖上**有**「再查一次」,
+       用來讓下面「唯讀下它不見了」那條不是恆真。兩邊的對象都退場了,一起走。 */
     /* ---- 05 那張截圖上那個換行,在這裡先量一次當對照組 ----
        離線(`editable()` 為 true)的時候「改」和「刪掉」同時出現,`.wm` 裝不下,
        **那正是 05 變胖 51px 的原因**。先量它,下面那條「唯讀不換行」才不是恆真 ——
@@ -788,46 +596,17 @@ function approxPins() {
     ok("而且 editable() 真的是 false(加行程的按鈕被收起來了)",
       q("#add-stop-btn").hidden === true, q("#add-stop-btn").outerHTML.slice(0, 100));
 
-    // 14b ---- 唯讀 + 別人的願望:**以前一個字都沒有,現在有解釋** ----
-    /* 挑 w3(泡溫泉,chen_suchih 許的、沒挑地點):它同時踩到兩個以前會靜默的條件 ——
-       不是我的(`mineWish` false)、而且沒有 place(所以本來就不會上地圖)。
-       **這一筆正是 Lulu 描述的那個畫面。** */
-    var other = wishRow(/泡溫泉/);
-    ok("找得到別人許的那一筆(泡溫泉)", !!other, null);
-    other.click();
-    ok("唯讀 + 別人的願望 → **那一條出現了**(這一輪之前它是 hidden)",
-      await until(function () { return bar().hidden === false; }), bar().outerHTML.slice(0, 160));
-    ok("而且講的是為什麼它不在圖上,不是叫他去做什麼",
-      /泡溫泉.*還沒挑地點/.test(barText()), barText());
-    ok("唯讀 → 不畫「再查一次」(沒挑地點本來就不畫,這裡兩個理由都成立)",
-      q("#map-fix-go").hidden === true, q("#map-fix-go").outerHTML);
+    /* ---- 14b / 14c / 14d 退場(mapfix-retire) ----
+       這三小段量的是那條小字在唯讀下的行為:別人的願望有沒有解釋、自己的願望
+       說明在不在、「再查一次」搬走了沒、「對」的判準裡有沒有身分。
+       **那條小字和那兩顆鈕整條拆了,四件事都沒有對象。**
 
-    // 14c ---- 唯讀 + 自己的願望:說明在、「再查一次」搬走了 ----
-    /* **用的是上面那筆對照組驗過的願望**,不是 w2 —— 見上面那段註解。
-       同一筆、同一顆按鈕,唯一換掉的變數是 `editable()`。 */
+       要留下一句話給下一個人:Lulu 當初回報的是「唯讀的人點一列,地圖開了、
+       什麼解釋都沒有」。那個解釋現在**對所有人都不存在了** —— 不是退回舊行為,
+       是那條小字整條退場。使用者要知道「這一筆為什麼不在地圖上」,
+       靠的是送出當下那一槽(第 10 / 12 段量的那個),不是地圖上那一條。 */
     var mineRow = wishRow(new RegExp(CLEAN));
     ok("找得到自己許的那一筆(" + CLEAN + ")", !!mineRow, null);
-    var netB14 = asked.length + osm.length;
-    mineRow.click();
-    ok("唯讀 + 自己的願望 → 說明照樣在",
-      await until(function () { return bar().hidden === false && new RegExp(CLEAN).test(barText()); }), barText());
-    ok("**「再查一次」不在地圖上了** —— 它搬進「改我的願望」裡(對照組同一筆是畫得出來的)",
-      q("#map-fix-go").hidden === true, q("#map-fix-go").outerHTML);
-    q("#map-fix-go").click();          /* 硬戳 DOM 也不該送出去 */
-    await sleep(60);
-    ok("而且硬戳它一次查詢都不發",
-      asked.length + osm.length === netB14, { 之前: netB14, 之後: asked.length + osm.length });
-
-    // 14d ---- 「對」不分身分:它不打 API,作用域只有這台裝置 ----
-    /* **這一條要小心變成恆真。** 「對」只在 `asking`(有 ap、而且沒按過 ok)時才畫,
-       而 w2 的座標是 fixture 灌的、沒有 ap —— 也就是說它在唯讀下**本來就該是 hidden**,
-       量它等於什麼都沒量(工具陷阱 12 的形狀)。
-       所以這裡不去斷言「它出現了」,改成斷言**它的判準裡沒有身分** ——
-       做法是先問一個已經帶著 ok/ap 的那一筆(上面第 4 段按過「對」的淺草寺
-       已經不在了,因為 pull() 換掉了 state.stops),所以這裡誠實登記:
-       **唯讀下「對」有沒有畫出來,這支探針沒有量到**,理由寫在 wish-edit.md。 */
-    out.唯讀下的對按鈕 = "**沒測到東西** —— asking 要 ap 且未確認,而 pull() 之後" +
-      "手上沒有這種資料;不要把 14c 的綠燈讀成「對」也驗過了";
 
     // 14e ---- 「改」在唯讀下還在,「刪掉」不在 ----
     ok("唯讀 → 自己那一筆仍然有「改」(它的判準是 mineWish,不是通行碼)",

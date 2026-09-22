@@ -260,12 +260,6 @@
     #map-sheet[data-mode="wish"] #lay-plan[aria-pressed="true"]::before{background:var(--ink-2); border-color:var(--ink-2);}
     .lay:hover{background:var(--surface-2);}
 
-    /* 「再查一次」那一條。只有在清單上點過某一列(= 使用者正在看某一個點)之後才出現 ——
-       線上查詢不確定的時候不會說,能看出「這顆 pin 不對」的是人,不是程式。
-       預設 hidden,所以沒點過任何一列的地圖畫面一個像素都沒變。 */
-    .mapfix{display:flex; align-items:center; gap:8px; margin-bottom:9px;}
-    .mf-t{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-      font-family:var(--font-sign); font-size:11.5px; color:var(--muted);}
     /* 只查到大概範圍的那種 pin:虛線圈 + 標籤前面的「約 」。
        它跟精確的 pin 看起來一模一樣,那正是要擋的事 —— 標示留在 pin 自己身上,
        不是只留在一則 2.8 秒就消失的提示裡。 */
@@ -936,12 +930,6 @@
     <div class="maplayers">
       <button type="button" class="lay" id="lay-plan" data-layer="plan" aria-pressed="true">已排行程</button>
       <button type="button" class="lay" id="lay-wish" data-layer="wish" aria-pressed="true">大家的許願</button>
-    </div>
-    <!-- 點過清單某一列之後才出現:那一筆標錯了、或根本沒標上去,從這裡再查一次 -->
-    <div class="mapfix" id="map-fix" hidden>
-      <span class="mf-t" id="map-fix-t"></span>
-      <button type="button" class="btn btn-sm" id="map-fix-ok" hidden>對</button>
-      <button type="button" class="btn btn-sm" id="map-fix-go">再查一次</button>
     </div>
     <div class="map" id="map"></div>
   </div>
@@ -1983,30 +1971,22 @@
     el("map-sheet").dataset.mode = sheetMode || "";
   }
 
-  /* ---- 地圖上那一條 ----
-     它只在使用者**點過清單某一列**之後出現 —— 那時候他正盯著某一個點,
-     不是這裡標錯了,就是這一筆根本沒標上去,兩種都是他才判斷得出來的事。
-     沒點過任何一列時它是 hidden,所以預設的地圖畫面完全沒變。
+  /* ---- 地圖上那一條(已退場) ----
+     它是地圖上方那一句小字,加上「對」和「再查一次」兩顆鈕。
+     Lulu 自己提的:「『晴空塔』不在這裡?　→　已經不會有這種說明小字了吧　怎麼還出現」。
 
-     **說明和動作是兩件事,而以前它們綁在一起。**
-     整條以前只在 `editable() || mineWish()` 才畫,理由是上面那顆「再查一次」要錢。
-     結果:沒有通行碼的人點一列(任何行程、或別人的願望),地圖開了、
-     沒有東西被聚焦、**而完全沒有任何解釋** —— 他分不出「沒挑地點」「查不到」
-     「標到日本以外」是哪一種,而那三句話早就算好了、就在記憶體裡。
-     Lulu 的決定:**那句解釋對所有人顯示。**
+     **退場的理由是前提消失了。** 「不在這裡?」預設的是「程式自己猜了一個位置,
+     可能猜錯」—— 而 `merge-place-field` 之後程式不再自己猜:座標是人從候選清單裡
+     親手挑的,存下來標 `by:"pick"`。對一個親手挑的點問「不在這裡?」,
+     問的是一個他剛剛才回答完的問題。
 
-     拆開之後的判準:
-       說明(`#map-fix-t`)  讀的是 `item.place/title` 和 `pinOf(item)`,
-                            **零查詢零費用**,所以所有人都畫。
-       「對」(`map-fix-ok`) `confirmPin()` 只改本機那一份快取的 `ok`,不打任何 API,
-                            而它要退場的虛線圈本來就是每台裝置各自的 ——
-                            **作用域一致,就沒有理由分兩種人**。看得到一個自己
-                            弄不掉的標記,那個標記很快就沒有人讀了。
-       「再查一次」(`go`)   要錢,維持有條件 —— 而且這一輪**收窄成只有 `editable()`**:
-                            願望那一半搬進「改我的願望」那個編輯流程了(見 openWishEdit),
-                            在那裡它被限制在「有意圖的、自己的那一筆」上。
-                            **這是一個入口的搬家,所以舊的那個要真的不見。** */
-  let fixItem = null, fixKey = null;
+     **要重標的路沒有斷**,而且比那顆按鈕好:四張表單都有搜尋鈕
+     (`sf-title`／`wf-title`／`se-title`／`we-title`),改地點欄 → 搜尋 → 重新挑一次,
+     做的是同一件事,而且結果會標成親手挑的,下次開場對帳會跳過它。
+
+     一起走的還有 `paintFix()`、`regeo()`、`regeoItem()`、`confirmPin()` ——
+     **四支的呼叫端在這一條拆掉之後全部歸零**(查過才刪)。
+     `outsidePin()` 和 `savePins()` 另有活著的呼叫端,留著。 */
   /* **自己許的願望,自己可以修。** 判斷用的是願望清單上那個 `.mine` 的同一個判準
      (`w.by === myName()`)。行程沒有「誰加的」這個欄位(stopOut 裡沒有,Notion 那邊
      也沒有,舊資料更補不回來)—— 所以行程那一半維持原樣:要通行碼。
@@ -2024,42 +2004,6 @@
      `mineWish()` 本身**留著不動**:`.mine` 那個紫框問的是「這是誰許的」,
      那是一個事實,跟現在能不能寫沒有關係。 */
   const mayEditWish = w => mineWish(w) && !onSnapshot();
-  function paintFix(item, key, found) {
-    fixItem = item || null;
-    fixKey = key || null;
-    const bar = el("map-fix");
-    /* **顯示的判準只剩「有沒有點過某一列」。** 誰在看不影響說明畫不畫。 */
-    if (!fixItem) { bar.hidden = true; return; }
-    const what = fixItem.place || fixItem.title;
-    const at = pinOf(fixItem);
-    /* 只查到大概範圍、而且還**沒有人說過「對」**的時候才問。
-       精確的結果不問 —— 機器有信心的時候反過來讓人背書,只會把確認變成例行公事,
-       然後沒有人真的在看。那正是這個 repo 一路在拆的那種「還在響但沒人讀」的檢查。 */
-    const asking = !!at && !!at.ap && !at.ok;
-    /* `via` 只有「地點欄答不出來、由標題比對到人工表」那一步會帶上,而且它帶的是
-       比對到的那個字串 —— 所以這裡講得出「是哪幾個字命中的」,而不是印出
-       地點欄那句航班備註。 */
-    const manual = !!at && !!at.via;
-    el("map-fix-ok").hidden = !asking;
-    /* 什麼時候不畫「再查一次」:
-       - 沒填地點:按了只是再問一次同一個錯問題(規則一),而且那一問要錢
-       - 人工表就是答案:再查只會拿一個比較差的結果去蓋掉一個人工驗過的座標。
-         (**注意這跟 regeoItem 先查表不衝突**:那條路要處理的是
-          `pins[place]` 已經有一個線上錯座標、表還沒接手的那一種,按鈕在那種
-          狀態下是畫得出來的。) */
-    /* `!editable()` 是這一輪加的:沒有通行碼的人改從「改我的願望」那條路進去。
-       行程那一半沒有搬家的地方(行程沒有「誰加的」,編輯行程本來就要通行碼),
-       所以這顆按鈕留著,只是不再對唯讀的人畫。 */
-    el("map-fix-go").hidden = !editable() || !fixItem.place || manual;
-    el("map-fix-t").textContent =
-        manual && !found ? "「" + at.via + "」在人工確認過的表裡,但不在日本境內 —— 這張圖只畫日本的點"
-      : manual ? "「" + at.via + "」用的是人工確認過的座標"
-      : !fixItem.place ? "「" + what + "」還沒挑地點,不會出現在地圖上"
-      : asking ? "「" + what + "」這個位置對嗎?"
-      : found ? "「" + what + "」不在這裡?"
-      : "「" + what + "」沒標上去";
-    bar.hidden = false;
-  }
 
   async function loadSheetMap(force) {
     if (el("map-sheet").hidden || !sheetMode) { sheetKey = null; return; }
@@ -2134,8 +2078,8 @@
     { key: ["首爾", "서울", "韓國"], cc: "kr", view: "126.7,37.75,127.25,37.35" },
     { key: ["曼谷", "泰國"], cc: "th", view: "100.3,13.95,100.75,13.55" },
     /* **這裡曾經加過一條台灣,然後撤掉了。** 量到「桃園」用 `cc=jp` 去問會拿到
-       1343 km 外的東西(三家都是),看起來該補 —— 但 `regionFor()` 的兩個呼叫點
-       (`pinFor` 和 `regeo`)**都在查表之後**,而台灣那條的 key(桃園／TPE)
+       1343 km 外的東西(三家都是),看起來該補 —— 但 `pinFor` 那個呼叫點
+       (當年另一個是 `regeo`,已隨 `#map-fix` 退場)**在查表之後**,而台灣那條的 key(桃園／TPE)
        跟人工表的 key 一模一樣。會選到它的字串,表一定先答掉了:**那是死碼。**
        那筆量測量的是腳本裡獨立重現的 `regionFor`,不是 app 走得到的路。
        真要讓它有用,key 得放寬到「台北」「台灣」那種表答不出來的字 ——
@@ -2217,7 +2161,8 @@
     const known = outsideHit(place);
     if (known) {
       /* **`via` 要一起存。** 它是「這顆座標來自人工表」的唯一標記,而介面靠它
-         決定講哪一句話(`paintFix` 的 `manual`)、以及要不要畫「再查一次」。
+         決定講哪一句話 —— `#map-fix` 那一條退場之後,讀它的是 `checkPlace()`
+         裡「不在日本境內」那一句(講得出是哪幾個字命中的,而不是印出地點欄那句航班備註)。
          以前只掛在 outsidePin() 的回傳值上,一存進快取就掉 —— 於是
          **凡是關鍵字寫在地點欄的那幾筆(TPE 桃園 T1、NRT 成田 T1、箱根…),
          人工表那一句話永遠出不來**,只有標題命中那條路看得到。 */
@@ -2589,91 +2534,12 @@
     runSeek(t.id);
   });
 
-  /* ---- 再查一次 ----
-     上面那個線上查詢**不確定的時候不會說**:「淺草寺」和「泡溫泉」回的是同一份格式,
-     一個對、一個在雲南,差三千公里。沒有信心值,pinFor() 無從判斷第二筆是錯的,
-     使用者看到的是一顆很有自信的錯 pin。
-
-     程式偵測不到這件事,但**使用者知道** —— 打「泡溫泉」的人知道那不是地名,
-     看到 pin 跑到雲南的人也知道不對。所以這條退路是**人按下去才走的**,
-     偵測器是人。走的是自己的 API(金鑰不能放前端,理由跟 Notion token 一樣),
-     那一頭每筆都帶精度,而且非地名會明確說查無。 */
-  async function regeo(text, item) {
-    /* 沒有通行碼的人只走得通「自己許的願望」那條窄路,所以要帶上是哪一筆。
-       伺服器核對的是「那一筆願望的地點欄就是這個字串」—— 帶錯、亂帶都只會被擋掉,
-       而且它驗的是**被問的是什麼**,不是**誰在問**(身分伺服器驗不了)。 */
-    const w = item && item.by && item.id ? "&wish=" + encodeURIComponent(item.id) : "";
-    return api("?resource=geocode&q=" + encodeURIComponent(text) +
-      "&cc=" + encodeURIComponent(regionFor(text).cc) + w);
-  }
-
-  /* 一筆行程／願望的兩個候選字串一起重查。
-     **先把兩個都設成 null 再寫回查到的那個** —— 不先清的話會出現
-     「地點欄留著舊的錯座標、標題欄查到新的對座標」,而 pinOf 先看地點欄,
-     使用者按了修正卻什麼都沒變。用 null 不是 delete:null 在這份快取裡
-     本來就有意思(查過了,沒有),delete 會讓下一次重畫又跑去問線上查詢。 */
-  async function regeoItem(item) {
-    /* **先查人工確認過的表,而且兩個欄位都比。** 以前這條路根本沒查它 ——
-       按下去只會拿線上結果蓋掉,錯得更確定,而且每按一次都要錢。
-       命中就直接用:那是人工驗過的座標,比任何線上服務準(這張表存在的理由
-       就是線上查詢對這些地方最不準),而且**不打任何 API**。 */
-    const kp = outsidePin(item.place), kt = kp ? null : outsidePin(item.title);
-    if (kp || kt) {
-      const known = kp || kt;
-      const old = item.place ? pins[item.place] : null;
-      /* 快取要跟著動,不然 pinOf 先看 pins[place],按了畫面不會變(跟下面
-         「先把候選清成 null」同一個理由)。
-         地點欄命中 → 把表的值寫回去,換掉任何線上蓋上來的錯座標;
-         標題命中   → 清成 null,讓 pinOf 掉到標題那一步。
-         `null` 不是 delete:null 在這份快取裡本來就有意思(查過了,沒有)。 */
-      if (item.place) { pins[item.place] = kp ? { la: kp.la, lo: kp.lo, via: kp.via } : null; savePins(); }
-      return { at: known, area: false, manual: true, same: !!old && km(old, known) < 0.05 };
-    }
-    /* 線上那一端的候選只有地點欄(規則一)。以前標題也是候選,而那正是
-       「拿做什麼去查在哪」—— 退路那一端比較準,但它回答的還是同一個錯問題。 */
-    const tries = [item.place].filter(Boolean);
-    if (!tries.length) return null;
-    /* **查完才動快取。** 中途丟例外(沒設金鑰、額度用完、連不上)就原封不動退出 ——
-       不然一次失敗的重查會把使用者本來好好的那顆 pin 清掉。 */
-    let hit = null;
-    for (const t of tries) {
-      const r = await regeo(t, item);
-      if (r && r.found) { hit = { key: t, r: r }; break; }
-    }
-    const old = hit ? (pins[hit.key] || null) : null;
-    tries.forEach(t => { pins[t] = null; });
-    let out = null;
-    if (hit) {
-      const at = { la: hit.r.la, lo: hit.r.lo };
-      if (hit.r.precision !== "exact") at.ap = 1;   /* 只查到行政區的概略中心 */
-      const same = !!old && km(old, at) < 0.05;
-      /* 已經被人按過「對」的那一筆,再查一次如果回到同一個座標,就把那個確認
-         帶過來。使用者當初確認的是**這個座標**,不是這個名字 ——
-         對一顆他已經看過的 pin 再問一次「這個位置對嗎」是純噪音,
-         而噪音多了就沒有人看那一條了。 */
-      if (same && old.ok) at.ok = 1;
-      pins[hit.key] = at;
-      out = { at: at, area: !!at.ap && !at.ok, same: same };
-    }
-    savePins();
-    return out;
-  }
-
-  /* 「對」= 使用者說「我看了,它是對的」。**只動本機那份快取,不打任何 API。**
-     機器說不確定的時候要標出來(虛線圈),人說確定的時候就要讓那個標記退場 ——
-     不然它會一直在,然後所有人都不再看它,而這一整條路的價值就是那個標記。
-     存在哪:同一個 `tokyo5-pin3`、同一筆,多一個 `ok`。
-     **不開第二份快取**,理由跟上一輪一樣:一個 key 一個答案。
-     **不回存 Notion**:那是另一件事的規模(要動資料表)。代價是五個人各按各的 ——
-     但那個代價跟它要退場的那個標記是同一個範圍(虛線圈本來就只在按過
-     「再查一次」的那台裝置上),所以沒有多欠什麼。 */
-  function confirmPin(item) {
-    const at = item && item.place && pins[item.place];
-    if (!at) return false;
-    at.ok = 1;
-    savePins();
-    return true;
-  }
+  /* ---- 再查一次(已退場) ----
+     `regeo()` / `regeoItem()` / `confirmPin()` 跟著 `#map-fix` 那一條一起拆了。
+     退場的理由不是它們壞掉,是**它們回答的問題已經被回答過**:
+     `merge-place-field` 之後座標是人從候選清單裡親手挑的(存下來標 `by:"pick"`),
+     對一個親手挑的點問「不在這裡?」,問的是一個人剛剛才回答完的問題。
+     要重標的路還在,而且更好:改地點欄 → 搜尋 → 重新挑一次。 */
 
   /* 日本境內。出發日的桃園機場查得到,但一張圖同時要裝下台灣和成田,就得縮到
      看得見鹿兒島,兩個點都擠到邊上 —— 那張圖排行程用不到,所以不標。 */
@@ -3355,7 +3221,6 @@
     const b = ev.target.closest("[data-day]");
     if (!b) return;
     state.day = b.dataset.day;
-    paintFix(null);   /* 換了一天,剛才選定的那一列已經不在畫面上了 */
     clearHere();      /* 那句話講的是剛才那一筆,換了一天它就沒有對象了 */
     renderDays(); renderRoute();
   });
@@ -3676,7 +3541,6 @@
     openMapSheet("day");
     await loadSheetMap(true);
     const at = pinOf(item);
-    paintFix(item, "d" + (n - 1), !!at && inJapan(at));
     if (!at || !inJapan(at)) { flash("「" + item.title + "」在地圖上沒有位置"); return; }
     if (focusPin(el("map"), at, "d" + (n - 1))) {
       [].forEach.call(el("route").children, r => r.classList.toggle("on", r === row));
@@ -3836,7 +3700,8 @@
                              在一份凍結的副本上開一個花錢的動作,是 `wish-edit`
                              那一輪剛關上的門。
 
-     (`regeoItem()` 沒有動 —— 地圖那顆「再查一次」還在用它,見下面那一則。) */
+     (`regeoItem()` 後來連同 `#map-fix` 那一條一起退場了 —— 那一輪之後
+      它唯一的呼叫端就是地圖上那顆「再查一次」,按鈕拆掉它就沒有人叫了。) */
   function openWishEdit(id) {
     const w = state.wishes.find(x => x.id === id);
     /* 按鈕本來就只畫在自己那幾筆上,這層是防手動戳 DOM(跟 mayEdit() 同一個用意)。
@@ -3902,7 +3767,6 @@
     openMapSheet("wish");
     await loadSheetMap(true);
     const at = pinOf(list[i]);
-    paintFix(list[i], "w" + i, !!at && inJapan(at));
     if (!at || !inJapan(at)) { flash("「" + list[i].title + "」在地圖上沒有位置"); return; }
     if (focusPin(el("map"), at, "w" + i)) {
       [].forEach.call(el("wish-list").querySelectorAll("[data-wish]"),
@@ -4115,13 +3979,9 @@
     document.body.classList.remove("drawer-open");
     sheetKey = null;
     sheetMode = null;
-    paintFix(null);
   }
   /* mode 只有 "day" 和 "wish"。換模式等於換內容,得重畫。 */
   function openMapSheet(mode) {
-    /* 每次進來先收掉 —— 從 DAY 或許願那顆按鈕進來時沒有選定任何一列。
-       點某一列進來的那條路會在 loadSheetMap 之後自己再畫回去。 */
-    paintFix(null);
     if (sheetMode !== mode) sheetKey = null;
     sheetMode = mode;
     syncSheetChrome();
@@ -4203,50 +4063,6 @@
     /* 指標離開瀏覽器視窗之後放開,`pointerup` 不一定回得來 —— 補這一條收尾。 */
     window.addEventListener("blur", stop);
   })();
-  /* 使用者說「不對」的那一下。這是整條退路唯一的觸發點 ——
-     沒有人按,就一次查詢都不會發出去(那一端每查一次都要錢)。 */
-  /* 「對」:不打 API、不需要通行碼(它不花錢),按完那一條就不再問這一筆。
-     **沒有「不對／刪掉這顆 pin」那種按鈕** —— 「不對」就是再按一次「再查一次」。
-     一個只會讓東西消失的按鈕,比一個會讓它重試的按鈕危險。 */
-  el("map-fix-ok").addEventListener("click", async () => {
-    const item = fixItem, key = fixKey;
-    if (!item || !confirmPin(item)) return;
-    await loadSheetMap(true);
-    const at = pinOf(item);
-    if (at) focusPin(el("map"), at, key);
-    paintFix(item, key, !!at && inJapan(at));
-    flash("「" + (item.place || item.title) + "」記下來了 —— 這個位置以後不再問");
-  });
-  el("map-fix-go").addEventListener("click", async () => {
-    const item = fixItem, key = fixKey;
-    if (!item || !item.place) return;   /* 沒填地點的不查(規則一),按鈕本來也沒畫 */
-    const btn = el("map-fix-go");
-    const what = item.place || item.title;
-    btn.disabled = true;
-    el("map-fix-t").textContent = "「" + what + "」查詢中…";
-    try {
-      const hit = await regeoItem(item);
-      /* 誠實講結果。還是找不到就說還是找不到,不要假裝有東西。 */
-      let msg;
-      if (!hit) msg = "「" + what + "」還是找不到 —— 它可能不是一個地名,地圖上不會顯示";
-      /* 人工表命中:沒有打任何 API,所以也要講清楚它為什麼不用再查。 */
-      else if (hit.manual) msg = "「" + hit.at.via + "」用的是人工確認過的座標" +
-        (inJapan(hit.at) ? " —— 這比線上查得到的準,不用再查" : ",它不在日本境內,這張圖只畫日本的點");
-      else if (!inJapan(hit.at)) msg = "「" + what + "」查到的位置不在日本境內,地圖上不會顯示";
-      else if (hit.area) msg = "「" + what + "」只查到大概的範圍,標的是那一區的中心 —— 地名打完整會更準";
-      else if (hit.same) msg = "「" + what + "」再查一次還是同一個位置";
-      else msg = "「" + what + "」重新標好了";
-      await loadSheetMap(true);
-      if (hit && inJapan(hit.at)) focusPin(el("map"), hit.at, key);
-      paintFix(item, key, !!hit && inJapan(hit.at));
-      flash(msg);
-    } catch (e) {
-      paintFix(item, key, !!pinOf(item));
-      flash("再查一次沒成功:" + e.message);
-    } finally {
-      btn.disabled = false;
-    }
-  });
   el("map-sheet-x").addEventListener("click", closeMapSheet);
   /* 沒有背景那層可以點了(背景要留給使用者操作),所以收起來只剩 ✕ 和 Esc */
   document.addEventListener("keydown", ev => {
