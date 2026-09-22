@@ -233,13 +233,45 @@
        所以在許願裡按「許願地點」看得到那張表。地圖比對話框高,**那正是
        手機上開對話框前要先把地圖收起來的理由** —— 順序在這裡,不在那段程式裡。 */
     @media (max-width:1279px){
-      .wishbox[open]{position:fixed; inset:0; z-index:55; margin:0; border:0; border-radius:0;
+      /* **不鑽到地圖底下。** 第一版寫 `inset:0` 蓋滿整個視窗,於是被地圖佔走的那一塊
+         裡面的按鈕看得到卻按不到 —— 而「看得到但按不到」比「看不到」更糟,
+         使用者會一直按。
+         手機上地圖是底部 sheet,所以讓開的是**高度**(`--maph`,由 JS 量了寫上來);
+         窄桌機上它是右邊的抽屜,讓開的是**寬度**(`--drawer`)—— 見下面那條。
+         兩邊是同一句話:地圖佔走的不碰。 */
+      .wishbox[open]{position:fixed; left:0; right:0; top:0; bottom:var(--maph,0px);
+        z-index:55; margin:0; border:0; border-radius:0;
         overflow-y:auto; overscroll-behavior:contain; background:var(--surface);
         animation:wish-up .18s ease-out;}
       .wishbox[open] > summary{position:sticky; top:0; z-index:1; background:var(--surface);
         border-bottom:1px solid var(--line);}
       /* 底下留一段:滿版之後最後一顆按鈕會頂到螢幕邊,手機還有下巴。 */
       .wishbox[open] > *:last-child{margin-bottom:calc(18px + env(safe-area-inset-bottom,0px));}
+    }
+    /* ---- 手機:收起來的時候那條標頭釘在畫面底部 ----
+       **許願是「隨時想到就丟一筆」的東西**,而它以前住在行程列表的最下面 ——
+       行程多的那幾天要捲過整天才找得到它,於是想到的時候最省事的做法變成「算了」。
+       釘在底部之後它一直在手邊,而且那條就順便報幾個願望。
+
+       只在真手機(≤640)釘。窄桌機還有高度,把一條東西長期壓在畫面底下
+       是拿走可用空間去換一個那裡並不缺的入口。
+
+       z-index 54:比許願 sheet(55)低一階 —— 展開之後那條標頭是 sheet 自己的
+       黏頭,不需要再有一條浮在外面。比地圖(70)低很多,所以**地圖開著會蓋住它**,
+       那跟「地圖蓋在許願上面」是同一條規則,不是例外。 */
+    @media (max-width:640px){
+      .wishbox:not([open]){margin:0; border:0; background:none;}
+      .wishbox:not([open]) > summary{position:fixed; left:0; right:0; bottom:0; z-index:54;
+        background:var(--surface); border-top:1px solid var(--line); border-radius:0;
+        padding-bottom:calc(13px + env(safe-area-inset-bottom,0px));
+        box-shadow:0 -2px 10px rgba(20,26,45,.07);}
+      /* 底下讓出那條的高度,不然行程的最後一列永遠被壓著。
+         **高度是量出來的**(`--wishbar`):字級和安全區都會改變它,寫死會在某支手機上差幾 px。 */
+      body{padding-bottom:var(--wishbar,0px);}
+    }
+    /* 窄桌機(641–1279):地圖是右邊的抽屜,所以讓開寬度,高度整條到底。 */
+    @media (min-width:641px) and (max-width:1279px){
+      body.drawer-open .wishbox[open]{right:var(--drawer,440px); bottom:0;}
     }
     @keyframes wish-up{from{transform:translateY(18px); opacity:.5;} to{transform:none; opacity:1;}}
     @media (prefers-reduced-motion:reduce){ .wishbox[open]{animation:none;} }
@@ -748,34 +780,6 @@
     <div class="countdown" id="countdown"></div>
   </header>
 
-  <details class="board" id="board">
-    <summary class="board-head">
-      <span class="bh-name">Peach Aviation · PTETF3</span>
-      <span class="bh-brief">MM626 10/03 → MM631 10/08</span>
-      <span class="live">5 PAX</span>
-      <svg class="i bh-caret" aria-hidden="true"><use href="#i-chevron-down"></use></svg>
-    </summary>
-    <div class="leg">
-      <span class="leg-tag">去程 OUT</span><span></span><span class="leg-no">MM626 · 10/03 SAT</span>
-      <div class="leg-route">
-        <div class="port"><span class="code">TPE</span><span class="sub">台北 桃園 T1</span><span class="time">10:50</span></div>
-        <div class="dash"><svg class="i" aria-hidden="true"><use href="#i-plane"></use></svg></div>
-        <div class="port"><span class="code">NRT</span><span class="sub">東京 成田 T1</span><span class="time">15:20</span></div>
-      </div>
-      <div class="seatmap" id="seat-out"></div>
-      <div class="seats">託運 1 件／人 · 手提 2 件 7kg</div>
-    </div>
-    <div class="leg">
-      <span class="leg-tag">回程 IN</span><span></span><span class="leg-no">MM631 · 10/08 THU</span>
-      <div class="leg-route">
-        <div class="port"><span class="code">NRT</span><span class="sub">東京 成田 T1</span><span class="time">21:50</span></div>
-        <div class="dash"><svg class="i" aria-hidden="true"><use href="#i-plane"></use></svg></div>
-        <div class="port"><span class="code">TPE</span><span class="sub">台北 桃園 T1</span><span class="time">00:40 <span class="next">+1</span></span></div>
-      </div>
-      <div class="seatmap" id="seat-back"></div>
-      <div class="seats">10/09 FRI 凌晨抵台 · <span id="seat-swap"></span></div>
-    </div>
-  </details>
 
   <div class="cloudbar" id="cloudbar" hidden>
     <span class="led"></span>
@@ -785,6 +789,7 @@
 
   <nav class="tabs" role="tablist" aria-label="頁面切換">
     <button class="tab" role="tab" id="tab-plan" data-tab="plan" aria-selected="true" aria-controls="panel-plan"><svg class="i" aria-hidden="true"><use href="#i-route"></use></svg>行程</button>
+    <button class="tab" role="tab" id="tab-fly" data-tab="fly" aria-selected="false" aria-controls="panel-fly"><svg class="i" aria-hidden="true"><use href="#i-plane"></use></svg>搭機</button>
     <button class="tab" role="tab" id="tab-cost" data-tab="cost" aria-selected="false" aria-controls="panel-cost"><svg class="i" aria-hidden="true"><use href="#i-receipt"></use></svg>花費<span class="n" id="tab-cost-n"></span></button>
     <button class="tab" role="tab" id="tab-split" data-tab="split" aria-selected="false" aria-controls="panel-split"><svg class="i" aria-hidden="true"><use href="#i-scale-balanced"></use></svg>分帳</button>
   </nav>
@@ -801,20 +806,6 @@
         <button class="btn btn-sm" id="add-stop-btn" type="button"><svg class="i" aria-hidden="true"><use href="#i-plus"></use></svg>加行程</button>
         <button class="iconbtn" id="day-map-btn" type="button" aria-label="這天的地圖" title="這天的地圖"><svg class="i" aria-hidden="true"><use href="#i-route"></use></svg></button>
       </div>
-      <form class="form" id="stop-form" hidden>
-        <div class="grid2">
-          <div class="fld"><label class="rm-label" for="sf-time">時間</label><input class="rm-input" type="time" id="sf-time" required></div>
-          <div class="fld"><label class="rm-label" for="sf-title">去哪／做什麼</label>
-            <div class="seek"><input class="rm-input" type="text" id="sf-title" placeholder="地名/車站/建築物/活動名等" required>
-            <button type="button" class="btn btn-sm" data-seek="sf-title">搜尋</button></div>
-            <div class="seek-out" id="sf-title-out" hidden></div></div>
-        </div>
-        <div class="fld"><label class="rm-label" for="sf-note">備註</label><input class="rm-input" type="text" id="sf-note" placeholder="要先線上預約"></div>
-        <div class="form-ops">
-          <button type="button" class="btn btn-ghost btn-sm" id="sf-cancel">取消</button>
-          <button type="submit" class="btn btn-main btn-sm">加入這天</button>
-        </div>
-      </form>
       <!-- 送出之後那句話講在這裡,不講在頁尾。表單送出就收起來了,所以槽在表單**外面**
            才活得過那一下。預設 hidden、外層不掛任何有 display 的 class,
            所以 08 / 09 / 10 / 11 四張截圖一個像素都不會動。 -->
@@ -838,6 +829,40 @@
         </button>
       </details>
       </div><!-- /#plan-cols -->
+    </section>
+
+    <!-- 機票從行程頁搬到自己的分頁。**它不是「那一天要做的事」** ——
+         航班、座位、行李額度是整趟不變的東西,壓在每天的行程上面只是把當天的事推下去。
+         搬過來之後預設攤開:一整頁只放一張收起來的卡沒有意義。 -->
+    <section class="panel" id="panel-fly" role="tabpanel" aria-labelledby="tab-fly" hidden>
+    <details class="board" id="board" open>
+      <summary class="board-head">
+        <span class="bh-name">Peach Aviation · PTETF3</span>
+        <span class="bh-brief">MM626 10/03 → MM631 10/08</span>
+        <span class="live">5 PAX</span>
+        <svg class="i bh-caret" aria-hidden="true"><use href="#i-chevron-down"></use></svg>
+      </summary>
+      <div class="leg">
+        <span class="leg-tag">去程 OUT</span><span></span><span class="leg-no">MM626 · 10/03 SAT</span>
+        <div class="leg-route">
+          <div class="port"><span class="code">TPE</span><span class="sub">台北 桃園 T1</span><span class="time">10:50</span></div>
+          <div class="dash"><svg class="i" aria-hidden="true"><use href="#i-plane"></use></svg></div>
+          <div class="port"><span class="code">NRT</span><span class="sub">東京 成田 T1</span><span class="time">15:20</span></div>
+        </div>
+        <div class="seatmap" id="seat-out"></div>
+        <div class="seats">託運 1 件／人 · 手提 2 件 7kg</div>
+      </div>
+      <div class="leg">
+        <span class="leg-tag">回程 IN</span><span></span><span class="leg-no">MM631 · 10/08 THU</span>
+        <div class="leg-route">
+          <div class="port"><span class="code">NRT</span><span class="sub">東京 成田 T1</span><span class="time">21:50</span></div>
+          <div class="dash"><svg class="i" aria-hidden="true"><use href="#i-plane"></use></svg></div>
+          <div class="port"><span class="code">TPE</span><span class="sub">台北 桃園 T1</span><span class="time">00:40 <span class="next">+1</span></span></div>
+        </div>
+        <div class="seatmap" id="seat-back"></div>
+        <div class="seats">10/09 FRI 凌晨抵台 · <span id="seat-swap"></span></div>
+      </div>
+    </details>
     </section>
 
     <section class="panel" id="panel-cost" role="tabpanel" aria-labelledby="tab-cost" hidden>
@@ -970,6 +995,26 @@
      外觀跟「改我的願望」同一套(`.overlay` + `.signin`),因為它們是同一件事的兩半。
      **訊息槽 `#wish-msg` 留在清單那邊沒有跟過來**:它講的是「剛剛存進去的那一筆
      為什麼不在地圖上」,那句話要在清單旁邊被讀到,不是在一個馬上會關掉的對話框裡。 -->
+<!-- 加一筆行程。**跟許願那張同一套**:兩張都是「在清單上加一筆」,而清單在手機上
+     可能正被地圖或許願 sheet 蓋著 —— 就地展開的表單會展開在一個看不到的地方。
+     `#stop-msg` 一樣留在清單那邊沒有跟過來:它講的是「剛存進去的那一筆為什麼
+     不在地圖上」,要貼著清單被讀到。 -->
+<div class="overlay" id="stop-add-overlay" hidden>
+  <form class="signin" id="stop-form">
+    <h2>加一筆行程</h2>
+    <div class="fld"><label class="rm-label" for="sf-time">時間</label><input class="rm-input" type="time" id="sf-time" required></div>
+    <div class="fld"><label class="rm-label" for="sf-title">去哪／做什麼</label>
+      <div class="seek"><input class="rm-input" type="text" id="sf-title" placeholder="地名/車站/建築物/活動名等" required>
+      <button type="button" class="btn btn-sm" data-seek="sf-title">搜尋</button></div>
+      <div class="seek-out" id="sf-title-out" hidden></div></div>
+    <div class="fld"><label class="rm-label" for="sf-note">備註</label><input class="rm-input" type="text" id="sf-note" placeholder="要先線上預約"></div>
+    <div class="ops">
+      <button type="submit" class="btn btn-main">加入這天</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="sf-cancel">取消</button>
+    </div>
+  </form>
+</div>
+
 <div class="overlay" id="wish-add-overlay" hidden>
   <form class="signin" id="wish-form">
     <h2>許一個願望</h2>
@@ -3390,7 +3435,7 @@
 
   function switchTab(name) {
     state.tab = name;
-    ["plan", "cost", "split"].forEach(t => {
+    ["plan", "fly", "cost", "split"].forEach(t => {
       el("tab-" + t).setAttribute("aria-selected", String(t === name));
       el("panel-" + t).hidden = t !== name;
     });
@@ -3404,11 +3449,48 @@
     }
     syncLayout();
     syncWishLock();
+    syncWishBar();
   }
   document.querySelectorAll(".tab").forEach(b => b.addEventListener("click", () => switchTab(b.dataset.tab)));
   /* 使用者在寬桌機上還是點得到那個 summary。點了就再開回去 ——
      **不要用 `preventDefault`**:`<details>` 的開合不是靠 click 的預設行為,
      攔了也沒用,而 toggle 事件是它真的變了之後才發的。 */
+  /* **地圖在手機上佔掉多少高度,量了寫進 `--maph`。**
+     許願 sheet 靠它決定自己到哪裡為止 —— CSS 算不出另一個 fixed 元素多高,
+     所以這件事只能量。桌機那邊不用:抽屜的寬度本來就是 `--drawer`,CSS 讀得到。
+
+     **每一個會改變它的地方都要叫一次**:開地圖、關地圖、拖握把、轉螢幕。
+     漏掉任何一個,許願 sheet 的下緣就會停在一個**上一刻**的位置,
+     而那看起來像「它自己算錯」,不像「有人忘了通知它」。 */
+  /* 底部那條佔掉多少高度。**開著的時候是 0** —— 那時候它是 sheet 的黏頭,
+     不再浮在外面,底下也就不必讓位。 */
+  function syncWishBar() {
+    const wb = el("wishbox"), sum = wb && wb.querySelector("summary");
+    const h = (!wb || wb.open || window.innerWidth > 640 || !sum)
+      ? 0 : Math.round(sum.getBoundingClientRect().height);
+    document.documentElement.style.setProperty("--wishbar", h + "px");
+  }
+
+  /* **量一次不夠,要盯著它。** 第一版在開地圖的下一幀量,量到 535 而它其實是 553 ——
+     那一幀 `#map` 的 46vh 和圖層按鈕都還沒排完。差 18px,於是許願 sheet 的下緣
+     壓進地圖 18px:**看得到一條,但那條上面的東西按不到**,而畫面看起來完全正常。
+
+     時間點是猜不準的(動畫、字體、圖層按鈕各有各的節奏),所以不要猜 ——
+     盯著那個元素的尺寸,它一變就重量。 */
+  (function watchSheetSize() {
+    const inEl = el("map-sheet") && el("map-sheet").querySelector(".sheet-in");
+    if (!inEl || typeof ResizeObserver !== "function") return;
+    new ResizeObserver(() => syncMapOcc()).observe(inEl);
+  })();
+
+  function syncMapOcc() {
+    const sheet = el("map-sheet");
+    const inEl = sheet && sheet.querySelector(".sheet-in");
+    const occ = (!sheet || sheet.hidden || wideCols() || window.innerWidth > 640 || !inEl)
+      ? 0 : Math.round(inEl.getBoundingClientRect().height);
+    document.documentElement.style.setProperty("--maph", occ + "px");
+  }
+
   /* sheet 開著的時候鎖住底層的捲動。**只在窄的時候鎖** —— 寬桌機那一欄是版面的
      一部分,不是蓋在上面的東西,鎖了會讓整頁捲不動。 */
   function syncWishLock() {
@@ -3418,11 +3500,11 @@
   (function () {
     const wb = el("wishbox");
     if (!wb) return;
-    wb.addEventListener("toggle", () => { if (!wb.open) syncLayout(); syncWishLock(); });
+    wb.addEventListener("toggle", () => { if (!wb.open) syncLayout(); syncWishLock(); syncWishBar(); });
   })();
   /* 拉寬視窗也要補上。`resize` 會連發,而 syncLayout 只做「該開的還沒開就開」,
      重複呼叫不會有副作用,所以不節流。 */
-  window.addEventListener("resize", syncLayout);
+  window.addEventListener("resize", () => { syncLayout(); syncMapOcc(); syncWishLock(); syncWishBar(); });
 
   el("days").addEventListener("click", ev => {
     const b = ev.target.closest("[data-day]");
@@ -3442,10 +3524,23 @@
   /* 再打開表單 = 使用者要做下一件事了,上一次那句話可以收了。 */
   /* 打開表單 = 要找下一個東西。**段數和候選清單都歸零** ——
      留著的話,下一筆會從上一筆的段數接下去,可能直接是「強力搜」。 */
-  el("add-stop-btn").addEventListener("click", () => {
-    sayHere("stop-msg", ""); seekReset("sf-title"); seekClear("sf-title"); toggleForm("stop-form");
+  function openStopAdd() {
+    tuckMapForDialog(false);
+    sayHere("stop-msg", "");
+    seekReset("sf-title"); seekClear("sf-title");
+    el("stop-form").reset();
+    el("stop-add-overlay").hidden = false;
+    el("sf-time").focus();
+  }
+  function closeStopAdd() {
+    el("stop-add-overlay").hidden = true;
+    seekClear("sf-title");
+  }
+  el("add-stop-btn").addEventListener("click", openStopAdd);
+  el("sf-cancel").addEventListener("click", closeStopAdd);
+  el("stop-add-overlay").addEventListener("click", ev => {
+    if (ev.target === el("stop-add-overlay")) closeStopAdd();
   });
-  el("sf-cancel").addEventListener("click", () => toggleForm("stop-form", false));
   el("stop-form").addEventListener("submit", ev => {
     ev.preventDefault();
     const title = el("sf-title").value.trim();
@@ -3462,7 +3557,7 @@
     });
     checkPlace({ place: place, title: title }, "stop-msg");
     el("stop-form").reset();
-    toggleForm("stop-form", false);
+    closeStopAdd();
   });
   el("route").addEventListener("click", ev => {
     const b = ev.target.closest("[data-del-stop]");
@@ -3543,6 +3638,7 @@
     fillExpPeople(e.payerId, (e.participants || []).filter(p => IDS.includes(p)));
     el("xe-note").value = e.note || "";
     showExpError("");
+    tuckMapForDialog(false);
     el("exp-edit-overlay").hidden = false;
     el("xe-title").focus();
   }
@@ -3777,6 +3873,7 @@
     seekReset("se-title");
     seekShowExisting("se-title", s.place);
     showEditError("");
+    tuckMapForDialog(false);
     el("edit-overlay").hidden = false;
     el("se-title").focus();
   });
@@ -3834,13 +3931,25 @@
     box.textContent = msg;
     box.hidden = !msg;
   }
-  /* **開對話框之前先把地圖收起來,而且只在窄的時候收。**
-     地圖 sheet 的 z-index 是 70,對話框是 60 —— 手機上地圖開著就會**整片蓋住**
-     那張表,而使用者按了「許願地點」什麼都沒發生,他不會知道是被蓋住了。
-     寬桌機不收:那裡地圖是右邊一欄,跟畫面中央的對話框不重疊,收掉只是讓三塊缺一塊。
-     **收了不自己回來** —— 他剛存完一筆,下一步多半是看清單,不是看地圖。 */
+  /* **手機上要開對話框,先把地圖收起來。**
+     地圖 sheet 的 z-index 是 70,對話框是 60 —— 地圖開著就會**整片蓋住**那張表,
+     而使用者按了按鈕什麼都沒發生,他不會知道是被蓋住了。
+     「看得到但按不到」和「根本沒反應」都比「東西沒出來」難查,因為畫面看起來是對的。
+
+     **一個例外:從地圖那一塊裡按出來的不收。** 那種操作的對象就在地圖上,
+     收掉地圖等於把他正在看的東西拿走;那種對話框本來就該蓋在地圖上面。
+
+     **寬桌機一律不收**:那裡地圖是右邊一欄,跟畫面中央的對話框不重疊,
+     收掉只是讓三塊缺一塊。
+
+     **收了不自己回來** —— 他剛做完一件事,下一步多半是看清單,不是看地圖。 */
+  function tuckMapForDialog(fromMap) {
+    if (fromMap || wideCols()) return;
+    if (!el("map-sheet").hidden) closeMapSheet();
+  }
+
   function openWishAdd() {
-    if (!wideCols() && !el("map-sheet").hidden) closeMapSheet();
+    tuckMapForDialog(false);
     seekReset("wf-title"); seekClear("wf-title");
     fillWishWho();
     sayHere("wish-msg", "");
@@ -3956,6 +4065,7 @@
        下一筆願望會從「強力搜」開場 —— 直接把人推到花錢那一段。 */
     seekReset("we-title");
     showWishEditError("");
+    tuckMapForDialog(false);
     el("wish-edit-overlay").hidden = false;
     el("we-title").focus();
   }
@@ -4217,6 +4327,8 @@
     document.body.classList.remove("drawer-open");
     sheetKey = null;
     sheetMode = null;
+    syncMapOcc();
+    syncWishBar();
   }
   /* mode 只有 "day" 和 "wish"。換模式等於換內容,得重畫。 */
   function openMapSheet(mode) {
@@ -4228,6 +4340,7 @@
     applyDrawer(stepPx(drawK));
     el("map-sheet").hidden = false;
     document.body.classList.add("drawer-open");
+    syncWishBar();
   }
   /* 從哪顆進來,就保證那一層是開的 —— 不然按了地圖卻什麼都沒有,會以為壞掉 */
   el("day-map-btn").addEventListener("click", () => {
@@ -4330,6 +4443,7 @@
       const h = Math.max(minH(), Math.min(window.innerHeight, startH + (startY - ev.clientY)));
       sheet.classList.add("sized");
       sheet.style.setProperty("--sh", Math.round(h) + "px");
+      syncMapOcc();   /* 拖的過程中許願 sheet 的下緣要跟著走,不是放手才跳一下 */
       repaintMap();
     });
     function stop() {
@@ -4351,6 +4465,7 @@
        不是一次全收。三層一起關的話,他按一下 Esc 就回到空無一物的行程頁。 */
     if (!el("map-sheet").hidden) { closeMapSheet(); return; }
     if (!el("wish-add-overlay").hidden) { closeWishAdd(); return; }
+    if (!el("stop-add-overlay").hidden) { closeStopAdd(); return; }
     const wb = el("wishbox");
     if (wb && wb.open && !wideCols()) { wb.open = false; return; }
   });

@@ -454,9 +454,14 @@ function pinsOf(k) { return pins()[k]; }
     ok("加行程沒填地點 → 話講在行程表單那一槽上",
       await until(function () { return q("#stop-msg").hidden === false; }), q("#stop-msg").outerHTML);
     ok("加行程那一句也不再寫到頁尾", !flashed(/還沒挑地點/), flashes);
-    ok("它在 DOM 上的位置是「表單和行程列表之間」",
-      q("#stop-form").nextElementSibling === q("#stop-msg") &&
-      q("#stop-msg").nextElementSibling === q("#route"), null);
+    /* 跟上面願望那條同一個形狀:**加行程的表單也搬進對話框了**
+       (`#stop-add-overlay`),所以它不再是行程列表上面那一塊。
+       要守的東西沒變:那句話講的是剛存進去的那一筆,要**貼著行程列表**被讀到。 */
+    ok("那句話貼在行程列表前面(它講的是剛存進去的那一筆)",
+      q("#stop-msg").nextElementSibling === q("#route"),
+      { 訊息的下一個: q("#stop-msg").nextElementSibling && q("#stop-msg").nextElementSibling.id });
+    ok("而且它沒有被搬進對話框裡",
+      !q("#stop-add-overlay").contains(q("#stop-msg")), q("#stop-msg").parentElement.className);
 
     /* **「查不到」那一段拿掉了,而且它不是搬走,是變成到不了。**
        兩欄合併之後,送出時要有 `place` 只有一條路:從候選清單挑一個 ——

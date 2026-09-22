@@ -88,6 +88,19 @@ function drag(toWidth, releaseOn) {
   await sleep(0);   /* 陷阱 14-a:同步跑完的話結論會被 probe.sh 的佔位值蓋掉 */
   try {
     out.視窗寬 = iw;
+    /* **這一支是桌機的題目,窄視窗不要跑。**
+       它量的是右邊那個抽屜的四檔寬度,而 641 以下根本沒有抽屜 —— `.sheet` 是
+       底部 sheet,`--drawer` 仍有值但沒有意義,於是「版面至少留得到 240px」
+       必然紅(390 減掉 240 只剩 150)。**那是拿錯尺去量,不是壞掉。**
+       我自己在一輪裡踩了兩次,所以擋在這裡:紅燈要留給真的壞掉的東西。
+       手機上那條握把(量的是高度)由 `probes/sheet-grab.js` 負責。 */
+    if (iw <= 640) {
+      out.說明 = "**這個寬度沒有量** —— 這一支量的是桌機抽屜的寬度,要 WIDTH=1100 或 641;" +
+        "手機上那條握把是 probes/sheet-grab.js。";
+      out.結論 = "跳過(不是手機的題目)";
+      document.getElementById("r").textContent = JSON.stringify(out, null, 2);
+      return;
+    }
     d.getElementById("day-map-btn").click();
     ok("抽屜打得開", await until(function () { return !d.getElementById("map-sheet").hidden; }), null);
     await sleep(400);
