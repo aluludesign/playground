@@ -511,6 +511,31 @@
     .seek-out .hit span{display:-webkit-box; -webkit-line-clamp:2; line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
       font-size:12px; color:var(--muted);}
     .seek-out .said{padding:9px 11px; font-size:12.5px; color:var(--muted);}
+    /* **句子裡那三個字就是按鈕。** 一句問句要有地方回答,而最省事的那個地方
+       就在問句裡面 —— 旁邊再擺一顆「好」,等於要人先讀懂問題再去找答案在哪。
+       用 <button> 不用 <span>:鍵盤 Tab 得到、Enter 按得下去。 */
+    /* **問句本身回到一般文字色。** `.said.hint` 整行是橘的加粗的 —— 那是上一輪
+       為了讓提示別被忽略才改的,而且 `HINT_WORDS` 和錯誤訊息還要靠它。
+       但這一句的重點只有三個字:整句都橘的話,那三個字就沒有比較亮,
+       **強調到處都是等於沒有強調**。所以只有這一句退回一般色,橘色留給那顆按鈕。 */
+    .seek-out .said.hint.ask{color:var(--ink-2); font-weight:400;}
+    .seek-out .hint .seek-arm{border:0; background:none; padding:0; font:inherit;
+      color:var(--color-accent); font-weight:700; text-decoration:underline;
+      text-underline-offset:2px; cursor:pointer;}
+    .seek-out .hint .seek-arm:focus-visible{outline:2px solid var(--color-accent); outline-offset:2px;}
+    /* 上膛之後變樣的是**輸入框**,不只是按鈕 —— 要錢的那一下,眼睛和手指都在這裡。
+       底色是 accent 疊 35% 在輸入框自己的底色上。`color-mix` 前面那一行是算好的
+       同一個值:這個專案的 CSS 壞掉不會報錯,不留後路的話舊瀏覽器會拿到透明。
+
+       **35% 不是挑好看挑出來的,是量出來的下限。** 疊到 50% 的時候底色是 #e39d7d,
+       而框裡的字是 `--color-ink`(#53443d)—— 量到 4.06:1,低於 AA 的 4.5:1。
+       **上膛狀態底下那個框是要打字的**,它不是裝飾色塊,裡面的字得讀得下去。
+       降到 35% 之後是 #e7b69d,同一組字量到 5.12:1。
+       要再往上調之前先量,accent 是橘的,往上加掉得很快。 */
+    .seek .rm-input.seek-armed{border-color:var(--color-accent); background:#e7b69d;
+      background:color-mix(in srgb, var(--color-accent) 35%, var(--color-foundation-muslin));}
+    /* 強力搜跑過一次之後才出現的那句。比 .said 再輕一階 —— 它是退路,不是提示。 */
+    .seek-out .said.soft{font-size:11.5px; padding-top:2px;}
     /* 已標定是「好消息」,跟查詢中／查無用同一個槽但要分得出來 */
     .seek-out .said.ok{color:var(--ink);}
     /* 用 id 不用 class:走鐘防護掃的是「用了但沒有規則的 class」,id 不在它的範圍裡,
@@ -2250,12 +2275,17 @@
 
   function seekBox(id) { return el(id + "-out"); }
 
+  /* 花過錢之後才出現。**跟著每一次重畫一起帶出去**,不然它只活到下一句訊息為止。 */
+  function seekTail(id) {
+    return seekUsedStrong[id] ? '<div class="said soft">' + esc(NOTE_OK_WITHOUT) + "</div>" : "";
+  }
+
   function seekSay(id, msg, hint) {
     const box = seekBox(id);
+    /* `hint === "ok"` 那一段拿掉了 —— 它畫的是舊的那顆「好」按鈕,而**沒有任何
+       呼叫端傳過 "ok"**(查過)。同一顆按鈕有兩個產生器,就會有一個先過期。 */
     if (!box) return;
-    box.innerHTML = msg ? '<div class="said' + (hint ? " hint" : "") + '">' + esc(msg) +
-      (hint === "ok" ? ' <button type="button" class="seek-ok" data-arm="' + id + '">好</button>' : "") +
-      "</div>" : "";
+    box.innerHTML = msg ? '<div class="said' + (hint ? " hint" : "") + '">' + esc(msg) + "</div>" + seekTail(id) : "";
     box.hidden = !msg;
   }
 
@@ -2293,7 +2323,15 @@
      是哪一刻變的。**要錢的那一段要有一個明確的「我同意」。** */
   const seekArmed = {};
   const HINT_WORDS = "沒找到?試試加入地點名 —— 例如「teamLab 豐洲」。";
-  const HINT_STRONG = "還是沒有找到嗎?試試強力搜?";
+  /* **後面那三個字是一顆按鈕,所以不寫在這裡。** 見 hintHTML()。 */
+  const HINT_STRONG = "還是沒有找到嗎?試試";
+  const NOTE_OK_WITHOUT = "沒找到也可以許願哦,只是不會出現在地圖上。";
+  /* 強力搜按過了沒。**跟 seekArmed 不是同一件事**:
+       `seekArmed`      = 下一按要不要花錢 —— 花掉就卸下
+       `seekUsedStrong` = 他走到最後一段了沒 —— 留到這一格關掉為止
+     **後者跟「錢有沒有真的花掉」無關**:伺服器拒絕、連不上,錢都沒花到,
+     但他按過了、手上什麼都沒有,那句退路的話就該出現。 */
+  const seekUsedStrong = {};
 
   function seekBtn(id) { return document.querySelector('[data-seek="' + id + '"]'); }
 
@@ -2306,11 +2344,19 @@
     const strong = !!seekArmed[id] && !onSnapshot();
     b.textContent = strong ? "強力搜" : "搜尋";
     b.classList.toggle("seek-strong", strong);
+    /* **輸入框跟著換。** 只換按鈕的話,上膛這件事發生在畫面右下角一顆小東西上,
+       而使用者的眼睛在輸入框裡。同一個地方畫,退場才不會漏掉一半。 */
+    const inp = el(id);
+    if (inp) inp.classList.toggle("seek-armed", strong);
   }
 
+  /* **這支會把 used 一起清掉。** 想在重置之後留住那句退路的,自己在後面補一行
+     `seekUsedStrong[id] = true` —— 每個表單打開時都會走到這裡,不清的話
+     下一筆願望會從「沒找到也可以許願」開場。 */
   function seekReset(id) {
     seekTries[id] = 0;
     seekArmed[id] = false;
+    seekUsedStrong[id] = false;
     paintSeekBtn(id);
   }
 
@@ -2342,12 +2388,24 @@
     } finally {
       if (b0) b0.disabled = false;
     }
+    /* **出錯的時候不卸下上膛,而那是刻意的。**
+       下面「只給用一次」卸的是**花掉的那一次**;這兩條路一毛錢都沒花到 ——
+       `res.錯` 是伺服器明講的拒絕(例如金鑰沒設),`!res` 是連不上。
+       逼他重走兩次沒挑到、再點一次那三個字才能重試,是在懲罰一個不是他造成的失敗。
+
+       **但 `seekUsedStrong` 要點起來。** 他確實按過強力搜了,而且手上什麼都沒有 ——
+       那正是最需要知道「沒找到也可以許願」的人。
+       所以這兩個旗標問的不是同一件事:
+         `seekArmed`      = 下一按要不要花錢
+         `seekUsedStrong` = 他走到最後一段了沒(跟花沒花到錢無關) */
     if (res && res.錯) {
       /* 伺服器說得出原因就照講。講不出來(連不上)才退回泛泛的那句。 */
+      seekUsedStrong[id] = true;
       seekSay(id, "這次沒查成 —— " + res.錯, true);
       return;
     }
     if (!res) {
+      seekUsedStrong[id] = true;
       seekSay(id, "連不上地名查詢服務 —— 網路好一點再試,或直接把地點打完整。", true);
       return;
     }
@@ -2362,8 +2420,10 @@
            願望本來就可以沒有地點(「多喝水」「早點睡」),
            使用者卡在這裡最需要知道的是「我可以就這樣送出去」。 */
         seekReset(id);
-        seekSay(id, "抱歉,找不到「" + q + "」這個地點。還是可以許願 —— " +
-          "只是它不會出現在地圖上。換個說法的話會重新找一次。", true);
+        seekUsedStrong[id] = true;   /* 清完再點起來,順序不能反 */
+        /* 「還是可以許願」那半句搬到 `seekTail()` —— 它現在要在**找到**的時候
+           也出現(使用者可能一筆都不想挑),留在這裡的話只有找不到的人看得到。 */
+        seekSay(id, "抱歉,找不到「" + q + "」這個地點。換個說法的話會重新找一次。", true);
         return;
       }
       /* **查無這條路也要走同一個產生器。** 第一版在這裡把提示當純文字接上去,
@@ -2374,14 +2434,22 @@
       nb.hidden = false;
       return;
     }
+    /* **強力搜只給用一次,找到也一樣卸下來。**
+       以前是「挑到候選才歸零」,於是查到一串、一筆都不想挑的人,
+       下一按仍然是花錢的那一按 —— 而他並沒有再同意一次。
+       現在跑完就退回一般搜,再按是免費的第 1 段;要再花一次錢,
+       得重新走完兩次沒挑到、再點一次句子裡那三個字。 */
+    if (strong) { seekReset(id); seekUsedStrong[id] = true; }
     const box = seekBox(id);
     /* **提示排在候選之前。** 第一版擺在清單最後面 —— 而候選有六筆的時候
        它在螢幕外,使用者根本不會捲到那裡。那句話的用途是「這一輪沒挑到的話下一步做什麼」,
-       它要在使用者決定「這些都不是」的**當下**就在視線裡。 */
+       它要在使用者決定「這些都不是」的**當下**就在視線裡。
+       **退路那句相反,排在最後面** —— 它是「都不挑也沒關係」,那是看完清單之後的事。 */
     box.innerHTML = hintHTML(id) +
       res.map((r, i) =>
         '<button type="button" class="hit" data-hit="' + id + '" data-i="' + i + '">' +
-        "<b>" + esc(hitName(r)) + "</b><span>" + esc(hitAddr(r)) + "</span></button>").join("");
+        "<b>" + esc(hitName(r)) + "</b><span>" + esc(hitAddr(r)) + "</span></button>").join("") +
+      seekTail(id);
     box.hidden = false;
     box._hits = res;
   }
@@ -2394,10 +2462,11 @@
   function hintHTML(id) {
     const h = seekHint(id);
     if (!h) return "";
-    const arm = h === HINT_STRONG;
-    return '<div class="said hint">' + esc(h) +
-      (arm ? ' <button type="button" class="seek-ok" data-arm="' + id + '">好</button>' : "") +
-      "</div>";
+    if (h !== HINT_STRONG) return '<div class="said hint">' + esc(h) + "</div>";
+    /* 「」留在一般文字色,只有三個字是連結 —— 引號是句子的一部分,不是按鈕的。 */
+    return '<div class="said hint ask">' + esc(h) + "「" +
+      '<button type="button" class="seek-arm" data-arm="' + id + '">強力搜</button>' +
+      "」</div>";
   }
 
   function seekHint(id) {
@@ -2500,7 +2569,9 @@
       const aid = arm.getAttribute("data-arm");
       seekArmed[aid] = true;
       paintSeekBtn(aid);
-      seekSay(aid, "好 —— 按「強力搜」再找一次。", true);
+      /* **「好 ——」拿掉了。** 那兩個字是在覆誦剛剛按的那顆按鈕,而按鈕現在
+         就在上一句話裡 —— 覆誦一次等於把同一句話講兩遍。 */
+      seekSay(aid, "按「強力搜」再找一次。", true);
       return;
     }
     const go = ev.target.closest && ev.target.closest("[data-seek]");

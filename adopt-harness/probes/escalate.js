@@ -18,6 +18,10 @@ async function until(fn, tries) {
   return false;
 }
 var osm = [], goo = [], osmReply = [], gooReply = { found: false }, gooStatus = 200;
+/* **連不上跟伺服器拒絕是兩條不同的路。** `gooStatus !== 200` 走的是
+   「伺服器講得出原因」那條(`res.錯`);`gooThrow` 讓 fetch 自己倒掉,
+   走的是 `!res` 那條 —— 兩條各有自己的 return,不能只測一條就當測過。 */
+var gooThrow = false;
 var realFetch = w.fetch.bind(w);
 w.fetch = function (u, init) {
   var url = String(u);
@@ -28,6 +32,7 @@ w.fetch = function (u, init) {
   }
   if (url.indexOf("resource=places") >= 0) {
     goo.push(url);
+    if (gooThrow) return Promise.reject(new Error("斷線"));
     var b = gooReply;
     /* `gooStatus` 不是 200 的時候模擬伺服器回錯誤 —— `api()` 會 throw,
        而「throw 之後使用者看到什麼」正是這一輪咬到 Lulu 的那條路。 */
@@ -80,14 +85,22 @@ async function press(id) {
       boxText("sf-title").indexOf("還是沒有找到嗎") >= 0, boxText("sf-title"));
     ok("而且這時候才問要不要強力搜",
       !!d.querySelector('[data-arm="sf-title"]'), boxText("sf-title"));
+    /* **那顆按鈕長在句子裡,不是旁邊。** 以前是「還是沒有找到嗎?試試強力搜?」
+       後面接一顆獨立的「好」—— 要人先讀懂問題,再去別的地方找答案在哪。 */
+    ok("而且它長在提示句子裡面(不是旁邊一顆「好」)",
+      !!d.querySelector('.seek-out .hint .seek-arm[data-arm="sf-title"]'),
+      d.querySelector('.seek-out .hint') && d.querySelector('.seek-out .hint').innerHTML);
+    ok("而且那三個字就是「強力搜」",
+      d.querySelector('[data-arm="sf-title"]').textContent === "強力搜",
+      d.querySelector('[data-arm="sf-title"]').textContent);
     ok("按鈕**還沒**變成強力搜(要先點頭)",
       btn("sf-title").textContent === "搜尋", btn("sf-title").textContent);
     ok("而且到這裡為止一次錢都沒花", goo.length === 0, { google: goo.length });
 
-    // ---- 點「好」才變,而且那一下不查東西 ----
+    // ---- 點句子裡那三個字才變,而且那一下不查東西 ----
     d.querySelector('[data-arm="sf-title"]').click();
     await sleep(60);
-    ok("點「好」之後按鈕變成「強力搜」", btn("sf-title").textContent === "強力搜", btn("sf-title").textContent);
+    ok("點下去之後按鈕變成「強力搜」", btn("sf-title").textContent === "強力搜", btn("sf-title").textContent);
     /* **量的是 class,不是 backgroundColor。** `.btn` 有 `transition:background .15s`,
        所以 computed 讀到的是過場跑到一半的值 —— 而在虛擬時間下它可能一幀都沒跑,
        讀到的就是起始的白色。我為了這件事查了五輪,而**同一個陷阱幾小時前才寫進
@@ -96,9 +109,14 @@ async function press(id) {
        **顏色對不對由截圖回答**(第 14 張),斷言只管狀態有沒有切過去。 */
     ok("而且掛上了 seek-strong(橘色那一組的來源)",
       btn("sf-title").classList.contains("seek-strong"), btn("sf-title").className);
-    ok("**點「好」那一下不查任何東西**(花錢的是下一下)",
+    /* **上膛的是輸入框,不只是按鈕。** 眼睛和手指都在輸入框裡,
+       只換右下角那顆小東西的話,狀態變了而看的人不在那裡。 */
+    ok("而且輸入框也跟著上膛(seek-armed)", inp.classList.contains("seek-armed"), inp.className);
+    ok("**點下去那一下不查任何東西**(花錢的是下一下)",
       osm.length === 2 && goo.length === 0, { osm: osm.length, google: goo.length });
     ok("而且它告訴你下一步做什麼", boxText("sf-title").indexOf("按「強力搜」") >= 0, boxText("sf-title"));
+    ok("而且不再覆誦「好 ——」(按的那顆就在上一句話裡)",
+      boxText("sf-title").indexOf("好 ——") < 0, boxText("sf-title"));
 
     // ---- 按下強力搜才走 Google ----
     gooReply = { list: [{ la: 35.6267, lo: 139.7745, label: "富士電視台", addr: "東京都港區台場" },
@@ -111,6 +129,14 @@ async function press(id) {
     ok("Google 的結果照樣畫成可以挑的候選,而且是**多筆**",
       d.querySelectorAll('[data-hit="sf-title"]').length === 2,
       d.querySelectorAll('[data-hit="sf-title"]').length);
+
+    /* ---- **只給用一次:找到了也退回去,不必等他挑** ----
+       以前是「挑到候選才歸零」。於是查到一串、一筆都不想挑的人,
+       **下一按仍然是花錢的那一按,而他並沒有再同意一次。** */
+    ok("找到了就退回「搜尋」(不必等他挑)", btn("sf-title").textContent === "搜尋", btn("sf-title").textContent);
+    ok("輸入框也卸下來了", !inp.classList.contains("seek-armed"), inp.className);
+    ok("而且這時候才講退路(找到也講 —— 他可能一筆都不想挑)",
+      boxText("sf-title").indexOf("也可以許願") >= 0, boxText("sf-title"));
 
     // ---- 挑到 → 全部歸零 ----
     d.querySelector('[data-hit="sf-title"]').click();
@@ -128,8 +154,13 @@ async function press(id) {
     ok("強力搜真的送出去了", goo.length === 1, { google: goo.length });
     ok("找不到 → 按鈕退回「搜尋」(再按一次是同一個字問同一家,白花錢)",
       btn("sf-title").textContent === "搜尋", btn("sf-title").textContent);
-    ok("講的是「還是可以許願」,不是「再試試」",
-      boxText("sf-title").indexOf("還是可以許願") >= 0, boxText("sf-title"));
+    /* 那句退路搬到 `seekTail()` 了,所以這裡比對的字換了 ——
+       **但要守的東西一樣**:講的是「不找了也沒關係」,不是「再試試」。 */
+    ok("講的是「也可以許願」,不是「再試試」",
+      boxText("sf-title").indexOf("也可以許願") >= 0, boxText("sf-title"));
+    ok("而且退路那句沒有被「找不到」那句蓋掉(兩句都在)",
+      boxText("sf-title").indexOf("換個說法") >= 0 && boxText("sf-title").indexOf("也可以許願") >= 0,
+      boxText("sf-title"));
     osm.length = 0; goo.length = 0;
     await press("sf-title");
     ok("退回之後再按,問的是免費那家(不會又花一次錢)",
@@ -155,6 +186,24 @@ async function press(id) {
       boxText("wf-title").indexOf("Places API") >= 0, boxText("wf-title"));
     ok("**不會換成自己編的原因**(例如「次數用完了」)",
       boxText("wf-title").indexOf("次數用完") < 0, boxText("wf-title"));
+    /* **出錯這條路上,那兩個旗標各自該怎樣。**
+       這一段以前只問「訊息有沒有照轉」,沒有問按鈕停在哪、退路那句在不在 ——
+       而「只給用一次」是在**找到**和**零筆**兩條路上實作的,出錯這條當時漏掉了。 */
+    ok("出錯 → 按鈕**留在**「強力搜」(這一下一毛錢都沒花到,不該逼他重走一輪)",
+      btn("wf-title").textContent === "強力搜", btn("wf-title").textContent);
+    ok("而且輸入框也還上著膛", d.getElementById("wf-title").classList.contains("seek-armed"),
+      d.getElementById("wf-title").className);
+    ok("但退路那句要出現 —— 他按過了,而且手上什麼都沒有",
+      boxText("wf-title").indexOf("也可以許願") >= 0, boxText("wf-title"));
+    ok("而且伺服器的原話沒有被退路那句擠掉(兩句都在)",
+      boxText("wf-title").indexOf("Places API") >= 0 && boxText("wf-title").indexOf("也可以許願") >= 0,
+      boxText("wf-title"));
+    /* 連不上那條(`!res`)跟上面那條是不同的分支,各自有自己的 return —— 分開問一次。 */
+    gooStatus = 0; gooReply = null; gooThrow = true;
+    await press("wf-title");
+    ok("連不上 → 退路那句一樣要出現(不是只有伺服器講得出話的時候才講)",
+      boxText("wf-title").indexOf("也可以許願") >= 0, boxText("wf-title"));
+    gooThrow = false;
     gooStatus = 200;
 
     // ---- 舊的那顆按鈕真的不見了 ----
