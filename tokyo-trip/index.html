@@ -409,6 +409,12 @@
        (窄桌機和手機不必:那裡開對話框本來就會先把地圖收起來。) */
     @media (min-width:1280px){
       body.drawer-open .overlay{right:var(--drawer,440px);}
+      /* **但那扇門不是對話框,它是門。** 上面那條把每一個 `.overlay` 都往左縮到
+         地圖邊緣,而登入用的是同一個 `.overlay` —— 於是還沒進來的人看到的是
+         一張清清楚楚、還能拖能點的地圖擺在門旁邊。
+         (它擋不住資料:「直接進入」不用密碼。但一扇蓋不住後面的門,
+         看起來像是壞了,而不是像一個選擇。) */
+      body.drawer-open #signin-overlay{right:0;}
       /* **三塊都關不掉,所以那顆 ✕ 是騙人的。** 一個按了會被立刻復原的關閉鈕,
          比沒有那個按鈕更糟:使用者會以為自己弄壞了什麼。 */
       #map-sheet-x{display:none;}
@@ -891,7 +897,11 @@
        `align-items:center` 加上溢出是 flex 的老坑:項目比容器高時,**上緣溢出到
        捲不到的地方**,而下緣(送出鈕)也在畫面外 —— 使用者看到一張填不完的表。
        改用 `margin:auto` 置中:有空間時一樣置中,不夠時就從頂端開始、整層可以捲。 */
-    .overlay{position:fixed; inset:0; z-index:60; display:flex; justify-content:center; padding:20px;
+    /* **門要在抽屜上面。** 對話框是 z60、抽屜是 z70 —— 只把門的矩形拉回整個視窗
+     還不夠,地圖照樣畫在它上面,而且拖得動、點得到。z 軸和矩形是兩件事,
+     我第一次只修了矩形,探針用 elementFromPoint 問「手指會碰到誰」才問出來。 */
+  #signin-overlay{z-index:80;}
+  .overlay{position:fixed; inset:0; z-index:60; display:flex; justify-content:center; padding:20px;
       overflow-y:auto; overscroll-behavior:contain;
       background:color-mix(in srgb, var(--paper) 86%, transparent); backdrop-filter:blur(6px);}
     .signin{margin:auto; width:100%; max-width:380px; background:var(--surface); border:1px solid var(--line); border-radius:12px;

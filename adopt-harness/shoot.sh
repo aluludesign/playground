@@ -406,6 +406,13 @@ shot 18-wish-add        390 1000 "d.getElementById('wishbox').open=true; d.getEl
 shot 19-fly-mobile      390  900 "d.getElementById('tab-fly').click();" \
                                   "#panel-fly .leg:2+"
 
+# 20:還沒進來的人看到的那一扇門,而且是在地圖抽屜開著的寬桌機上。
+# **這一層一張都沒拍過** —— 它是每個人看到的第一個畫面,卻沒有任何一張圖證明
+# 它蓋得住後面。她在 iPad 上拍到的正是這個:門旁邊擺著一張清清楚楚、
+# 還能拖能點的地圖。矩形和 z 軸是兩件事,而兩件事都只有眼睛看得出來。
+shot 20-signin-gate    1440  900 "d.getElementById('signin-overlay').hidden=false;" \
+                                  "#signin-overlay:not([hidden]) .signin:1+"
+
 kill $SRV 2>/dev/null || true
 rm -rf "$H/.work"
 echo "→ $OUT"

@@ -229,6 +229,25 @@ function drag(toWidth, releaseOn) {
         hit && (hit.tagName.toLowerCase() + (hit.id ? "#" + hit.id : "")));
       d.getElementById("sf-cancel").click();
       await sleep(80);
+
+      /* ---- 但登入那一層是門,不是對話框 ----
+         上面那條「往左縮到地圖邊緣」對每一個 `.overlay` 都成立,
+         **而登入用的是同一個 `.overlay`** —— 結果還沒進來的人看到的是
+         一張清清楚楚、還能拖能點的地圖擺在門旁邊(她在 iPad 上拍到的)。
+         這裡問的是門本身:它要蓋到視窗最右邊,而且地圖中央那一點碰不到地圖。 */
+      d.getElementById("signin-overlay").hidden = false;
+      await sleep(150);
+      var ov = d.getElementById("signin-overlay").getBoundingClientRect();
+      ok("登入那一層蓋到視窗最右邊(它是門,不是擺在地圖旁邊的對話框)",
+        ov.right >= w.innerWidth - 1,
+        { 門的右緣: Math.round(ov.right), 視窗寬: w.innerWidth });
+      var ms = d.getElementById("map-sheet").getBoundingClientRect();
+      var over = d.elementFromPoint(Math.round(ms.left + ms.width / 2), Math.round(ms.top + ms.height / 2));
+      ok("**地圖正中央那一點碰不到地圖** —— 幾何之外再問一次手指會碰到誰",
+        !!over && !d.getElementById("map-sheet").contains(over),
+        over && (over.tagName.toLowerCase() + (over.id ? "#" + over.id : "." + over.className)));
+      d.getElementById("signin-overlay").hidden = true;
+      await sleep(80);
     } else {
       out.許願讓開抽屜 = "**這個寬度沒有量** —— 641 以下沒有抽屜。要量那一段用 WIDTH=900。";
     }
