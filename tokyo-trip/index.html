@@ -361,6 +361,10 @@
       body[data-view="wish"]:not(.can-edit) #days{display:none;}
 
       /* 兩個檢視共用同一個 panel:露出哪一欄由 data-view 決定。 */
+      /* **「這天的地圖」那顆在手機上沒有作用了** —— 地圖一直都在,它是底。
+         一個按了不會有任何變化的按鈕,比沒有那個按鈕更讓人懷疑自己按錯。
+         桌機留著:那裡地圖是要自己打開的一塊,這顆是從行程那邊開它的路。 */
+      #day-map-btn{display:none;}
       body[data-view="plan"] #wishbox{display:none;}
       /* **`#wishbox` 自己也掛著 `.col`**(它在桌機是第二欄),所以這裡要把它排除掉,
          不然「藏起行程那一欄」會連許願一起藏,而畫面上是一張空的 sheet。 */
@@ -4433,10 +4437,23 @@
     checkPlace({ place: patch.place, title: patch.title }, "wish-msg");
   });
 
+  /* 點小卡 → 地圖移到那個點並亮起來;**再點同一張 → 取消,回到全部願望都在的樣子**。
+     以前只有「選進去」沒有「退出來」——要看回整片,得去點別的地方或換分頁,
+     而那是**用一個副作用去達成一件他直接想做的事**。 */
+  function unfocusWish() {
+    const box = el("map");
+    if (box) { box._focus = null; paintMap(box); }
+    [].forEach.call(el("wish-list").querySelectorAll("[data-wish]"),
+      r => r.classList.remove("on"));
+  }
+
   async function focusWish(id) {
     const list = wishOrder();
     const i = list.findIndex(w => w.id === id);
     if (i < 0) return;
+    /* 已經亮著的那一張再點一次 = 退出來。**判準是地圖上正在聚焦誰**,
+       不是另外記一個變數 —— 兩份狀態就會有一份先過期。 */
+    if (el("map") && el("map")._focus === "w" + i) { unfocusWish(); return; }
     openMapSheet("wish");
     await loadSheetMap(true);
     const at = pinOf(list[i]);

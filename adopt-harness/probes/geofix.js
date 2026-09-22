@@ -153,7 +153,10 @@ function pinsOf(k) { return pins()[k]; }
       pins()["富士電視台"] === undefined, JSON.stringify(pins()).slice(0, 160));
 
     // 2 ---- 從 DAY 那顆按鈕開地圖 = 06 那張截圖的狀態 ----
-    q("#day-map-btn").click();
+    /* **看得見才按 —— 不然又是一次「程式碰得到、人到不了」。**
+       手機上那顆已經拿掉了(地圖是底、一直在),對 `display:none` 的元素
+       呼叫 `.click()` 照樣會動,於是探針會繼續綠著走一條沒有人走的路。 */
+    if (w.getComputedStyle(q("#day-map-btn")).display !== "none") q("#day-map-btn").click();
     await until(function () { return d.querySelectorAll(".map .pin").length >= 3; });
     /* 3 顆而不是 5 顆:合羽橋道具街(行程,沒填地點)和 teamLab(願望,沒填地點)
        以前是**拿標題去查**才有 pin 的,規則一之後它們不該再出現。 */
@@ -319,7 +322,10 @@ function pinsOf(k) { return pins()[k]; }
        紅燈,而它指的不是壞掉,是我問錯問題。
        改成問看得見的那件事:**表有沒有接住它**,證據是地圖上那顆 pin + 零查詢。 */
     var osmB11nrt = osm.length, askedB11nrt = asked.length;
-    q("#day-map-btn").click();
+    /* **看得見才按 —— 不然又是一次「程式碰得到、人到不了」。**
+       手機上那顆已經拿掉了(地圖是底、一直在),對 `display:none` 的元素
+       呼叫 `.click()` 照樣會動,於是探針會繼續綠著走一條沒有人走的路。 */
+    if (w.getComputedStyle(q("#day-map-btn")).display !== "none") q("#day-map-btn").click();
     ok("成田那一筆在地圖上有 pin(人工表接住它,而且它在日本境內)",
       await until(function () {
         return [].some.call(d.querySelectorAll(".map .pin .lab"),

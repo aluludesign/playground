@@ -222,6 +222,39 @@ async function drag(dy) {
     d.getElementById("wf-cancel").click();
     await sleep(200);
 
+    /* ---- 點小卡聚焦,再點一次退出來 ----
+       以前只有「選進去」沒有「退出來」:要看回整片願望,得去點別的地方或換分頁,
+       **用一個副作用去達成一件他直接想做的事**。 */
+    d.getElementById("tab-wish").click();
+    await sleep(500);
+    var wrows = d.querySelectorAll("#wish-list [data-wish]");
+    /* **挑一張真的有地點的。** 第一張是沒填地點的那一種,點它只會說
+       「在地圖上沒有位置」—— 拿它測聚焦,量到的會是一個跟聚焦無關的 false。 */
+    var target = null;
+    for (var wi = 0; wi < wrows.length; wi++) {
+      wrows[wi].click();
+      await sleep(500);
+      if (d.getElementById("map")._focus) { target = wrows[wi]; break; }
+    }
+    ok("點小卡 → 地圖聚焦到那一個點,那一列亮起來",
+      !!target && d.querySelectorAll("[data-wish].on").length === 1 &&
+      d.querySelectorAll(".map .pin.on").length === 1,
+      { 聚焦: d.getElementById("map")._focus, 亮的列: d.querySelectorAll("[data-wish].on").length });
+    var nBefore = d.querySelectorAll(".map .pin").length;
+    if (target) { target.click(); await sleep(500); }
+    ok("再點同一張 → 退出來,回到沒有選的樣子",
+      !d.getElementById("map")._focus && d.querySelectorAll("[data-wish].on").length === 0 &&
+      d.querySelectorAll(".map .pin.on").length === 0,
+      { 聚焦: d.getElementById("map")._focus, 亮的列: d.querySelectorAll("[data-wish].on").length });
+    ok("而且願望的點一顆都沒少(退出來不是篩掉)",
+      d.querySelectorAll(".map .pin").length === nBefore,
+      { 之前: nBefore, 之後: d.querySelectorAll(".map .pin").length });
+    ok("「這天的地圖」那顆在手機上不在了(地圖是底,它沒有作用)",
+      w.getComputedStyle(d.getElementById("day-map-btn")).display === "none",
+      w.getComputedStyle(d.getElementById("day-map-btn")).display);
+    d.getElementById("tab-plan").click();
+    await sleep(400);
+
     // ---- 分頁列永遠按得到 ----
     var planTab = d.getElementById("tab-plan"), pb = planTab.getBoundingClientRect();
     var hitTab = d.elementFromPoint(Math.round(pb.left + pb.width / 2), Math.round(pb.top + pb.height / 2));
