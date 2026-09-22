@@ -413,6 +413,14 @@ shot 19-fly-mobile      390  900 "d.getElementById('tab-fly').click();" \
 shot 20-signin-gate    1440  900 "d.getElementById('signin-overlay').hidden=false;" \
                                   "#signin-overlay:not([hidden]) .signin:1+"
 
+# 21:窄桌機(1100)的「許願」分頁。
+# **這個寬度的許願以前是一條釘在底部的 bar,現在是分頁** —— 而 02 拍的是行程頁,
+# 05 拍的是手機。中間這個寬度的許願,沒有任何一張圖拍得到。
+# 它要看得到的三件事:分頁列上有「許願」而且排在「行程」後面、
+# 上面那一排日期在(管理員才有)、以及底部沒有那條浮著的 bar。
+shot 21-wish-narrow    1100  900 "d.getElementById('tab-wish').click();" \
+                                  "#wishbox .wish:2+,#days .day:3+"
+
 kill $SRV 2>/dev/null || true
 rm -rf "$H/.work"
 echo "→ $OUT"

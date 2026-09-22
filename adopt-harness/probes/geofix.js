@@ -398,12 +398,20 @@ function pinsOf(k) { return pins()[k]; }
       q("#stop-msg").hidden === true && q("#wish-msg").hidden === true,
       { stop: q("#stop-msg").outerHTML, wish: q("#wish-msg").outerHTML });
 
-    /* 許願那一整塊住在 <details class="wishbox"> 裡,而它預設是收起來的。
-       收起來的時候 Chrome 用 ::details-content 的 content-visibility:hidden ——
-       **裡面的元素照樣量得到一個 rect**,只是那個 rect 跟使用者看到的東西無關。
-       量位置之前一定要先打開它(05 那張截圖也是這樣打開的)。 */
+    /* **許願在 <1280 是一個分頁,不是行程頁裡的一塊。** 不切過去就直接開
+       `#wishbox`,量到的是一塊 `display:none` 的東西 —— 而 `.click()` 和
+       `getBoundingClientRect()` 在那上面**都會成功**,只是跟使用者看到的東西無關。
+       這支探針在窄桌機上一直是這樣跑的(那時候它是收起來的 `<details>`,
+       Chrome 的 content-visibility 一樣給得出 rect),沒有人發現。
+       ≥1280 是三欄,許願一直都在,不必切。 */
+    if (w.innerWidth < 1280) { q("#tab-wish").click(); await sleep(250); }
     q("#wishbox").open = true;
     await sleep(50);
+    ok("量許願之前,許願那一塊真的在畫面上(不是 display:none 也不是收起來的)",
+      (function () { var b = q("#wishbox").getBoundingClientRect();
+        return w.getComputedStyle(q("#wishbox")).display !== "none" && b.height > 40; })(),
+      { display: w.getComputedStyle(q("#wishbox")).display,
+        高: Math.round(q("#wishbox").getBoundingClientRect().height) });
     flashes.length = 0;
     q("#add-wish-btn").click();
     q("#wf-title").value = "早點睡";

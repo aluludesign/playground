@@ -246,13 +246,6 @@
          手機上地圖是底部 sheet,所以讓開的是**高度**(`--maph`,由 JS 量了寫上來);
          窄桌機上它是右邊的抽屜,讓開的是**寬度**(`--drawer`)—— 見下面那條。
          兩邊是同一句話:地圖佔走的不碰。 */
-      .wishbox[open]{position:fixed; left:0; right:0; top:0; bottom:var(--maph,0px);
-        z-index:55; margin:0; border:0; border-radius:0;
-        overflow-y:auto; overscroll-behavior:contain; background:var(--surface);
-        animation:wish-up .18s ease-out;}
-      .wishbox[open] > summary{position:sticky; top:0; z-index:1; background:var(--surface);
-        border-bottom:1px solid var(--line);}
-      /* 底下留一段:滿版之後最後一顆按鈕會頂到螢幕邊,手機還有下巴。 */
       .wishbox[open] > *:last-child{margin-bottom:calc(18px + env(safe-area-inset-bottom,0px));}
     }
     /* ---- 手機:收起來的時候那條標頭釘在畫面底部 ----
@@ -270,25 +263,20 @@
        **釘的是「內容區」的底部,不是螢幕的底部。** 手機上那兩件事一樣;
        窄桌機上不一樣 —— 地圖是右邊的抽屜,那條要在它左邊結束,
        不然它會從地圖底下穿過去,而使用者看到的是一條被切掉一半的東西。 */
-    /* **「許願」分頁只有手機有。** 桌機是三欄的第二欄、窄桌機是釘在底部那一條 ——
-       兩個地方都已經有入口,再開一個分頁等於同一件事有兩個進法,
-       而那種重複遲早會有一邊先過期。 */
-    @media (min-width:641px){ #tab-wish{display:none;} }
-    @media (max-width:1279px){
-      .wishbox:not([open]){margin:0; border:0; background:none;}
-      .wishbox:not([open]) > summary{position:fixed; left:0; right:0; bottom:var(--tabh,0px);
-        z-index:54; background:var(--surface); border-top:1px solid var(--line); border-radius:0;
-        padding-bottom:13px;
-        box-shadow:0 -2px 10px rgba(20,26,45,.07);}
-    }
+    /* **「許願」分頁在三欄以外的每個寬度都有。** 只有寬桌機(≥1280)沒有 ——
+       那裡它是三欄的第二欄,一直看得到,再開一個分頁等於同一件事有兩個進法。
+       窄桌機以前走的是第三條路:釘在底部的一條、點開會滿版蓋住行程。
+       **那條路現在收掉了** —— 同一件事在 641 和 640 兩側長得不一樣,
+       而使用者手上的 iPad 會在轉個方向之後跨過那條線。 */
+    @media (min-width:1280px){ #tab-wish{display:none;} }
+    /* **釘在底部那一條、和它點開之後的滿版 sheet,兩個都退場了。**
+       它們是「許願不是分頁」那個年代的東西:窄桌機沒有分頁可以放它,
+       所以給了它一條浮在底部的入口。現在 <1280 一律是分頁,那條入口變成
+       同一件事的第二個進法 —— 而兩個進法遲早會有一邊先過期。
+       (`.wishbox[open]` 那段滿版 sheet 也一起走:在分頁模式裡許願是
+       `position:static` 的一欄,那段永遠不會套用到。) */
     @media (max-width:640px){
-      /* **坐在分頁列上面,不是坐在畫面底部。** 手機的分頁列(行程／搭機／花費／分帳)
-         本來就是 `position:fixed; bottom:0`,第一版我也寫 `bottom:0`,結果整條導覽
-         被蓋掉 —— 而畫面看起來只是「少了一排東西」,不像有人壓在上面。
-         `--tabh` 是量出來的:那一列有安全區內距,寫死會在有下巴的機型上差一截。 */
-      .wishbox:not([open]) > summary{padding-bottom:13px;}
-      /* `.wrap` 本來就留了分頁列的高度,這裡再補許願那條的 —— 兩條都是浮在上面的。 */
-      .wrap{padding-bottom:calc(78px + var(--wishbar,0px) + env(safe-area-inset-bottom,0px));}
+      .wrap{padding-bottom:calc(78px + env(safe-area-inset-bottom,0px));}
     }
 
     /* ================= 手機:地圖是底,清單是疊在上面的 sheet =================
@@ -364,18 +352,32 @@
         background:var(--surface); padding-block:8px; margin-block:0;}
       /* **許願分頁的天數只給管理員看。** 那一列的用途是「把願望排進哪一天」,
          而沒有通行碼的人排不了 —— 給他一排點了沒有作用的東西,比不給更糟。 */
-      body[data-view="wish"]:not(.can-edit) #days{display:none;}
 
       /* 兩個檢視共用同一個 panel:露出哪一欄由 data-view 決定。 */
       /* **「這天的地圖」那顆在手機上沒有作用了** —— 地圖一直都在,它是底。
          一個按了不會有任何變化的按鈕,比沒有那個按鈕更讓人懷疑自己按錯。
          桌機留著:那裡地圖是要自己打開的一塊,這顆是從行程那邊開它的路。 */
       #day-map-btn{display:none;}
+      /* sheet 自己就是捲動容器,`.wrap` 不必再為那條浮起來的許願 bar 讓位 */
+      body[data-view="plan"] .wrap,
+      body[data-view="wish"] .wrap{padding-bottom:0;}
+    }
+    @media (prefers-reduced-motion:reduce){ #panel-plan{transition:none;} }
+
+    /* ================= 「許願」是一個分頁:手機和窄桌機共用 =================
+       **這一組以前只寫在 ≤640 裡面。** 窄桌機走的是另一條路(底部一條 bar),
+       於是同一件事在 640 和 641 兩側是兩個不同的東西 —— 而一台 iPad
+       轉個方向就會跨過那條線。現在兩邊都是分頁,差別只剩「地圖在哪裡」:
+       手機地圖是底,窄桌機地圖是右邊的抽屜。 */
+    @media (max-width:1279px){
+      /* **許願分頁的天數只給管理員看。** 那一列的用途是「把願望排進哪一天」,
+         而沒有通行碼的人排不了 —— 給他一排點了沒有作用的東西,比不給更糟。 */
+      body[data-view="wish"]:not(.can-edit) #days{display:none;}
       body[data-view="plan"] #wishbox{display:none;}
-      /* **`#wishbox` 自己也掛著 `.col`**(它在桌機是第二欄),所以這裡要把它排除掉,
-         不然「藏起行程那一欄」會連許願一起藏,而畫面上是一張空的 sheet。 */
+      /* **`#wishbox` 自己也掛著 `.col`**(它在寬桌機是第二欄),所以這裡要把它排除掉,
+         不然「藏起行程那一欄」會連許願一起藏,而畫面上是一片空的。 */
       body[data-view="wish"] .cols > .col:not(#wishbox){display:none;}
-      /* 許願在這個版面裡是 sheet 的內容,不再是「收合區塊」也不再有底部那條。 */
+      /* 許願在分頁模式裡就是版面裡的一欄,不再是「收合區塊」也不再有底部那條。 */
       body[data-view="wish"] #wishbox{position:static; inset:auto; z-index:auto; height:auto;
         overflow:visible; animation:none; border:0; background:none; margin:0;}
       body[data-view="wish"] #wishbox > summary{position:static; border:0; background:none; padding-left:0;}
@@ -383,25 +385,21 @@
       /* 收合的箭頭藏了,游標也要跟著改 —— 一個看起來可以點、點了沒事的標題,
          比一個明顯不能點的標題更讓人懷疑自己按錯了。 */
       body[data-view="wish"] #wishbox > summary{cursor:default;}
-      body[data-view="plan"] .wishbox:not([open]) > summary,
-      body[data-view="wish"] .wishbox:not([open]) > summary{position:static;}
-      /* sheet 自己就是捲動容器,`.wrap` 不必再為那條浮起來的許願 bar 讓位 */
-      body[data-view="plan"] .wrap,
-      body[data-view="wish"] .wrap{padding-bottom:0;}
     }
-    @media (prefers-reduced-motion:reduce){ #panel-plan{transition:none;} }
     /* 窄桌機(641–1279):地圖是右邊的抽屜,**收起來的那條和展開的 sheet 都讓開它的寬度**。
        桌機沒有底部分頁列(分頁在上面),所以 `--tabh` 是 0,那條就貼著畫面底部。 */
     @media (min-width:641px) and (max-width:1279px){
-      body.drawer-open .wishbox[open]{right:var(--drawer,440px); bottom:0;}
-      body.drawer-open .wishbox:not([open]) > summary{right:var(--drawer,440px);}
-      .wrap{padding-bottom:calc(18px + var(--wishbar,0px));}
+      /* 讓開抽屜那兩條跟著那條 bar 一起走了 —— 分頁模式裡許願是版面裡的一欄,
+         它本來就在 `.wrap` 裡面,不會鑽到抽屜底下。 */
+      .wrap{padding-bottom:18px;}
     }
     @keyframes wish-up{from{transform:translateY(18px); opacity:.5;} to{transform:none; opacity:1;}}
     @media (prefers-reduced-motion:reduce){ .wishbox[open]{animation:none;} }
     /* sheet 開著的時候底下那層不要跟著捲 —— 兩層都能捲的話,手指往上滑到底,
        捲的會變成後面那張,而使用者以為 sheet 卡住了。 */
-    body.wish-open{overflow:hidden;}
+    /* **只鎖手機。** 手機上許願是一張 fixed 的 sheet,自己有捲軸,鎖 body 是對的。
+       窄桌機上它是一頁普通會捲的內容 —— 在那裡鎖 body 等於「頁面太長不能滑動」。 */
+    @media (max-width:640px){ body.wish-open{overflow:hidden;} }
     /* **對話框要置中在「扣掉地圖之後」的那一塊,不是整個視窗。**
        抽屜是 z70、對話框是 z60,我原本判斷「桌機地圖是右邊一欄,跟畫面中央的
        對話框不重疊」—— **那句話在抽屜被拖寬之後就不成立**:拖到 3/4 的時候,
@@ -3696,7 +3694,7 @@
     /* **手機的「許願」分頁也關不掉。** 那裡「看行程還是看許願」是分頁在決定,
        底層那個 `<details>` 的開關已經沒有意義 —— 而它還在,點那條標頭會把整塊收起來,
        使用者看到的是「內容整個不見了」。開關要嘛有用,要嘛不要在。 */
-    if (window.innerWidth <= 640 && state.tab === "wish") {
+    if (!wideCols() && state.tab === "wish") {
       const w0 = el("wishbox");
       if (w0 && !w0.open) w0.open = true;
       return;
@@ -3739,11 +3737,13 @@
          篩到某一天的那幾個點 —— **而「切回來應該看到整趟」正是這一輪要的。** */
       loadSheetMap(true);
       const wb = el("wishbox");
-      /* **只有真手機(≤640)自動展開。** 那裡許願是 sheet 的內容、由分頁決定看哪一份。
-         窄桌機(641–1279)不一樣:它維持釘在底部那一條,使用者自己點開 ——
-         第一版寫 `!wideCols()`(<1280),於是窄桌機一進站許願就整片打開,
-         把行程蓋掉,而那不是任何人要求的。 */
-      if (wb && window.innerWidth <= 640) wb.open = true;
+      /* **三欄以外的每個寬度都自動展開。** 那裡「看行程還是看許願」是分頁在決定,
+         底層那個 `<details>` 的開關已經沒有意義。
+         這行寫過兩次相反的版本:一次 `!wideCols()`、一次 `<= 640`。
+         `<= 640` 是對的 —— **在窄桌機還有那條底部 bar 的時候**。
+         那條 bar 收掉、許願變成分頁之後,它又回到 `!wideCols()`,
+         而這一次兩邊講的是同一句話:沒有三欄的地方,許願由分頁決定。 */
+      if (wb && !wideCols()) wb.open = true;
     }
     syncLayout();
     syncWishLock();
@@ -3802,17 +3802,16 @@
       (window.innerWidth <= 640 ? Math.round(h) : 0) + "px");
   }
 
+  /* 名字留著(叫的地方有好幾處),但它現在只做一件事:量分頁列的高度。
+     那條許願 bar 已經沒有了。 */
   function syncWishBar() {
-    const wb = el("wishbox"), sum = wb && wb.querySelector("summary");
     const tabs = document.querySelector(".tabs");
     /* **只有手機的分頁列浮在底部**,桌機那排在上面 —— 所以 `--tabh` 只在手機有值。 */
     const phone = window.innerWidth <= 640;
     const th = (phone && tabs) ? Math.round(tabs.getBoundingClientRect().height) : 0;
     document.documentElement.style.setProperty("--tabh", th + "px");
-    /* 那條在**所有沒有三欄的寬度**都釘著,不只手機 —— 窄桌機也是它。 */
-    const h = (!wb || wb.open || wideCols() || !sum)
-      ? 0 : Math.round(sum.getBoundingClientRect().height);
-    document.documentElement.style.setProperty("--wishbar", h + "px");
+    /* **那條底部 bar 沒有了**,所以這裡不再量它 —— 留著一個永遠是 0 的變數,
+       等於留著一句「那條還在」的話。`--tabh` 留著,分頁列還在。 */
   }
 
   /* **量一次不夠,要盯著它。** 第一版在開地圖的下一幀量,量到 535 而它其實是 553 ——
@@ -3849,7 +3848,9 @@
      一部分,不是蓋在上面的東西,鎖了會讓整頁捲不動。 */
   function syncWishLock() {
     const wb = el("wishbox");
-    document.body.classList.toggle("wish-open", !!(wb && wb.open && !wideCols()));
+    /* 只有手機要鎖捲動:那裡許願是一張 fixed 的 sheet。
+       窄桌機上它是一頁普通會捲的內容,鎖了就變成「頁面太長不能滑動」。 */
+    document.body.classList.toggle("wish-open", !!(wb && wb.open && window.innerWidth <= 640));
   }
   (function () {
     const wb = el("wishbox");
