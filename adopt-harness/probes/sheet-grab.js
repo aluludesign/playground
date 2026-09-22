@@ -66,8 +66,23 @@ async function drag(dy) {
       sheet.getBoundingClientRect().bottom <= tabTop + 1,
       { 清單底: Math.round(sheet.getBoundingClientRect().bottom), 分頁列上緣: Math.round(tabTop) });
     var mr = map.getBoundingClientRect();
-    ok("地圖鋪滿分頁列以上的整塊(它是背景,不是一條)",
-      Math.round(mr.height) > w.innerHeight * 0.8, Math.round(mr.height));
+    /* **從頂列下面鋪到分頁列上面。** 第一版寫「佔視窗八成以上」,而頂列改成
+       「把東西往下擠」之後地圖就從 115 開始了 —— 那是要的行為,不是縮水。
+       閾值式的斷言碰到版面改動就會這樣:它守的是一個數字,不是一件事。
+       改成問那件事本身:上緣貼著頂列、下緣貼著分頁列。 */
+    var headBottom = d.querySelector(".topbar").getBoundingClientRect().bottom;
+    var cb = d.getElementById("cloudbar");
+    if (cb && !cb.hidden) headBottom = Math.max(headBottom, cb.getBoundingClientRect().bottom);
+    ok("地圖從頂列下面開始(頂列不蓋住它,不然那兩個圖層開關會消失)",
+      Math.abs(mr.top - headBottom) <= 1, { 地圖上緣: Math.round(mr.top), 頂列下緣: Math.round(headBottom) });
+    ok("而且那兩個圖層開關看得見、按得到",
+      (function () {
+        var lay = d.getElementById("lay-plan");
+        if (!lay || w.getComputedStyle(lay).display === "none") return false;
+        var r = lay.getBoundingClientRect();
+        var hit = d.elementFromPoint(Math.round(r.left + r.width / 2), Math.round(r.top + r.height / 2));
+        return !!hit && (hit === lay || lay.contains(hit));
+      })(), "lay-plan");
     /* 地圖的握把不該再出現:它已經不是要縮放的東西,留著會承諾一件做不到的事。 */
     ok("地圖那條舊握把收起來了(它不再是可縮放的 sheet)",
       w.getComputedStyle(d.getElementById("map-grab")).display === "none",

@@ -82,12 +82,16 @@
     body{overflow-x:clip;}
 
     /* ---- top bar ---- */
-    .topbar{position:sticky; top:env(safe-area-inset-top,0px); z-index:20; display:flex; align-items:flex-end; justify-content:space-between; gap:16px;
-      padding-block:18px 14px; background:var(--paper); border-bottom:1px solid var(--line-soft);}
-    .kicker{display:block; font-family:var(--font-mono); font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:var(--muted);}
+    .topbar{position:sticky; top:env(safe-area-inset-top,0px); z-index:20; display:flex; align-items:center; justify-content:space-between; gap:16px;
+      padding-block:12px 10px; background:var(--paper); border-bottom:1px solid var(--line-soft);}
+    .topbar h1{margin:0;}
     .topbar h1{font-family:var(--font-sign); font-size:22px; letter-spacing:.04em;}
-    .countdown{text-align:right; font-family:var(--font-mono); font-size:11px; color:var(--muted); letter-spacing:.04em; white-space:nowrap;}
-    .countdown b{display:block; font-size:21px; font-weight:600; color:var(--ink); letter-spacing:0;}
+    /* 「倒數 11 天」—— 沒有標籤那一行了,這一句自己說得完。
+       數字用設計系統的 primary(`--color-accent`),其餘是一般文字色:
+       **要被一眼抓到的是那個數字**,不是「倒數」和「天」。 */
+    .countdown{text-align:right; font-family:var(--font-mono); white-space:nowrap;}
+    .countdown b{font-size:19px; font-weight:600; color:var(--ink); letter-spacing:0;}
+    .countdown .cd-n{color:var(--color-accent); font-size:21px;}
 
     /* ---- flight board ---- */
     .board summary{list-style:none; cursor:pointer;}
@@ -263,6 +267,10 @@
        **釘的是「內容區」的底部,不是螢幕的底部。** 手機上那兩件事一樣;
        窄桌機上不一樣 —— 地圖是右邊的抽屜,那條要在它左邊結束,
        不然它會從地圖底下穿過去,而使用者看到的是一條被切掉一半的東西。 */
+    /* **「許願」分頁只有手機有。** 桌機是三欄的第二欄、窄桌機是釘在底部那一條 ——
+       兩個地方都已經有入口,再開一個分頁等於同一件事有兩個進法,
+       而那種重複遲早會有一邊先過期。 */
+    @media (min-width:641px){ #tab-wish{display:none;} }
     @media (max-width:1279px){
       .wishbox:not([open]){margin:0; border:0; background:none;}
       .wishbox:not([open]) > summary{position:fixed; left:0; right:0; bottom:var(--tabh,0px);
@@ -295,8 +303,20 @@
     @media (max-width:640px){
       /* 地圖降到最底層,鋪滿分頁列以上的整塊。它不再是「從下面滑上來的東西」,
          所以那些屬於 sheet 的裝飾(把手、圓角、陰影、標題列)都收掉。 */
+      /* **頂列不浮,它把下面的東西往下擠。** 第一版讓地圖從 `top:0` 開始,
+         結果頂列(sticky、z20)和「連上 Notion」那一條都蓋在地圖上面 ——
+         而地圖最上面那一排正好是「已排行程／大家的許願」兩個開關,**它們就這樣消失了**。
+         畫面上看起來只是「那兩個開關不見了」,不像有人壓在上面。
+         `--headh` 是量出來的:頂列的高度會因為字級、安全區、連線狀態那一條在不在而變。 */
+      /* **只有行程和許願這兩頁不浮。** 那兩頁地圖是底、頁面本身不捲,
+         頂列浮著只會蓋掉地圖最上面那一排開關。
+         搭機／花費／分帳那三頁是會捲的長頁面,頂列**釘著**(維持原本的 sticky)——
+         捲到哪裡都看得到現在在哪一趟、還有幾天。 */
+      body[data-view="plan"] .topbar,
+      body[data-view="wish"] .topbar{position:static;}
       body[data-view="plan"] #map-sheet,
-      body[data-view="wish"] #map-sheet{position:fixed; inset:0 0 var(--tabh,0px) 0; z-index:1;
+      body[data-view="wish"] #map-sheet{position:fixed;
+        inset:var(--headh,0px) 0 var(--tabh,0px) 0; z-index:1;
         align-items:stretch; pointer-events:auto;}
       body[data-view="plan"] #map-sheet .sheet-in,
       body[data-view="wish"] #map-sheet .sheet-in{height:100%; border-radius:0; box-shadow:none;
@@ -325,11 +345,21 @@
       /* 把手:整條可按,點它就回到預設那一段(iOS 那種)。
          `touch-action:none` 一樣是功能不是樣式,少了它往上拖會被當成捲頁面。 */
       .pg-grab{display:block; position:sticky; top:0; z-index:2; width:100%;
+        --grabh:20px;
         padding:9px 0 7px; border:0; background:var(--surface); cursor:grab;
         touch-action:none; border-radius:16px 16px 0 0;}
       .pg-grab::before{content:""; display:block; width:38px; height:4px; margin:0 auto;
         border-radius:2px; background:var(--line);}
       .pg-grab:hover::before,#panel-plan.dragging .pg-grab::before{background:var(--accent);}
+
+      /* 天數那一列黏在 sheet 最頂部,底下是握把的高度。
+         **兩個檢視都黏**:在行程那頁它是主要的導覽,在許願那頁它是「加到哪一天」。 */
+      body[data-view="plan"] #days,
+      body[data-view="wish"] #days{position:sticky; top:var(--grabh,20px); z-index:1;
+        background:var(--surface); padding-block:8px; margin-block:0;}
+      /* **許願分頁的天數只給管理員看。** 那一列的用途是「把願望排進哪一天」,
+         而沒有通行碼的人排不了 —— 給他一排點了沒有作用的東西,比不給更糟。 */
+      body[data-view="wish"]:not(.can-edit) #days{display:none;}
 
       /* 兩個檢視共用同一個 panel:露出哪一欄由 data-view 決定。 */
       body[data-view="plan"] #wishbox{display:none;}
@@ -874,10 +904,9 @@
 
 <div class="wrap">
   <header class="topbar">
-    <div class="brand">
-      <span class="kicker">TPE → NRT · Terminal 1</span>
-      <h1>東京五人行</h1>
-    </div>
+    <!-- 航班那一行搬去「搭機」分頁了,這裡不再重複;倒數那一行也不要標籤,
+         留「倒數 N 天」本身就說得完。**頂列越短,地圖和清單就越長。** -->
+    <div class="brand"><h1>東京五人行</h1></div>
     <div class="countdown" id="countdown"></div>
   </header>
 
@@ -1817,6 +1846,10 @@
           ? "這是離線副本,改不了也傳不回去。連上網之後會自動換成最新的。"
           : "紀錄存在這台裝置的瀏覽器裡。要跟其他人對帳,按「匯出備份」把 JSON 傳給對方,對方用「匯入備份」讀進去。";
     }
+    /* **「能不能編輯」要讓 CSS 看得到。** 許願分頁的天數那一列只給管理員 ——
+       那一列的用途是「把願望排進哪一天」,而沒有通行碼的人排不了。
+       判準跟這個函式其餘每一條同一個 `on`,不要另外算一次。 */
+    document.body.classList.toggle("can-edit", !!on);
     if (!on) {
       /* **收的是對話框那一層,不是裡面那張卡。**
          `#stop-form` 以前是就地展開的表單,藏它就等於收起來;現在它是
@@ -1967,13 +2000,14 @@
     const back = new Date("2026-10-09T00:40:00+08:00");
     const now = new Date();
     const box = el("countdown");
-    if (now > back) box.innerHTML = "<span>旅程結束</span><b>回味中</b>";
+    if (now > back) box.innerHTML = "<b>回味中</b>";
     else if (now >= go) {
       /* 數日曆上的第幾天,跟上面的 DAY 幾對得起來 —— 不是從起飛算滿 24 小時 */
       const d = DAYS.find(x => x.date === todayISO());
-      box.innerHTML = "<span>正在東京</span><b>第 " + (d ? d.n : DAYS.length) + " 天</b>";
+      box.innerHTML = '<b>第 <span class="cd-n">' + (d ? d.n : DAYS.length) + "</span> 天</b>";
     }
-    else box.innerHTML = "<span>出發倒數</span><b>" + Math.ceil((go - now) / 86400000) + " 天</b>";
+    else box.innerHTML = '<b>倒數 <span class="cd-n">' +
+      Math.ceil((go - now) / 86400000) + "</span> 天</b>";
   }
 
   /* 誰坐哪一個位子 —— 照機艙由窗到窗排,走道畫在中間 */
@@ -2210,7 +2244,13 @@
       }));
     }
     if (layers.plan) {
-      if (sheetMode === "day") {
+      /* **手機上「行程」分頁預設放全部天數的點。**
+         以前一律只放當天 —— 而手機上地圖是底、一直看得到,只放一天等於
+         「這張圖只能回答我已經選好的那個問題」。想看整趟怎麼分布,沒有地方可以看。
+         點了某一天才篩成那一天;切回「行程」分頁會重新放全部(`dayPicked` 歸零)。
+         桌機維持原樣:那裡地圖是要自己打開的一塊,打開的當下就是在看某一天。 */
+      const filterToDay = window.innerWidth > 640 || dayPicked;
+      if (sheetMode === "day" && filterToDay) {
         const today = DAYS.find(x => x.date === state.day);
         dayList(state.day).forEach((x, i) => out.push({
           item: x, k: "d" + i, n: i + 1, cls: "plan", color: today ? today.color : "",
@@ -2583,6 +2623,9 @@
   /* **升到強力搜是使用者點頭,不是按滿次數。** 他按了「好」這裡才變 true。
      沒有這一步的話,那顆按鈕會自己在某個時刻變成花錢的 —— 而使用者不會知道
      是哪一刻變的。**要錢的那一段要有一個明確的「我同意」。** */
+  /* 「使用者主動點了某一天」跟「state.day 有值」是兩件事 —— state.day 永遠有值
+     (預設是第一天),所以不能拿它來判斷「有沒有挑過」。 */
+  let dayPicked = false;
   const seekArmed = {};
   const HINT_WORDS = "沒找到?試試加入地點名 —— 例如「teamLab 豐洲」。";
   /* **後面那三個字是一顆按鈕,所以不寫在這裡。** 見 hintHTML()。 */
@@ -3564,6 +3607,8 @@
     TABS.forEach(t => el("tab-" + t).setAttribute("aria-selected", String(t === name)));
     ["plan", "fly", "cost", "split"].forEach(pn => { el("panel-" + pn).hidden = PANEL_OF[name] !== pn; });
     document.body.dataset.view = name;
+    /* 每次進「行程」分頁都從「看整趟」開始 —— 她要看某一天,點那一天就好。 */
+    if (name === "plan") dayPicked = false;
     /* **花費和分帳是一頁式的。** 地圖和許願講的都是「某一天要去哪」,
        在對帳的頁面上它們沒有對象,而抽屜還會把版面往左擠掉 440px。
        許願那張滿版 sheet 更要收 —— 它蓋住整個畫面,不收的話切過去等於沒切。 */
@@ -3575,12 +3620,22 @@
     } else {
       /* **手機上這兩頁地圖是底**,所以一定要開著;而且圖上的點跟著檢視換。 */
       openMapSheet(name === "wish" ? "wish" : "day");
+      /* **換檢視要重畫地圖上的點。** `openMapSheet()` 只負責把那一塊打開、
+         設定模式;圖上放哪些點是 `loadSheetMap()` 算的,而它有一層快取
+         (`sheetKey`)。不主動叫一次的話,切回「行程」看到的還是上一次
+         篩到某一天的那幾個點 —— **而「切回來應該看到整趟」正是這一輪要的。** */
+      loadSheetMap(true);
       const wb = el("wishbox");
-      if (wb && !wideCols()) wb.open = true;   /* 手機上它是 sheet 的內容,不再是收合區塊 */
+      /* **只有真手機(≤640)自動展開。** 那裡許願是 sheet 的內容、由分頁決定看哪一份。
+         窄桌機(641–1279)不一樣:它維持釘在底部那一條,使用者自己點開 ——
+         第一版寫 `!wideCols()`(<1280),於是窄桌機一進站許願就整片打開,
+         把行程蓋掉,而那不是任何人要求的。 */
+      if (wb && window.innerWidth <= 640) wb.open = true;
     }
     syncLayout();
     syncWishLock();
     syncWishBar();
+    syncHeadH();
   }
   document.querySelectorAll(".tab").forEach(b => b.addEventListener("click", () => switchTab(b.dataset.tab)));
   /* 使用者在寬桌機上還是點得到那個 summary。點了就再開回去 ——
@@ -3595,6 +3650,18 @@
      而那看起來像「它自己算錯」,不像「有人忘了通知它」。 */
   /* 底部那條佔掉多少高度。**開著的時候是 0** —— 那時候它是 sheet 的黏頭,
      不再浮在外面,底下也就不必讓位。 */
+  /* 頁面最上面那一塊(頂列 + 連線狀態那一條)佔掉多少高度。
+     地圖靠它決定自己從哪裡開始 —— **那兩樣東西都會變高變矮**:
+     連上 Notion 之後那一條會出現、旅程開始之後倒數那句話會變短。 */
+  function syncHeadH() {
+    const tb = document.querySelector(".topbar");
+    const cb = el("cloudbar");
+    let h = tb ? tb.getBoundingClientRect().bottom : 0;
+    if (cb && !cb.hidden) h = Math.max(h, cb.getBoundingClientRect().bottom);
+    document.documentElement.style.setProperty("--headh",
+      (window.innerWidth <= 640 ? Math.round(h) : 0) + "px");
+  }
+
   function syncWishBar() {
     const wb = el("wishbox"), sum = wb && wb.querySelector("summary");
     const tabs = document.querySelector(".tabs");
@@ -3624,6 +3691,11 @@
        跟 `--maph` 同一個形狀:時間點猜不準,就不要猜。 */
     const tabs = document.querySelector(".tabs");
     if (tabs) new ResizeObserver(() => { syncWishBar(); setDet(planDet); }).observe(tabs);
+    /* 頂列和連線狀態那一條也盯著 —— 它們的高度會變,而地圖的起點跟著它們。 */
+    const tb = document.querySelector(".topbar");
+    if (tb) new ResizeObserver(syncHeadH).observe(tb);
+    const cb = el("cloudbar");
+    if (cb) new ResizeObserver(syncHeadH).observe(cb);
   })();
 
   function syncMapOcc() {
@@ -3653,6 +3725,7 @@
     const b = ev.target.closest("[data-day]");
     if (!b) return;
     state.day = b.dataset.day;
+    dayPicked = true;
     clearHere();      /* 那句話講的是剛才那一筆,換了一天它就沒有對象了 */
     renderDays(); renderRoute();
   });
