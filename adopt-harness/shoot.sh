@@ -383,6 +383,14 @@ shot 15-wish-edit-other  390 1000 "d.getElementById('wishbox').open=true; d.quer
 shot 16-seek-hint      390 1000 "(async function(){var R=[{lat:'35.6',lon:'139.7',display_name:'某個地方, 東京都, 日本'}];w.fetch=function(u){return String(u).indexOf('nominatim')<0?Promise.reject(new Error('擋掉')):Promise.resolve({ok:true,json:function(){return Promise.resolve(R)}})};d.getElementById('add-stop-btn').click();d.getElementById('sf-title').value='泡溫泉';var b=d.querySelector('[data-seek=sf-title]');var nap=function(){return new Promise(function(r){w.setTimeout(r,50)})};for(var i=0;i<2;i++){b.click();for(var k=0;k<40&&!b.disabled;k++){await nap()}for(var m=0;m<120&&b.disabled;m++){await nap()}}})();" \
                                   "#stop-form:not([hidden]) [data-seek]:1+"
 
+# 17:寬桌機的三塊 —— 行程 ｜ 許願 ｜ 地圖。
+# **這張是被 02 拍不到逼出來的。** 02 是在 1100px 拍的,而三欄的門檻是 1280
+# (量出來的:願望那一排在 1100 只剩 182px 會換行,1280 是 234px 一行)。
+# 也就是說整個三欄版面**在既有的十六張裡一張都拍不到** —— 而「沒有任何一張
+# 截圖拍得到它」正是 `#map-fix` 躲了四輪的那個機制。
+# 不必點任何東西:寬桌機的行程分頁預設就是三塊,那正是這張要證明的事。
+shot 17-plan-three-cols 1440  900 ""                                            ".stop:3+,.map .pin:3+"
+
 kill $SRV 2>/dev/null || true
 rm -rf "$H/.work"
 echo "→ $OUT"

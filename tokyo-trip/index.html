@@ -197,6 +197,29 @@
     .stop .b .nt{font-size:12.5px; color:var(--ink-2); margin-top:3px;}
     .stop .x{opacity:0; transition:opacity .15s;}
     /* ---- 許願 ---- */
+    /* ---- 寬桌機:行程 ｜ 許願 ｜ 地圖 三塊並排 ----
+       **1280 是量出來的,不是挑的。** 641px 就進桌機模式,但那個寬度扣掉 440px 的
+       地圖抽屜再切兩欄,每欄剩一百多,行程那一列會擠爛。
+       實際量願望那一排(`.wm`)在各個寬度下有多寬、會不會換行:
+         1100 → 182px,換行     1280 → 234px,一行
+         1440 → 281px,一行     1680 → 301px,一行
+       所以門檻放在 1280:**它是那一排不再換行的第一個寬度**。
+       (`col-plan` / `col-wish` 這兩個名字寫過又拿掉了 —— 走鐘防護抓到它們
+        「用了但沒有任何 CSS 規則」。兩欄的差別全靠順序,不需要各自的名字。)
+       不夠寬的時候許願走另一條路(底部 sheet)。
+       地圖那一塊不在這裡:它是 `position:fixed` 的抽屜,靠 `body.drawer-open`
+       的 `padding-right` 把空間讓出來,所以這兩欄分的本來就是「扣掉地圖之後」的寬度 ——
+       **把地圖拖寬,這兩欄會自己等量變窄**,不用另外算。 */
+    @media (min-width:1280px){
+      .cols{display:flex; gap:18px; align-items:flex-start;}
+      /* **`flex:1 1 0` 不是 `flex:1`。** 後者的基準是內容寬度,於是願望多的那天
+         許願那欄會比行程寬 —— 而「平分」講的是位置,不是內容多寡。 */
+      .cols > .col{flex:1 1 0; min-width:0;}
+      .wishbox.col{margin-top:0;}
+      /* 三塊都關不掉,所以那個收合的箭頭是騙人的,收起來。 */
+      .wishbox.col .wish-caret{display:none;}
+      .wishbox.col > summary{cursor:default;}
+    }
     .wishbox{margin-top:22px; border:1px solid var(--line); border-radius:11px; background:var(--surface); padding:0;}
     .wish-head{list-style:none; cursor:pointer; display:flex; align-items:center; gap:8px; padding:13px 15px;
       font-family:var(--font-sign); font-size:14px; font-weight:600;}
@@ -550,6 +573,9 @@
       background:color-mix(in srgb, var(--color-accent) 35%, var(--color-foundation-muslin));}
     /* 強力搜跑過一次之後才出現的那句。比 .said 再輕一階 —— 它是退路,不是提示。 */
     .seek-out .said.soft{font-size:11.5px; padding-top:2px;}
+    /* 來源標示。**它是義務,不是訊息** —— 所以比退路那句還輕,而且不佔一整列的高度。 */
+    .seek-out .said.cred{font-size:10.5px; letter-spacing:.04em; color:var(--ink-3,var(--muted));
+      padding-top:0; padding-bottom:7px; opacity:.75;}
     /* 已標定是「好消息」,跟查詢中／查無用同一個槽但要分得出來 */
     .seek-out .said.ok{color:var(--ink);}
     /* 用 id 不用 class:走鐘防護掃的是「用了但沒有規則的 class」,id 不在它的範圍裡,
@@ -729,6 +755,10 @@
   <main>
     <section class="panel" id="panel-plan" role="tabpanel" aria-labelledby="tab-plan">
       <div class="days" id="days" role="group" aria-label="選擇日期"></div>
+      <!-- 日期那排留在上面橫跨整寬:它選的是「哪一天」,而行程和許願兩欄講的都是那一天。
+           寬桌機時底下這層變成並排的兩欄(行程 ｜ 許願),地圖抽屜佔右邊第三塊。 -->
+      <div class="cols" id="plan-cols">
+      <div class="col">
       <div class="sec-head">
         <h2 id="day-title">當日行程</h2>
         <button class="btn btn-sm" id="add-stop-btn" type="button"><svg class="i" aria-hidden="true"><use href="#i-plus"></use></svg>加行程</button>
@@ -753,8 +783,9 @@
            所以 08 / 09 / 10 / 11 四張截圖一個像素都不會動。 -->
       <div id="stop-msg" hidden></div>
       <div class="route" id="route"></div>
+      </div><!-- /.col(行程那一欄) -->
 
-      <details class="wishbox" id="wishbox">
+      <details class="wishbox col" id="wishbox">
         <summary class="wish-head">
           <svg class="i" aria-hidden="true"><use href="#i-star"></use></svg>
           <span>大家的許願</span>
@@ -784,6 +815,7 @@
           <svg class="i" aria-hidden="true"><use href="#i-plus"></use></svg>許願地點
         </button>
       </details>
+      </div><!-- /#plan-cols -->
     </section>
 
     <section class="panel" id="panel-cost" role="tabpanel" aria-labelledby="tab-cost" hidden>
@@ -2472,6 +2504,11 @@
         '<button type="button" class="hit" data-hit="' + id + '" data-i="' + i + '">' +
         hitThumb(r) + '<span class="txt"><b>' + esc(hitName(r)) + '</b><span class="at">' +
         esc(hitAddr(r)) + "</span></span></button>").join("") +
+      /* **只有這一輪真的問了 Google 才標。** Google 的條款要求「在非 Google 地圖上
+         顯示他們的 Places 資料要標來源」,而免費那家是 OpenStreetMap ——
+         對免費的結果標 Google,是把來源講錯,比不標更糟。
+         `strong` 在這裡還在,不用另外記一個旗標。 */
+      (strong ? '<div class="said soft cred">Powered by Google</div>' : "") +
       seekTail(id);
     box.hidden = false;
     box._hits = res;
@@ -3290,14 +3327,45 @@
   function render() { renderSeats(); renderDays(); renderRoute(); renderWishes(); renderCost(); renderFund(); renderSplit(); renderSync(); }
 
   /* ================= 互動 ================= */
+  /* **三塊並排的門檻,跟 CSS 那條 media query 同一個數字。**
+     兩邊各寫一次是沒辦法的事(CSS 決定排版、JS 決定要不要自動打開),
+     所以寫在一起、註解互相指過去 —— 改一個就要改另一個。見 `#plan-cols` 那段。 */
+  const WIDE_COLS = "(min-width:1280px)";
+  const wideCols = () => !!(window.matchMedia && window.matchMedia(WIDE_COLS).matches);
+
+  /* 寬桌機的行程分頁:**三塊都不能各自關**,所以這裡把它們點回去。
+     許願那一欄是 `<details>`,使用者點得到 summary;地圖是抽屜,預設沒開。
+     兩個都在這裡補上,而不是靠使用者自己開。 */
+  function syncLayout() {
+    const three = wideCols() && state.tab === "plan";
+    if (!three) return;
+    const wb = el("wishbox");
+    if (wb && !wb.open) wb.open = true;
+    if (el("map-sheet").hidden) openMapSheet("day");
+  }
+
   function switchTab(name) {
     state.tab = name;
     ["plan", "cost", "split"].forEach(t => {
       el("tab-" + t).setAttribute("aria-selected", String(t === name));
       el("panel-" + t).hidden = t !== name;
     });
+    /* **花費和分帳是一頁式的。** 地圖和許願講的都是「某一天要去哪」,
+       在對帳的頁面上它們沒有對象,而抽屜還會把版面往左擠掉 440px。 */
+    if (name !== "plan") closeMapSheet();
+    syncLayout();
   }
   document.querySelectorAll(".tab").forEach(b => b.addEventListener("click", () => switchTab(b.dataset.tab)));
+  /* 使用者在寬桌機上還是點得到那個 summary。點了就再開回去 ——
+     **不要用 `preventDefault`**:`<details>` 的開合不是靠 click 的預設行為,
+     攔了也沒用,而 toggle 事件是它真的變了之後才發的。 */
+  (function () {
+    const wb = el("wishbox");
+    if (wb) wb.addEventListener("toggle", () => { if (!wb.open) syncLayout(); });
+  })();
+  /* 拉寬視窗也要補上。`resize` 會連發,而 syncLayout 只做「該開的還沒開就開」,
+     重複呼叫不會有副作用,所以不節流。 */
+  window.addEventListener("resize", syncLayout);
 
   el("days").addEventListener("click", ev => {
     const b = ev.target.closest("[data-day]");
@@ -4174,8 +4242,15 @@
      正式站不出聲(那五個人不該看到我們的工程訊息),只寫 console;
      localhost 和 file:// 才跳出來擋在眼前。 */
   (function checkBuild() {
-    /* 純標記用的 class,沒有樣式也沒有 JS 用到,不是漏編 */
-    const IGNORE = ["brand", "panel"];
+    /* 純標記用的 class,不是漏編。兩種:
+       - `brand` / `panel`:沒有樣式,也沒有 JS 用到。
+       - `plan`:**給 JS 用的標記,不是樣式掛鉤**。地圖上的點用它分「已排行程」和
+         「願望」,而那是排序(`cls === "plan"`)和過濾(`filter(x => x.cls !== "plan")`)
+         在用的,從來沒有對應的 CSS。
+         它一直是這樣,只是**以前地圖不會自己打開**,所以沒有人看過這條警告 ——
+         寬桌機改成預設三塊之後,一進站就有行程的點,它就叫了。
+         這一條的用途是抓「改了 markup 沒重編 CSS」,一個刻意不要樣式的標記不在裡面。 */
+    const IGNORE = ["brand", "panel", "plan"];
     const dev = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname) || location.protocol === "file:";
     setTimeout(() => {
       const known = {};
