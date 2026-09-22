@@ -279,6 +279,75 @@
       /* `.wrap` 本來就留了分頁列的高度,這裡再補許願那條的 —— 兩條都是浮在上面的。 */
       .wrap{padding-bottom:calc(78px + var(--wishbar,0px) + env(safe-area-inset-bottom,0px));}
     }
+
+    /* ================= 手機:地圖是底,清單是疊在上面的 sheet =================
+       **這是把原本的疊法整個翻過來。** 以前是「頁面在底、地圖從下面滑上來蓋住它」,
+       於是要看地圖就看不到清單,要看清單就得把地圖收掉 —— 而那兩件事在排行程的時候
+       是同一件事:**看著地圖上的點,對照清單上的順序。**
+
+       現在地圖鋪在底層一直在,清單是一張可以縮放的 sheet:
+         收起來(det=0) 只剩一條細 bar —— 整張地圖看得見,點 bar 或往上拖就回來
+         預設 (det=1) 約半螢幕 —— 上面看點、下面看清單
+         全開 (det=2) 只留地圖最上面一點,幾乎是純清單
+
+       「行程」和「許願」是同一張地圖的兩個檢視:sheet 裡換清單、圖上換點,
+       地圖本身**不重開、不閃**。 */
+    @media (max-width:640px){
+      /* 地圖降到最底層,鋪滿分頁列以上的整塊。它不再是「從下面滑上來的東西」,
+         所以那些屬於 sheet 的裝飾(把手、圓角、陰影、標題列)都收掉。 */
+      body[data-view="plan"] #map-sheet,
+      body[data-view="wish"] #map-sheet{position:fixed; inset:0 0 var(--tabh,0px) 0; z-index:1;
+        align-items:stretch; pointer-events:auto;}
+      body[data-view="plan"] #map-sheet .sheet-in,
+      body[data-view="wish"] #map-sheet .sheet-in{height:100%; border-radius:0; box-shadow:none;
+        animation:none; display:flex; flex-direction:column;}
+      body[data-view="plan"] #map-sheet .sheet-grab,
+      body[data-view="wish"] #map-sheet .sheet-grab,
+      body[data-view="plan"] #map-sheet .sheet-head,
+      body[data-view="wish"] #map-sheet .sheet-head{display:none;}
+      body[data-view="plan"] #map-sheet #map,
+      body[data-view="wish"] #map-sheet #map{flex:1; height:auto; min-height:0;}
+
+      /* 清單那一張 sheet。高度由 `--det` 決定,三段之間用 transition 滑過去;
+         拖的時候把 transition 關掉(`.dragging`),不然手指和畫面會脫節。 */
+      body[data-view="plan"] #panel-plan,
+      body[data-view="wish"] #panel-plan{position:fixed; left:0; right:0; bottom:var(--tabh,0px);
+        z-index:20; height:var(--det,50vh); max-height:calc(100vh - var(--tabh,0px));
+        margin:0; padding:0 15px calc(12px + env(safe-area-inset-bottom,0px));
+        background:var(--surface); border-radius:16px 16px 0 0;
+        box-shadow:0 -6px 24px rgba(20,26,45,.16);
+        overflow-y:auto; overscroll-behavior:contain;
+        transition:height .22s cubic-bezier(.22,1,.36,1);}
+      #panel-plan.dragging{transition:none;}
+      /* 收到剩一條的時候,裡面的東西不該還能捲 —— 捲一個看不見的清單是假的互動。 */
+      #panel-plan[data-det="0"]{overflow:hidden;}
+
+      /* 把手:整條可按,點它就回到預設那一段(iOS 那種)。
+         `touch-action:none` 一樣是功能不是樣式,少了它往上拖會被當成捲頁面。 */
+      .pg-grab{display:block; position:sticky; top:0; z-index:2; width:100%;
+        padding:9px 0 7px; border:0; background:var(--surface); cursor:grab;
+        touch-action:none; border-radius:16px 16px 0 0;}
+      .pg-grab::before{content:""; display:block; width:38px; height:4px; margin:0 auto;
+        border-radius:2px; background:var(--line);}
+      .pg-grab:hover::before,#panel-plan.dragging .pg-grab::before{background:var(--accent);}
+
+      /* 兩個檢視共用同一個 panel:露出哪一欄由 data-view 決定。 */
+      body[data-view="plan"] #wishbox{display:none;}
+      /* **`#wishbox` 自己也掛著 `.col`**(它在桌機是第二欄),所以這裡要把它排除掉,
+         不然「藏起行程那一欄」會連許願一起藏,而畫面上是一張空的 sheet。 */
+      body[data-view="wish"] .cols > .col:not(#wishbox){display:none;}
+      /* 許願在這個版面裡是 sheet 的內容,不再是「收合區塊」也不再有底部那條。 */
+      body[data-view="wish"] #wishbox{position:static; inset:auto; z-index:auto; height:auto;
+        overflow:visible; animation:none; border:0; background:none; margin:0;}
+      body[data-view="wish"] #wishbox > summary{position:static; border:0; background:none; padding-left:0;}
+      body[data-view="wish"] .wish-caret{display:none;}
+      body[data-view="plan"] .wishbox:not([open]) > summary,
+      body[data-view="wish"] .wishbox:not([open]) > summary{position:static;}
+      /* sheet 自己就是捲動容器,`.wrap` 不必再為那條浮起來的許願 bar 讓位 */
+      body[data-view="plan"] .wrap,
+      body[data-view="wish"] .wrap{padding-bottom:0;}
+    }
+    @media (prefers-reduced-motion:reduce){ #panel-plan{transition:none;} }
     /* 窄桌機(641–1279):地圖是右邊的抽屜,**收起來的那條和展開的 sheet 都讓開它的寬度**。
        桌機沒有底部分頁列(分頁在上面),所以 `--tabh` 是 0,那條就貼著畫面底部。 */
     @media (min-width:641px) and (max-width:1279px){
@@ -821,6 +890,7 @@
 
   <nav class="tabs" role="tablist" aria-label="頁面切換">
     <button class="tab" role="tab" id="tab-plan" data-tab="plan" aria-selected="true" aria-controls="panel-plan"><svg class="i" aria-hidden="true"><use href="#i-route"></use></svg>行程</button>
+    <button class="tab" role="tab" id="tab-wish" data-tab="wish" aria-selected="false" aria-controls="panel-plan"><svg class="i" aria-hidden="true"><use href="#i-star"></use></svg>許願</button>
     <button class="tab" role="tab" id="tab-fly" data-tab="fly" aria-selected="false" aria-controls="panel-fly"><svg class="i" aria-hidden="true"><use href="#i-plane"></use></svg>搭機</button>
     <button class="tab" role="tab" id="tab-cost" data-tab="cost" aria-selected="false" aria-controls="panel-cost"><svg class="i" aria-hidden="true"><use href="#i-receipt"></use></svg>花費<span class="n" id="tab-cost-n"></span></button>
     <button class="tab" role="tab" id="tab-split" data-tab="split" aria-selected="false" aria-controls="panel-split"><svg class="i" aria-hidden="true"><use href="#i-scale-balanced"></use></svg>分帳</button>
@@ -828,6 +898,10 @@
 
   <main>
     <section class="panel" id="panel-plan" role="tabpanel" aria-labelledby="tab-plan">
+      <!-- 手機上這一整塊是疊在地圖上的 sheet,這條是它的把手(桌機 display:none)。
+           **跟地圖那條 `.sheet-grab` 是兩條** —— 一條管清單的高度、一條管地圖的,
+           在手機新版面裡地圖是底、不再自己縮放,所以那條會收起來。 -->
+      <button type="button" class="pg-grab" id="plan-grab" aria-label="拉開或收起清單"></button>
       <div class="days" id="days" role="group" aria-label="選擇日期"></div>
       <!-- 日期那排留在上面橫跨整寬:它選的是「哪一天」,而行程和許願兩欄講的都是那一天。
            寬桌機時底下這層變成並排的兩欄(行程 ｜ 許願),地圖抽屜佔右邊第三塊。 -->
@@ -3478,19 +3552,31 @@
     if (el("map-sheet").hidden) openMapSheet("day");
   }
 
+  /* **「許願」是分頁,但不是另一個 panel。**
+     它跟「行程」講的是同一天的同一張地圖,只是清單換一份、圖上的點換一組。
+     開第二個 panel 的話,願望清單就得有兩份 DOM(桌機那一欄一份、手機這裡一份)——
+     **同一份資料畫兩次,就會有一次先過期**。所以兩個分頁共用 `#panel-plan`,
+     差別寫在 `body[data-view]` 上,由 CSS 決定露出哪一欄。 */
+  const TABS = ["plan", "wish", "fly", "cost", "split"];
+  const PANEL_OF = { plan: "plan", wish: "plan", fly: "fly", cost: "cost", split: "split" };
   function switchTab(name) {
     state.tab = name;
-    ["plan", "fly", "cost", "split"].forEach(t => {
-      el("tab-" + t).setAttribute("aria-selected", String(t === name));
-      el("panel-" + t).hidden = t !== name;
-    });
+    TABS.forEach(t => el("tab-" + t).setAttribute("aria-selected", String(t === name)));
+    ["plan", "fly", "cost", "split"].forEach(pn => { el("panel-" + pn).hidden = PANEL_OF[name] !== pn; });
+    document.body.dataset.view = name;
     /* **花費和分帳是一頁式的。** 地圖和許願講的都是「某一天要去哪」,
        在對帳的頁面上它們沒有對象,而抽屜還會把版面往左擠掉 440px。
        許願那張滿版 sheet 更要收 —— 它蓋住整個畫面,不收的話切過去等於沒切。 */
-    if (name !== "plan") {
+    /* 地圖只服務「行程」和「許願」這兩個檢視。搭機／花費／分帳沒有對象。 */
+    if (name !== "plan" && name !== "wish") {
       closeMapSheet();
       const wb = el("wishbox");
       if (wb) wb.open = false;
+    } else {
+      /* **手機上這兩頁地圖是底**,所以一定要開著;而且圖上的點跟著檢視換。 */
+      openMapSheet(name === "wish" ? "wish" : "day");
+      const wb = el("wishbox");
+      if (wb && !wideCols()) wb.open = true;   /* 手機上它是 sheet 的內容,不再是收合區塊 */
     }
     syncLayout();
     syncWishLock();
@@ -4477,6 +4563,79 @@
     window.addEventListener("blur", stop);
   })();
 
+  /* ---- 手機:清單那張 sheet 的三段式收合(iOS「尋找」那種) ----
+     收起來只剩一條細 bar → 點它、或往上拖,就回來。
+
+     **三段是「位置」不是「比例」**:拖到哪裡放手,就吸到最近的那一段。
+     自由高度聽起來比較彈性,實際上每個人每次都停在不同的地方,而
+     「回到我熟悉的那個高度」變成一件要瞄準的事。三段是可以用肌肉記憶的。 */
+  const DET_MIN = 46;
+  let planDet = 1;
+  function detSizes() {
+    const tab = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--tabh")) || 0;
+    const full = Math.max(200, window.innerHeight - tab);
+    return [DET_MIN, Math.round(full * 0.5), full];
+  }
+  function setDet(i) {
+    planDet = Math.max(0, Math.min(2, i));
+    const p = el("panel-plan");
+    p.style.setProperty("--det", detSizes()[planDet] + "px");
+    p.dataset.det = String(planDet);
+    /* 地圖能看到的高度變了,重畫一次 —— 不然點會停在上一個尺寸算出來的位置。 */
+    setTimeout(repaintMap, 240);
+  }
+  (function () {
+    const p = el("panel-plan"), grab = el("plan-grab");
+    if (!p || !grab) return;
+    const mobile = () => window.innerWidth <= 640 &&
+      (state.tab === "plan" || state.tab === "wish");
+    let dragging = false, startY = 0, startH = 0, moved = 0, liveH = 0;
+    grab.addEventListener("pointerdown", ev => {
+      if (!mobile()) return;
+      dragging = true; moved = 0; startY = ev.clientY;
+      startH = p.getBoundingClientRect().height;
+      p.classList.add("dragging");
+      try { grab.setPointerCapture(ev.pointerId); } catch (_) {}
+      ev.preventDefault();
+    });
+    window.addEventListener("pointermove", ev => {
+      if (!dragging) return;
+      const dy = startY - ev.clientY;          /* 往上拖 = 變高 */
+      moved = Math.max(moved, Math.abs(dy));
+      const sz = detSizes();
+      const h = Math.max(DET_MIN, Math.min(sz[2], startH + dy));
+      liveH = h;
+      p.style.setProperty("--det", Math.round(h) + "px");
+    });
+    function stop() {
+      if (!dragging) return;
+      dragging = false;
+      p.classList.remove("dragging");
+      /* **移動不到 6px 當成「點一下」**,不是拖 —— 手指按下去一定會抖一兩個像素,
+         判成拖的話那條 bar 就永遠點不動。 */
+      if (moved < 6) { setDet(planDet === 0 ? 1 : 0); return; }
+      /* **吸附要用拖到哪裡的那個數字,不要回頭去量版面。**
+         第一版讀的是 `getBoundingClientRect().height`,而那一行就在
+         `classList.remove("dragging")` 後面 —— transition 剛被打開,量到的可能是
+         過場中的值,於是「一路拖到最上面」吸回了中間那一段。
+         拖的過程我本來就知道高度,記著就好。 */
+      const h = liveH || p.getBoundingClientRect().height, sz = detSizes();
+      let best = 0;
+      sz.forEach((v, i) => { if (Math.abs(v - h) < Math.abs(sz[best] - h)) best = i; });
+      setDet(best);
+    }
+    window.addEventListener("pointerup", stop);
+    window.addEventListener("pointercancel", stop);
+    window.addEventListener("blur", stop);
+    /* 鍵盤也要到得了:那條 bar 是 <button>,Enter/Space 會發 click。
+       拖曳完的那一下也會發 click,所以用 moved 擋掉重複。 */
+    grab.addEventListener("click", ev => {
+      if (!mobile() || moved >= 6) return;
+      ev.preventDefault();
+    });
+    window.addEventListener("resize", () => { if (mobile()) setDet(planDet); });
+  })();
+
   /* ---- 手機:上下拖那條握把,把地圖放大到全螢幕 ----
      **這條路以前不存在。** 手機上地圖固定 46vh,想看大一點只能關掉再開,
      而那不會讓它變大 —— 握把看起來可以拖,但拖了什麼都不會發生,
@@ -4603,6 +4762,9 @@
 
   state.day = initialDay();
   switchTab("plan");
+  /* 開機時把 sheet 放到預設那一段。**要在 switchTab 之後** —— `--tabh` 是它量的,
+     而三段的高度是從那個數字算出來的。 */
+  setDet(1);
   loadWeather();   /* 跟 Notion 無關,離線模式也照抓 */
 
   (async () => {
