@@ -198,9 +198,39 @@ function drag(toWidth, releaseOn) {
       ok("展開之後那張 sheet 也停在抽屜左邊(寬度是扣掉地圖剩下的)",
         wr.right <= mr.left + 1, { sheet右緣: Math.round(wr.right), 抽屜左緣: Math.round(mr.left) });
       wb.open = false;
+    } else if (iw >= 1280) {
+      /* ---- 三欄版面:關不掉,而且對話框不可以被抽屜蓋掉 ----
+         **這一段是被一個「按了沒反應」逼出來的。** 對話框是 z60、抽屜是 z70,
+         我原本判斷「桌機地圖是右邊一欄,跟畫面中央的對話框不重疊」——
+         那句話在抽屜被拖寬之後就不成立:拖到 3/4 的時候置中的對話框整張都在
+         抽屜底下。**元素在、值也對、只是看不到**,斷言那時候一條都不會紅。 */
+      ok("三塊都在(行程 ｜ 許願 ｜ 地圖)",
+        !!d.querySelector(".cols > .col") && !!d.getElementById("wishbox") &&
+        !d.getElementById("map-sheet").hidden,
+        { 欄: d.querySelectorAll(".cols > .col").length, 地圖收著: d.getElementById("map-sheet").hidden });
+      ok("**那顆 ✕ 不在**(關不掉的東西不該有關閉鈕)",
+        w.getComputedStyle(d.getElementById("map-sheet-x")).display === "none",
+        w.getComputedStyle(d.getElementById("map-sheet-x")).display);
+      /* 把抽屜拖到最寬,那是對話框最容易被蓋掉的狀態 —— 要測就測最壞的那一種。 */
+      drag(want(4));   /* 用這支自己的拖曳助手,拖到第 4 檔 = 螢幕的 3/4 */
+      await sleep(200);
+      d.getElementById("add-stop-btn").click();
+      await until(function () { return !d.getElementById("stop-add-overlay").hidden; });
+      await sleep(150);
+      var card = d.getElementById("stop-form").getBoundingClientRect();
+      var mr = d.getElementById("map-sheet").getBoundingClientRect();
+      ok("抽屜拉到最寬的時候,加行程那張對話框沒有躲在抽屜底下",
+        card.right <= mr.left + 1,
+        { 卡片: [Math.round(card.left), Math.round(card.right)], 抽屜左緣: Math.round(mr.left) });
+      /* 幾何之外再問一次:那張卡上面那一點,手指會碰到誰。 */
+      var hit = d.elementFromPoint(Math.round(card.left + card.width / 2), Math.round(card.top + 20));
+      ok("而且那張卡真的在最上面(碰得到它自己)",
+        !!hit && d.getElementById("stop-form").contains(hit),
+        hit && (hit.tagName.toLowerCase() + (hit.id ? "#" + hit.id : "")));
+      d.getElementById("sf-cancel").click();
+      await sleep(80);
     } else {
-      out.許願讓開抽屜 = "**這個寬度沒有量** —— 1280 以上許願是版面裡的一欄不是浮的," +
-        "641 以下沒有抽屜。要量這一段用 WIDTH=900。";
+      out.許願讓開抽屜 = "**這個寬度沒有量** —— 641 以下沒有抽屜。要量那一段用 WIDTH=900。";
     }
   } catch (e) {
     out.爆掉了 = String((e && e.stack) || e);

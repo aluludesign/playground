@@ -217,7 +217,18 @@ function pinsOf(k) { return pins()[k]; }
     var netBefore2 = asked.length + osm.length;
     var nWishBefore = d.querySelectorAll("#wish-list [data-wish]").length;
     flashes.length = 0;
+    /* **「＋許願」現在長在 `<summary>` 裡。** 點 summary 的預設行為是開合
+       `<details>` —— 不擋冒泡的話,按它會順手把整塊許願收起來,對話框開了卻蓋在
+       一個收起來的區塊上,看起來像「按了沒反應」。這兩條守那件事。 */
+    var wbOpenBefore = q("#wishbox").open;
+    ok("「＋許願」在標頭裡,而且在地圖那顆的左邊",
+      q(".wish-head").contains(q("#add-wish-btn")) &&
+      q("#add-wish-btn").getBoundingClientRect().right <= q("#wish-map-btn").getBoundingClientRect().left + 1,
+      { 在標頭: q(".wish-head").contains(q("#add-wish-btn")) });
     q("#add-wish-btn").click();
+    ok("按它不會順手把許願區收起來(它在 summary 裡,預設行為要擋掉)",
+      q("#wishbox").open === wbOpenBefore,
+      { 之前: wbOpenBefore, 之後: q("#wishbox").open });
     q("#wf-title").value = "多喝水";
     q("#wf-by").value = "hsieh_chinhui";
     q("#wf-submit").click();

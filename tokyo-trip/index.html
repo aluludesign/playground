@@ -291,6 +291,17 @@
     /* sheet 開著的時候底下那層不要跟著捲 —— 兩層都能捲的話,手指往上滑到底,
        捲的會變成後面那張,而使用者以為 sheet 卡住了。 */
     body.wish-open{overflow:hidden;}
+    /* **對話框要置中在「扣掉地圖之後」的那一塊,不是整個視窗。**
+       抽屜是 z70、對話框是 z60,我原本判斷「桌機地圖是右邊一欄,跟畫面中央的
+       對話框不重疊」—— **那句話在抽屜被拖寬之後就不成立**:拖到 3/4 的時候,
+       置中的對話框整張都在抽屜底下,而使用者看到的是「按了沒反應」。
+       (窄桌機和手機不必:那裡開對話框本來就會先把地圖收起來。) */
+    @media (min-width:1280px){
+      body.drawer-open .overlay{right:var(--drawer,440px);}
+      /* **三塊都關不掉,所以那顆 ✕ 是騙人的。** 一個按了會被立刻復原的關閉鈕,
+         比沒有那個按鈕更糟:使用者會以為自己弄壞了什麼。 */
+      #map-sheet-x{display:none;}
+    }
     .wishbox{margin-top:22px; border:1px solid var(--line); border-radius:11px; background:var(--surface); padding:0;}
     .wish-head{list-style:none; cursor:pointer; display:flex; align-items:center; gap:8px; padding:13px 15px;
       font-family:var(--font-sign); font-size:14px; font-weight:600;}
@@ -299,7 +310,13 @@
     .wish-n{font-family:var(--font-mono); font-size:11px; color:var(--muted); font-weight:400;}
     .wish-caret{color:var(--muted); font-size:12px; transition:transform .18s;}
     /* 摺疊列裡的地圖入口:靠右,箭頭跟在它後面 */
-    .wish-head .iconbtn{margin-left:auto;}
+    /* 右邊那組(「＋許願」和地圖)一起推到底 —— 推的是第一顆,不是 iconbtn,
+       不然兩顆之間會被 auto 撐開。 */
+    .wish-head #add-wish-btn{margin-left:auto;}
+    .wish-head .iconbtn{flex:0 0 auto;}
+    /* summary 裡的按鈕要自己吃掉點擊,不然點它會連帶把 <details> 開合 ——
+       「按＋許願結果整塊收起來」那種事看起來像沒反應。 */
+    .wish-head button{position:relative; z-index:1;}
     .iconbtn.sm{width:27px; height:27px; border-radius:7px;}
     .wishbox[open] .wish-caret{transform:rotate(180deg);}
     .wishbox > *:not(summary){margin:0 15px;}
@@ -467,11 +484,13 @@
     .lnk:hover{color:var(--accent); text-decoration-style:solid;}
     .wish .wdel{background:none; border:0; color:var(--muted); cursor:pointer; font-size:11px; padding:2px 4px;}
     .wish-hint{font-size:11px; color:var(--muted); margin-bottom:10px;}
-    /* 無框、置中、主色文字 —— 它是邀請,不是動作按鈕 */
-    #add-wish-btn{display:flex; align-items:center; justify-content:center; gap:0;
-      margin:0 auto 15px; padding:9px 14px; min-height:0;
+    /* **搬到標頭之後不再是「邀請」,是跟「＋加行程」對等的動作按鈕。**
+       原本它在清單底下、無框置中、`margin:0 auto 15px` 那一套 —— 那是給
+       「頁面最後一條邀請」用的樣子,擺進一排標頭會整條被 auto 撐歪。 */
+    #add-wish-btn{display:inline-flex; align-items:center; justify-content:center; gap:4px;
+      margin:0; padding:6px 11px; min-height:0;
       background:none; border:0; border-radius:8px; cursor:pointer;
-      color:var(--accent); font-weight:600; font-size:13px;}
+      color:var(--accent); font-weight:600; font-size:13px; white-space:nowrap;}
     #add-wish-btn:hover{background:var(--accent-soft);}
     #add-wish-btn .i{color:var(--accent);}
     .route.dropzone{outline:2px dashed var(--accent); outline-offset:6px; border-radius:8px;}
@@ -831,15 +850,16 @@
           <svg class="i" aria-hidden="true"><use href="#i-star"></use></svg>
           <span>大家的許願</span>
           <span class="wish-n" id="wish-n"></span>
+          <!-- **跟「＋加行程」同一個位置**:各自區塊的右上角。以前它在清單的最下面,
+               願望多的時候要捲到底才按得到 —— 而這是「想到就丟一筆」的東西。
+               排在地圖那顆的左邊:先給「加東西」,再給「換個方式看」。 -->
+          <button class="btn btn-sm" id="add-wish-btn" type="button"><svg class="i" aria-hidden="true"><use href="#i-plus"></use></svg>許願</button>
           <button class="iconbtn sm" id="wish-map-btn" type="button" aria-label="在地圖上看" title="在地圖上看"><svg class="i" aria-hidden="true"><use href="#i-route"></use></svg></button>
           <svg class="i wish-caret" aria-hidden="true"><use href="#i-chevron-down"></use></svg>
         </summary>
         <p class="wish-intro">想去哪裡先丟進來,不用等排好。誰都可以許願、可以幫別人的願望 +1。</p>
         <div id="wish-msg" hidden></div>
         <div id="wish-list"></div>
-        <button class="btn btn-sm" id="add-wish-btn" type="button">
-          <svg class="i" aria-hidden="true"><use href="#i-plus"></use></svg>許願地點
-        </button>
       </details>
       </div><!-- /#plan-cols -->
     </section>
@@ -3983,7 +4003,14 @@
     seekClear("wf-title");
     showWishError("");
   }
-  el("add-wish-btn").addEventListener("click", openWishAdd);
+  /* **要擋掉冒泡。** 這顆現在長在 `<summary>` 裡,而點 summary 的預設行為是
+     開合 `<details>` —— 不擋的話按「＋許願」會順手把整塊許願收起來,
+     對話框開了又被蓋在一個收起來的區塊上,看起來像「按了沒反應」。 */
+  el("add-wish-btn").addEventListener("click", ev => {
+    ev.preventDefault();
+    ev.stopPropagation();
+    openWishAdd();
+  });
   el("wf-cancel").addEventListener("click", closeWishAdd);
   /* 點灰色底、按 Esc 都關得掉 —— 跟「改我的願望」那張同一套手勢。 */
   el("wish-add-overlay").addEventListener("click", ev => {
