@@ -806,6 +806,28 @@ function pinsOf(k) { return pins()[k]; }
     ok("**沒有動 title**(只改了想說的,標題原樣)", sent.title === "橫濱 港灣未來", sent);
     ok("**沒有動 place**(標題沒改,所以原來那個留著,沒有被悄悄丟掉)",
       sent.place === "港灣未來", sent);
+
+    // 15 ---- 「搭機」那張卡是攤開的,而且攤開不是預設值,是唯一的狀態 ----
+    /* 那一頁只有這一張卡。要點一下才看得到內容,等於叫人多按一次才看得到
+       他點進來就是要看的東西。`open` 一個屬性擋不住這件事 —— `<details>`
+       點了就會收起來,所以這裡問的是**點下去之後**還開不開,不是初始值。 */
+    q("#tab-fly").click();
+    await sleep(300);
+    var bd = q("#board");
+    var legH = function () { var e = bd.querySelector(".leg"); return e ? Math.round(e.getBoundingClientRect().height) : 0; };
+    ok("一進「搭機」就看得到航班內容,不必先點開", bd.open && legH() > 40, { open: bd.open, 高: legH() });
+    ok("箭頭收起來了(沒有開關,就不要畫一個開關的樣子)",
+      w.getComputedStyle(bd.querySelector(".bh-caret")).display === "none",
+      w.getComputedStyle(bd.querySelector(".bh-caret")).display);
+    var sum = bd.querySelector("summary");
+    ok("標題也不裝成可以點的樣子", w.getComputedStyle(sum).cursor === "default", w.getComputedStyle(sum).cursor);
+    sum.click();
+    await sleep(250);
+    ok("**點下去也收不起來**(這才是這一條在守的事)", bd.open && legH() > 40, { open: bd.open, 高: legH() });
+    sum.click();
+    await sleep(250);
+    ok("再點一次還是開著的", bd.open && legH() > 40, { open: bd.open, 高: legH() });
+
   } catch (e) {
     out.爆掉了 = String((e && e.stack) || e);
   }

@@ -97,8 +97,12 @@
     .board summary{list-style:none; cursor:pointer;}
     .board summary::-webkit-details-marker{display:none;}
     .bh-brief{display:none; font-family:var(--font-mono); color:var(--board-ink); letter-spacing:.06em;}
-    .bh-caret{color:var(--board-muted); transition:transform .18s; font-size:15px;}
-    .board[open] .bh-caret{transform:rotate(180deg);}
+    /* **那張機票卡不再是開關。** 它現在是「搭機」那一頁唯一的內容 ——
+       一整頁只放一張要點開才看得到的卡,等於要人多按一次才看得到他點進來看的東西。
+       箭頭收起來、游標也跟著改:一個看起來可以點、點了沒事的標題,
+       比一個明顯不能點的標題更讓人懷疑自己按錯。 */
+    .bh-caret{display:none;}
+    .board > summary{cursor:default;}
     .board{background:var(--board-bg); border-radius:10px; overflow:hidden; margin-block:16px; box-shadow:var(--shadow);}
     .board-head{display:flex; justify-content:space-between; align-items:center; gap:12px; padding:10px 16px; border-bottom:1px solid var(--board-line);
       font-family:var(--font-mono); font-size:10px; letter-spacing:.16em; text-transform:uppercase; color:var(--board-muted);}
@@ -4617,10 +4621,6 @@
   });
 
   /* ================= 啟動 ================= */
-  /* 手機上收起航班看板,免得每次都要滑過半個螢幕 */
-  const board = el("board");
-  if (board) board.open = window.matchMedia("(min-width: 641px)").matches;
-
   renderCountdown();
   setInterval(renderCountdown, 60000);
 
@@ -5047,6 +5047,13 @@
   }
 
   state.day = initialDay();
+  /* 機票那張卡永遠攤開。`<details>` 的開關還在(它是那個元素本來的行為),
+     所以點了就再開回去 —— 跟許願那條標頭同一個做法。 */
+  (function () {
+    const bd = el("board");
+    if (bd) bd.addEventListener("toggle", () => { if (!bd.open) bd.open = true; });
+  })();
+
   switchTab("plan");
   /* 開機時把 sheet 放到預設那一段。**要在 switchTab 之後** —— `--tabh` 是它量的,
      而三段的高度是從那個數字算出來的。 */
