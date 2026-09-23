@@ -251,7 +251,10 @@ shot 01-plan-mobile      390 1500 ""                                            
 shot 02-plan-desktop    1100  900 ""                                            ".stop:3+"
 shot 03-cost-mobile      390 1400 "d.getElementById('tab-cost').click();"       ".exp:3+,.rm-chip:3+,.catrow:2+"
 shot 04-split-mobile     390 1300 "d.getElementById('tab-split').click();"      ".fp:5+"
-shot 05-wishes-mobile    390 1200 "d.getElementById('wishbox').open=true;"      ".wish:3+"
+# **這張以前拍錯頁。** 腳本還是「把 `#wishbox` 打開」—— 那是許願還住在行程頁
+# 裡面的年代。許願變成分頁之後,那一行什麼都沒做,於是這張「許願頁」拍到的是行程頁,
+# 而斷言 `.wish:3+` 照樣過(願望清單在 DOM 裡,只是那一欄沒露出來)。
+shot 05-wishes-mobile    390 1200 "d.getElementById('tab-wish').click();"       "#wishbox .wish:3+"
 # 06 / 07 的門檻在「沒填地點就不查」那一輪重設過,而且**不是只把數字調低**:
 #
 # 1. 規則改了之後,兩顆本來靠「拿標題去查」得來的 pin 消失了(合羽橋道具街、teamLab)。
