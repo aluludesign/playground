@@ -588,7 +588,6 @@
     .sheet-head{display:flex; align-items:center; gap:8px; margin-bottom:10px;
       font-family:var(--font-sign); font-size:14px; font-weight:600;}
     .sheet-head .i{color:var(--accent);}
-    .sheet-head .n{font-family:var(--font-mono); font-size:11px; color:var(--muted); font-weight:400;}
     .sheet-x{margin-left:auto; background:none; border:0; color:var(--muted); cursor:pointer; padding:4px 6px;}
     /* 手機上 sheet 只佔下半部,給地圖將近半個螢幕高 */
     #map{height:46vh; min-height:240px;}
@@ -1313,8 +1312,11 @@
     <div class="sheet-grab" id="map-grab" title="上下拖可以放大到全螢幕"></div>
     <div class="sheet-head">
       <svg class="i" aria-hidden="true"><use href="#i-route"></use></svg>
-      <span id="map-title">地圖</span>
-      <span class="n" id="map-n"></span>
+      <!-- **這一行不再報現況。** 它以前寫「DAY 1 · 10/03 行程 3」或
+           「大家想去的地方 願望 14／14 · 行程 1」—— 而那些數字底下的圖層鈕
+           (全部已排／Day n／大家的許願)已經把「現在看的是什麼」講完了,
+           標題再講一次就是同一件事寫在兩個地方,而兩個地方遲早會有一個先過期。 -->
+      <span id="map-title">旅行地圖</span>
       <button type="button" class="sheet-x" id="map-sheet-x" aria-label="收起來">
         <svg class="i" aria-hidden="true"><use href="#i-xmark"></use></svg>
       </button>
@@ -2408,8 +2410,7 @@
      所以開著的時候切到別天,標記還留著上一天的顏色。 */
   function syncSheetChrome() {
     const d = DAYS.find(x => x.date === state.day);
-    el("map-title").textContent = sheetMode === "wish" ? "大家想去的地方"
-      : "DAY " + (d ? d.n : "") + " · " + state.day.slice(5).replace("-", "/");
+    /* 標題固定是「旅行地圖」,不跟著分頁或日期換 —— 它就寫在 HTML 裡,這裡不碰。 */
     el("map-sheet").style.setProperty("--dc", sheetMode === "wish" ? "var(--accent)" : (d ? d.color : ""));
     el("map-sheet").dataset.mode = sheetMode || "";
     /* 行程那層兩個模式都只放選著的那一天,所以開關上的圓點一律用那天的顏色 ——
@@ -2467,8 +2468,6 @@
     sheetKey = key;
 
     /* 願望的數量才是標題要報的數字,已排的那些是背景資訊 */
-    const wishes = rows.filter(r => r.cls !== "plan");
-
     const draw = () => {
       if (sheetKey !== key) return;   /* 中途換了一天或換了模式,就不要畫舊的 */
       const pts = [];
@@ -2479,10 +2478,6 @@
         }, r));
       });
       drawMap(el("map"), pts, keep);
-      const got = pts.filter(x => x.cls !== "plan").length;
-      const planned = pts.length - got;
-      el("map-n").textContent = [wishes.length ? "願望 " + got + "／" + wishes.length : "",
-        planned ? "行程 " + planned : ""].filter(Boolean).join(" · ");
     };
 
     draw();
