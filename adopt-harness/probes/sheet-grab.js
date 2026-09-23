@@ -152,7 +152,7 @@ async function drag(dy) {
        捲到一半本來就會重疊,那是 sticky 的正常行為;要問的是誰蓋住誰。 */
     (function () {
       var sh = d.getElementById("panel-plan"), days = d.getElementById("days");
-      var add = d.getElementById("add-wish-btn"), mb = d.getElementById("wish-map-btn");
+      var add = d.getElementById("add-wish-btn");
       sh.scrollTop = 150;
       return new Promise(function (r) { w.setTimeout(r, 350); }).then(function () {
         function topAt(e) {
@@ -161,7 +161,6 @@ async function drag(dy) {
           return h && (days === h || days.contains(h));
         }
         ok("捲動時「＋許願」被日期列蓋住(它在底下,不是浮在上面)", topAt(add), "add-wish-btn");
-        ok("地圖那顆也一樣", topAt(mb), "wish-map-btn");
         sh.scrollTop = 0;
       });
     })();
@@ -348,9 +347,12 @@ async function drag(dy) {
     d.getElementById("tab-wish").click();
     await sleep(500);
 
-    ok("「這天的地圖」那顆在手機上不在了(地圖是底,它沒有作用)",
-      w.getComputedStyle(d.getElementById("day-map-btn")).display === "none",
-      w.getComputedStyle(d.getElementById("day-map-btn")).display);
+    /* **那兩顆地圖鈕整個刪掉了(2026-09-23)**,不再是「藏起來」。
+       問的東西也跟著換:從「它看不到」變成「它不存在」——
+       藏起來的按鈕 `.click()` 照樣會動,不存在的不會。 */
+    ok("那兩顆地圖鈕不存在(地圖一直都在,它們沒有工作了)",
+      !d.getElementById("day-map-btn") && !d.getElementById("wish-map-btn"),
+      { day: !!d.getElementById("day-map-btn"), wish: !!d.getElementById("wish-map-btn") });
     d.getElementById("tab-plan").click();
     await sleep(400);
 

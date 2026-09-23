@@ -104,8 +104,10 @@ function drag(toWidth, releaseOn) {
       document.getElementById("r").textContent = JSON.stringify(out, null, 2);
       return;
     }
-    d.getElementById("day-map-btn").click();
-    ok("抽屜打得開", await until(function () { return !d.getElementById("map-sheet").hidden; }), null);
+    /* **不用開它。** 三欄版面裡地圖是第三塊,一進站就在;
+       那顆「這天的地圖」已經刪掉了 —— 沒有人需要打開它。 */
+    ok("一進站抽屜就在(三欄版面的第三塊,不必打開)",
+      await until(function () { return !d.getElementById("map-sheet").hidden; }), null);
     await sleep(400);
     out.預設 = drawerPx();
     ok("預設是第 2 檔(不再從一個目標寬度反推 —— 那是懸崖的來源)",
@@ -158,17 +160,16 @@ function drag(toWidth, releaseOn) {
 
     out.存的k = w.localStorage.getItem("tokyo5-drawer");
     ok("存的是檔位(1–4),不是像素", /^[1-4]$/.test(out.存的k || ""), out.存的k);
-    /* **期望值不要寫死檔位。** 第一版寫 `want(4)`,因為當時最後一次拖曳是拖到最寬;
-       後來在它前面插了「落點對照」那組,檔位變成 2,而斷言沒跟著改 ——
-       **紅的是斷言過期,不是程式壞掉**。改成「回到剛才那一個」就不會再過期。 */
-    var beforeClose = drawerPx();
-    d.getElementById("map-sheet-x").click();
-    await sleep(120);
-    d.getElementById("day-map-btn").click();
-    await until(function () { return !d.getElementById("map-sheet").hidden; });
-    await sleep(60);
-    ok("關掉再打開 → 回到關掉之前那一檔",
-      drawerPx() === beforeClose, { 關掉前: beforeClose, 打開後: drawerPx() });
+    /* **「關掉再打開 → 回到原來那一檔」這一條退場了(2026-09-23)。**
+       它是這樣走的:按 ✕ 關掉、再按「這天的地圖」打開。**兩顆在這個寬度都不存在** ——
+       ✕ 在三欄版面是 `display:none`(關不掉才是對的),而那顆地圖鈕整個刪掉了。
+       也就是說它走的是一條沒有人走得到的路,而 `.click()` 在那上面照樣會成功:
+       **綠了四輪,量的是一個不存在的行為。**
+       它真正想守的是「檔位記得住」,那件事改由下面這條問:存起來的那個數字,
+       要跟畫面上現在的寬度對得起來。 */
+    ok("存起來的檔位跟畫面上的寬度是同一件事(重開之後才回得到原位)",
+      drawerPx() === want(parseInt(out.存的k, 10)),
+      { 存的: out.存的k, 那一檔該是: want(parseInt(out.存的k, 10)), 現在: drawerPx() });
 
     /* ---- 窄桌機那一段整個搬走了 ----
        641–1279 以前在這裡量「許願是不是一個分頁、日期那一列歸誰、頁面捲不捲得動」。

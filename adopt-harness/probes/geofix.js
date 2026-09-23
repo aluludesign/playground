@@ -156,7 +156,7 @@ function pinsOf(k) { return pins()[k]; }
     /* **看得見才按 —— 不然又是一次「程式碰得到、人到不了」。**
        手機上那顆已經拿掉了(地圖是底、一直在),對 `display:none` 的元素
        呼叫 `.click()` 照樣會動,於是探針會繼續綠著走一條沒有人走的路。 */
-    if (w.getComputedStyle(q("#day-map-btn")).display !== "none") q("#day-map-btn").click();
+    /* 地圖不用開了 —— 那顆「這天的地圖」已經刪掉,地圖本來就在畫面上。 */
     await until(function () { return d.querySelectorAll(".map .pin").length >= 2; });
     /* **2 顆,而且這個數字這一輪換過。** 以前行程頁預設兩層都亮(行程 + 願望),
        所以是 3 顆;PR #7 之後預設只亮「這一天」那層,願望的點要自己開 ——
@@ -229,10 +229,11 @@ function pinsOf(k) { return pins()[k]; }
        `<details>` —— 不擋冒泡的話,按它會順手把整塊許願收起來,對話框開了卻蓋在
        一個收起來的區塊上,看起來像「按了沒反應」。這兩條守那件事。 */
     var wbOpenBefore = q("#wishbox").open;
-    ok("「＋許願」在標頭裡,而且在地圖那顆的左邊",
-      q(".wish-head").contains(q("#add-wish-btn")) &&
-      q("#add-wish-btn").getBoundingClientRect().right <= q("#wish-map-btn").getBoundingClientRect().left + 1,
-      { 在標頭: q(".wish-head").contains(q("#add-wish-btn")) });
+    /* 「在地圖上看」那顆刪掉之後,「在它左邊」就沒有對象了 ——
+       剩下的那半(它在標頭裡、而且按它不會把整塊收起來)照問。 */
+    ok("「＋許願」在標頭裡",
+      q(".wish-head").contains(q("#add-wish-btn")),
+      q("#add-wish-btn").parentElement.className);
     q("#add-wish-btn").click();
     ok("按它不會順手把許願區收起來(它在 summary 裡,預設行為要擋掉)",
       q("#wishbox").open === wbOpenBefore,
@@ -330,7 +331,6 @@ function pinsOf(k) { return pins()[k]; }
     /* **看得見才按 —— 不然又是一次「程式碰得到、人到不了」。**
        手機上那顆已經拿掉了(地圖是底、一直在),對 `display:none` 的元素
        呼叫 `.click()` 照樣會動,於是探針會繼續綠著走一條沒有人走的路。 */
-    if (w.getComputedStyle(q("#day-map-btn")).display !== "none") q("#day-map-btn").click();
     ok("成田那一筆在地圖上有 pin(人工表接住它,而且它在日本境內)",
       await until(function () {
         return [].some.call(d.querySelectorAll(".map .pin .lab"),

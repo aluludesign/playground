@@ -352,10 +352,6 @@
         background:var(--surface); padding-block:8px; margin-block:0;}
 
       /* 兩個檢視共用同一個 panel:露出哪一欄由 data-view 決定。 */
-      /* **「這天的地圖」那顆在手機上沒有作用了** —— 地圖一直都在,它是底。
-         一個按了不會有任何變化的按鈕,比沒有那個按鈕更讓人懷疑自己按錯。
-         桌機留著:那裡地圖是要自己打開的一塊,這顆是從行程那邊開它的路。 */
-      #day-map-btn{display:none;}
       /* sheet 自己就是捲動容器,`.wrap` 不必再為那條浮起來的許願 bar 讓位 */
       body[data-view="plan"] .wrap,
       body[data-view="wish"] .wrap{padding-bottom:0;}
@@ -383,10 +379,16 @@
       /* **`#wishbox` 自己也掛著 `.col`**(它在寬桌機是第二欄),所以這裡要把它排除掉,
          不然「藏起行程那一欄」會連許願一起藏,而畫面上是一片空的。 */
       body[data-view="wish"] .cols > .col:not(#wishbox){display:none;}
-      /* 許願在分頁模式裡就是版面裡的一欄,不再是「收合區塊」也不再有底部那條。 */
+      /* **許願那一塊要看得出來跟上面的日子沒有連動。**
+         它不跟著選到的那一天走:換哪一天,底下這些願望都是同一批。
+         所以它保留桌機那一欄的邊框和底色,變成畫面上一塊獨立的東西,
+         而不是接在日期那一排下面的一段內容 —— 中間再加一條線把兩件事分開。
+         (第一版把邊框和底色都拿掉了,結果它跟日期那一排看起來是同一塊。) */
       body[data-view="wish"] #wishbox{position:static; inset:auto; z-index:auto; height:auto;
-        overflow:visible; animation:none; border:0; background:none; margin:0;}
-      body[data-view="wish"] #wishbox > summary{position:static; border:0; background:none; padding-left:0;}
+        overflow:visible; animation:none; margin:14px 0 0;
+        border:1px solid var(--line); border-radius:11px; background:var(--surface);}
+      body[data-view="wish"] #days{border-bottom:1px solid var(--line); padding-bottom:12px;}
+      body[data-view="wish"] #wishbox > summary{position:static; border:0; background:none;}
       body[data-view="wish"] .wish-caret{display:none;}
       /* 收合的箭頭藏了,游標也要跟著改 —— 一個看起來可以點、點了沒事的標題,
          比一個明顯不能點的標題更讓人懷疑自己按錯了。 */
@@ -476,7 +478,9 @@
       box-shadow:0 1px 3px rgba(0,0,0,.18);
       font-family:var(--font-sign); font-size:10px; font-weight:500; letter-spacing:0;}
     /* 兩個圖層的開關。關掉的那個變灰,開著的用它自己的顏色。 */
-    .maplayers{display:flex; gap:6px; margin-bottom:9px;}
+    .maplayers{display:flex; align-items:center; gap:6px; margin-bottom:9px;}
+    /* 分組用的直線。它不是一顆鈕,所以不吃 `.lay` 的樣式,也不佔按得到的面積。 */
+    .lay-sep{flex:none; width:1px; align-self:stretch; margin:1px 3px; background:var(--line);}
     .lay{display:inline-flex; align-items:center; gap:6px; cursor:pointer;
       border:1px solid var(--line); border-radius:99px; padding:4px 11px 4px 9px;
       background:var(--surface); color:var(--muted);
@@ -486,14 +490,14 @@
     .lay[aria-pressed="true"]{color:var(--ink); border-color:var(--ink-2);}
     #lay-plan[aria-pressed="true"]::before{background:var(--dc,var(--ink)); border-color:var(--dc,var(--ink));}
     #lay-wish[aria-pressed="true"]::before{background:var(--accent); border-color:var(--accent);}
-    /* 不分天數 = 六天六種顏色,一個顏色代表不了,用中性色 */
+    /* 全部已排 = 六天六種顏色,一個顏色代表不了,用中性色 */
     #lay-all[aria-pressed="true"]::before{background:var(--ink-2); border-color:var(--ink-2);}
     .lay:hover{background:var(--surface-2);}
     /* 這一頁的主角那層鎖著開(行程頁鎖行程、許願頁鎖願望),按了不會有反應 ——
        游標和 hover 就不該假裝它按得動。 */
     .lay:disabled{cursor:default;}
     .lay:disabled:hover{background:var(--surface);}
-    /* 「不分天數」開著時 Day n 讓位:它不是關掉,是被另一個選項取代,所以畫成停用。
+    /* 「全部已排」開著時 Day n 讓位:它不是關掉,是被另一個選項取代,所以畫成停用。
        0.45 跟設計系統 `.rm-btn[disabled]` 同一個值。 */
     .lay:disabled[aria-pressed="false"]{opacity:.45; cursor:not-allowed;}
 
@@ -1022,7 +1026,6 @@
       <div class="sec-head">
         <h2 id="day-title">當日行程</h2>
         <button class="btn btn-sm" id="add-stop-btn" type="button"><svg class="i" aria-hidden="true"><use href="#i-plus"></use></svg>加行程</button>
-        <button class="iconbtn" id="day-map-btn" type="button" aria-label="這天的地圖" title="這天的地圖"><svg class="i" aria-hidden="true"><use href="#i-route"></use></svg></button>
       </div>
       <!-- 送出之後那句話講在這裡,不講在頁尾。表單送出就收起來了,所以槽在表單**外面**
            才活得過那一下。預設 hidden、外層不掛任何有 display 的 class,
@@ -1040,7 +1043,6 @@
                願望多的時候要捲到底才按得到 —— 而這是「想到就丟一筆」的東西。
                排在地圖那顆的左邊:先給「加東西」,再給「換個方式看」。 -->
           <button class="btn btn-sm" id="add-wish-btn" type="button"><svg class="i" aria-hidden="true"><use href="#i-plus"></use></svg>許願</button>
-          <button class="iconbtn sm" id="wish-map-btn" type="button" aria-label="在地圖上看" title="在地圖上看"><svg class="i" aria-hidden="true"><use href="#i-route"></use></svg></button>
           <svg class="i wish-caret" aria-hidden="true"><use href="#i-chevron-down"></use></svg>
         </summary>
         <p class="wish-intro">想去哪裡先丟進來,不用等排好。誰都可以許願、可以幫別人的願望 +1。</p>
@@ -1291,9 +1293,13 @@
       </button>
     </div>
     <div class="maplayers">
+      <!-- **順序就是分組。**「全部已排」和「Day n」講的是同一件事(已經排進行程的點,
+           看全部還是看一天),中間那條線右邊的「大家的許願」是另一件事 ——
+           它不跟著日子走。線是畫給眼睛看的,螢幕閱讀器跳過它。 -->
+      <button type="button" class="lay" id="lay-all" data-layer="all" aria-pressed="false">全部已排</button>
       <button type="button" class="lay" id="lay-plan" data-layer="plan" aria-pressed="true">Day 1</button>
+      <span class="lay-sep" aria-hidden="true"></span>
       <button type="button" class="lay" id="lay-wish" data-layer="wish" aria-pressed="true">大家的許願</button>
-      <button type="button" class="lay" id="lay-all" data-layer="all" aria-pressed="false">不分天數</button>
     </div>
     <div class="map" id="map"></div>
   </div>
@@ -2303,7 +2309,7 @@
      day  —— 只有那天的行程,編號 = 時間軸上的順序
      wish —— 全部的願望,外加選著的那一天的行程(畫成背景),
              這樣才看得出「這個願望離那天排好的東西近不近」。願望仍然是主角。 */
-  /* 圖層開關。`plan` 是「Day n」(選著的那一天),`all` 是「不分天數」(六天全部)——
+  /* 圖層開關。`plan` 是「Day n」(選著的那一天),`all` 是「全部已排」(六天全部)——
      兩個互斥:`all` 開著時它蓋過 `plan`,`plan` 自己的值留著不動,
      `all` 一關掉就回到原本的樣子。記在瀏覽器裡,但換模式時會重設(見 openMapSheet)。 */
   const LAYLS = "tokyo5-layers";
@@ -2318,11 +2324,11 @@
     el("lay-plan").setAttribute("aria-pressed", String(!!layers.plan && !layers.all));
     el("lay-wish").setAttribute("aria-pressed", String(!!layers.wish));
     el("lay-all").setAttribute("aria-pressed", String(!!layers.all));
-    /* 「不分天數」開著時 Day n 停用 —— 它被取代了,不是被關掉 */
+    /* 「全部已排」開著時 Day n 停用 —— 它被取代了,不是被關掉 */
     el("lay-plan").disabled = lockedLayer() === "plan" || !!layers.all;
     el("lay-wish").disabled = lockedLayer() === "wish";
   }
-  /* 關掉「不分天數」。會把地圖移到某個點的動作(點行程那一列、點願望卡片、點日子)
+  /* 關掉「全部已排」。會把地圖移到某個點的動作(點行程那一列、點願望卡片、點日子)
      都先叫它 —— 你指著某一天的某個點,地圖就不該還在講六天全部(Lulu 的決定)。
      回傳有沒有真的關掉,呼叫的人要不要重畫自己決定。 */
   function leaveAllDays() {
@@ -2347,7 +2353,7 @@
       }));
     }
     if (layers.all) {
-      /* 「不分天數」:六天全部。編號是第幾天、顏色是那天的顏色 ——
+      /* 「全部已排」:六天全部。編號是第幾天、顏色是那天的顏色 ——
          同一個編號會出現好幾次,那是對的:它回答的是「這個點排在哪一天」。 */
       DAYS.forEach(d => dayList(d.date).forEach((x, i) => out.push({
         item: x, k: "p" + d.date + "-" + i, n: d.n, cls: "plan", color: d.color,
@@ -2355,7 +2361,7 @@
       })));
     } else if (layers.plan) {
       /* **「Day n」只放選著的那一天**,行程分頁、許願分頁都一樣(Lulu 的決定)。
-         要看六天全部是另一顆開關(「不分天數」),不是預設 ——
+         要看六天全部是另一顆開關(「全部已排」),不是預設 ——
          畫面上一定有一天是亮著的,預設就放全部的話,地圖會在講另一件事。 */
       const today = DAYS.find(x => x.date === state.day);
       dayList(state.day).forEach((x, i) => out.push({
@@ -3902,7 +3908,7 @@
   el("days").addEventListener("click", ev => {
     const b = ev.target.closest("[data-day]");
     if (!b) return;
-    /* 點了某一天 = 要看那一天,「不分天數」讓位。
+    /* 點了某一天 = 要看那一天,「全部已排」讓位。
        (Lulu 沒有特別講這一條,是推出來的:不讓位的話,切日子地圖不會動 ——
        那正是之前被抓到的「許願頁切日子沒反應」。) */
     const left = leaveAllDays();
@@ -4798,20 +4804,11 @@
     document.body.classList.add("drawer-open");
     syncWishBar();
   }
-  /* 從哪顆進來,就保證那一層是開的 —— 不然按了地圖卻什麼都沒有,會以為壞掉 */
-  el("day-map-btn").addEventListener("click", () => {
-    layers.plan = true; saveLayers();
-    openMapSheet("day");
-    loadSheetMap(true);
-  });
-  el("wish-map-btn").addEventListener("click", ev => {
-    /* 它坐在 <summary> 裡,不擋下來的話按它會順便把整塊摺疊起來 */
-    ev.preventDefault();
-    ev.stopPropagation();
-    layers.wish = true; saveLayers();
-    openMapSheet("wish");
-    loadSheetMap(true);
-  });
+  /* **那兩顆地圖鈕(「這天的地圖」「在地圖上看」)刪掉了。**
+     它們是「地圖要自己打開」那個年代的入口。現在兩邊都沒有那件事:
+     三欄版面地圖一直在畫面上,1280 以下地圖是底、清單疊在它上面 ——
+     一顆按了什麼都不會變的按鈕,比沒有那顆更讓人懷疑自己按錯。
+     (它們要開的那兩層,現在由切分頁決定:行程頁看那一天,許願頁看願望。) */
   function saveLayers() {
     paintLayerBtns();
     try { localStorage.setItem(LAYLS, JSON.stringify(layers)); } catch (_) {}
