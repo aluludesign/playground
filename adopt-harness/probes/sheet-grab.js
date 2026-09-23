@@ -347,6 +347,43 @@ async function drag(dy) {
     d.getElementById("tab-wish").click();
     await sleep(500);
 
+    /* ---- 左右滑換「行程 ⇄ 許願」 ----
+       **每一條讓路規則都要問**,因為它們都是「兩個手勢搶同一塊地」——
+       而搶輸的那一個不會報錯,只會安靜地不動作。 */
+    /* **這一段以前包在一個沒有被 `await` 的 Promise 鏈裡。**
+       它在探針印出結論之後才跑,所以那五條**一條都沒被算進去** ——
+       把手勢整個關掉,結論照樣印「全部通過」。
+       沒跑到的不會進「沒過的」,而「沒過的」是空的就會被當成全過。
+       所以這裡全部攤平成 await,跟這支其他地方一樣。 */
+    var sh2 = d.getElementById("panel-plan");
+    async function sw(x0, y0, dx, dy, target, ms) {
+      var t = target || sh2;
+      t.dispatchEvent(new w.PointerEvent("pointerdown", { clientX: x0, clientY: y0,
+        pointerId: 5, bubbles: true, cancelable: true, pointerType: "touch" }));
+      await sleep(ms || 60);
+      t.dispatchEvent(new w.PointerEvent("pointerup", { clientX: x0 + dx, clientY: y0 + dy,
+        pointerId: 5, bubbles: true, cancelable: true, pointerType: "touch" }));
+      await sleep(350);
+    }
+    d.getElementById("tab-plan").click();
+    await sleep(350);
+    var midX = Math.round(w.innerWidth / 2);
+    var midY = Math.round(sh2.getBoundingClientRect().top + 120);
+    await sw(midX, midY, -120, 4);
+    ok("在清單上往左滑 → 換到「許願」", d.body.dataset.view === "wish", d.body.dataset.view);
+    await sw(midX, midY, 120, 4);
+    ok("往右滑 → 換回「行程」", d.body.dataset.view === "plan", d.body.dataset.view);
+    /* 讓路 1:日期那一排自己會橫向捲,在它上面滑不該換頁 */
+    var daysEl2 = d.getElementById("days"), db = daysEl2.getBoundingClientRect();
+    await sw(Math.round(db.left + db.width / 2), Math.round(db.top + db.height / 2), -120, 4, daysEl2);
+    ok("**在日期那一排上滑不會換頁**(那是在找日子,不是要換頁)",
+      d.body.dataset.view === "plan", d.body.dataset.view);
+    await sw(midX, midY, 30, 160);
+    ok("**直著滑不會換頁**(那是在捲清單)", d.body.dataset.view === "plan", d.body.dataset.view);
+    await sw(midX, midY, -30, 2);
+    ok("滑一點點不算(要走夠遠才換)", d.body.dataset.view === "plan", d.body.dataset.view);
+
+
     /* **拖放是桌機才有的。** 願望卡長按拖進時間軸那條路,2026-09-17 就是因為
        「用大拇指做這件事太難」被拿掉的;它在三欄版面回來了,這裡守住它沒有跟著回到手機。
        判準是那個 class —— 它同時決定游標樣式和拖曳要不要理你。 */
