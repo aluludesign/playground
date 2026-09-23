@@ -211,20 +211,20 @@ function drag(toWidth, releaseOn) {
       ok("這一頁捲得動(body 沒有被鎖住)",
         w.getComputedStyle(d.body).overflow !== "hidden", w.getComputedStyle(d.body).overflow);
 
-      /* 日期那一列:管理員看得到(它的用途是「排到哪一天」),沒登入的人看不到。 */
+      /* 日期那一列:許願頁上**每個人都看得到**,有沒有通行碼都一樣 ——
+         它也是「地圖看哪一天」的開關。兩種身分各問一次,
+         不然看不出規則是不是還偷偷綁在 can-edit 上。 */
       var daysEl = d.getElementById("days");
-      var canEdit = d.body.classList.contains("can-edit");
-      ok("日期那一列在許願頁的去留,跟「能不能改」是同一件事(現在是 can-edit=" + canEdit + ")",
-        (w.getComputedStyle(daysEl).display !== "none") === canEdit,
-        { can_edit: canEdit, display: w.getComputedStyle(daysEl).display });
-
-      /* **另外半邊也要問。** 上面那條在 can-edit=true 的時候兩邊都成立,
-         單看它不知道規則是不是真的綁在那個 class 上。把 class 拿掉再問一次。 */
+      var hadEdit = d.body.classList.contains("can-edit");
+      d.body.classList.add("can-edit");
+      await sleep(80);
+      ok("有通行碼的人,許願頁上有那一排日期",
+        w.getComputedStyle(daysEl).display !== "none", w.getComputedStyle(daysEl).display);
       d.body.classList.remove("can-edit");
       await sleep(80);
-      ok("沒有通行碼的人,許願頁上沒有那一排日期(按了也排不進去的東西不要給他)",
-        w.getComputedStyle(daysEl).display === "none", w.getComputedStyle(daysEl).display);
-      d.body.classList.add("can-edit");
+      ok("沒有通行碼的人,許願頁上也有那一排日期",
+        w.getComputedStyle(daysEl).display !== "none", w.getComputedStyle(daysEl).display);
+      d.body.classList.toggle("can-edit", hadEdit);
       await sleep(80);
 
       /* 底部那條 bar 真的不在了 —— 畫面最底那一點不可以碰到許願的標頭。 */
