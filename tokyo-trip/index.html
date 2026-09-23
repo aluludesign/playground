@@ -492,9 +492,11 @@
     .lay[aria-pressed="true"]{color:var(--ink); border-color:var(--ink-2);}
     #lay-plan[aria-pressed="true"]::before{background:var(--dc,var(--ink)); border-color:var(--dc,var(--ink));}
     #lay-wish[aria-pressed="true"]::before{background:var(--accent); border-color:var(--accent);}
-    /* 許願模式下行程那層是六天六種顏色,點一個顏色代表不了,用中性色 */
-    #map-sheet[data-mode="wish"] #lay-plan[aria-pressed="true"]::before{background:var(--ink-2); border-color:var(--ink-2);}
     .lay:hover{background:var(--surface-2);}
+    /* 這一頁的主角那層鎖著開(行程頁鎖行程、許願頁鎖願望),按了不會有反應 ——
+       游標和 hover 就不該假裝它按得動。 */
+    .lay:disabled{cursor:default;}
+    .lay:disabled:hover{background:var(--surface);}
 
     /* 只查到大概範圍的那種 pin:虛線圈 + 標籤前面的「約 」。
        它跟精確的 pin 看起來一模一樣,那正是要擋的事 —— 標示留在 pin 自己身上,
@@ -2296,20 +2298,23 @@
 
   /* 這張圖上要畫哪些點。
      day  —— 只有那天的行程,編號 = 時間軸上的順序
-     wish —— 全部的願望,外加**已經排進行程的每一個點**(不分哪一天),
-             這樣才看得出「這個願望離我已經排好的東西近不近」。
-             已排的畫成小一點的淡標記、字是第幾天,願望仍然是主角。 */
+     wish —— 全部的願望,外加選著的那一天的行程(畫成背景),
+             這樣才看得出「這個願望離那天排好的東西近不近」。願望仍然是主角。 */
   /* 兩個圖層,各自可以關掉。記在瀏覽器裡,下次打開還是你上次選的。 */
   const LAYLS = "tokyo5-layers";
   let layers = { plan: true, wish: true };
   try { layers = Object.assign(layers, JSON.parse(localStorage.getItem(LAYLS) || "{}")); } catch (_) {}
+  /* 這個模式鎖著開的那一層:行程頁是行程,許願頁是願望(Lulu 的決定)。 */
+  const lockedLayer = () => sheetMode === "wish" ? "wish" : "plan";
   function paintLayerBtns() {
     el("lay-plan").setAttribute("aria-pressed", String(!!layers.plan));
     el("lay-wish").setAttribute("aria-pressed", String(!!layers.wish));
+    el("lay-plan").disabled = lockedLayer() === "plan";
+    el("lay-wish").disabled = lockedLayer() === "wish";
   }
 
   /* 這張圖上要畫哪些點。
-     模式決定「行程」那層的範圍:從 DAY 那顆按鈕進來就只有那天,從願望進來是全部六天。
+     「行程」那層不管哪個模式都只放選著的那一天。
      開關決定哪一層看得到。兩層畫得一樣明顯,靠顏色分 —— 行程用當天的顏色,願望用主色。 */
   function sheetPoints() {
     const out = [];
@@ -2323,23 +2328,14 @@
       }));
     }
     if (layers.plan) {
-      /* **手機上「行程」分頁預設放全部天數的點。**
-         以前一律只放當天 —— 而手機上地圖是底、一直看得到,只放一天等於
-         「這張圖只能回答我已經選好的那個問題」。想看整趟怎麼分布,沒有地方可以看。
-         點了某一天才篩成那一天;切回「行程」分頁會重新放全部(`dayPicked` 歸零)。
-         桌機維持原樣:那裡地圖是要自己打開的一塊,打開的當下就是在看某一天。 */
-      if (sheetMode === "day" && planFiltered()) {
-        const today = DAYS.find(x => x.date === state.day);
-        dayList(state.day).forEach((x, i) => out.push({
-          item: x, k: "d" + i, n: i + 1, cls: "plan", color: today ? today.color : "",
-          tip: (i + 1) + ". " + x.title + (x.place ? " \u00b7 " + x.place : ""),
-        }));
-      } else {
-        DAYS.forEach(d => dayList(d.date).forEach((x, i) => out.push({
-          item: x, k: "p" + d.date + "-" + i, n: d.n, cls: "plan", color: d.color,
-          tip: "DAY " + d.n + " " + (x.time || "") + " " + x.title,
-        })));
-      }
+      /* **行程那層永遠只放選著的那一天**,行程分頁、許願分頁都一樣(Lulu 的決定)。
+         以前手機的行程分頁一進來放全部六天、許願分頁也放全部六天 ——
+         但畫面上一定有一天是亮著的,地圖卻在講另一件事,兩邊對不起來。 */
+      const today = DAYS.find(x => x.date === state.day);
+      dayList(state.day).forEach((x, i) => out.push({
+        item: x, k: "d" + i, n: i + 1, cls: "plan", color: today ? today.color : "",
+        tip: (i + 1) + ". " + x.title + (x.place ? " \u00b7 " + x.place : ""),
+      }));
     }
     return out;
   }
@@ -2352,6 +2348,9 @@
       : "DAY " + (d ? d.n : "") + " · " + state.day.slice(5).replace("-", "/");
     el("map-sheet").style.setProperty("--dc", sheetMode === "wish" ? "var(--accent)" : (d ? d.color : ""));
     el("map-sheet").dataset.mode = sheetMode || "";
+    /* 行程那層兩個模式都只放選著的那一天,所以開關上的圓點一律用那天的顏色 ——
+       許願模式的 --dc 是主色,不在按鈕上蓋一層的話它會變成願望的顏色。 */
+    el("lay-plan").style.setProperty("--dc", d ? d.color : "");
   }
 
   /* ---- 地圖上那一條(已退場) ----
@@ -2393,11 +2392,11 @@
      不是同一件事,前者留得下痕跡(改完還是他許的),後者不留。 */
   const mayEditWish = w => (mineWish(w) || editable()) && !onSnapshot();
 
-  async function loadSheetMap(force) {
+  async function loadSheetMap(force, keep) {
     if (el("map-sheet").hidden || !sheetMode) { sheetKey = null; return; }
     syncSheetChrome();
     const rows = sheetPoints();
-    const key = sheetMode + "|" + (sheetMode === "day" ? state.day : "") + "|" +
+    const key = sheetMode + "|" + state.day + "|" +
       rows.map(r => r.k + r.item.place + "\u0001" + r.item.title).join("|");
     if (!force && sheetKey === key) return;
     sheetKey = key;
@@ -2414,7 +2413,7 @@
           la: at.la, lo: at.lo, ap: at.ap, ok: at.ok, place: r.item.place || r.item.title, title: r.item.title,
         }, r));
       });
-      drawMap(el("map"), pts);
+      drawMap(el("map"), pts, keep);
       const got = pts.filter(x => x.cls !== "plan").length;
       const planned = pts.length - got;
       el("map-n").textContent = [wishes.length ? "願望 " + got + "／" + wishes.length : "",
@@ -2701,13 +2700,6 @@
   /* **升到強力搜是使用者點頭,不是按滿次數。** 他按了「好」這裡才變 true。
      沒有這一步的話,那顆按鈕會自己在某個時刻變成花錢的 —— 而使用者不會知道
      是哪一刻變的。**要錢的那一段要有一個明確的「我同意」。** */
-  /* 「使用者主動點了某一天」跟「state.day 有值」是兩件事 —— state.day 永遠有值
-     (預設是第一天),所以不能拿它來判斷「有沒有挑過」。 */
-  let dayPicked = false;
-  /* **畫哪些點、和點下去要找哪一顆,必須用同一個判準。**
-     兩邊各寫一次的話,手機上地圖畫的是 `p<日期>-<序>`、而點擊去找 `d<序>`,
-     於是點了小卡什麼都不會發生 —— 而那看起來像「聚焦壞了」。 */
-  const planFiltered = () => window.innerWidth > 640 || dayPicked;
   const seekArmed = {};
   const HINT_WORDS = "沒找到?試試加入地點名 —— 例如「teamLab 豐洲」。";
   /* **後面那三個字是一顆按鈕,所以不寫在這裡。** 見 hintHTML()。 */
@@ -3195,9 +3187,7 @@
 
   /* 同一列在不同模式下對應到不同的標記:行程模式它是主角 d,許願模式裡它是背景的 p */
   function stopKey(day, i) {
-    if (sheetMode === "day" && planFiltered()) return day === state.day ? "d" + i : null;
-    if (sheetMode) return "p" + day + "-" + i;
-    return null;
+    return sheetMode && day === state.day ? "d" + i : null;
   }
   function hotPin(key) {
     const box = el("map");
@@ -3379,18 +3369,28 @@
     }, { passive: false });
   }
 
-  function drawMap(box, pts) {
+  function drawMap(box, pts, keep) {
     const w = box.clientWidth, h = box.clientHeight;
     if (!w || !h) return;
     if (!pts.length) { box.innerHTML = ""; box._v = null; return; }
 
-    /* 取景只看「主角」那組點 —— 兩層都開時是願望那層。許願模式裡已排的成田、
-       桃園機場也是點,跟著算的話整張圖會為了容納機場而縮出去,願望全擠成一團。
-       只開行程那層時,行程自己就是主角。 */
-    const stars = pts.filter(p => p.cls !== "plan").length
-      ? pts.filter(p => p.cls !== "plan") : pts;
-    const split = coreOf(stars.length ? stars : pts);
-    const fit = split.core;
+    /* 取景看哪些點(Lulu 的決定):
+       **「大家的許願」開著 → 所有願望都要框得進來**,不管在哪個分頁。
+       當天的行程也一起框 —— 它們就在圖上,開願望是為了看兩者的相對位置。
+       這裡不做 `coreOf` 的離群排除:「全部的願望都看得到」是這條規則本身,
+       排掉一個就違反它。
+       **願望關著 → 只看當天的行程**,離很遠的那一個由 `coreOf` 排除。
+       (第一版寫成「兩層都開就只看願望」,結果切到只有一筆鎌倉行程的那天,
+       地圖框的是新宿和草加那兩個願望,當天要去的地方反而在畫面外。) */
+    const fit = pts.some(p => p.cls !== "plan") ? pts : coreOf(pts).core;
+
+    /* **取景跟 `focusPin` 一樣,只算看得到的那一塊。** 手機上清單 sheet 蓋住下半部,
+       照整個元素取景的話,當天的點有一半落在 sheet 後面。
+       sheet 拉到幾乎全滿時看得到的只剩一條縫,拿那條縫取景會一路縮到 Z_MIN ——
+       那時地圖本來就看不到,照整個元素算,拉下來的時候才是對的樣子。 */
+    let cov = mapCoveredBottom(box);
+    if (h - cov < 120) cov = 0;
+    const vh = h - cov;
 
     /* 塞得下那一區的最大縮放。只有一個點時不要貼到街區級 ——
        周圍已排的點全被推到畫面外,就看不出它跟什麼東西近。 */
@@ -3399,15 +3399,18 @@
       for (; z > Z_MIN; z--) {
         const xs = fit.map(p => projX(p.lo, z)), ys = fit.map(p => projY(p.la, z));
         if ((Math.max.apply(null, xs) - Math.min.apply(null, xs)) * TILE < w - 40 &&
-            (Math.max.apply(null, ys) - Math.min.apply(null, ys)) * TILE < h - 40) break;
+            (Math.max.apply(null, ys) - Math.min.apply(null, ys)) * TILE < vh - 40) break;
       }
     }
     const xs = fit.map(p => projX(p.lo, z)), ys = fit.map(p => projY(p.la, z));
     box._pts = pts;
-    box._focus = null;   /* 換了一天,上一天的第 3 個跟這一天的第 3 個不是同一個地方 */
+    /* 換了一天,上一天的第 3 個跟這一天的第 3 個不是同一個地方,所以預設清掉。
+       **只有開關圖層時留著**(`keep`):取景換了,但你選的那個點還是那個點,
+       它要繼續亮著 —— 除非它所在的那層剛被關掉、圖上已經沒有它。 */
+    box._focus = keep && pts.some(p => p.k === keep) ? keep : null;
     /* 這是「回到預設視角」—— 點變了才重算,不然你拉到一半被拉回去 */
     box._v = { z: z, cx: (Math.max.apply(null, xs) + Math.min.apply(null, xs)) / 2,
-                     cy: (Math.max.apply(null, ys) + Math.min.apply(null, ys)) / 2 };
+                     cy: (Math.max.apply(null, ys) + Math.min.apply(null, ys)) / 2 + cov / 2 / TILE };
     paintMap(box);
     initMapGestures(box);
 
@@ -3470,7 +3473,8 @@
     el("day-title").textContent = "DAY " + d.n + " · " + state.day.slice(5).replace("-", "/") + " 週" + d.w;
     const route = el("route");
     route.style.setProperty("--dc", d.color);
-    if (sheetMode === "day") loadSheetMap();
+    /* 兩個模式都要跟著換天 —— 許願頁的地圖也放著那一天的行程 */
+    if (sheetMode) loadSheetMap();
     if (!list.length) {
       route.innerHTML = '<div class="empty">這天還沒排。' + (editable() ? "按右上角「加行程」開始。" : "") + "</div>";
       return;
@@ -3725,8 +3729,6 @@
     TABS.forEach(t => el("tab-" + t).setAttribute("aria-selected", String(t === name)));
     ["plan", "fly", "cost", "split"].forEach(pn => { el("panel-" + pn).hidden = PANEL_OF[name] !== pn; });
     document.body.dataset.view = name;
-    /* 每次進「行程」分頁都從「看整趟」開始 —— 她要看某一天,點那一天就好。 */
-    if (name === "plan") dayPicked = false;
     /* **花費和分帳是一頁式的。** 地圖和許願講的都是「某一天要去哪」,
        在對帳的頁面上它們沒有對象,而抽屜還會把版面往左擠掉 440px。
        許願那張滿版 sheet 更要收 —— 它蓋住整個畫面,不收的話切過去等於沒切。 */
@@ -3871,8 +3873,13 @@
   el("days").addEventListener("click", ev => {
     const b = ev.target.closest("[data-day]");
     if (!b) return;
+    /* **再點一次已經選著的那一天 = 退出聚焦**,回到那天的整體視野(Lulu 的決定)。
+       跟再點一次那一列是同一件事,走同一條 unfocusMap。 */
+    if (b.dataset.day === state.day) {
+      if (el("map") && el("map")._focus) unfocusMap();
+      return;
+    }
     state.day = b.dataset.day;
-    dayPicked = true;
     clearHere();      /* 那句話講的是剛才那一筆,換了一天它就沒有對象了 */
     renderDays(); renderRoute();
   });
@@ -4735,7 +4742,16 @@
   }
   /* mode 只有 "day" 和 "wish"。換模式等於換內容,得重畫。 */
   function openMapSheet(mode) {
-    if (sheetMode !== mode) sheetKey = null;
+    /* **換進哪個模式,圖層就先回到那個模式的預設**(Lulu 的決定):
+       許願 —— 願望一定開著,那是這一頁要挑的東西。
+       行程 —— 願望先關掉,要看再自己按開;行程那層一定開著,不然兩層都關是一張空圖。
+       只在「換模式」的那一下重設 —— 同一個模式裡手動按開的,換天不會被關回去。 */
+    if (sheetMode !== mode) {
+      sheetKey = null;
+      if (mode === "wish") layers.wish = true;
+      else { layers.plan = true; layers.wish = false; }
+      saveLayers();
+    }
     sheetMode = mode;
     syncSheetChrome();
     paintLayerBtns();
@@ -4767,11 +4783,26 @@
     const b = ev.target.closest("[data-layer]");
     if (!b) return;
     const which = b.dataset.layer;
-    /* 兩層都關掉就變成一張空地圖,沒有意義 —— 至少留一層 */
-    if (layers[which] && !layers[which === "plan" ? "wish" : "plan"]) return;
+    /* 鎖著的那層不能關 —— 這也順便保證了兩層不會同時關掉變成一張空地圖 */
+    if (which === lockedLayer()) return;
     layers[which] = !layers[which];
     saveLayers();
-    loadSheetMap(true);
+    /* **正在看某一個點的時候開關圖層**(Lulu 的決定):
+       開著願望 → 取景縮到所有願望都看得到(drawMap 的規則),那個點照樣亮著;
+       關掉願望 → 回到那個點的特寫,跟剛才點它的時候一樣。 */
+    const box = el("map"), f = box && box._focus;
+    loadSheetMap(true, f).then(() => {
+      if (!f) return;
+      if (box._focus !== f) {
+        /* 它所在的那層被關掉了,圖上已經沒有它 —— 清單那一列也別再亮 */
+        [].forEach.call(document.querySelectorAll("#route > .on, #wish-list [data-wish].on"),
+          r => r.classList.remove("on"));
+        return;
+      }
+      if (layers.wish) return;
+      const p = (box._pts || []).find(q => q.k === f);
+      if (p) focusPin(box, p, f);
+    });
   });
 
   /* 拉寬:拖的時候即時跟著手指,放開才吸到最近那一檔 */
