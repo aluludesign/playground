@@ -157,10 +157,15 @@ function pinsOf(k) { return pins()[k]; }
        手機上那顆已經拿掉了(地圖是底、一直在),對 `display:none` 的元素
        呼叫 `.click()` 照樣會動,於是探針會繼續綠著走一條沒有人走的路。 */
     if (w.getComputedStyle(q("#day-map-btn")).display !== "none") q("#day-map-btn").click();
-    await until(function () { return d.querySelectorAll(".map .pin").length >= 3; });
-    /* 3 顆而不是 5 顆:合羽橋道具街(行程,沒填地點)和 teamLab(願望,沒填地點)
-       以前是**拿標題去查**才有 pin 的,規則一之後它們不該再出現。 */
-    ok("地圖有畫出 pin(確認這一輪真的跑起來了)", d.querySelectorAll(".map .pin").length >= 3,
+    await until(function () { return d.querySelectorAll(".map .pin").length >= 2; });
+    /* **2 顆,而且這個數字這一輪換過。** 以前行程頁預設兩層都亮(行程 + 願望),
+       所以是 3 顆;PR #7 之後預設只亮「這一天」那層,願望的點要自己開 ——
+       DAY 3 有三個行程,其中「合羽橋道具街」沒填地點,所以是 2 顆。
+       (teamLab 是願望、也沒填地點,那一層現在預設就不亮。)
+       這條問的是「這一輪真的跑起來了」;寫 `>= 3` 會在一個正確的改動上變紅,
+       寫 `>= 1` 則什麼都擋不住,所以寫死 2 並且把為什麼是 2 寫在這裡。 */
+    ok("地圖畫出這一天有地點的那兩個行程(確認這一輪真的跑起來了)",
+      d.querySelectorAll(".map .pin").length === 2,
       d.querySelectorAll(".map .pin").length);
     var labs = [].map.call(d.querySelectorAll(".map .pin .lab"), function (e) { return e.textContent; });
     ok("沒填地點的沒有被標上去(合羽橋道具街)",

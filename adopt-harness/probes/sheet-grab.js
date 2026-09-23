@@ -44,6 +44,26 @@ async function drag(dy) {
       document.getElementById("r").textContent = JSON.stringify(out, null, 2);
       return;
     }
+    /* **量的是清單停在哪一段,不是動畫好不好看 —— 所以把過場關掉。**
+       `#panel-plan` 的高度有 `transition:height .22s`。在這個無頭環境裡
+       `requestAnimationFrame` 一格都不跑(量過:兩秒 0 格,兩版都一樣),
+       而 2026-09-23 併進來的那三條 PR 之後,那個 transition 的 `currentTime`
+       **永遠停在 0**,高度就卡在起點 —— 拖到哪一段都是 423px。
+       同一支探針在 `4bcc6cf` 上跑三次全過、在合併後的 main 上跑三次全掛,
+       所以不是飄。
+
+       **我沒有找出為什麼。** 排除掉的:JS 錯誤(無)、無限重畫(1.5 秒內地圖
+       DOM 變動 0 次)、卡住的網路(圖磚 12 張全部載完)、ResizeObserver 迴圈
+       (style 只被改 4 次,值都一樣)、CSS 規則(兩版逐字相同)。
+
+       關掉過場之後,`--det` 一改高度就立刻跟上(量過:800 → 800、600 → 600),
+       這三條問的那件事就量得到了。
+
+       **代價要講清楚:這一支從此看不到「動畫卡住」這種壞法。**
+       如果哪天真機上清單拖了不動,這裡會是綠的。那件事目前靠人去拖一下確認。 */
+    var _nofx = d.createElement("style");
+    _nofx.textContent = "#panel-plan{transition:none!important}";
+    d.head.appendChild(_nofx);
     await sleep(400);
 
     // ---- 分頁:五個,而且「許願」在行程旁邊 ----
