@@ -5,7 +5,15 @@
 文字反鋸齒的抖動,顏色差一階,眼睛看不出來。用位元組比對的話,每一輪都會有一張
 無意義的紅字,而「反正那張本來就會紅」正是一個真的改動可以躲進去的地方。
 
-所以這裡數像素,並且分三級:
+**只數「幾個像素不同」也不夠。** 2026-09-23 又量到一組:花費那一頁差了
+31954 個像素,而兩張圖並排看**完全一樣** —— 整頁的字在次像素位置上差一點點,
+每個字的邊緣都算進去,數量就這樣堆上來了。
+一個真的移動剛好相反:**像素不多,但每一個都差很多**(白底上冒出一塊深色的字)。
+
+所以現在數兩個數字:不同的像素數,以及其中**單一通道差超過 24** 的那些。
+**判決看後者**,前者只印出來給人看。
+
+分三級:
   0                   完全一樣
   1 ~ 門檻(預設 5000)  反鋸齒等級的抖動 —— 記下來,不當成改動
   > 門檻               真的變了,要去看圖
@@ -46,6 +54,7 @@ def rows(p):
 
 old, new = sys.argv[1], sys.argv[2]
 thr = int(sys.argv[3]) if len(sys.argv) > 3 else 5000
+AMP = 24   # 單一通道差多少才算「看得出來」
 names = sorted(set(os.listdir(old)) | set(os.listdir(new)))
 names = [n for n in names if n.endswith('.png')]
 real = 0
@@ -56,14 +65,18 @@ for n in names:
     wa, ha, ch, A = rows(a); wb, hb, _, B = rows(b)
     if (wa, ha) != (wb, hb):
         print("尺寸變了 %s  %dx%d → %dx%d" % (n, wa, ha, wb, hb)); real += 1; continue
-    diff = 0
+    diff = 0; strong = 0
     for y in range(ha):
         if A[y] != B[y]:
             ra, rb = A[y], B[y]
             for x in range(0, wa*ch, ch):
-                if ra[x:x+ch] != rb[x:x+ch]: diff += 1
+                if ra[x:x+ch] != rb[x:x+ch]:
+                    diff += 1
+                    if max(abs(ra[x+c] - rb[x+c]) for c in range(min(ch, 3))) > AMP: strong += 1
     if diff == 0: print("一樣  %s" % n)
-    elif diff <= thr: print("抖動  %s  %d 個像素(在 %d 以內,當成反鋸齒)" % (n, diff, thr))
-    else: print("變了  %s  %d 個像素" % (n, diff)); real += 1
+    elif strong <= thr:
+        print("抖動  %s  %d 個像素,看得出來的只有 %d 個(門檻 %d)" % (n, diff, strong, thr))
+    else:
+        print("變了  %s  %d 個像素,其中 %d 個看得出來" % (n, diff, strong)); real += 1
 print("\n%d 張裡面,%d 張是真的變了" % (len(names), real))
 sys.exit(1 if real else 0)
