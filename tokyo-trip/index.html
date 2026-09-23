@@ -3301,7 +3301,12 @@
     el("route").addEventListener("mouseleave", () => hotPin(null));
     el("wish-list").addEventListener("mouseover", ev => {
       const row = ev.target.closest("[data-wish]");
-      if (!row || sheetMode !== "wish") { hotPin(null); return; }
+      /* **條件是「那一層開著嗎」,不是「地圖在許願模式嗎」。**
+         `w<i>` 這種點是 `layers.wish` 畫出來的 —— 在行程分頁把「大家的許願」
+         打開,圖上就有它們,那時候滑過卡片當然要亮。
+         原本問 sheetMode,於是在行程分頁滑過去什麼事都不會發生,
+         而畫面上那個點明明就在那裡:**看得到、卻沒有反應**。 */
+      if (!row || !layers.wish) { hotPin(null); return; }
       const k = wishOrder().findIndex(w => w.id === row.dataset.wish);
       hotPin(k < 0 ? null : "w" + k);
     });

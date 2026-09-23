@@ -228,6 +228,52 @@ function drag(toWidth, releaseOn) {
       d.getElementById("signin-overlay").hidden = true;
       await sleep(80);
 
+      /* ---- 滑過願望卡 → 地圖上對應的點亮起來 ----
+         **判準是「那一層開著嗎」,不是「在哪一個分頁」。** 這一條原本問的是
+         地圖在不在許願模式,於是在行程分頁把「大家的許願」打開之後,
+         圖上明明有那些點,滑過卡片卻什麼都不會發生 —— 看得到、沒有反應。
+         所以這裡在**行程分頁**問,而且兩邊都問:層開著會亮、關掉不會。 */
+      var wl0 = d.getElementById("wish-list");
+      /* **挑一張地圖上真的有的卡。** 第一張是 teamLab,它沒填地點 ——
+         圖上根本沒有那個點,滑過去不亮是對的,而我第一版就是挑了它,
+         於是紅字指著程式,錯的卻是探針。
+         判準用剛做的 📍:它的意思就是「地圖上找得到這一筆」。 */
+      var wcard = (wl0.querySelector(".wish .pinmark") || {}).closest
+        ? wl0.querySelector(".wish .pinmark").closest(".wish") : null;
+      var lw = d.getElementById("lay-wish");
+      if (lw.getAttribute("aria-pressed") !== "true") { lw.click(); await sleep(400); }
+      ok("願望清單裡至少有一張卡是地圖上找得到的(沒有的話下面幾條問不出東西)",
+        !!wcard, wl0.textContent.slice(0, 40));
+      function hoverOn(e) {
+        e.dispatchEvent(new w.MouseEvent("mouseover", { bubbles: true, cancelable: true }));
+      }
+      hoverOn(wcard);
+      await sleep(120);
+      var litKey = (function () { var p = d.querySelector(".map .pin.hot"); return p && p.dataset.k; })();
+      ok("「大家的許願」開著時,滑過願望卡 → 地圖上那個點亮起來",
+        !!litKey && litKey[0] === "w", { 亮的: litKey });
+      /* 亮的要是**同一筆**,不是隨便一個願望的點 */
+      /* **不要叫 `want`。** 這支檔案上面已經有一個 `want(檔位)` 的助手,
+         而 `var` 會提升到整個函式 —— 取同一個名字會把它整個蓋掉,
+         於是**前面**那條呼叫 `want(2)` 的斷言炸在「is not a function」,
+         而錯的地方在後面幾十行。 */
+      var mineIdx = [].slice.call(wl0.querySelectorAll(".wish[data-wish]")).indexOf(wcard);
+      ok("而且亮的是同一筆,不是隨便一個點",
+        litKey === "w" + mineIdx, { 亮的: litKey, 該是: "w" + mineIdx });
+      wl0.dispatchEvent(new w.MouseEvent("mouseleave", { bubbles: true }));
+      await sleep(120);
+      ok("移開就不亮了", !d.querySelector(".map .pin.hot"),
+        (d.querySelector(".map .pin.hot") || {}).dataset);
+      /* 另外半邊:那一層關掉之後,圖上根本沒有那個點,滑過去不該有任何反應 */
+      lw.click();
+      await sleep(400);
+      hoverOn(wcard);
+      await sleep(120);
+      ok("**那一層關掉之後滑過去沒有反應**(圖上根本沒有那個點)",
+        !d.querySelector(".map .pin.hot"), (d.querySelector(".map .pin.hot") || {}).dataset);
+      lw.click();
+      await sleep(300);
+
       /* ---- 桌機才有的:長按願望卡,拖進時間軸 ----
          **這件事 2026-09-17 被拿掉過**,理由是「用大拇指做這件事太難」——
          那是手機的理由。三欄版面有滑鼠、而且時間軸和願望並排看得到,所以它回來了。
