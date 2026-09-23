@@ -269,8 +269,15 @@ shot 05-wishes-mobile    390 1200 "d.getElementById('wishbox').open=true;"      
 # 七顆全部來自 fixture 快取或 OUTSIDE 人工表,900ms 就全部到齊。
 # 所以這裡把門檻設回截圖上的數字是合法的 —— **「不靠網路就一定在」這個判準沒有放寬,
 # 是那條路真的不靠網路了。** 哪天它又需要一次網路往返,這條斷言會先紅,那是對的。
-shot 06-map-sheet        390 1000 "d.getElementById('day-map-btn').click();"    ".map .pin:3+,.stop:3+"
-shot 07-map-drawer      1100  900 "d.getElementById('wish-map-btn').click();"   ".map .pin:7+,.stop:3+"
+# **這三張的 pin 門檻在 2026-09-23 全部改小了,原因是同一個。**
+# 那天併進來的 PR 讓行程頁預設**只亮「這一天」那一層**,願望的點要自己開 ——
+# 所以圖上的點從「這一天 + 全部願望」縮成「這一天有地點的行程」。
+# DAY 3 有三個行程,其中「合羽橋道具街」沒填地點,所以是 2 個。
+# 舊的門檻(3 / 7 / 3)於是在一個正確的改動上把整批截圖判成「這頁是空的」,
+# 而那句話會讓人去找一個不存在的破版。
+shot 06-map-sheet        390 1000 "d.getElementById('day-map-btn').click();"    ".map .pin:2+,.stop:3+"
+# 07 是從「許願」那顆進地圖的,所以除了那一天的兩個行程還多一個願望的點 = 3。
+shot 07-map-drawer      1100  900 "d.getElementById('wish-map-btn').click();"   ".map .pin:3+,.stop:3+"
 shot 08-addstop-form     390 1100 "d.getElementById('add-stop-btn').click();"   "#stop-form:not([hidden]) input:3+,.stop:3+"
 shot 09-edit-dialog      390  900 "d.querySelector('[data-edit-stop]').click();" "#edit-overlay:not([hidden]) #edit-form input:3+,.stop:3+"
 # 10 / 11:花費的兩張表單。九張裡從來沒有一張打開過它們,而裡面有 16 個欄位、
@@ -389,7 +396,7 @@ shot 16-seek-hint      390 1000 "(async function(){var R=[{lat:'35.6',lon:'139.7
 # 也就是說整個三欄版面**在既有的十六張裡一張都拍不到** —— 而「沒有任何一張
 # 截圖拍得到它」正是 `#map-fix` 躲了四輪的那個機制。
 # 不必點任何東西:寬桌機的行程分頁預設就是三塊,那正是這張要證明的事。
-shot 17-plan-three-cols 1440  900 ""                                            ".stop:3+,.map .pin:3+"
+shot 17-plan-three-cols 1440  900 ""                                            ".stop:3+,.map .pin:2+"
 
 # 18:手機上「許願地點」那張對話框。
 # **以前它不是對話框,是就地展開的表單,所以沒有任何一張圖需要拍它。**
