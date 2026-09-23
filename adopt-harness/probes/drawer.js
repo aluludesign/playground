@@ -94,10 +94,13 @@ function drag(toWidth, releaseOn) {
        必然紅(390 減掉 240 只剩 150)。**那是拿錯尺去量,不是壞掉。**
        我自己在一輪裡踩了兩次,所以擋在這裡:紅燈要留給真的壞掉的東西。
        手機上那條握把(量的是高度)由 `probes/sheet-grab.js` 負責。 */
-    if (iw <= 640) {
-      out.說明 = "**這個寬度沒有量** —— 這一支量的是桌機抽屜的寬度,要 WIDTH=1100 或 641;" +
-        "手機上那條握把是 probes/sheet-grab.js。";
-      out.結論 = "跳過(不是手機的題目)";
+    /* **門檻從 641 拉到 1280(2026-09-23)。** 窄桌機整段改成跟手機一模一樣了:
+       地圖是底、清單是三段式 sheet、分頁列在畫面下緣 —— 那裡**沒有抽屜**。
+       所以這一支現在只問三欄版面那一段,1280 以下全部交給 sheet-grab。 */
+    if (iw < 1280) {
+      out.說明 = "**這個寬度沒有量** —— 這一支量的是三欄版面那個抽屜,要 WIDTH=1280 以上;" +
+        "1280 以下是手機那一套,由 probes/sheet-grab.js 負責。";
+      out.結論 = "跳過(不是這個寬度的題目)";
       document.getElementById("r").textContent = JSON.stringify(out, null, 2);
       return;
     }
@@ -167,78 +170,13 @@ function drag(toWidth, releaseOn) {
     ok("關掉再打開 → 回到關掉之前那一檔",
       drawerPx() === beforeClose, { 關掉前: beforeClose, 打開後: drawerPx() });
 
-    /* ---- 窄桌機的「許願」是一個分頁,不再是浮在底部的一條 ----
-       **這一段以前量的是相反的東西。** 641–1279 以前的許願是一條 `position:fixed`
-       釘在底部的 bar,點開會變成滿版 sheet —— 而抽屜也是 fixed,兩個 fixed
-       不會互相閃避,所以那時候要量「那條有沒有從抽屜底下穿過去」。
+    /* ---- 窄桌機那一段整個搬走了 ----
+       641–1279 以前在這裡量「許願是不是一個分頁、日期那一列歸誰、頁面捲不捲得動」。
+       那段寬度現在跟手機一模一樣,所以那些問題由 `probes/sheet-grab.js` 在
+       WIDTH=390 和 WIDTH=900 各問一次 —— **同一個模型不要有兩份斷言**,
+       兩份遲早會有一份先過期。 */
+    {
 
-       那條收掉了(2026-09-22):<1280 一律是分頁,許願是版面裡的一欄。
-       **那三條不是壞了,是量的東西沒了。** 換成問新模型該成立的事:
-       分頁在不在、切過去之後露出來的是誰、日期那一列歸誰、以及這一頁捲不捲得動。 */
-    if (iw >= 641 && iw < 1280) {
-      var wb = d.getElementById("wishbox");
-      var tw = d.getElementById("tab-wish");
-      /* **桌機沒有那顆把手。** 它是手機三段式 sheet 的拖曳handle;
-         在這裡它是一顆長在日期排左上角、按了什麼都不會發生的空按鈕。 */
-      ok("桌機沒有那顆拖曳把手(沒有 sheet,就不要有 sheet 的握把)",
-        w.getComputedStyle(d.getElementById("plan-grab")).display === "none",
-        w.getComputedStyle(d.getElementById("plan-grab")).display);
-      ok("窄桌機看得到「許願」分頁", w.getComputedStyle(tw).display !== "none",
-        w.getComputedStyle(tw).display);
-      var tabs = Array.prototype.slice.call(d.querySelectorAll(".tab"))
-        .filter(function (b) { return w.getComputedStyle(b).display !== "none"; })
-        .map(function (b) { return b.dataset.tab; });
-      ok("而且它排在「行程」後面", tabs[0] === "plan" && tabs[1] === "wish", tabs);
-
-      tw.click();
-      await sleep(250);
-      ok("切過去之後,行程那一欄收起來了",
-        w.getComputedStyle(d.getElementById("route").closest(".col")).display === "none",
-        w.getComputedStyle(d.getElementById("route").closest(".col")).display);
-      var wr = wb.getBoundingClientRect();
-      ok("許願那一欄真的攤在畫面上(不是一個收起來的 `<details>`)",
-        wb.open && wr.height > 100, { open: wb.open, 高: Math.round(wr.height) });
-      /* 幾何之外再問一次:願望清單第一列上面那一點,手指會碰到誰。 */
-      var row = d.querySelector("#wish-list .wish");
-      var rr = row.getBoundingClientRect();
-      var hit = d.elementFromPoint(Math.round(rr.left + 20), Math.round(rr.top + 10));
-      ok("**願望那一列碰得到** —— `.click()` 在 display:none 上照樣會成功,所以這裡問的是手指",
-        !!hit && row.contains(hit),
-        hit && (hit.tagName.toLowerCase() + (hit.id ? "#" + hit.id : "." + hit.className)));
-
-      /* **她之前踩過的那一個:頁面太長不能滑。** 許願攤開的時候 body 被鎖住過。
-         手機上鎖是對的(那裡許願是一張 fixed 的 sheet),窄桌機上鎖就是這個 bug。 */
-      ok("這一頁捲得動(body 沒有被鎖住)",
-        w.getComputedStyle(d.body).overflow !== "hidden", w.getComputedStyle(d.body).overflow);
-
-      /* 日期那一列:許願頁上**每個人都看得到**,有沒有通行碼都一樣 ——
-         它也是「地圖看哪一天」的開關。兩種身分各問一次,
-         不然看不出規則是不是還偷偷綁在 can-edit 上。 */
-      var daysEl = d.getElementById("days");
-      var hadEdit = d.body.classList.contains("can-edit");
-      d.body.classList.add("can-edit");
-      await sleep(80);
-      ok("有通行碼的人,許願頁上有那一排日期",
-        w.getComputedStyle(daysEl).display !== "none", w.getComputedStyle(daysEl).display);
-      d.body.classList.remove("can-edit");
-      await sleep(80);
-      ok("沒有通行碼的人,許願頁上也有那一排日期",
-        w.getComputedStyle(daysEl).display !== "none", w.getComputedStyle(daysEl).display);
-      d.body.classList.toggle("can-edit", hadEdit);
-      await sleep(80);
-
-      /* 底部那條 bar 真的不在了 —— 畫面最底那一點不可以碰到許願的標頭。 */
-      var low = d.elementFromPoint(Math.round(w.innerWidth / 2), w.innerHeight - 6);
-      var sum = wb.querySelector("summary");
-      ok("畫面底部沒有一條浮著的許願 bar(它退場了,不是被蓋住)",
-        !low || !(low === sum || sum.contains(low)),
-        low && (low.tagName.toLowerCase() + (low.id ? "#" + low.id : "." + low.className)));
-
-      d.getElementById("tab-plan").click();
-      await sleep(200);
-      ok("切回行程,許願那一欄就收起來(兩個分頁不會同時在畫面上)",
-        w.getComputedStyle(wb).display === "none", w.getComputedStyle(wb).display);
-    } else if (iw >= 1280) {
       /* ---- 三欄版面:關不掉,而且對話框不可以被抽屜蓋掉 ----
          **這一段是被一個「按了沒反應」逼出來的。** 對話框是 z60、抽屜是 z70,
          我原本判斷「桌機地圖是右邊一欄,跟畫面中央的對話框不重疊」——
@@ -288,8 +226,6 @@ function drag(toWidth, releaseOn) {
         over && (over.tagName.toLowerCase() + (over.id ? "#" + over.id : "." + over.className)));
       d.getElementById("signin-overlay").hidden = true;
       await sleep(80);
-    } else {
-      out.許願讓開抽屜 = "**這個寬度沒有量** —— 641 以下沒有抽屜。要量那一段用 WIDTH=900。";
     }
   } catch (e) {
     out.爆掉了 = String((e && e.stack) || e);

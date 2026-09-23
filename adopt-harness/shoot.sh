@@ -246,6 +246,8 @@ AHTML
 
 echo "截 $LABEL:"
 shot 01-plan-mobile      390 1500 ""                                            ".stop:3+"
+# 02 的名字留著(基準表上追得到),但它現在拍的是**「1100 長得跟手機一樣」**——
+# 那正是這一輪要的結果:窄桌機不再有自己的一套版面。
 shot 02-plan-desktop    1100  900 ""                                            ".stop:3+"
 shot 03-cost-mobile      390 1400 "d.getElementById('tab-cost').click();"       ".exp:3+,.rm-chip:3+,.catrow:2+"
 shot 04-split-mobile     390 1300 "d.getElementById('tab-split').click();"      ".fp:5+"
@@ -277,7 +279,11 @@ shot 05-wishes-mobile    390 1200 "d.getElementById('wishbox').open=true;"      
 # 而那句話會讓人去找一個不存在的破版。
 shot 06-map-sheet        390 1000 "d.getElementById('day-map-btn').click();"    ".map .pin:2+,.stop:3+"
 # 07 是從「許願」那顆進地圖的,所以除了那一天的兩個行程還多一個願望的點 = 3。
-shot 07-map-drawer      1100  900 "d.getElementById('wish-map-btn').click();"   ".map .pin:3+,.stop:3+"
+# **這張搬到 1440 了(2026-09-23)。** 它叫「抽屜」,而 1100 已經沒有抽屜 ——
+# 那個寬度整段改成跟手機一樣(地圖是底、清單是三段式 sheet)。
+# 在 1100 拍的話,拍到的是一張名字寫著抽屜、畫面上沒有抽屜的圖,
+# 而那種圖會讓下一個人以為抽屜壞了。
+shot 07-map-drawer      1440  900 "d.getElementById('wish-map-btn').click();"   ".map .pin:3+,.stop:3+"
 shot 08-addstop-form     390 1100 "d.getElementById('add-stop-btn').click();"   "#stop-form:not([hidden]) input:3+,.stop:3+"
 shot 09-edit-dialog      390  900 "d.querySelector('[data-edit-stop]').click();" "#edit-overlay:not([hidden]) #edit-form input:3+,.stop:3+"
 # 10 / 11:花費的兩張表單。九張裡從來沒有一張打開過它們,而裡面有 16 個欄位、

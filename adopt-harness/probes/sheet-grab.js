@@ -38,9 +38,12 @@ async function drag(dy) {
 }
 (async function () {
   try {
-    if (w.innerWidth > 640) {
-      out.說明 = "**這個寬度沒有量** —— 這一支是手機版的層次,要 WIDTH=390。桌機是三欄,由 drawer.js 負責。";
-      out.結論 = "跳過(不是桌機的題目)";
+    /* **門檻從 640 拉到 1279(2026-09-23)。** 窄桌機整段改成跟手機一模一樣,
+       所以這一支現在管的是「沒有三欄的每個寬度」,要 WIDTH=390 也要 WIDTH=900。 */
+    if (w.innerWidth >= 1280) {
+      out.說明 = "**這個寬度沒有量** —— 這一支量的是手機那一套(地圖是底、清單是三段式 sheet)," +
+        "1280 以上是三欄版面,由 drawer.js 負責。";
+      out.結論 = "跳過(不是這個寬度的題目)";
       document.getElementById("r").textContent = JSON.stringify(out, null, 2);
       return;
     }

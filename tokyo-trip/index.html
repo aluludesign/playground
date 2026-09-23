@@ -275,7 +275,7 @@
        同一件事的第二個進法 —— 而兩個進法遲早會有一邊先過期。
        (`.wishbox[open]` 那段滿版 sheet 也一起走:在分頁模式裡許願是
        `position:static` 的一欄,那段永遠不會套用到。) */
-    @media (max-width:640px){
+    @media (max-width:1279px){
       .wrap{padding-bottom:calc(78px + env(safe-area-inset-bottom,0px));}
     }
 
@@ -291,7 +291,7 @@
 
        「行程」和「許願」是同一張地圖的兩個檢視:sheet 裡換清單、圖上換點,
        地圖本身**不重開、不閃**。 */
-    @media (max-width:640px){
+    @media (max-width:1279px){
       /* 地圖降到最底層,鋪滿分頁列以上的整塊。它不再是「從下面滑上來的東西」,
          所以那些屬於 sheet 的裝飾(把手、圓角、陰影、標題列)都收掉。 */
       /* **頂列不浮,它把下面的東西往下擠。** 第一版讓地圖從 `top:0` 開始,
@@ -365,7 +365,7 @@
        一顆點得到、focus 得到、按了什麼都不會發生的小方塊。
        (它在 21-wish-narrow 那張截圖上看得見,在那之前沒有任何一張圖拍到過
        這個寬度的這個角落。) */
-    @media (min-width:641px){ .pg-grab{display:none;} }
+    @media (min-width:1280px){ .pg-grab{display:none;} }
 
     @media (prefers-reduced-motion:reduce){ #panel-plan{transition:none;} }
 
@@ -394,18 +394,13 @@
     }
     /* 窄桌機(641–1279):地圖是右邊的抽屜,**收起來的那條和展開的 sheet 都讓開它的寬度**。
        桌機沒有底部分頁列(分頁在上面),所以 `--tabh` 是 0,那條就貼著畫面底部。 */
-    @media (min-width:641px) and (max-width:1279px){
-      /* 讓開抽屜那兩條跟著那條 bar 一起走了 —— 分頁模式裡許願是版面裡的一欄,
-         它本來就在 `.wrap` 裡面,不會鑽到抽屜底下。 */
-      .wrap{padding-bottom:18px;}
-    }
     @keyframes wish-up{from{transform:translateY(18px); opacity:.5;} to{transform:none; opacity:1;}}
     @media (prefers-reduced-motion:reduce){ .wishbox[open]{animation:none;} }
     /* sheet 開著的時候底下那層不要跟著捲 —— 兩層都能捲的話,手指往上滑到底,
        捲的會變成後面那張,而使用者以為 sheet 卡住了。 */
     /* **只鎖手機。** 手機上許願是一張 fixed 的 sheet,自己有捲軸,鎖 body 是對的。
        窄桌機上它是一頁普通會捲的內容 —— 在那裡鎖 body 等於「頁面太長不能滑動」。 */
-    @media (max-width:640px){ body.wish-open{overflow:hidden;} }
+    @media (max-width:1279px){ body.wish-open{overflow:hidden;} }
     /* **對話框要置中在「扣掉地圖之後」的那一塊,不是整個視窗。**
        抽屜是 z70、對話框是 z60,我原本判斷「桌機地圖是右邊一欄,跟畫面中央的
        對話框不重疊」—— **那句話在抽屜被拖寬之後就不成立**:拖到 3/4 的時候,
@@ -539,7 +534,10 @@
        清單和地圖真的並排看得到。 */
     /* 拉寬用的握把。手機上抽屜本來就滿版,用不到。 */
     .sheet-grip{display:none;}
-    @media (min-width:641px){
+    /* **抽屜只剩三欄版面在用。** 641–1279 以前也是抽屜,那讓同一件事在 640 兩側
+       長成兩個東西 —— 而一台 iPad 轉個方向就跨過去了。現在 <1280 一律是
+       手機那一套:地圖是底、清單是三段式 sheet、分頁列在畫面下緣。 */
+    @media (min-width:1280px){
       .sheet{top:0; left:auto; width:var(--drawer,440px);}
       .sheet-in{position:relative; height:100%; display:flex; flex-direction:column;
         border-top:0; border-left:1px solid var(--line); border-radius:16px 0 0 16px;
@@ -925,7 +923,7 @@
     /* 花費那張表欄位多,要寬一點,而且手機上高度會爆,所以讓它自己捲 */
     .signin.wide{max-width:440px; max-height:calc(100vh - 40px); overflow-y:auto; gap:12px;}
 
-    @media (max-width:640px){
+    @media (max-width:1279px){
       .topbar h1{font-size:19px;}
       .countdown b{font-size:18px;}
       .port{min-width:88px;}
@@ -3839,15 +3837,15 @@
        浮在上面、不佔版面。只量頂列本身。 */
     const h = tb ? tb.getBoundingClientRect().bottom : 0;
     document.documentElement.style.setProperty("--headh",
-      (window.innerWidth <= 640 ? Math.round(h) : 0) + "px");
+      (!wideCols() ? Math.round(h) : 0) + "px");
   }
 
   /* 名字留著(叫的地方有好幾處),但它現在只做一件事:量分頁列的高度。
      那條許願 bar 已經沒有了。 */
   function syncWishBar() {
     const tabs = document.querySelector(".tabs");
-    /* **只有手機的分頁列浮在底部**,桌機那排在上面 —— 所以 `--tabh` 只在手機有值。 */
-    const phone = window.innerWidth <= 640;
+    /* **分頁列浮在底部的,是「沒有三欄」的每個寬度** —— 三欄版面那排在上面。 */
+    const phone = !wideCols();
     const th = (phone && tabs) ? Math.round(tabs.getBoundingClientRect().height) : 0;
     document.documentElement.style.setProperty("--tabh", th + "px");
     /* **那條底部 bar 沒有了**,所以這裡不再量它 —— 留著一個永遠是 0 的變數,
@@ -3879,7 +3877,7 @@
   function syncMapOcc() {
     const sheet = el("map-sheet");
     const inEl = sheet && sheet.querySelector(".sheet-in");
-    const occ = (!sheet || sheet.hidden || wideCols() || window.innerWidth > 640 || !inEl)
+    const occ = (!sheet || sheet.hidden || wideCols() || !inEl)
       ? 0 : Math.round(inEl.getBoundingClientRect().height);
     document.documentElement.style.setProperty("--maph", occ + "px");
   }
@@ -3890,7 +3888,7 @@
     const wb = el("wishbox");
     /* 只有手機要鎖捲動:那裡許願是一張 fixed 的 sheet。
        窄桌機上它是一頁普通會捲的內容,鎖了就變成「頁面太長不能滑動」。 */
-    document.body.classList.toggle("wish-open", !!(wb && wb.open && window.innerWidth <= 640));
+    document.body.classList.toggle("wish-open", !!(wb && wb.open && !wideCols()));
   }
   (function () {
     const wb = el("wishbox");
@@ -4368,7 +4366,7 @@
        而收了就**沒有人會再打開** —— 按取消回到頁面,地圖不見了,而底下露出來的是
        頁面本身(匯出備份那一段)。使用者看到的是「地圖消失」,
        而真正發生的是「有人把底板抽走了」。 */
-    if (window.innerWidth <= 640) return;
+    if (!wideCols()) return;
     if (!el("map-sheet").hidden) closeMapSheet();
   }
 
@@ -4971,7 +4969,7 @@
   (function () {
     const p = el("panel-plan"), grab = el("plan-grab");
     if (!p || !grab) return;
-    const mobile = () => window.innerWidth <= 640 &&
+    const mobile = () => !wideCols() &&
       (state.tab === "plan" || state.tab === "wish");
     let dragging = false, startY = 0, startH = 0, moved = 0, liveH = 0;
     grab.addEventListener("pointerdown", ev => {
