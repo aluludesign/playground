@@ -912,6 +912,14 @@
     .hamb{display:flex; flex-direction:column; justify-content:center; gap:4px;
       width:38px; height:38px; padding:0 9px; margin-left:4px; flex:0 0 auto;
       background:none; border:1px solid var(--line); border-radius:9px; cursor:pointer;}
+    /* AI 按鈕。用 id 不用 class:走鐘防護只掃 class。
+       margin-left:auto 把它和選單一起推到右邊,倒數留在標題旁。 */
+    #ai-btn{margin-left:auto; flex:0 0 auto; height:38px;}
+    #ai-img-row{display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
+    #ai-img-name, #ai-say{font-size:.8125rem; line-height:1.5; color:var(--color-ink-muted);}
+    #ai-say{margin:0 0 12px;}
+    #ai-seat-list{display:grid; grid-template-columns:auto 1fr; gap:6px 10px; align-items:center;}
+    #ai-seat-list .rm-input{max-width:110px;}
     .hamb span{display:block; height:2px; border-radius:1px; background:var(--ink);}
     .hamb[aria-expanded="true"]{background:var(--accent-soft); border-color:var(--accent);}
     /* 選單本身。**貼在頂列下面、靠右**,不是蓋在畫面中央 ——
@@ -1017,6 +1025,9 @@
     <div class="countdown" id="countdown"></div>
     <!-- 連線狀態和管理員登入／登出收進這裡。**它們是一年按不到幾次的東西**,
          卻佔掉一整條橫在行程上面 —— 在手機上那一條就是地圖少掉的一截。 -->
+    <!-- AI 按鈕:丟一段話或一張圖,AI 判斷要建哪一種資料,確認後才存。
+         放在選單旁邊,因為它不屬於任何一頁 —— 許願、行程、座位都從這裡進。 -->
+    <button type="button" class="btn btn-sm" id="ai-btn" aria-haspopup="dialog">✨ AI</button>
     <button type="button" class="hamb" id="menu-btn" aria-label="選單" aria-expanded="false"
       aria-controls="menu-pop"><span></span><span></span><span></span></button>
   </header>
@@ -1262,6 +1273,53 @@
   </form>
 </div>
 
+<!-- AI 按鈕的對話框。**兩步:先問,再確認。** 第二步的每一欄都可以改 ——
+     AI 判斷錯了(類型、哪一天、座位),攔住它的是按「確定」的那個人。
+     存的時候走的是原本的 addWish / addStop / 座位那幾條路,權限也還是它們在管。 -->
+<div class="overlay" id="ai-overlay" hidden>
+  <form class="signin" id="ai-form">
+    <h2>AI 幫你加</h2>
+    <div class="fld"><label class="rm-label" for="ai-text">想做什麼</label>
+      <textarea class="rm-input" id="ai-text" rows="3" placeholder="例:這家想去許願／加到第 3 天晚上 7 點／這是回程的座位"></textarea></div>
+    <div class="fld" id="ai-img-row">
+      <button type="button" class="btn btn-sm" id="ai-pick">📷 加一張圖</button>
+      <input type="file" accept="image/*" id="ai-file" hidden>
+      <span id="ai-img-name"></span>
+    </div>
+    <div class="err" id="ai-err" hidden></div>
+    <div class="ops">
+      <button type="submit" class="btn btn-main" id="ai-go">交給 AI</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="ai-cancel">取消</button>
+    </div>
+  </form>
+  <form class="signin" id="ai-confirm" hidden>
+    <h2>確認一下</h2>
+    <p id="ai-say"></p>
+    <div class="fld"><label class="rm-label" for="ai-kind">加到哪裡</label>
+      <select class="rm-input" id="ai-kind">
+        <option value="wish">許願</option>
+        <option value="stop">行程</option>
+        <option value="seats">搭機座位</option>
+      </select></div>
+    <div class="fld" id="ai-f-day"><label class="rm-label" for="ai-day">哪一天</label><select class="rm-input" id="ai-day"></select></div>
+    <div class="fld" id="ai-f-time"><label class="rm-label" for="ai-time">時間</label><input class="rm-input" type="time" id="ai-time"></div>
+    <div class="fld" id="ai-f-title"><label class="rm-label" for="ai-title">去哪／做什麼</label>
+      <div class="seek"><input class="rm-input" type="text" id="ai-title" placeholder="地名/車站/建築物/活動名等">
+      <button type="button" class="btn btn-sm" data-seek="ai-title">搜尋</button></div>
+      <div class="seek-out" id="ai-title-out" hidden></div></div>
+    <div class="fld" id="ai-f-note"><label class="rm-label" for="ai-note">備註</label><input class="rm-input" type="text" id="ai-note" placeholder="可留白"></div>
+    <div class="fld" id="ai-f-by"><label class="rm-label" for="ai-by">你是誰</label><select class="rm-input" id="ai-by"></select></div>
+    <div class="fld" id="ai-f-flight"><label class="rm-label" for="ai-flight">哪一班</label><select class="rm-input" id="ai-flight"></select></div>
+    <div class="fld" id="ai-f-seats"><span class="rm-label">座位(留白 = 不改)</span><div id="ai-seat-list"></div></div>
+    <div class="err" id="ai-cerr" hidden></div>
+    <div class="ops">
+      <button type="submit" class="btn btn-main" id="ai-ok">確定</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="ai-back">重來</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="ai-cancel2">取消</button>
+    </div>
+  </form>
+</div>
+
 <div class="overlay" id="wish-add-overlay" hidden>
   <form class="signin" id="wish-form">
     <h2>許一個願望</h2>
@@ -1374,6 +1432,13 @@
   };
   /* A320 是 3-3,他們訂的是 A B / D E F,C 空著 —— 走道在 C 和 D 中間 */
   const SEAT_ORDER = ["27A", "27B", "27D", "27E", "27F"];
+  /* 航班號 → 畫面上的哪一段。Notion「座位」資料庫用航班號當標題(之後航班不只兩班),
+     這張表只決定**這一趟的畫面**把哪一班畫在去程、哪一班畫在回程。
+     上面的 SEATS 是離線／Notion 讀不到時的備援,也是座位資料庫一開始的內容。 */
+  const FLIGHTS = [
+    { no: "MM626", leg: "out",  date: "2026-10-03", label: "去程 MM626 · 10/03" },
+    { no: "MM631", leg: "back", date: "2026-10-08", label: "回程 MM631 · 10/08" },
+  ];
 
   const DAYS = [
     { n: 1, date: "2026-10-03", w: "六", color: "#F39700" },
@@ -1429,7 +1494,7 @@
 
   /* ================= 狀態 ================= */
   const state = { tab: "plan", day: "2026-10-03", rate: (window.TRIP_CONFIG || {}).rate || SEED.rate,
-    kitty: Number((window.TRIP_CONFIG || {}).kitty) || 30000, names: {}, expenses: [], stops: [], wishes: [] };
+    kitty: Number((window.TRIP_CONFIG || {}).kitty) || 30000, names: {}, expenses: [], stops: [], wishes: [], seats: [] };
   const nameOf = id => state.names[id] || (MEMBERS.find(m => m.id === id) || {}).def || id;
   const colorOf = id => (MEMBERS.find(m => m.id === id) || {}).color || "#7E8796";
 
@@ -1588,10 +1653,11 @@
     state.expenses = Array.isArray(d.expenses) ? clone(d.expenses) : [];
     state.stops = Array.isArray(d.stops) ? clone(d.stops) : [];
     state.wishes = Array.isArray(d.wishes) ? clone(d.wishes) : [];
+    state.seats = Array.isArray(d.seats) ? clone(d.seats) : [];
     sortExpenses();
   }
   function snapshot() {
-    return { version: 3, rate: state.rate, names: state.names, expenses: state.expenses, stops: state.stops, wishes: state.wishes };
+    return { version: 3, rate: state.rate, names: state.names, expenses: state.expenses, stops: state.stops, wishes: state.wishes, seats: state.seats };
   }
   function saveLocal() {
     /* snapAt 有值 = 現在顯示的是共用紀錄的副本,不是這台裝置自己的紀錄。
@@ -1901,11 +1967,15 @@
 
   /* --- 從 Notion 讀 --- */
   async function pull() {
-    const [ex, st, wi] = await Promise.all([
+    /* 座位**讀不到不算失敗**:它是後來才加的資料庫,讀不到就用程式裡的 SEATS,
+       不能因為它拖垮整份資料。null = 讀不到,保留手上原本的。 */
+    const [ex, st, wi, se] = await Promise.all([
       api("?resource=expenses"),
       api("?resource=itinerary"),
       api("?resource=wishes"),
+      api("?resource=seats").catch(() => null),
     ]);
+    if (se) state.seats = se.rows;
     state.expenses = ex.rows.map(expFromRow);
     state.stops = st.rows.filter(r => r.day).map(stopFromRow);
     state.wishes = wi.rows;
@@ -2131,23 +2201,40 @@
       Math.ceil((go - now) / 86400000) + "</span> 天</b>";
   }
 
-  /* 誰坐哪一個位子 —— 照機艙由窗到窗排,走道畫在中間 */
+  /* 現在誰坐哪裡:程式裡的 SEATS 打底,Notion「座位」資料庫有的就蓋上去。
+     認不得的航班(不在 FLIGHTS 裡)先不畫 —— 那是之後開放給別團時的事。 */
+  function seatsNow() {
+    const S = { out: Object.assign({}, SEATS.out), back: Object.assign({}, SEATS.back) };
+    (state.seats || []).forEach(r => {
+      const f = FLIGHTS.find(x => x.no === r.flight);
+      const m = MEMBERS.find(x => x.key === r.passenger);
+      if (f && m && r.seat) S[f.leg][m.id] = r.seat;
+    });
+    return S;
+  }
+  /* 座位照排、再照字母排。走道畫在 C 和 D 之間(A320 是 3-3) ——
+     以前寫死「27D 前面」,座位一換成別排就畫不出來了。 */
+  const seatKey = x => { const m = /^(\d+)([A-Z])$/.exec(x) || [0, 0, ""]; return [+m[1], m[2]]; };
   function renderSeats() {
-    const who = (leg, seat) => MEMBERS.find(m => SEATS[leg][m.id] === seat);
+    const S = seatsNow();
     const draw = (leg, box) => {
-      box.innerHTML = SEAT_ORDER.map(seat => {
-        const m = who(leg, seat);
-        if (!m) return "";
+      const list = MEMBERS.filter(m => S[leg][m.id]).map(m => ({ m, seat: S[leg][m.id] }))
+        .sort((a, b) => { const x = seatKey(a.seat), y = seatKey(b.seat); return x[0] - y[0] || x[1].localeCompare(y[1]); });
+      let prev = "";
+      box.innerHTML = list.map(({ m, seat }) => {
+        const letter = seatKey(seat)[1];
         /* 回程換了位子的人標成琥珀色,免得照去程的記憶亂坐 */
-        const moved = leg === "back" && SEATS.out[m.id] !== seat;
+        const moved = leg === "back" && S.out[m.id] && S.out[m.id] !== seat;
         const chip = '<span class="seat' + (moved ? " moved" : "") + '" style="--sc:' + m.color + '">' +
-          "<b>" + seat + "</b><span>" + esc(nameOf(m.id)) + "</span></span>";
-        return seat === "27D" ? '<span class="aisle">走道</span>' + chip : chip;
+          "<b>" + esc(seat) + "</b><span>" + esc(nameOf(m.id)) + "</span></span>";
+        const aisle = prev && prev < "D" && letter >= "D";
+        prev = letter;
+        return (aisle ? '<span class="aisle">走道</span>' : "") + chip;
       }).join("");
     };
     draw("out", el("seat-out"));
     draw("back", el("seat-back"));
-    const moved = MEMBERS.filter(m => SEATS.out[m.id] !== SEATS.back[m.id]);
+    const moved = MEMBERS.filter(m => S.out[m.id] && S.back[m.id] && S.out[m.id] !== S.back[m.id]);
     el("seat-swap").textContent = moved.length
       ? moved.map(m => nameOf(m.id)).join("、") + " 回程換位子"
       : "";
@@ -3033,7 +3120,7 @@
      而且邊打邊搜會把「東京」這種打到一半的字送出去。**按下去才查,是刻意的。** */
   document.addEventListener("keydown", ev => {
     const t = ev.target;
-    if (!t || !t.id || !/^(sf|wf|se|we)-title$/.test(t.id) || ev.key !== "Enter") return;
+    if (!t || !t.id || !/^(sf|wf|se|we|ai)-title$/.test(t.id) || ev.key !== "Enter") return;
     ev.preventDefault();   /* 不要順手送出整張表單 */
     runSeek(t.id);
   });
@@ -4485,6 +4572,214 @@
   });
 
   /* --- 許願表單 --- */
+  /* ================= AI 按鈕 =================
+     **只讀懂,不存。** /api/ai 回來的是「AI 覺得這是什麼」,放進確認卡;
+     人按「確定」才走 addWish / addStop / saveSeats —— 權限跟手動加一模一樣:
+     許願誰都能加,行程和座位要通行碼。 */
+  const AI_API = (CFG.apiBase || "").replace(/\/$/, "") + "/api/ai";
+  let aiImage = "";   /* 縮過的 JPEG,base64,沒有 data: 前綴 */
+
+  /* 手機原圖動輒 5MB,超過 Vercel 函式的請求上限;長邊 1600px 的字已經夠讀。 */
+  function shrinkImage(file) {
+    return new Promise((ok, no) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        const k = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight));
+        const c = document.createElement("canvas");
+        c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+        c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(url);
+        ok(c.toDataURL("image/jpeg", 0.85).split(",")[1]);
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); no(new Error("這張圖片讀不出來")); };
+      img.src = url;
+    });
+  }
+  const aiErr = (id, msg) => { el(id).textContent = msg || ""; el(id).hidden = !msg; };
+
+  function openAI() {
+    tuckMapForDialog(false);
+    el("ai-form").reset(); aiImage = "";
+    el("ai-img-name").textContent = "";
+    aiErr("ai-err", "");
+    el("ai-form").hidden = false; el("ai-confirm").hidden = true;
+    el("ai-overlay").hidden = false;
+    el("ai-text").focus();
+  }
+  function closeAI() {
+    el("ai-overlay").hidden = true;
+    seekClear("ai-title");
+  }
+
+  /* 哪一種資料要哪幾欄。類型選單可以改 —— AI 看錯了,人換一下就好,不必重來。 */
+  const AI_FIELDS = {
+    wish:  ["title", "note", "by"],
+    stop:  ["day", "time", "title", "note"],
+    seats: ["flight", "seats"],
+  };
+  function aiShowKind() {
+    const k = el("ai-kind").value;
+    ["day", "time", "title", "note", "by", "flight", "seats"].forEach(f => {
+      el("ai-f-" + f).hidden = AI_FIELDS[k].indexOf(f) < 0;
+    });
+    /* 行程和座位跟手動加一樣要通行碼。**擋在按鈕上,不是等存的時候才說** ——
+       讓人填完才告訴他不能存,是浪費他的時間。 */
+    const need = k !== "wish" && !editable();
+    aiErr("ai-cerr", need ? "加行程和座位要先用通行碼登入(選單 → 我是管理員)。許願不用。" : "");
+    el("ai-ok").disabled = need;
+  }
+
+  function aiFillSeats(flightNo, fromAI) {
+    const S = seatsNow();
+    const f = FLIGHTS.find(x => x.no === flightNo) || FLIGHTS[0];
+    el("ai-seat-list").innerHTML = MEMBERS.map(m => {
+      const got = (fromAI || []).find(x => x.member === m.id);
+      return '<label class="rm-label" for="ai-seat-' + m.id + '">' + esc(nameOf(m.id)) + "</label>" +
+        '<input class="rm-input" type="text" id="ai-seat-' + m.id + '" maxlength="4" placeholder="' +
+        esc(S[f.leg][m.id] || "") + '" value="' + esc(got ? got.seat : "") + '">';
+    }).join("");
+  }
+
+  function aiConfirm(r) {
+    el("ai-say").textContent = r.message || "";
+    el("ai-kind").value = r.intent === "unknown" ? "wish" : r.intent;
+    el("ai-day").innerHTML = DAYS.map(d => '<option value="' + d.date + '">Day ' + d.n + " · " +
+      d.date.slice(5).replace("-", "/") + " (" + d.w + ")</option>").join("");
+    el("ai-day").value = r.day || state.day;
+    el("ai-time").value = r.time || "";
+    seekReset("ai-title"); seekClear("ai-title");
+    el("ai-title").value = r.title || "";
+    el("ai-note").value = r.note || "";
+    const me = myName();
+    el("ai-by").innerHTML = '<option value="">— 選一下 —</option>' + MEMBERS.map(m =>
+      '<option value="' + m.id + '"' + (m.id === me ? " selected" : "") + ">" + esc(nameOf(m.id)) + "</option>").join("");
+    el("ai-flight").innerHTML = FLIGHTS.map(f => '<option value="' + f.no + '">' + esc(f.label) + "</option>").join("");
+    const f = FLIGHTS.find(x => x.no === r.flight);
+    el("ai-flight").value = f ? f.no : FLIGHTS[0].no;
+    aiFillSeats(el("ai-flight").value, r.seats);
+    if (r.intent === "seats" && r.flight && !f)
+      el("ai-say").textContent = "圖上的航班是 " + r.flight + ",不是這趟的兩班。請選要改哪一班。";
+    el("ai-form").hidden = true; el("ai-confirm").hidden = false;
+    aiShowKind();
+    /* 有地名就先幫他搜一次:**挑哪一個還是人挑**,這裡只是省他按一下「搜尋」。
+       不挑的話照樣存得進去,只是不上地圖 —— 跟手動加同一條規則(locatedAt)。 */
+    if (r.title && r.intent !== "seats") runSeek("ai-title");
+  }
+
+  async function saveSeats(flightNo) {
+    const f = FLIGHTS.find(x => x.no === flightNo);
+    const want = MEMBERS.map(m => ({ m, seat: el("ai-seat-" + m.id).value.trim().toUpperCase() }))
+      .filter(x => x.seat);
+    if (!want.length) throw new Error("沒有要改的座位");
+    const bad = want.find(x => !/^\d{1,3}[A-K]$/.test(x.seat));
+    if (bad) throw new Error(nameOf(bad.m.id) + " 的座位「" + bad.seat + "」看起來不對,要像 27A");
+    if (!online) throw new Error("座位要連上網才能存");
+    for (const { m, seat } of want) {
+      const had = (state.seats || []).find(r => r.flight === f.no && r.passenger === m.key);
+      const body = JSON.stringify({ flight: f.no, date: f.date, passenger: m.key, seat });
+      const { row } = had
+        ? await api("?resource=seats&id=" + encodeURIComponent(had.id), { method: "PATCH", body })
+        : await api("?resource=seats", { method: "POST", body });
+      state.seats = (state.seats || []).filter(r => r.id !== row.id && !(r.flight === row.flight && r.passenger === row.passenger));
+      state.seats.push(row);
+    }
+    saveSnap();
+    return want.length;
+  }
+
+  el("ai-btn").addEventListener("click", openAI);
+  el("ai-cancel").addEventListener("click", closeAI);
+  el("ai-cancel2").addEventListener("click", closeAI);
+  el("ai-overlay").addEventListener("click", ev => { if (ev.target === el("ai-overlay")) closeAI(); });
+  el("ai-pick").addEventListener("click", () => el("ai-file").click());
+  el("ai-file").addEventListener("change", async ev => {
+    const file = ev.target.files && ev.target.files[0];
+    ev.target.value = "";
+    if (!file) return;
+    el("ai-img-name").textContent = "處理圖片中…";
+    try { aiImage = await shrinkImage(file); el("ai-img-name").textContent = "已加入:" + file.name; }
+    catch (e) { aiImage = ""; el("ai-img-name").textContent = e.message; }
+  });
+  el("ai-kind").addEventListener("change", aiShowKind);
+  el("ai-flight").addEventListener("change", () => aiFillSeats(el("ai-flight").value, null));
+  el("ai-back").addEventListener("click", () => {
+    seekClear("ai-title");
+    el("ai-confirm").hidden = true; el("ai-form").hidden = false;
+    el("ai-text").focus();
+  });
+
+  el("ai-form").addEventListener("submit", async ev => {
+    ev.preventDefault();
+    const text = el("ai-text").value.trim();
+    if (!text && !aiImage) { aiErr("ai-err", "打一段話,或加一張圖。"); return; }
+    if (!online) { aiErr("ai-err", "AI 要連上網才能用。"); return; }
+    aiErr("ai-err", "");
+    const go = el("ai-go");
+    go.disabled = true; go.textContent = "AI 讀取中…";
+    try {
+      const res = await fetch(AI_API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, image: aiImage, context: { today: todayISO(), day: state.day } }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error || ("HTTP " + res.status));
+      aiConfirm(body.result || {});
+    } catch (e) {
+      aiErr("ai-err", "沒成功:" + e.message);
+    } finally {
+      go.disabled = false; go.textContent = "交給 AI";
+    }
+  });
+
+  el("ai-confirm").addEventListener("submit", async ev => {
+    ev.preventDefault();
+    const k = el("ai-kind").value;
+    const title = el("ai-title").value.trim();
+    const note = el("ai-note").value.trim();
+    const place = locatedAt(title) ? title : "";
+    if (k === "wish") {
+      if (!title) { aiErr("ai-cerr", "總要寫個地方。"); return; }
+      const by = el("ai-by").value;
+      if (!by) { aiErr("ai-cerr", "選一下你是誰,不然沒人知道這是誰許的。"); return; }
+      setMe(by);
+      addWish({ id: uid(), title, place, note, by, votes: [by], createdAt: new Date().toISOString() });
+      closeAI();
+      switchTab("wish");
+      checkPlace({ place, title }, "wish-msg");
+      flash("已加進許願:" + title);
+      return;
+    }
+    if (k === "stop") {
+      const day = el("ai-day").value, time = el("ai-time").value;
+      if (!title) { aiErr("ai-cerr", "總要寫要去哪。"); return; }
+      if (!time) { aiErr("ai-cerr", "行程要有時間,填一下。"); return; }
+      addStop({ id: uid(), day, time, title, place, note });
+      closeAI();
+      state.day = day;
+      switchTab("plan");
+      renderDays(); renderRoute();
+      checkPlace({ place, title }, "stop-msg");
+      const d = DAYS.find(x => x.date === day);
+      flash("已加到 Day " + (d ? d.n : "") + ":" + time + " " + title);
+      return;
+    }
+    const ok = el("ai-ok");
+    ok.disabled = true;
+    try {
+      const n = await saveSeats(el("ai-flight").value);
+      closeAI();
+      renderSeats();
+      switchTab("fly");
+      flash("已更新 " + n + " 個座位");
+    } catch (e) {
+      aiErr("ai-cerr", "座位沒存成功:" + e.message);
+    } finally {
+      ok.disabled = false;
+    }
+  });
+
   function fillWishWho() {
     const me = myName();
     el("wf-by").innerHTML = '<option value="">— 選一下 —</option>' +
@@ -5222,6 +5517,7 @@
        許願 sheet(55)上面 —— Esc 關掉的應該是**他現在看得到的最上面那一層**,
        不是一次全收。三層一起關的話,他按一下 Esc 就回到空無一物的行程頁。 */
     if (!el("map-sheet").hidden) { closeMapSheet(); return; }
+    if (!el("ai-overlay").hidden) { closeAI(); return; }
     if (!el("wish-add-overlay").hidden) { closeWishAdd(); return; }
     if (!el("stop-add-overlay").hidden) { closeStopAdd(); return; }
     const wb = el("wishbox");

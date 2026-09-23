@@ -6,7 +6,7 @@
 // 需要的環境變數:
 //   NOTION_TOKEN     Notion internal integration 的密鑰(secret_... 或 ntn_...)
 //   TRIP_KEY         五個人共用的通行碼,前端會帶在 x-trip-key 標頭
-//   NOTION_DB_EXPENSES / NOTION_DB_ITINERARY  (選填,預設值見下方)
+//   NOTION_DB_EXPENSES / NOTION_DB_ITINERARY / NOTION_DB_SEATS  (選填,預設值見下方)
 //   GEOCODE_KEY      地名查詢退路的金鑰(選填;沒設就只是那條退路不能用,
 //                    網站其他部分照常。理由和它擋住什麼,見下面 resource=geocode)
 
@@ -17,6 +17,7 @@ const GEOCODE = "https://maps.googleapis.com/maps/api/geocode/json";
 const DB = {
   expenses: process.env.NOTION_DB_EXPENSES || "bc4321f89f224137845f5e528730f042",
   itinerary: process.env.NOTION_DB_ITINERARY || "3b2d1f3045fc4b2490e93e3238c26b3a",
+  seats: process.env.NOTION_DB_SEATS || "35e32ca036ee4901b1951c9e22dd9f7e",
 };
 
 /* ---------- Notion 呼叫 ---------- */
@@ -206,9 +207,33 @@ function wishIn(b) {
   };
 }
 
+/* 座位:一列 = 一個人在一班飛機上的位子。**用航班號當標題,不是用「去程/回程」** ——
+   之後開放給別的團用,航班不會只有兩班,而航班號本來就是那一班的名字。
+   前端怎麼把航班號對到畫面上的那一段,是前端的事(見 index.html 的 FLIGHTS)。 */
+function seatOut(page) {
+  const p = page.properties;
+  return {
+    id: page.id,
+    flight: ttl(p["航班"]).toUpperCase().replace(/\s+/g, ""),
+    date: dat(p["日期"]),
+    passenger: sel(p["旅客"]),
+    seat: txt(p["座位"]).toUpperCase(),
+  };
+}
+function seatIn(b) {
+  const props = {
+    "航班": { title: richText(String(b.flight || "").toUpperCase()) },
+    "座位": { rich_text: richText(String(b.seat || "").toUpperCase()) },
+  };
+  if (b.date) props["日期"] = { date: { start: b.date } };
+  if (b.passenger) props["旅客"] = { select: { name: b.passenger } };
+  return props;
+}
+
 const SHAPES = {
   expenses: { db: DB.expenses, out: expenseOut, in: expenseIn, sort: [{ property: "日期", direction: "ascending" }] },
   itinerary: { db: DB.itinerary, out: stopOut, in: stopIn, sort: [{ property: "日期", direction: "ascending" }] },
+  seats: { db: DB.seats, out: seatOut, in: seatIn, sort: [{ property: "航班", direction: "ascending" }] },
   wishes: {
     db: DB.itinerary, out: wishOut, in: wishIn, open: true,
     filter: { property: "日期", date: { is_empty: true } },   /* 沒排進行程的才算願望 */
