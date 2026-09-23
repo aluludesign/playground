@@ -173,6 +173,54 @@ function pinsOf(k) { return pins()[k]; }
     ok("沒填地點的沒有被標上去(teamLab)",
       !labs.some(function (t) { return /teamLab/.test(t); }), labs);
 
+    // 2b ---- 小卡上那個 📍 跟地圖是同一句話 ----
+    /* **判準不是「有沒有填地點」,是「地圖上找不找得到」。**
+       合羽橋道具街沒填地點 → 地圖上沒有它 → 不該有 📍。
+       淺草寺參拜填了「淺草寺」而且查得到 → 地圖上有 → 該有。
+       兩者都在同一天、同一個清單裡,所以這一條問的是**那條規則**,
+       不是「這一頁有沒有出現過 📍」。 */
+    function rowOfStop(re) {
+      return [].slice.call(d.querySelectorAll("#route .stop")).find(function (e) {
+        var t = e.querySelector(".ti"); return t && re.test(t.textContent || "");
+      });
+    }
+    var r1 = rowOfStop(/淺草寺參拜/), r2 = rowOfStop(/合羽橋/);
+    ok("地圖上有的那一筆,小卡上有 📍",
+      !!r1 && !!r1.querySelector(".pinmark"), r1 && r1.querySelector(".ti").textContent);
+    ok("**地圖上沒有的那一筆,小卡上沒有 📍**(填了地點但查不到的,那顆 📍 會是騙人的)",
+      !!r2 && !r2.querySelector(".pinmark"), r2 && r2.querySelector(".ti").textContent);
+
+    // 2c ---- 「全部已排 / Day n」是一個開關的兩半 ----
+    /* 以前它們是兩顆各自的開關,而「全部已排」開著時 Day n 被畫成停用。
+       現在兩半都按得到,而且**永遠剛好亮一個** —— 兩個都關就是一張空地圖。 */
+    var all = q("#lay-all"), dayb = q("#lay-plan");
+    ok("兩半在同一個框裡(它是一個開關,不是兩顆鈕)",
+      !!all.closest(".laygroup") && all.closest(".laygroup") === dayb.closest(".laygroup"),
+      all.parentElement.className);
+    ok("一開始亮的是 Day n",
+      dayb.getAttribute("aria-pressed") === "true" && all.getAttribute("aria-pressed") === "false",
+      { day: dayb.getAttribute("aria-pressed"), all: all.getAttribute("aria-pressed") });
+    var pinsBefore = d.querySelectorAll(".map .pin").length;
+    all.click();
+    await sleep(400);
+    ok("按「全部已排」→ 換邊,而且圖上的點變多(六天全部)",
+      all.getAttribute("aria-pressed") === "true" &&
+      dayb.getAttribute("aria-pressed") === "false" &&
+      d.querySelectorAll(".map .pin").length > pinsBefore,
+      { all: all.getAttribute("aria-pressed"), day: dayb.getAttribute("aria-pressed"),
+        點: [pinsBefore, d.querySelectorAll(".map .pin").length] });
+    ok("Day n 這時候仍然按得到(它是「換到這一邊」,不是「關掉」)", dayb.disabled === false, dayb.disabled);
+    all.click();
+    await sleep(300);
+    ok("**再按一次亮著的那一半,什麼都不變**(關掉它等於一張空地圖)",
+      all.getAttribute("aria-pressed") === "true", all.getAttribute("aria-pressed"));
+    dayb.click();
+    await sleep(400);
+    ok("按 Day n → 換回那一天",
+      dayb.getAttribute("aria-pressed") === "true" && all.getAttribute("aria-pressed") === "false" &&
+      d.querySelectorAll(".map .pin").length === pinsBefore,
+      { day: dayb.getAttribute("aria-pressed"), 點: d.querySelectorAll(".map .pin").length });
+
     /* ---- 3 到 7 段退場(2026-09-22,mapfix-retire) ----
        這五段量的是「再查一次」那條退路的前端行為:點一列 → 那條小字出現 →
        按「再查一次」→ 回概略 → 虛線圈 → 按「對」→ 變實線 → 失敗不弄丟座標 → 收起來就不見。

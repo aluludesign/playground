@@ -347,6 +347,13 @@ async function drag(dy) {
     d.getElementById("tab-wish").click();
     await sleep(500);
 
+    /* **拖放是桌機才有的。** 願望卡長按拖進時間軸那條路,2026-09-17 就是因為
+       「用大拇指做這件事太難」被拿掉的;它在三欄版面回來了,這裡守住它沒有跟著回到手機。
+       判準是那個 class —— 它同時決定游標樣式和拖曳要不要理你。 */
+    ok("手機上願望卡不能拖(那條路只給滑鼠)",
+      !d.getElementById("wish-list").classList.contains("can-sort"),
+      d.getElementById("wish-list").className);
+
     /* **那兩顆地圖鈕整個刪掉了(2026-09-23)**,不再是「藏起來」。
        問的東西也跟著換:從「它看不到」變成「它不存在」——
        藏起來的按鈕 `.click()` 照樣會動,不存在的不會。 */

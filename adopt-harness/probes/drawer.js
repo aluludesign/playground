@@ -227,6 +227,43 @@ function drag(toWidth, releaseOn) {
         over && (over.tagName.toLowerCase() + (over.id ? "#" + over.id : "." + over.className)));
       d.getElementById("signin-overlay").hidden = true;
       await sleep(80);
+
+      /* ---- 桌機才有的:長按願望卡,拖進時間軸 ----
+         **這件事 2026-09-17 被拿掉過**,理由是「用大拇指做這件事太難」——
+         那是手機的理由。三欄版面有滑鼠、而且時間軸和願望並排看得到,所以它回來了。
+         這裡問三件事:那一欄標著「可以拖」、長按真的會浮起來、放開會進到問時間那一關。
+         (真正插進去那一步不做 —— 它會寫資料,而寫入的形狀 geofix 已經在問了。) */
+      var wl = d.getElementById("wish-list");
+      ok("願望清單標著「可以拖」(桌機才有)",
+        wl.classList.contains("can-sort"), wl.className);
+      var card = wl.querySelector(".wish[data-wish]");
+      var cb = card.getBoundingClientRect();
+      function pev(t, x, y) {
+        return new w.PointerEvent(t, { clientX: x, clientY: y, pointerId: 7,
+          bubbles: true, cancelable: true, pointerType: "mouse" });
+      }
+      card.dispatchEvent(pev("pointerdown", cb.left + 30, cb.top + 12));
+      await sleep(120);
+      ok("**按下去就浮起來不算拖**(短按是點,不是拖 —— 要按住才算)",
+        !card.classList.contains("lifted"), card.className);
+      await sleep(400);
+      ok("長按之後卡片浮起來了", card.classList.contains("lifted"), card.className);
+      var rt = d.getElementById("route").getBoundingClientRect();
+      /* **事件要發在卡片上,不是 window。** 卡片浮起來的時候做了 `setPointerCapture`,
+         真實瀏覽器從此把這根指標的事件都送到那張卡片(再往上冒泡到清單,
+         處理器就掛在那裡)。發到 window 的話,那一路冒泡經過的是別的地方,
+         處理器一條都收不到 —— 而畫面上看起來就像「拖不動」。 */
+      card.dispatchEvent(pev("pointermove", rt.left + 60, rt.top + 30));
+      await sleep(80);
+      ok("拖到時間軸上會標出要插在哪一格", !!d.querySelector(".dropline"),
+        d.getElementById("route").className);
+      card.dispatchEvent(pev("pointerup", rt.left + 60, rt.top + 30));
+      await sleep(250);
+      ok("放開之後會先問幾點(插在兩筆中間要有時間,不然清單順序跟時間會打架)",
+        !d.getElementById("time-overlay").hidden, d.getElementById("time-overlay").outerHTML.slice(0, 80));
+      var tc = d.getElementById("tf-cancel") || d.querySelector("#time-overlay [data-cancel]");
+      if (tc) tc.click();
+      await sleep(120);
     }
   } catch (e) {
     out.爆掉了 = String((e && e.stack) || e);

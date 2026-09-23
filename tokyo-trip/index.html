@@ -479,8 +479,18 @@
       font-family:var(--font-sign); font-size:10px; font-weight:500; letter-spacing:0;}
     /* 兩個圖層的開關。關掉的那個變灰,開著的用它自己的顏色。 */
     .maplayers{display:flex; align-items:center; gap:6px; margin-bottom:9px;}
+    /* 它跟在標題後面,不要把標題擠到換行,也不吃點擊 */
+    .pinmark{font-size:11px; line-height:1; vertical-align:2px; white-space:nowrap; cursor:default;}
     /* 分組用的直線。它不是一顆鈕,所以不吃 `.lay` 的樣式,也不佔按得到的面積。 */
     .lay-sep{flex:none; width:1px; align-self:stretch; margin:1px 3px; background:var(--line);}
+    /* **「全部已排 / Day n」是一個開關的兩半,不是兩顆鈕。**
+       它們互斥 —— 地圖上的行程要嘛全部、要嘛那一天,不會兩個都關(那是一張空地圖),
+       也不會兩個都開(那句話沒有意義)。所以畫成一個連在一起的段,中間一條線,
+       亮著的那一半有底色:**看一眼就知道現在站在哪一邊**。 */
+    .laygroup{display:inline-flex; border:1px solid var(--line); border-radius:99px; overflow:hidden;}
+    .laygroup .lay{border:0; border-radius:0; background:none;}
+    .laygroup .lay + .lay{border-left:1px solid var(--line);}
+    .laygroup .lay[aria-pressed="true"]{background:var(--paper); color:var(--ink);}
     .lay{display:inline-flex; align-items:center; gap:6px; cursor:pointer;
       border:1px solid var(--line); border-radius:99px; padding:4px 11px 4px 9px;
       background:var(--surface); color:var(--muted);
@@ -659,6 +669,23 @@
 
     /* ---- 長按整列拖移排序 ---- */
     /* 捲動照常,長按成立之後才在 touchmove 裡擋掉捲動(見 initSorting) */
+    /* ---- 桌機:長按願望卡,拖進時間軸 ----
+       **這件事在 2026-09-17 被拿掉過**(`11cf284`),理由寫得很清楚:
+       用大拇指做這件事太難 —— 按住、等卡片浮起來、手指不能放、再一路拖上去。
+       那個理由是**手機的**理由。桌機有滑鼠:按住拖過去是最短的一條路,
+       而且看得到整個時間軸。所以它只在三欄版面回來,手機維持按「加入」。
+       (兩條路同時存在不違反「一件事一個進法」—— 它們在不同的寬度,
+       任何一個使用者在任何一刻只看得到其中一條。) */
+    #wish-list.can-sort .wish{cursor:grab; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none;}
+    /* 拿起來的那張卡浮在最上層跟著游標走。`pointer-events:none` 是功能不是樣式 ——
+       不關掉的話,底下「現在指到時間軸的第幾格」會一直命中這張卡自己。 */
+    .wish.lifted{position:relative; z-index:60; background:var(--surface);
+      box-shadow:0 12px 30px rgba(0,0,0,.24); pointer-events:none; will-change:transform;
+      transform:scale(1.02); transition:box-shadow .15s;}
+    /* 放開會插在這裡 */
+    .dropline{height:2px; background:var(--accent); border-radius:2px; margin:5px 0; position:relative;}
+    .dropline::before{content:""; position:absolute; left:-4px; top:-3px; width:8px; height:8px;
+      border-radius:50%; background:var(--accent);}
     .route.can-sort .stop:not(.anchor){cursor:grab; user-select:none; -webkit-user-select:none;
       -webkit-touch-callout:none;}
     .route.sorting{user-select:none; touch-action:none;}
@@ -1296,8 +1323,10 @@
       <!-- **順序就是分組。**「全部已排」和「Day n」講的是同一件事(已經排進行程的點,
            看全部還是看一天),中間那條線右邊的「大家的許願」是另一件事 ——
            它不跟著日子走。線是畫給眼睛看的,螢幕閱讀器跳過它。 -->
-      <button type="button" class="lay" id="lay-all" data-layer="all" aria-pressed="false">全部已排</button>
-      <button type="button" class="lay" id="lay-plan" data-layer="plan" aria-pressed="true">Day 1</button>
+      <div class="laygroup" role="group" aria-label="地圖上的行程要看哪些">
+        <button type="button" class="lay" id="lay-all" data-layer="all" aria-pressed="false">全部已排</button>
+        <button type="button" class="lay" id="lay-plan" data-layer="plan" aria-pressed="true">Day 1</button>
+      </div>
       <span class="lay-sep" aria-hidden="true"></span>
       <button type="button" class="lay" id="lay-wish" data-layer="wish" aria-pressed="true">大家的許願</button>
     </div>
@@ -2321,11 +2350,14 @@
     const d = DAYS.find(x => x.date === state.day);
     /* 名字跟著選著的那一天換(Lulu 的決定):「已排行程」沒講是哪一天,「Day 3」講了 */
     el("lay-plan").textContent = "Day " + (d ? d.n : "");
-    el("lay-plan").setAttribute("aria-pressed", String(!!layers.plan && !layers.all));
-    el("lay-wish").setAttribute("aria-pressed", String(!!layers.wish));
+    /* 兩半互斥:亮著的永遠剛好一個 */
     el("lay-all").setAttribute("aria-pressed", String(!!layers.all));
-    /* 「全部已排」開著時 Day n 停用 —— 它被取代了,不是被關掉 */
-    el("lay-plan").disabled = lockedLayer() === "plan" || !!layers.all;
+    el("lay-plan").setAttribute("aria-pressed", String(!layers.all));
+    el("lay-wish").setAttribute("aria-pressed", String(!!layers.wish));
+    /* **兩半都按得到。** 以前「全部已排」開著時把 Day n 畫成停用 ——
+       那是它們還是兩顆獨立開關的年代:關掉 Day n 會變成空地圖,所以只好擋住。
+       現在按 Day n 的意思是「換到這一邊」,不是「關掉」。 */
+    el("lay-plan").disabled = false;
     el("lay-wish").disabled = lockedLayer() === "wish";
   }
   /* 關掉「全部已排」。會把地圖移到某個點的動作(點行程那一列、點願望卡片、點日子)
@@ -3110,6 +3142,13 @@
      所以不必換快取 key(換 key 會把大家查好的正確座標一起丟掉)。 */
   const pinOf = item => (item && ((item.place && pins[item.place]) || outsidePin(item.title))) || null;
 
+  /* **小卡上那個 📍 = 「這一筆在地圖上找得到」。**
+     判準跟地圖用的是同一句話(`inJapan(pinOf(item))`)—— 不是「有沒有填地點」:
+     填了地點但查不到座標的,地圖上也沒有它,那顆 📍 會是一個騙人的承諾。
+     一份事實只寫一次,所以這裡直接借地圖那條規則,不另外判斷。 */
+  const pinMark = item => inJapan(pinOf(item))
+    ? ' <span class="pinmark" title="地圖上有這個點" aria-label="地圖上有這個點">\uD83D\uDCCD</span>' : "";
+
   /* 兩點間的公里數 */
   function km(a, b) {
     const R = 6371, r = Math.PI / 180;
@@ -3522,7 +3561,7 @@
       (movable(s) ? ' title="長按可以拖著換順序"' : "") + ">" +
       '<div class="t num">' + (s.time || "—") +
       (s.day === OVERNIGHT ? '<span style="color:var(--muted); font-size:10px"> +1</span>' : "") + "</div>" +
-      '<div class="b"><div class="ti">' + linkify(s.title) + "</div>" +
+      '<div class="b"><div class="ti">' + linkify(s.title) + pinMark(s) + "</div>" +
       (s.place ? '<div class="pl">' + linkify(s.place) + stopWx(s.place, s.day || state.day) + "</div>" : "") +
       (s.note ? '<div class="nt">' + linkify(s.note) + "</div>" : "") + "</div>" +
       '<div class="rowops">' +
@@ -3557,6 +3596,8 @@
     if (sheetMode === "wish") loadSheetMap();
 
     el("wish-n").textContent = list.length ? list.length + " 個" : "";
+    /* 只有三欄版面拖得動 —— 那裡時間軸和願望並排看得到,滑鼠也拖得準。 */
+    el("wish-list").classList.toggle("can-sort", editable() && wideCols() && list.length > 0);
     el("add-wish-btn").hidden = false;
 
     if (!list.length) {
@@ -3576,7 +3617,7 @@
         });
         return '<div class="wish' + (w.by === me ? " mine" : "") + '" data-wish="' + esc(w.id || "") + '">' +
           '<div class="wt">' + (num[w.id] ? '<span class="wnum">' + num[w.id] + "</span>" : "") +
-          linkify(w.title) + "</div>" +
+          linkify(w.title) + pinMark(w) + "</div>" +
           '<div class="wm">' + by +
           (w.place ? "<span>" + linkify(w.place) + "</span>" : "") +
           (w.note ? "<span>" + linkify(w.note) + "</span>" : "") +
@@ -4107,6 +4148,13 @@
     return { prev: rowAt(rows, i - 1), next: rowAt(rows, i + 1) };
   }
 
+  /* **插進去的那一筆還不在 rows 裡**,所以鄰居是 i-1 和 i —— 不是 i-1 和 i+1。
+     用錯的話會跳過一整格:插在第 3 格卻拿第 4 格當「後面那一筆」,
+     建議的時間就會落在別人身上,而畫面上看起來完全合理。 */
+  function neighboursForInsert(rows, i) {
+    return { prev: rowAt(rows, i - 1), next: rowAt(rows, i) };
+  }
+
   /* 想塞進 prev 和 next 中間的話,幾點比較合理 */
   function suggestSlot(prev, next) {
     const a = slotOf(prev), b = slotOf(next);
@@ -4243,6 +4291,102 @@
     route.addEventListener("touchmove", ev => {
       if (row) ev.preventDefault();
     }, { passive: false });
+  })();
+
+  /* ---- 桌機:長按願望卡 → 拖進時間軸的某一格 ----
+     **拿回 `11cf284` 拿掉的那段,但只給三欄版面。** 當時拿掉的理由是
+     「用大拇指做這件事太難」—— 那是手機的理由,不是滑鼠的。
+     手機維持按「加入」那條路;兩條路不會同時出現在同一個畫面上。
+
+     `askTime` 那一關留著:插進兩筆之間要先問幾點,不然清單的順序會跟時間打架。 */
+  (function initWishDrag() {
+    const box = el("wish-list"), route = el("route");
+    if (!box || !route) return;
+    const HOLD = 380, SLOP = 10;
+    let armed = null, row = null, from = null, line = null;
+
+    const on = () => editable() && wideCols();
+    function disarm() { if (armed) { clearTimeout(armed.timer); armed = null; } }
+    function lift() {
+      if (!armed) return;
+      row = armed.row; from = { x: armed.x, y: armed.y };
+      row.classList.add("lifted");
+      try { row.setPointerCapture(armed.pointerId); } catch (_) {}
+      armed = null;
+    }
+    function follow(ev) {
+      if (!row || !from) return;
+      row.style.transform = "translate(" + (ev.clientX - from.x) + "px," +
+        (ev.clientY - from.y) + "px) scale(1.02)";
+    }
+    /* 時間軸上畫一條線,標出放開會插在哪一格 */
+    function mark(spot) {
+      if (!spot) { if (line) { line.remove(); line = null; } return; }
+      if (!line) { line = document.createElement("div"); line.className = "dropline"; }
+      const at = spot.rows[spot.idx];
+      if (at) route.insertBefore(line, at); else route.appendChild(line);
+    }
+    function clear() {
+      if (row) { row.classList.remove("lifted"); row.style.transform = ""; }
+      route.classList.remove("dropzone");
+      mark(null);
+      row = null; from = null;
+    }
+    /* 游標在時間軸上嗎;是的話該插第幾格 */
+    function hit(y, x) {
+      /* **量之前先把那條線拿掉。** 它自己會把下面的格子往下推,
+         不拿掉的話量到的索引會在兩格之間來回跳。 */
+      if (line && line.parentNode) line.remove();
+      const r = route.getBoundingClientRect(), pad = 40;
+      if (x < r.left - pad || x > r.right + pad || y < r.top - pad || y > r.bottom + pad) return null;
+      const rows = [].slice.call(route.querySelectorAll(".stop"));
+      let i = rows.length;
+      rows.some((e2, k) => {
+        const b = e2.getBoundingClientRect();
+        if (y < b.top + b.height / 2) { i = k; return true; }
+        return false;
+      });
+      return { rows: rows, idx: i };
+    }
+
+    box.addEventListener("pointerdown", ev => {
+      if (!on() || row) return;
+      if (ev.target.closest("button")) return;      /* +1、加入、左滑那排各自有事做 */
+      const r = ev.target.closest(".wish");
+      if (!r || !r.dataset.wish) return;
+      armed = { row: r, pointerId: ev.pointerId, x: ev.clientX, y: ev.clientY, timer: 0 };
+      armed.timer = setTimeout(lift, HOLD);
+    });
+    box.addEventListener("pointermove", ev => {
+      if (armed) {
+        /* 還沒浮起來就先動了 → 那是在選字或捲動,不是要拖 */
+        if (Math.abs(ev.clientY - armed.y) > SLOP || Math.abs(ev.clientX - armed.x) > SLOP) disarm();
+        return;
+      }
+      if (!row) return;
+      ev.preventDefault();
+      follow(ev);
+      const spot = hit(ev.clientY, ev.clientX);
+      route.classList.toggle("dropzone", !!spot);
+      mark(spot);
+    });
+    function drop(ev) {
+      disarm();
+      if (!row) return;
+      const id = row.dataset.wish;
+      const spot = hit(ev.clientY, ev.clientX);
+      clear();
+      if (!spot) { renderWishes(); return; }        /* 沒放在時間軸上,當作沒事 */
+      const w = state.wishes.find(x => x.id === id);
+      if (!w) { renderWishes(); return; }
+      const nb = neighboursForInsert(spot.rows, spot.idx);
+      askTime({ id: w.id, title: w.title, time: "", day: state.day }, nb.prev, nb.next,
+        t => promoteWish(w.id, state.day, t));
+    }
+    box.addEventListener("pointerup", drop);
+    box.addEventListener("pointercancel", () => { disarm(); clear(); renderWishes(); });
+    /* 捲動一開始就放棄長按,免得捲一捲東西突然浮起來 */
+    window.addEventListener("scroll", disarm, true);
   })();
 
   /* 點行程那一列(避開按鈕)→ 打開地圖並移到那個點。
@@ -4820,8 +4964,22 @@
     /* 鎖著的那層不能關 —— 這也順便保證了兩層不會同時關掉變成一張空地圖。
        `all` 不在鎖的範圍:它跟 Day n 互斥,開它等於把 Day n 換成六天,
        關它就回到 Day n,地圖上永遠有東西。 */
-    if (which === lockedLayer()) return;
-    layers[which] = !layers[which];
+    /* **兩半的處理要排在「鎖」前面。**
+       那道鎖擋的是「把唯一亮著的那一層關掉 → 一張空地圖」,而在行程模式下
+       `lockedLayer()` 就是 `plan` —— 排在後面的話,按 Day n 會被鎖擋掉,
+       「全部已排」換過去就再也換不回來。
+       兩半互斥本身已經保證圖上永遠有東西,所以它不需要那道鎖。 */
+    if (which === "all" || which === "plan") {
+      /* 按亮著的那一半不做事;按另一半就換過去。
+         `plan` 永遠留著 true —— 「全部」關掉之後要回到 Day n。 */
+      const wantAll = which === "all";
+      if (!!layers.all === wantAll) return;
+      layers.all = wantAll;
+      layers.plan = true;
+    } else {
+      if (which === lockedLayer()) return;
+      layers[which] = !layers[which];
+    }
     saveLayers();
     /* **正在看某一個點的時候開關圖層**(Lulu 的決定):
        開著願望 → 取景縮到所有願望都看得到(drawMap 的規則),那個點照樣亮著;
