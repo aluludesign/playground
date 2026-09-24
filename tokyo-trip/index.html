@@ -1279,7 +1279,7 @@
 <div class="overlay" id="ai-overlay" hidden>
   <form class="signin" id="ai-form">
     <h2>AI 幫你加</h2>
-    <div class="fld"><label class="rm-label" for="ai-text">想做什麼</label>
+    <div class="fld"><label class="rm-label" for="ai-text" id="ai-ask-label">想做什麼</label>
       <textarea class="rm-input" id="ai-text" rows="3" placeholder="例:這家想去許願／加到第 3 天晚上 7 點／這是回程的座位"></textarea></div>
     <div class="fld" id="ai-img-row">
       <button type="button" class="btn btn-sm" id="ai-pick">📷 加一張圖</button>
@@ -4601,6 +4601,14 @@
   function openAI() {
     tuckMapForDialog(false);
     el("ai-form").reset(); aiImage = "";
+    /* **沒有通行碼的人只能做一件事:許願。** 所以問法也只問那一件 ——
+       「想做什麼」配上三種例子,是問給管理員聽的;對其他四個人來說,
+       那是三個選項裡有兩個他按不下去。 */
+    const wishOnly = !editable();
+    el("ai-ask-label").textContent = wishOnly ? "想去哪裡?" : "想做什麼";
+    el("ai-text").placeholder = wishOnly
+      ? "例:這家拉麵店想去／照片裡這個地方"
+      : "例:這家想去許願／加到第 3 天晚上 7 點／這是回程的座位";
     el("ai-img-name").textContent = "";
     aiErr("ai-err", "");
     el("ai-form").hidden = false; el("ai-confirm").hidden = true;
@@ -4642,6 +4650,22 @@
   }
 
   function aiConfirm(r) {
+    /* **唯讀的人不必再選一次「要加到哪裡」。** 他只有許願這一條路,
+       那張卡上的三個選項有兩個是停用的 —— 而一個大部分選不到的選單,
+       比沒有選單更像是「我哪裡做錯了」。
+       所以直接把讀出來的東西倒進既有的「＋許願」對話框:同一個表單、
+       同一條送出的路、同一份驗證,這裡不長第二套。
+       AI 講的那句話跟著進去,不然他不知道為什麼欄位是這樣填的。 */
+    if (!editable()) {
+      closeAI();
+      openWishAdd();
+      el("wf-title").value = r.title || "";
+      el("wf-note").value = r.note || "";
+      sayHere("wish-msg", r.message || "");
+      /* 有地名就先搜一次 —— **挑哪一個還是人挑**,跟手動加同一條規則。 */
+      if (r.title) runSeek("wf-title");
+      return;
+    }
     el("ai-say").textContent = r.message || "";
     el("ai-kind").value = r.intent === "unknown" ? "wish" : r.intent;
     el("ai-day").innerHTML = DAYS.map(d => '<option value="' + d.date + '">Day ' + d.n + " · " +

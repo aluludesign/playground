@@ -886,52 +886,35 @@ function pinsOf(k) { return pins()[k]; }
     ok("**沒有動 place**(標題沒改,所以原來那個留著,沒有被悄悄丟掉)",
       sent.place === "港灣未來", sent);
 
-    // 15 ---- 唯讀的人走 AI 那條路,會被擋在按鈕上,不是等他填完才說 ----
-    /* **這一段是被一個「畫面說成功、其實什麼都沒發生」的疑慮逼出來的。**
-       AI 的確認卡送出去之後會呼叫 `addStop()`,而它第一行是 `if (!mayEdit()) return;` ——
-       靜靜結束。它後面那幾行(關對話框、切到行程頁、`flash("已加到 Day …")`)
-       如果照跑,使用者看到的就是一句假的成功,而 `flash` 是覆蓋同一個元素,
-       連前面那句「唯讀模式」都會被蓋掉。
-       **查證之後:`aiShowKind()` 已經擋住了** —— 它把「確定」停用並說明原因。
-       所以這幾條不是修 bug,是把那個擋法釘住:它只要哪天沒跑到,上面那條路就活過來。 */
+    // 15 ---- 唯讀的人走 AI 那條路,直接落在「＋許願」 ----
+    /* **這一段上一輪問的是另一件事**:那時候唯讀的人會看到那張要選「加到哪裡」的卡,
+       而三個選項有兩個是停用的,斷言問的是「擋在按鈕上、而且有講原因」。
+       現在那張卡對他不出現了(Lulu 的決定):他只有許願這一條路,
+       就直接把 AI 讀出來的東西倒進既有的「＋許願」對話框。
+       **那幾條不是壞了,是那個畫面沒了** —— 換成問這條路該成立的事。 */
     q("#ai-btn").click();
     await until(function () { return q("#ai-overlay").hidden === false; });
-    q("#ai-text").value = "把築地市場排進行程";
+    ok("問法也跟著換:只問他唯一能做的那件事",
+      /想去哪/.test(q("#ai-ask-label").textContent || ""), q("#ai-ask-label").textContent);
+    q("#ai-text").value = "這家拉麵店想去";
     q("#ai-form button[type=submit]").click();
-    ok("AI 讀完之後出現確認卡", await until(function () { return q("#ai-confirm").hidden === false; }),
-      q("#ai-confirm").outerHTML.slice(0, 80));
-    ok("AI 說這是「行程」,卡片就選在行程", q("#ai-kind").value === "stop", q("#ai-kind").value);
-    ok("**沒有通行碼 → 「確定」是停用的**(擋在按鈕上,不是等他填完才說)",
-      q("#ai-ok").disabled === true, q("#ai-ok").disabled);
-    ok("而且有講為什麼",
-      /通行碼/.test(q("#ai-cerr").textContent || ""), q("#ai-cerr").textContent);
-    /* **反面**:改成「許願」就該放行 —— 許願誰都能加,擋住它才是錯的。 */
-    q("#ai-kind").value = "wish";
-    q("#ai-kind").dispatchEvent(new w.Event("change", { bubbles: true }));
+    ok("**AI 讀完直接進「＋許願」**,不必再選一次要加到哪裡",
+      await until(function () { return q("#wish-add-overlay").hidden === false; }),
+      { 許願框: q("#wish-add-overlay").hidden, AI框: q("#ai-overlay").hidden });
+    ok("而且那張要選類型的卡完全沒出現過(它對他只有兩個按不下去的選項)",
+      q("#ai-confirm").hidden === true, q("#ai-confirm").hidden);
+    ok("AI 那個對話框自己關掉了(不會兩個疊在一起)",
+      q("#ai-overlay").hidden === true, q("#ai-overlay").hidden);
+    ok("讀出來的名字已經填好", (q("#wf-title").value || "").length > 0, q("#wf-title").value);
+    ok("AI 講的那句話也跟著進去(不然他不知道欄位為什麼是這樣填的)",
+      /\S/.test(q("#wish-msg").textContent || ""), q("#wish-msg").textContent);
+    /* **按人會按的那顆鈕。** 第一版寫成「找得到就按,找不到就把它藏起來」——
+       而那顆的 id 是 `wf-cancel` 不是 `wa-cancel`,所以它每次都走藏起來那條,
+       也就是說「關得掉」這件事從來沒被走過一次。 */
+    q("#wf-cancel").click();
+    await until(function () { return q("#wish-add-overlay").hidden === true; });
+    ok("那個許願框按取消關得掉", q("#wish-add-overlay").hidden === true, q("#wish-add-overlay").hidden);
     await sleep(80);
-    ok("改成「許願」就放行(許願不需要通行碼)", q("#ai-ok").disabled === false, q("#ai-ok").disabled);
-    q("#ai-x") ? q("#ai-x").click() : (q("#ai-overlay").hidden = true);
-
-    // 15 ---- 「搭機」那張卡是攤開的,而且攤開不是預設值,是唯一的狀態 ----
-    /* 那一頁只有這一張卡。要點一下才看得到內容,等於叫人多按一次才看得到
-       他點進來就是要看的東西。`open` 一個屬性擋不住這件事 —— `<details>`
-       點了就會收起來,所以這裡問的是**點下去之後**還開不開,不是初始值。 */
-    q("#tab-fly").click();
-    await sleep(300);
-    var bd = q("#board");
-    var legH = function () { var e = bd.querySelector(".leg"); return e ? Math.round(e.getBoundingClientRect().height) : 0; };
-    ok("一進「搭機」就看得到航班內容,不必先點開", bd.open && legH() > 40, { open: bd.open, 高: legH() });
-    ok("箭頭收起來了(沒有開關,就不要畫一個開關的樣子)",
-      w.getComputedStyle(bd.querySelector(".bh-caret")).display === "none",
-      w.getComputedStyle(bd.querySelector(".bh-caret")).display);
-    var sum = bd.querySelector("summary");
-    ok("標題也不裝成可以點的樣子", w.getComputedStyle(sum).cursor === "default", w.getComputedStyle(sum).cursor);
-    sum.click();
-    await sleep(250);
-    ok("**點下去也收不起來**(這才是這一條在守的事)", bd.open && legH() > 40, { open: bd.open, 高: legH() });
-    sum.click();
-    await sleep(250);
-    ok("再點一次還是開著的", bd.open && legH() > 40, { open: bd.open, 高: legH() });
 
   } catch (e) {
     out.爆掉了 = String((e && e.stack) || e);
