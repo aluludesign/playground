@@ -35,6 +35,13 @@ var THREE = [
   { lat: "34.9837", lon: "135.7654", display_name: "teamLab BioVortex, 八条通, 下京区, 京都市, 京都府, 日本" },
 ];
 
+/* 六筆:用來問「最多露四則半,其餘用捲的」。三筆那一組問不到這件事 ——
+   不到五筆本來就不設上限,而那正是它現在的樣子。 */
+var SIX = [0, 1, 2, 3, 4, 5].map(function (i) {
+  return { lat: "35.6" + (60 + i), lon: "139.7" + (400 + i),
+    display_name: "teamLab 第" + (i + 1) + "號店, 江東區, 東京都, 日本" };
+});
+
 (async function () {
   /* **第一件事是讓出一次,不是量東西。** `probe.sh` 的外層是
      `out = (function(){ …探針… })();` 然後才 `#r = JSON.stringify(out)` ——
@@ -88,6 +95,10 @@ var THREE = [
     ok("列出全部三筆候選(不是自己挑一筆)",
       await until(function () { return d.querySelectorAll('[data-hit="sf-title"]').length === 3; }),
       d.querySelectorAll('[data-hit="sf-title"]').length);
+    /* ---- 候選最多露四則半,其餘用捲的;那句提示在捲動區外面 ----
+       **半則是刻意的**:露一半的那則就是在說「底下還有」。
+       而提示不跟著捲 —— 它的用途是「這些都不是的時候下一步做什麼」,
+       跟著捲出去的話,要看到它得先捲到底,那時候他已經放棄了。 */
     var first = q('[data-hit="sf-title"]');
     /* **這條原本寫 `querySelector("span")`,而那是位置式的選擇器。**
        加了縮圖之後這一列有三個 span(縮圖、包文字的那層、地址),第一個是空的縮圖,
@@ -125,6 +136,38 @@ var THREE = [
     ok("查詢不帶 bounded=1(人在挑,不需要硬界線)", asked.join(" ").indexOf("bounded") < 0, asked);
     ok("但 viewbox 留著當加權", /viewbox=/.test(asked.join(" ")), asked);
     ok("而且帶了國家代碼", /countrycodes=jp/.test(asked.join(" ")), asked);
+
+    /* ---- 六筆的時候:最多露四則半,其餘用捲的 ---- */
+    asked.length = 0; reply = SIX;
+    d.getElementById("sf-title").value = "teamLab";
+    q('[data-seek="sf-title"]').click();
+    await until(function () { return d.querySelectorAll('[data-hit="sf-title"]').length === 6; });
+    await sleep(120);
+    var wrap = q("#sf-title-out .hits") || q(".seek-out .hits");
+    ok("候選裝在一個自己會捲的容器裡", !!wrap, q(".seek-out").innerHTML.slice(0, 120));
+    var rows = wrap.querySelectorAll(".hit");
+    var want4h = 0;
+    for (var i4 = 0; i4 < 4; i4++) want4h += rows[i4].getBoundingClientRect().height;
+    want4h += rows[4].getBoundingClientRect().height / 2;
+    ok("**看得到的高度就是四則半**(露一半的那則在說「底下還有」)",
+      Math.abs(wrap.clientHeight - want4h) <= 2, { 量到: wrap.clientHeight, 該是: Math.round(want4h) });
+    ok("而且真的捲得動(六筆裝不進四則半)", wrap.scrollHeight > wrap.clientHeight + 4,
+      { 內容: wrap.scrollHeight, 看得到: wrap.clientHeight });
+    var hintEl = q(".seek-out .hint");
+    ok("那句提示排在候選後面", !!hintEl &&
+      hintEl.getBoundingClientRect().top >= wrap.getBoundingClientRect().bottom - 1,
+      hintEl && { 提示上緣: Math.round(hintEl.getBoundingClientRect().top),
+        清單下緣: Math.round(wrap.getBoundingClientRect().bottom) });
+    ok("**而且它不跟著捲**(不必捲到底才看得到)",
+      !!hintEl && !wrap.contains(hintEl), hintEl && hintEl.parentElement.className);
+    /* **把清單換回三筆。** 下一節要挑第二筆,而它預期的是那三筆 ——
+       不還原的話,後面四條會在一個「前提被我換掉了」的畫面上紅,
+       而紅字會指著程式。 */
+    asked.length = 0; reply = THREE;
+    d.getElementById("sf-title").value = "teamLab";
+    q('[data-seek="sf-title"]').click();
+    await until(function () { return d.querySelectorAll('[data-hit="sf-title"]').length === 3; });
+    await sleep(80);
 
     // 3 ---- 選一個 ----
     var second = d.querySelectorAll('[data-hit="sf-title"]')[1];   /* 麻布台那間 */
