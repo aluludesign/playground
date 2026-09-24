@@ -22,6 +22,14 @@ const ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/";
 const MODELS = ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3.8-flash"];
 
 const MAX_B64 = 3_000_000;   /* 前端送來的是縮過的 JPEG,正常 1MB 以內;這是防呆 */
+
+/* **等多久就放棄。** 沒有上限的話,Google 那邊不回應,畫面就一直停在
+   「AI 讀取中…」,直到 Vercel 在 30 秒把整個函式砍掉 —— 使用者看到的是
+   「按了之後就卡住」,而那是最難判斷該不該再按一次的一種壞法。
+   單次 10 秒:正常一兩秒就回來,10 秒是三四倍,夠寬。
+   總共 22 秒:三個模型輪完也不會撞到函式本身的 30 秒上限。 */
+const CALL_MS = 10_000;
+const TOTAL_MS = 22_000;
 const MAX_TEXT = 1000;
 
 /* 旅程的基本資料。跟 index.html 的 DAYS / MEMBERS / 航班那段是同一份事實,
@@ -82,15 +90,35 @@ function prompt(text, ctx) {
   ].join("\n");
 }
 
-async function ask(model, parts) {
-  const res = await fetch(ENDPOINT + model + ":generateContent", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "x-goog-api-key": process.env.GEMINI_KEY },
-    body: JSON.stringify({
-      contents: [{ parts }],
-      generationConfig: { responseMimeType: "application/json", responseSchema: SCHEMA, temperature: 0 },
-    }),
-  });
+/* `soft` 的意思是「這句話可以直接給使用者看」—— 下面回應的時候不加前綴。
+   `retry` 的意思是「換下一個模型再試一次有機會成功」。 */
+function softErr(msg, retry) {
+  const e = new Error(msg);
+  e.soft = true;
+  e.retry = !!retry;
+  return e;
+}
+
+async function ask(model, parts, msLeft) {
+  const ac = new AbortController();
+  const timer = setTimeout(() => ac.abort(), Math.max(1000, Math.min(CALL_MS, msLeft)));
+  let res;
+  try {
+    res = await fetch(ENDPOINT + model + ":generateContent", {
+      method: "POST",
+      signal: ac.signal,
+      headers: { "Content-Type": "application/json", "x-goog-api-key": process.env.GEMINI_KEY },
+      body: JSON.stringify({
+        contents: [{ parts }],
+        generationConfig: { responseMimeType: "application/json", responseSchema: SCHEMA, temperature: 0 },
+      }),
+    });
+  } catch (e) {
+    if (e && e.name === "AbortError") throw softErr("AI 太久沒回應,再試一次", true);
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
   const body = await res.json().catch(() => ({}));
   if (!res.ok) {
     const err = new Error((body.error && body.error.message) || "Gemini 回應 " + res.status);
@@ -98,7 +126,14 @@ async function ask(model, parts) {
     throw err;
   }
   const out = ((((body.candidates || [])[0] || {}).content || {}).parts || []).map(p => p.text || "").join("");
-  return JSON.parse(out);
+  /* **模型偶爾會回不是 JSON 的東西**(截斷、前後多一段說明)。
+     不接的話,`JSON.parse` 丟出來的是 `Unexpected token <` 這種給工程師看的字,
+     而它會原封不動出現在使用者眼前 —— 看的人只知道壞了,不知道該不該再按一次。 */
+  try {
+    return JSON.parse(out);
+  } catch (_) {
+    throw softErr("AI 這次沒讀懂,再按一次試試", true);
+  }
 }
 
 /* 模型回什麼都不直接信:型別、格式、範圍在這裡再過一次,
@@ -145,17 +180,22 @@ module.exports = async (req, res) => {
   parts.push({ text: prompt(text, { today: typeof ctx.today === "string" ? ctx.today.slice(0, 10) : "", dayN }) });
 
   let last;
+  const until = Date.now() + TOTAL_MS;
   for (const model of MODELS) {
+    const msLeft = until - Date.now();
+    if (msLeft < 1500) break;            /* 剩下的時間不夠再問一次,就別問了 */
     try {
-      return res.status(200).json({ result: clean(await ask(model, parts)), model });
+      return res.status(200).json({ result: clean(await ask(model, parts, msLeft)), model });
     } catch (e) {
       last = e;
-      if (e.status === 429 || e.status === 404) continue;
+      if (e.retry || e.status === 429 || e.status === 404) continue;
       break;
     }
   }
   const quota = last && last.status === 429;
-  return res.status(quota ? 429 : 502).json({
-    error: quota ? "今天的免費 AI 額度用完了,明天再試,或先手動加" : "AI 沒回應成功:" + (last ? last.message : "未知錯誤"),
-  });
+  /* `soft` 的訊息本來就是寫給使用者看的,不要再包一層「AI 沒回應成功:」。 */
+  const msg = quota ? "今天的免費 AI 額度用完了,明天再試,或先手動加"
+    : last && last.soft ? last.message
+    : "AI 沒回應成功:" + (last ? last.message : "未知錯誤");
+  return res.status(quota ? 429 : 502).json({ error: msg });
 };
