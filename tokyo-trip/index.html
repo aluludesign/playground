@@ -1434,6 +1434,12 @@
 </div>
 
 <script src="config.js"></script>
+<!-- **設計系統的動態反光。** `build.sh` 把它複製到這個目錄並蓋指紋(跟 CSS 同一條路),
+     所以這裡引的是相對路徑,不是 `../design-system/` —— Vercel 的 root 只有 tokyo-trip/。
+     它自己會在 DOMContentLoaded 時 init:**不需要任何權限**就綁上捲動和觸控拖曳
+     (桌機另外綁滑鼠移動),高光跟著手指走。陀螺儀是再多一種推動方式,要權限,這裡不要。
+     不引它也只是高光不動,其他都照常。 -->
+<script src="retro-modern.js"></script>
 
 <script>
 (() => {
@@ -4760,15 +4766,16 @@
   }
 
   /* ---- 那顆 AI 按鈕的自動掃掠 ----
-     **設計系統有一支 `sweep()`,這裡沒有直接用它,理由要寫下來。**
-     它靠 `animationend` 把 class 拿掉,而 `設計系統建立` 那邊量過:
-     headless Chrome 在 `--virtual-time-budget` 下**一個動畫事件都不觸發**。
-     我們的截圖和探針都跑在那個環境裡 —— 用它的話,class 會永遠留在按鈕上,
-     而那件事在畫面上看不出來(掃掠層本來就是透明的),只會安靜地累積。
+     **掃掠本身是設計系統的 `RetroModern.sweep()`,這裡不再自己抄一份。**
+     (第一版抄了,因為那時候還沒有把 JS 送過來的路。抄的那份沒有指紋,
+      走鐘不會有人講 —— 那正是不該抄的理由。)
 
-     所以這裡聽 `animationend`,**但同時給一個時間到就收的後路**。
-     時長仍然只寫在 CSS 裡,這邊的數字是「上限」不是「時長」——
-     它只在事件沒來的時候才生效,而事件沒來就是那個環境的事實。
+     這裡只加一件它還沒有的事:**時間到就收的後路**。
+     它靠 `animationend` 收尾,而 headless Chrome 在 `--virtual-time-budget` 下
+     **一個動畫事件都不觸發**(`設計系統建立` 量過)。我們的截圖和探針都跑在那裡 ——
+     沒有後路的話,那個 promise 永遠不會結束,class 也永遠留在按鈕上,
+     而那件事在畫面上看不出來(掃掠層本來就是透明的)。
+     已經請他把這條收進 `sweep()`;收進去之後這裡就可以整段拿掉。
 
      **一直掃,不停。**(Lulu 的決定)第一版寫成「開過一次就不再掃」,
      理由是「他已經知道它在那裡了」—— 她要的不是那個。
@@ -4779,29 +4786,15 @@
     if (!btn) return;
     const still = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let timer = 0;
-    function once(cls, name, cap) {
-      return new Promise(done => {
-        btn.classList.remove(cls);
-        void btn.offsetWidth;            /* 強制回流,動畫才會重播 */
-        let over = 0;
-        const end = e => {
-          /* 動畫跑在子層,事件是冒上來的 —— 不認名字的話,別的動畫結束也會收掉它 */
-          if (e && e.animationName !== name) return;
-          clearTimeout(over);
-          btn.removeEventListener("animationend", end);
-          btn.classList.remove(cls);
-          done();
-        };
-        btn.addEventListener("animationend", end);
-        over = setTimeout(() => end(null), cap);
-        btn.classList.add(cls);
-      });
-    }
+    const wait = ms => new Promise(r => setTimeout(r, ms));
     async function sweep() {
       /* 看不到就不掃:切到別的分頁(`hidden`)、或按鈕不在版面上的時候。 */
       if (still || document.hidden || btn.offsetParent === null) return;
-      await once("is-sweeping-sheen", "rm-sweep-sheen", 2200);
-      await once("is-sweeping-flare", "rm-sweep-flare", 1500);
+      const RM = window.RetroModern;
+      if (!RM || !RM.sweep) return;     /* 沒載到 JS 就安靜地不掃,不要炸 */
+      await Promise.race([RM.sweep(btn), wait(4200)]);
+      /* 後路:事件沒來的時候它不會自己收,這裡替它收掉 */
+      btn.classList.remove("is-sweeping-sheen", "is-sweeping-flare");
     }
     /* 進站等一下再掃:一載入就掃,使用者還在看整頁,那一下等於沒發生。 */
     timer = setTimeout(function again() {
