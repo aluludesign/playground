@@ -169,16 +169,16 @@
 
 /* 金屬漸層。v4 沒有 backgroundImage 這個 namespace，改用 @utility 自訂。 */
 @utility bg-steel-matte {
-  background-image: linear-gradient(135deg, #F0F2F5 0%, #D8DCE1 24%, #B2B9C0 52%, #CBD0D6 76%, #889098 100%);
+  background-image: linear-gradient(135deg, #F8F8F8 0%, #DFDFDF 16%, #CBCBCB 36%, #B0B0B0 52%, #CFCFCF 70%, #C8C8C8 84%, #8F8F8F 100%);
 }
 @utility bg-steel-matte-subtle {
   background-image: linear-gradient(140deg, #F4F6F8 0%, #DEE2E6 32%, #C2C8CF 68%, #A4ACB5 100%);
 }
 @utility bg-steel-crisp {
-  background-image: linear-gradient(135deg, #F1F4F8 0%, #C8D0DA 22%, #9EA7B4 50%, #B4BDC8 74%, #727C88 100%);
+  background-image: linear-gradient(135deg, #EBEEF2 0%, #BAC3CD 22%, #8B95A2 50%, #A3ADB9 74%, #5F6975 100%);
 }
 @utility bg-steel-iridescent {
-  background-image: linear-gradient(135deg, #F6F8FB 0%, #E0E5F0 16%, #B8CBD8 36%, #B2B6C6 52%, #D8CDC2 70%, #C3CBD2 84%, #88919A 100%);
+  background-image: linear-gradient(135deg, #F6F8FB 0%, #E0E5F0 16%, #B8CBD8 36%, #B2B6C6 52%, #D8CDC2 70%, #C3CBD2 84%, #88919A 100%);  filter: saturate(var(--iri-saturate));
 }
 
 /* 反光引擎的狀態。不是 design token，是 retro-modern.js 每幀寫入的執行期狀態，
@@ -242,7 +242,7 @@
 
   /* Version A：原版柔霧不鏽鋼。高漫射絲緞質感，預設就用這個。 */
   .gradient-matte-steel {
-    background: linear-gradient(135deg, #F0F2F5 0%, #D8DCE1 24%, #B2B9C0 52%, #CBD0D6 76%, #889098 100%);
+    background: linear-gradient(135deg, #F8F8F8 0%, #DFDFDF 16%, #CBCBCB 36%, #B0B0B0 52%, #CFCFCF 70%, #C8C8C8 84%, #8F8F8F 100%);
     box-shadow: inset 0 1.5px 0.5px rgba(255, 255, 255, 0.75), inset 0 -1.5px 1px rgba(83, 68, 61, 0.25);
   }
   .gradient-matte-steel-subtle {
@@ -251,7 +251,7 @@
 
   /* Version B：均衡微亮鋼質。比 A 更凝聚、更有精神的冷灰階。 */
   .gradient-crisp-steel {
-    background: linear-gradient(135deg, #F1F4F8 0%, #C8D0DA 22%, #9EA7B4 50%, #B4BDC8 74%, #727C88 100%);
+    background: linear-gradient(135deg, #EBEEF2 0%, #BAC3CD 22%, #8B95A2 50%, #A3ADB9 74%, #5F6975 100%);
     box-shadow: inset 0 1.5px 1px rgba(255, 255, 255, 0.8), inset 0 -2px 1.5px rgba(45, 50, 58, 0.25);
   }
 
@@ -275,8 +275,10 @@
   /* 大級字專用的實體刻印。只給 display / h1 / h2，
      小字套下去筆畫會糊掉，反而更難讀。 */
   .text-steel-engraved {
-    color: #382C26;
-    text-shadow: 0 1.5px 0.5px rgba(255, 255, 255, 0.55), 0 -1px 0.5px rgba(0, 0, 0, 0.28);
+    /* 規格書 9/24 版改柔和了：顏色回到系統的 ink（原本是自成一格的 #382C26），
+       浮雕收得更淺 —— 大級字在新的中性灰鋼面上不需要那麼重的刻痕。 */
+    color: var(--color-ink);
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.45), 0 -0.5px 0.5px rgba(0, 0, 0, 0.15);
   }
 
   /* ── 動態反光 ─────────────────────────────────────────────────────── */
@@ -350,13 +352,14 @@
       linear-gradient(
         var(--sheen-angle),
         rgba(255, 255, 255, 0) 0%,
-        rgba(155, 185, 225, 0.25) calc(var(--sheen-x) - 22%),
-        rgba(215, 175, 220, 0.30) calc(var(--sheen-x) - 10%),
+        rgba(122, 172, 245, 0.25) calc(var(--sheen-x) - 22%),
+        rgba(225, 150, 240, 0.30) calc(var(--sheen-x) - 10%),
         rgba(255, 255, 255, calc(var(--sheen-intensity) * 0.8)) var(--sheen-x),
-        rgba(235, 210, 165, 0.32) calc(var(--sheen-x) + 10%),
-        rgba(165, 215, 195, 0.22) calc(var(--sheen-x) + 22%),
+        rgba(250, 195, 120, 0.32) calc(var(--sheen-x) + 10%),
+        rgba(130, 230, 195, 0.22) calc(var(--sheen-x) + 22%),
         rgba(255, 255, 255, 0) 100%
       );
+    filter: contrast(105%) saturate(var(--iri-saturate));
   }
 
   /* 內容一律騎在反光之上 */
@@ -462,7 +465,7 @@
 
   /* 不鏽鋼按鈕。搭 .steel-sheen-surface 才有動態反光。 */
   .rm-btn--steel {
-    background: linear-gradient(135deg, #F0F2F5 0%, #D8DCE1 24%, #B2B9C0 52%, #CBD0D6 76%, #889098 100%);
+    background: linear-gradient(135deg, #F8F8F8 0%, #DFDFDF 16%, #CBCBCB 36%, #B0B0B0 52%, #CFCFCF 70%, #C8C8C8 84%, #8F8F8F 100%);
     color: var(--color-ink);
   }
   .rm-btn--steel:hover { filter: brightness(1.04); }
@@ -479,8 +482,10 @@
   .btn-steel-hybrid:hover,
   .btn-steel-hybrid:focus-visible {
     /* hover 這條是必要的：.rm-btn:hover 的特異度跟它一樣，
-       少了它底色會在 hover 時被換成砂岩色 */
-    background: linear-gradient(135deg, #F1F4F8 0%, #C8D0DA 22%, #9EA7B4 50%, #B4BDC8 74%, #727C88 100%);
+       少了它底色會在 hover 時被換成砂岩色。
+       9/24 版把靜止狀態從 Version B（冷鋼）換成 Version A（中性灰柔霧）——
+       所以現在是「A 柔霧 → hover C 虹光」，不是「B → C」。 */
+    background: linear-gradient(135deg, #F8F8F8 0%, #DFDFDF 16%, #CBCBCB 36%, #B0B0B0 52%, #CFCFCF 70%, #C8C8C8 84%, #8F8F8F 100%);
   }
   .btn-steel-hybrid {
     position: relative;
@@ -512,10 +517,10 @@
     pointer-events: none;
     background: linear-gradient(
       125deg,
-      rgba(155, 185, 225, 0.28) 0%,
+      rgba(122, 172, 245, 0.28) 0%,
       rgba(215, 175, 220, 0.32) 32%,
-      rgba(235, 210, 165, 0.32) 68%,
-      rgba(165, 215, 195, 0.26) 100%
+      rgba(250, 195, 120, 0.32) 68%,
+      rgba(130, 230, 195, 0.26) 100%
     );
     mix-blend-mode: overlay;
     opacity: 0;
