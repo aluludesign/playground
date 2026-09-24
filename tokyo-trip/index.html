@@ -4691,7 +4691,11 @@
   el("ai-btn").addEventListener("click", openAI);
   el("ai-cancel").addEventListener("click", closeAI);
   el("ai-cancel2").addEventListener("click", closeAI);
-  el("ai-overlay").addEventListener("click", ev => { if (ev.target === el("ai-overlay")) closeAI(); });
+  /* **這一個對話框只有「取消」關得掉。**(Lulu 的決定)
+     點背景和 Esc 都拿掉了 —— 別的對話框留著那兩條,這一個不留,因為它裡面
+     裝著**拿不回來的東西**:你上傳的那張照片,和 AI 花了幾秒讀出來的結果。
+     手滑點到旁邊就全沒了,而那不是一個「再按一次就好」的損失。
+     代價是多按一下取消。那一下是刻意的,而刻意正是這裡要的。 */
   el("ai-pick").addEventListener("click", () => el("ai-file").click());
   el("ai-file").addEventListener("change", async ev => {
     const file = ev.target.files && ev.target.files[0];
@@ -5563,8 +5567,11 @@
     /* **由上往下關,一次只關一層。** 地圖(70)蓋在對話框(60)上面,對話框蓋在
        許願 sheet(55)上面 —— Esc 關掉的應該是**他現在看得到的最上面那一層**,
        不是一次全收。三層一起關的話,他按一下 Esc 就回到空無一物的行程頁。 */
+    /* **AI 那一層不在這個名單裡**,它只有「取消」關得掉 —— 見 openAI 旁邊那段。
+       而且它也不讓 Esc 穿過去關掉底下那些:它開著的時候,Esc 什麼都不做。
+       (不擋的話,按 Esc 會關掉它背後的地圖,而使用者以為自己關掉的是對話框。) */
+    if (!el("ai-overlay").hidden) return;
     if (!el("map-sheet").hidden) { closeMapSheet(); return; }
-    if (!el("ai-overlay").hidden) { closeAI(); return; }
     if (!el("wish-add-overlay").hidden) { closeWishAdd(); return; }
     if (!el("stop-add-overlay").hidden) { closeStopAdd(); return; }
     const wb = el("wishbox");

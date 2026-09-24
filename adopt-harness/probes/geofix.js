@@ -184,6 +184,38 @@ function pinsOf(k) { return pins()[k]; }
     ok("沒填地點的沒有被標上去(teamLab)",
       !labs.some(function (t) { return /teamLab/.test(t); }), labs);
 
+    // 2a ---- 網址會變成看得出來、點得到的連結 ----
+    /* **這件事以前一條斷言都沒有。** 它壞掉的樣子是無聲的:
+       某次改版把某張卡的 `linkify()` 拿掉、或那條底線的 CSS 被蓋掉,
+       畫面上就只是「網址變成一段普通的字」—— 沒有人會紅,而截圖要人去看。
+       `rel="noopener"` 特別要問:少了它,開出去的那個分頁可以反過來控制這一頁。 */
+    var tsu = [].slice.call(d.querySelectorAll("#route .stop")).find(function (e) {
+      return /築地/.test((e.querySelector(".ti") || {}).textContent || "");
+    });
+    var lnk = tsu && tsu.querySelector(".nt a.lnk");
+    ok("備註裡自己打的網址變成連結", !!lnk && /tsukiji/.test(lnk.getAttribute("href") || ""),
+      tsu && (tsu.querySelector(".nt") || {}).innerHTML);
+    ok("**連結看得出來是連結**(有底線)",
+      /underline/.test(w.getComputedStyle(lnk).textDecorationLine || ""),
+      lnk && w.getComputedStyle(lnk).textDecorationLine);
+    ok("在新分頁開,而且帶 rel=noopener(少了它,開出去的分頁能反過來控制這一頁)",
+      lnk.getAttribute("target") === "_blank" && /noopener/.test(lnk.getAttribute("rel") || ""),
+      { target: lnk.getAttribute("target"), rel: lnk.getAttribute("rel") });
+
+    /* 從網頁貼過來的那一種:連結藏在剪貼簿的 HTML 裡,`<input>` 只收純文字,
+       所以程式自己接 paste,把 `<a>` 抽成 `[文字](網址)` 存起來,顯示時再變回連結。 */
+    var probe = q("#wf-title") || q("#sf-title") || d.querySelector("input[type=text]");
+    if (probe) {
+      probe.value = "";
+      var dt = new w.DataTransfer();
+      dt.setData("text/html", '<a href="https://example.com/z">店家頁</a>');
+      dt.setData("text/plain", "店家頁");
+      probe.dispatchEvent(new w.ClipboardEvent("paste", { clipboardData: dt, bubbles: true, cancelable: true }));
+      ok("**貼上帶連結的文字,網址留得住**(純文字欄位本來會把它弄丟)",
+        probe.value === "[店家頁](https://example.com/z)", probe.value);
+      probe.value = "";
+    }
+
     // 2b ---- 小卡上那個 📍 跟地圖是同一句話 ----
     /* **判準不是「有沒有填地點」,是「地圖上找不找得到」。**
        合羽橋道具街沒填地點 → 地圖上沒有它 → 不該有 📍。
@@ -910,7 +942,26 @@ function pinsOf(k) { return pins()[k]; }
     q("#ai-kind").dispatchEvent(new w.Event("change", { bubbles: true }));
     await sleep(80);
     ok("改成「許願」就放行(許願不需要通行碼)", q("#ai-ok").disabled === false, q("#ai-ok").disabled);
-    q("#ai-x") ? q("#ai-x").click() : (q("#ai-overlay").hidden = true);
+
+    /* ---- 這個對話框只有「取消」關得掉 ----
+       **裡面裝著拿不回來的東西**:上傳的那張照片,和 AI 讀出來的結果。
+       手滑點到旁邊就全沒了,所以點背景和 Esc 都不關(別的對話框留著那兩條)。
+       三條都問:點背景不關、Esc 不關、按取消才關。
+       **Esc 那一條還要問第二件事**:它不可以穿過去關掉底下的地圖 ——
+       不然使用者以為自己關掉的是對話框,實際上關掉的是背後那一層。 */
+    q("#ai-overlay").dispatchEvent(new w.MouseEvent("click", { bubbles: true }));
+    await sleep(120);
+    ok("點對話框外面的背景 → 不關", q("#ai-overlay").hidden === false, q("#ai-overlay").hidden);
+    var mapWasOpen = !q("#map-sheet").hidden;
+    d.dispatchEvent(new w.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    await sleep(120);
+    ok("按 Esc → 不關", q("#ai-overlay").hidden === false, q("#ai-overlay").hidden);
+    ok("**而且 Esc 沒有穿過去關掉底下那一層**",
+      (!q("#map-sheet").hidden) === mapWasOpen,
+      { 之前: mapWasOpen, 之後: !q("#map-sheet").hidden });
+    q("#ai-cancel2").click();
+    await sleep(120);
+    ok("按「取消」才關得掉", q("#ai-overlay").hidden === true, q("#ai-overlay").hidden);
 
     // 15 ---- 「搭機」那張卡是攤開的,而且攤開不是預設值,是唯一的狀態 ----
     /* 那一頁只有這一張卡。要點一下才看得到內容,等於叫人多按一次才看得到
