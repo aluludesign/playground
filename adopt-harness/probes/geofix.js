@@ -80,6 +80,17 @@ w.fetch = function (url, init) {
     else body = { rows: kind === "wishes" ? notionWishes : [] };
     return Promise.resolve({ ok: true, status: 200, json: function () { return Promise.resolve(body); } });
   }
+  /* **AI 那條路也要接起來**,不然唯讀那一段問不到它 —— 而它正是
+     「沒有通行碼的人被帶到一條走不通的路上」最可能發生的地方。
+     回一個 intent=stop 的結果:那是要通行碼的那一種。 */
+  if (/\/api\/ai/.test(String(url))) {
+    return Promise.resolve({ ok: true, status: 200, json: function () {
+      return Promise.resolve({ result: {
+        intent: "stop", title: "築地市場", day: "2026-10-05", time: "14:00",
+        note: "", flight: "", seats: [], message: "看起來是要排進行程",
+      } });
+    } });
+  }
   if (String(url).indexOf("resource=geocode") < 0) return realFetch(url, init);
   asked.push(String(url));
   var r = reply;
@@ -874,6 +885,32 @@ function pinsOf(k) { return pins()[k]; }
     ok("**沒有動 title**(只改了想說的,標題原樣)", sent.title === "橫濱 港灣未來", sent);
     ok("**沒有動 place**(標題沒改,所以原來那個留著,沒有被悄悄丟掉)",
       sent.place === "港灣未來", sent);
+
+    // 15 ---- 唯讀的人走 AI 那條路,會被擋在按鈕上,不是等他填完才說 ----
+    /* **這一段是被一個「畫面說成功、其實什麼都沒發生」的疑慮逼出來的。**
+       AI 的確認卡送出去之後會呼叫 `addStop()`,而它第一行是 `if (!mayEdit()) return;` ——
+       靜靜結束。它後面那幾行(關對話框、切到行程頁、`flash("已加到 Day …")`)
+       如果照跑,使用者看到的就是一句假的成功,而 `flash` 是覆蓋同一個元素,
+       連前面那句「唯讀模式」都會被蓋掉。
+       **查證之後:`aiShowKind()` 已經擋住了** —— 它把「確定」停用並說明原因。
+       所以這幾條不是修 bug,是把那個擋法釘住:它只要哪天沒跑到,上面那條路就活過來。 */
+    q("#ai-btn").click();
+    await until(function () { return q("#ai-overlay").hidden === false; });
+    q("#ai-text").value = "把築地市場排進行程";
+    q("#ai-form button[type=submit]").click();
+    ok("AI 讀完之後出現確認卡", await until(function () { return q("#ai-confirm").hidden === false; }),
+      q("#ai-confirm").outerHTML.slice(0, 80));
+    ok("AI 說這是「行程」,卡片就選在行程", q("#ai-kind").value === "stop", q("#ai-kind").value);
+    ok("**沒有通行碼 → 「確定」是停用的**(擋在按鈕上,不是等他填完才說)",
+      q("#ai-ok").disabled === true, q("#ai-ok").disabled);
+    ok("而且有講為什麼",
+      /通行碼/.test(q("#ai-cerr").textContent || ""), q("#ai-cerr").textContent);
+    /* **反面**:改成「許願」就該放行 —— 許願誰都能加,擋住它才是錯的。 */
+    q("#ai-kind").value = "wish";
+    q("#ai-kind").dispatchEvent(new w.Event("change", { bubbles: true }));
+    await sleep(80);
+    ok("改成「許願」就放行(許願不需要通行碼)", q("#ai-ok").disabled === false, q("#ai-ok").disabled);
+    q("#ai-x") ? q("#ai-x").click() : (q("#ai-overlay").hidden = true);
 
     // 15 ---- 「搭機」那張卡是攤開的,而且攤開不是預設值,是唯一的狀態 ----
     /* 那一頁只有這一張卡。要點一下才看得到內容,等於叫人多按一次才看得到
