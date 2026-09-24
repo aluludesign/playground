@@ -188,14 +188,23 @@ module.exports = async (req, res) => {
       return res.status(200).json({ result: clean(await ask(model, parts, msLeft)), model });
     } catch (e) {
       last = e;
-      if (e.retry || e.status === 429 || e.status === 404) continue;
+      /* **「太忙」也要換一個再試。** Google 回 503「This model is currently
+         experiencing high demand」的時候,換一個模型通常就過了 —— 而原本只有
+         額度用完(429)和模型不存在(404)會換,忙碌直接放棄,
+         使用者拿到的是一句英文,而他什麼都沒做錯。 */
+      if (e.retry || e.status === 429 || e.status === 404 || e.status >= 500) continue;
       break;
     }
   }
   const quota = last && last.status === 429;
-  /* `soft` 的訊息本來就是寫給使用者看的,不要再包一層「AI 沒回應成功:」。 */
+  const busy = last && last.status >= 500;
+  /* **回給前端的一律是一句完整的中文**,前端直接顯示,不要再包前綴。
+     以前這裡會把 Google 的英文原話接在「AI 沒回應成功:」後面,前端再加一個
+     「沒成功:」—— 使用者看到的是兩層「失敗」加一句他看不懂的英文,
+     而那句英文講的其實是「過幾分鐘再試」。 */
   const msg = quota ? "今天的免費 AI 額度用完了,明天再試,或先手動加"
+    : busy ? "AI 現在太忙(Google 那邊),過幾分鐘再試一次"
     : last && last.soft ? last.message
-    : "AI 沒回應成功:" + (last ? last.message : "未知錯誤");
+    : "AI 這次沒成功,再試一次";
   return res.status(quota ? 429 : 502).json({ error: msg });
 };
