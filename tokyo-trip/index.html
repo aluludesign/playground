@@ -1044,13 +1044,16 @@
          卻佔掉一整條橫在行程上面 —— 在手機上那一條就是地圖少掉的一截。 -->
     <!-- AI 按鈕:丟一段話或一張圖,AI 判斷要建哪一種資料,確認後才存。
          放在選單旁邊,因為它不屬於任何一頁 —— 許願、行程、座位都從這裡進。 -->
-    <!-- **設計系統的 `.btn-steel-hybrid`(自動掃掠那顆)。** 它要四層:
-         虹光(hover／focus 用)、方向性掃掠、白光收尾,和裝文字的那層 ——
-         前三層是 `pointer-events:none` 的裝飾,文字那層要在上面才點得到。
-         `aria-hidden` 是給讀螢幕的人省掉三個沒有意義的空節點。 -->
-    <button type="button" class="btn-steel-hybrid rm-btn rm-btn--sm" id="ai-btn" aria-haspopup="dialog">
-      <span class="steel-iridescent-overlay" aria-hidden="true"></span>
-      <span class="directional-sheen" aria-hidden="true"></span>
+    <!-- **照她規格書裡「Auto Pulse」那顆的結構。**(`#btn-auto-pulse`)
+         它跟「Version A ⇄ C」那顆的 class 完全相同 —— 差別不在樣式,在驅動方式:
+         Auto Pulse 是被一個迴圈反覆觸發掃掠,不是等 hover。
+
+         **虹光和方向掃掠是同一層**,不是兩層(我第一版拆成兩個 span,那是我自己想的)。
+         `steel-sheen-surface` 是高光跟著指標／傾斜走的那一層,少了它高光不會動。
+         裝飾層都 `aria-hidden`:讀螢幕的人不需要聽到兩個空節點。 -->
+    <button type="button" class="btn-steel-hybrid steel-sheen-surface rm-btn rm-btn--sm"
+            id="ai-btn" aria-haspopup="dialog">
+      <span class="steel-iridescent-overlay directional-sheen" aria-hidden="true"></span>
       <span class="white-sweep-flare" aria-hidden="true"></span>
       <span class="steel-content-layer">✨ AI</span>
     </button>
