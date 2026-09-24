@@ -798,7 +798,11 @@
     /* 候選清單自己有上限。六筆候選會把「你是誰」和送出鈕推到幾百像素外 ——
        **要挑的東西和要按的東西不該互相擠掉**,清單自己捲就好。 */
     .seek-out{margin-top:6px; border:1px solid var(--line); border-radius:10px; overflow:hidden; background:var(--surface);}
-    .overlay .seek-out{max-height:46vh; overflow-y:auto; overscroll-behavior:contain;}
+    /* **捲的是候選那一塊,不是整個框。** 整個框捲的話,排在最後的提示會跟著捲出去,
+       而那句話正是「這些都不是的時候下一步做什麼」—— 它要一直在。
+       高度由 `capHits()` 量完寫上來(四則半),這裡只給捲動的行為。 */
+    .seek-out .hits{overflow-y:auto; overscroll-behavior:contain;}
+    .overlay .seek-out{max-height:70vh; overflow-y:auto; overscroll-behavior:contain;}
     .seek-out .hit{display:flex; gap:9px; align-items:center; width:100%; text-align:left; padding:9px 11px; border:0; border-top:1px solid var(--line);
       background:none; font:inherit; color:inherit; cursor:pointer;}
     .seek-out .hit:first-child{border-top:0;}
@@ -2967,15 +2971,19 @@
        得重新走完兩次沒挑到、再點一次句子裡那三個字。 */
     if (strong) { seekReset(id); seekUsedStrong[id] = true; }
     const box = seekBox(id);
-    /* **提示排在候選之前。** 第一版擺在清單最後面 —— 而候選有六筆的時候
-       它在螢幕外,使用者根本不會捲到那裡。那句話的用途是「這一輪沒挑到的話下一步做什麼」,
-       它要在使用者決定「這些都不是」的**當下**就在視線裡。
-       **退路那句相反,排在最後面** —— 它是「都不挑也沒關係」,那是看完清單之後的事。 */
-    box.innerHTML = hintHTML(id) +
+    /* **提示排在候選後面,而候選自己捲。**(Lulu 的決定,2026-09-24)
+       它以前排在前面,理由是:候選有六筆的時候,排在最後的它會在螢幕外,
+       而使用者根本不會捲到那裡 —— 那個顧慮還在,只是解法換了。
+       現在**只有候選那一塊捲**(最多露出四則半),提示在捲動區外面的下方,
+       所以它同時是「在最後面」和「一直看得到」。
+       四則半是刻意的:露一半的那則就是在說「底下還有,可以捲」。
+       **退路那句在更下面** —— 它是「都不挑也沒關係」,看完清單之後的事。 */
+    box.innerHTML = '<div class="hits">' +
       res.map((r, i) =>
         '<button type="button" class="hit" data-hit="' + id + '" data-i="' + i + '">' +
         hitThumb(r) + '<span class="txt"><b>' + esc(hitName(r)) + '</b><span class="at">' +
-        esc(hitAddr(r)) + "</span></span></button>").join("") +
+        esc(hitAddr(r)) + "</span></span></button>").join("") + "</div>" +
+      hintHTML(id) +
       /* **只有這一輪真的問了 Google 才標。** Google 的條款要求「在非 Google 地圖上
          顯示他們的 Places 資料要標來源」,而免費那家是 OpenStreetMap ——
          對免費的結果標 Google,是把來源講錯,比不標更糟。
@@ -2984,6 +2992,22 @@
       seekTail(id);
     box.hidden = false;
     box._hits = res;
+    capHits(box);
+  }
+
+  /* **四則半是量出來的,不是用 CSS 猜的。** 每一列的高度不一樣(地址有的一行有的兩行、
+     有的有照片),寫死一個 px 值會在某些結果上剛好切在一列中間、或多露一整列。
+     所以量真的那幾列:前四列的高度相加,再加第五列的一半。
+     不到五列就不設上限 —— 那時候全部都看得到,捲動條只會是多餘的裝飾。 */
+  function capHits(box) {
+    const wrap = box.querySelector(".hits");
+    if (!wrap) return;
+    const rows = wrap.querySelectorAll(".hit");
+    if (rows.length <= 4) { wrap.style.maxHeight = ""; return; }
+    let h = 0;
+    for (let i = 0; i < 4; i++) h += rows[i].getBoundingClientRect().height;
+    h += rows[4].getBoundingClientRect().height / 2;
+    wrap.style.maxHeight = Math.round(h) + "px";
   }
 
   /* 提示跟著段數走。**第 1 次不給提示** —— 那時候還沒有「找不到」這件事,
