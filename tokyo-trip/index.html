@@ -24,7 +24,11 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;500;700&family=Zen+Kaku+Gothic+New:wght@500;700&display=swap">
+<!-- 設計系統要的那三種字。**它的 CSS 不自己 @import 字型**(會多一次往返、擋住渲染),
+     所以消費端要自己引 —— 名單抄自 design-system/retro-modern.css 檔頭那一行。
+     Fraunces / Noto Serif TC 沒有引:`--font-serif` 在設計系統裡宣告了但沒有任何元件用它,
+     引了就是每個人多下載一套沒有人看得到的字。 -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=JetBrains+Mono:wght@400;600&family=Noto+Sans+TC:wght@400;500;700&display=swap">
 <!-- design-system 的產出。這支是編出來的,不要手改 —— 改 app.css 或 design-system/ 再重編。
 
      放在下面那個 <style> 之前是**必要條件**,不是保險:我的樣式和它的組件
@@ -42,13 +46,22 @@
     --pos:#0B6B53; --neg:#A93446; --warn:#8A5A00; --warn-soft:#FBF0DA;
     --shadow:0 1px 2px rgba(20,26,45,.05), 0 8px 24px -14px rgba(20,26,45,.22);
     --board-bg:#12141A; --board-ink:#F3F4F7; --board-muted:#878FA3; --board-line:#282C36; --board-amber:#F0B429;
-    --font-body:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
-    --font-sign:"Zen Kaku Gothic New","Noto Sans TC",system-ui,sans-serif;
-    /* CJK 排在所有等寬家族之後、generic monospace 之前:拉丁字和數字仍然由
-       IBM Plex Mono 先接走,只有它接不住的碼位才落到 Noto Sans TC。
-       沒有這幾個後援的話,mono 上的中文會掉到瀏覽器對那些碼位的預設,
-       跟頁面其他中文不同一套 —— 見 adopt-harness/block-02-mono.md。 */
-    --font-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,"Noto Sans TC","PingFang TC","Microsoft JhengHei",monospace;
+    /* **字體全部交給設計系統。**(Lulu 的決定,2026-09-24)
+       這裡以前自己宣告三種:body(Noto Sans TC)、sign(Zen Kaku Gothic New)、
+       mono(IBM Plex Mono)。而**自己宣告 `--font-mono` 會把設計系統的值擋掉** ——
+       build.sh 每次都在印那一行警告,印了很久。
+
+       `--font-sign` 併進 sans:設計系統只有 sans 和 mono 兩種在用
+       (它有 `--font-serif`,但自己一次都沒用)。所以標題那 16 處跟內文同一套字,
+       差別改由字重和字距表達 —— 那本來就是設計系統的分法。
+       兩個名字留著是因為 44 處在用它們,一次全改名只會讓這次的差異看不清楚;
+       它們現在是別名,不是第二套來源。
+
+       **CJK 後援的那件事仍然成立**,只是換設計系統在管:它的 `--font-mono`
+       把 CJK 排在等寬家族之後、generic monospace 之前,理由跟
+       adopt-harness/block-02-mono.md 記的是同一個。 */
+    --font-body:var(--font-sans);
+    --font-sign:var(--font-sans);
     color-scheme:light;
   }
 
@@ -491,22 +504,23 @@
     .laygroup .lay{border:0; border-radius:0; background:none;}
     .laygroup .lay + .lay{border-left:1px solid var(--line);}
     .laygroup .lay[aria-pressed="true"]{background:var(--paper); color:var(--ink);}
-    .lay{display:inline-flex; align-items:center; gap:6px; cursor:pointer;
-      border:1px solid var(--line); border-radius:99px; padding:4px 11px 4px 9px;
-      background:var(--surface); color:var(--muted);
-      font-family:var(--font-sign); font-size:11.5px; font-weight:500;}
-    .lay::before{content:""; width:9px; height:9px; border-radius:50%;
+    /* **標籤本體交給設計系統的 `.rm-chip rm-chip--selectable`(加在 markup 上)。**
+       它的「選取」是整顆換成陶土色 —— 而這裡不能只靠那個:
+       **那顆小圓點的顏色是資訊**(Day n 是那一天的顏色、大家的許願是願望色、
+       全部已排是中性色,因為六天六色沒有一個顏色代表得了)。
+       所以這裡只留那顆點,和它在兩種狀態下的顏色。 */
+    .lay{gap:6px; font-size:11.5px;}
+    .lay::before{content:""; width:9px; height:9px; border-radius:50%; flex:none;
       background:var(--line); border:1px solid var(--line);}
-    .lay[aria-pressed="true"]{color:var(--ink); border-color:var(--ink-2);}
-    #lay-plan[aria-pressed="true"]::before{background:var(--dc,var(--ink)); border-color:var(--dc,var(--ink));}
-    #lay-wish[aria-pressed="true"]::before{background:var(--accent); border-color:var(--accent);}
-    /* 全部已排 = 六天六種顏色,一個顏色代表不了,用中性色 */
-    #lay-all[aria-pressed="true"]::before{background:var(--ink-2); border-color:var(--ink-2);}
-    .lay:hover{background:var(--surface-2);}
+    /* 選取時整顆是陶土色,那顆點要換成淺色才看得見 —— 只有「全部已排」例外,
+       它本來就是中性色,在陶土上照樣分得出來。 */
+    .lay[aria-pressed="true"]::before{background:var(--color-foundation-muslin); border-color:var(--color-foundation-muslin);}
+    #lay-plan[aria-pressed="true"]::before{background:var(--dc,var(--ink)); border-color:var(--color-foundation-muslin);}
+    #lay-wish[aria-pressed="true"]::before{background:var(--accent); border-color:var(--color-foundation-muslin);}
     /* 這一頁的主角那層鎖著開(行程頁鎖行程、許願頁鎖願望),按了不會有反應 ——
        游標和 hover 就不該假裝它按得動。 */
     .lay:disabled{cursor:default;}
-    .lay:disabled:hover{background:var(--surface);}
+    .lay:disabled:hover{background:var(--color-foundation-muslin);}
     /* 「全部已排」開著時 Day n 讓位:它不是關掉,是被另一個選項取代,所以畫成停用。
        0.45 跟設計系統 `.rm-btn[disabled]` 同一個值。 */
     .lay:disabled[aria-pressed="false"]{opacity:.45; cursor:not-allowed;}
@@ -610,11 +624,10 @@
     .wish .wm{grid-column:1/2; font-size:11.5px; color:var(--muted); display:flex; flex-wrap:wrap; gap:4px 7px;}
     .wish .wm .by{color:var(--wc,var(--muted));}
     .wish .wops{grid-row:1/3; grid-column:2/3; align-self:center; display:flex; align-items:center; gap:6px;}
-    .wish .vote{display:flex; align-items:center; gap:5px;
-      border:1px solid var(--line); border-radius:99px; padding:5px 11px; background:var(--surface);
-      font-family:var(--font-mono); font-size:12px; cursor:pointer; color:var(--ink-2);}
-    .wish .vote:hover{background:var(--surface-2);}
-    .wish .vote.on{border-color:var(--accent); color:var(--accent); background:var(--accent-soft);}
+    /* 本體也交給設計系統。**狀態從 `.on` 換成 `aria-pressed`** ——
+       設計系統那條註解講得很清楚:靠 JS 抽換 class 的做法,screen reader
+       讀不出它是被按下的,而這顆的意思正是「我按過了」。 */
+    .wish .vote{gap:5px;}
     .wish .vote .i{font-size:11px; margin:0;}
     .wish .wadd{border:1px solid var(--accent); border-radius:99px; padding:5px 12px; cursor:pointer;
       background:var(--accent-soft); color:var(--accent);
@@ -1388,11 +1401,11 @@
            看全部還是看一天),中間那條線右邊的「大家的許願」是另一件事 ——
            它不跟著日子走。線是畫給眼睛看的,螢幕閱讀器跳過它。 -->
       <div class="laygroup" role="group" aria-label="地圖上的行程要看哪些">
-        <button type="button" class="lay" id="lay-all" data-layer="all" aria-pressed="false">全部已排</button>
-        <button type="button" class="lay" id="lay-plan" data-layer="plan" aria-pressed="true">Day 1</button>
+        <button type="button" class="rm-chip rm-chip--selectable lay" id="lay-all" data-layer="all" aria-pressed="false">全部已排</button>
+        <button type="button" class="rm-chip rm-chip--selectable lay" id="lay-plan" data-layer="plan" aria-pressed="true">Day 1</button>
       </div>
       <span class="lay-sep" aria-hidden="true"></span>
-      <button type="button" class="lay" id="lay-wish" data-layer="wish" aria-pressed="true">大家的許願</button>
+      <button type="button" class="rm-chip rm-chip--selectable lay" id="lay-wish" data-layer="wish" aria-pressed="true">大家的許願</button>
     </div>
     <div class="map" id="map"></div>
   </div>
@@ -3749,7 +3762,8 @@
             (editable() ? '<button type="button" class="wsw wsw-del" data-del-wish="' + esc(w.id || "") + '">刪除</button>' : "") +
             "</div>" : "") +
           '<div class="wops">' +
-          '<button type="button" class="vote' + (voted ? " on" : "") + '" data-vote="' + esc(w.id || "") + '">' +
+          '<button type="button" class="rm-chip rm-chip--selectable vote" aria-pressed="' +
+          (voted ? "true" : "false") + '" data-vote="' + esc(w.id || "") + '">' +
           '<svg class="i" aria-hidden="true"><use href="#i-thumbs-up"></use></svg>' + votes.length + "</button>" +
           (editable() ? '<button type="button" class="wadd" data-add-wish="' + esc(w.id || "") + '">加入</button>' : "") +
           "</div></div>";
