@@ -261,10 +261,15 @@ async function drag(dy) {
     }
     ok("捲到底之後,送出鈕按得到", reach(d.getElementById("wf-submit")), "wf-submit");
     ok("捲到底之後,「你是誰」也選得到", reach(d.getElementById("wf-by")), "wf-by");
-    /* 候選清單自己也要有上限 —— 不然「要挑的」和「要按的」會互相擠掉。 */
-    var so = d.getElementById("wish-form").querySelector(".seek-out");
+    /* 候選清單自己也要有上限 —— 不然「要挑的」和「要按的」會互相擠掉。
+       **捲的那一層在 2026-09-24 換了**:以前是整個 `.seek-out`,現在是它裡面的
+       `.hits`(候選最多露四則半),因為那句「沒找到?」的提示移到候選後面,
+       而它必須留在捲動區外面才會一直看得到。
+       這一條不是壞了,是它問的那個容器換了人 —— 問裡面那層才是現在的事實。 */
+    var so = d.getElementById("wish-form").querySelector(".seek-out .hits")
+      || d.getElementById("wish-form").querySelector(".seek-out");
     ok("候選清單自己有高度上限、自己捲", so.scrollHeight > so.clientHeight,
-      { 內容: so.scrollHeight, 可見: so.clientHeight });
+      { 容器: so.className, 內容: so.scrollHeight, 可見: so.clientHeight });
     d.getElementById("wf-cancel").click();
     await sleep(200);
 

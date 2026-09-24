@@ -185,7 +185,13 @@
     .day{flex:0 0 auto; display:flex; flex-direction:column; gap:2px; align-items:flex-start; padding:8px 12px 9px; border-radius:8px; cursor:pointer;
       background:var(--surface); border:1px solid var(--line); border-left:4px solid var(--dc,var(--muted)); min-width:84px; transition:background .15s;}
     .day:hover{background:var(--surface-2);}
-    .day[aria-pressed="true"]{background:var(--dc); border-color:var(--dc); color:#fff;}
+    /* **選到的那一天:淡底 + 原本的字色,不是刷滿 + 白字。**
+       刷滿的時候,「週日 · 0 項」那行 11.5px 的小字壓在飽和色上,
+       淺色系一律不夠對比 —— 而那正是把點綴色擋在門外的原因。
+       淡底之後字還是站在紙色上,六天就可以用真正分得開的顏色。
+       `color-mix` 讓濃度只寫一次,換顏色不必回來改。 */
+    .day[aria-pressed="true"]{background:color-mix(in oklab, var(--dc) 16%, var(--surface));
+      border-color:var(--dc); box-shadow:inset 0 0 0 1px var(--dc);}
     .day .dn{font-family:var(--font-mono); font-size:10px; letter-spacing:.12em; opacity:.8;}
     .day .dd{font-family:var(--font-sign); font-size:15px; font-weight:700; letter-spacing:.02em;}
     .day .dw{font-size:10.5px; opacity:.75;}
@@ -206,7 +212,7 @@
     /* 時間軸的號碼牌長得跟地圖上的標記一樣 —— 它們是同一個編號,看起來就該是同一個東西 */
     .stop::before{content:attr(data-n); position:absolute; left:-34px; top:14px;
       min-width:22px; height:22px; border-radius:11px; border:1.5px solid var(--paper);
-      background:var(--dc,var(--ink)); color:#fff; box-shadow:0 1px 4px rgba(0,0,0,.28);
+      background:var(--dc,var(--ink)); color:var(--dc-on,#fff); box-shadow:0 1px 4px rgba(0,0,0,.28);
       font-family:var(--font-mono); font-size:11px; font-weight:700;
       display:flex; align-items:center; justify-content:center;}
     /* 這一列在地圖上被聚焦時,兩邊一起亮起來 */
@@ -476,7 +482,7 @@
     /* 編號跟時間軸的順序一樣,才看得出一天怎麼走 */
     .map .pin{position:absolute; transform:translate(-50%,-50%); z-index:2;
       min-width:21px; height:21px; padding:0 5px; border-radius:11px; border:1.5px solid #fff;
-      background:var(--dc,var(--ink)); color:#fff; box-shadow:0 1px 4px rgba(0,0,0,.35);
+      background:var(--dc,var(--ink)); color:var(--dc-on,#fff); box-shadow:0 1px 4px rgba(0,0,0,.35);
       font-family:var(--font-mono); font-size:11px; font-weight:700; text-decoration:none;
       display:flex; align-items:center; justify-content:center;}
     /* 被聚焦的那個標記:外面套一圈光暈,跟清單那一列同時亮 */
@@ -1044,7 +1050,19 @@
          卻佔掉一整條橫在行程上面 —— 在手機上那一條就是地圖少掉的一截。 -->
     <!-- AI 按鈕:丟一段話或一張圖,AI 判斷要建哪一種資料,確認後才存。
          放在選單旁邊,因為它不屬於任何一頁 —— 許願、行程、座位都從這裡進。 -->
-    <button type="button" class="btn btn-sm" id="ai-btn" aria-haspopup="dialog">✨ AI</button>
+    <!-- **照她規格書裡「Auto Pulse」那顆的結構。**(`#btn-auto-pulse`)
+         它跟「Version A ⇄ C」那顆的 class 完全相同 —— 差別不在樣式,在驅動方式:
+         Auto Pulse 是被一個迴圈反覆觸發掃掠,不是等 hover。
+
+         **虹光和方向掃掠是同一層**,不是兩層(我第一版拆成兩個 span,那是我自己想的)。
+         `steel-sheen-surface` 是高光跟著指標／傾斜走的那一層,少了它高光不會動。
+         裝飾層都 `aria-hidden`:讀螢幕的人不需要聽到兩個空節點。 -->
+    <button type="button" class="btn-steel-hybrid steel-sheen-surface rm-btn rm-btn--sm"
+            id="ai-btn" aria-haspopup="dialog">
+      <span class="steel-iridescent-overlay directional-sheen" aria-hidden="true"></span>
+      <span class="white-sweep-flare" aria-hidden="true"></span>
+      <span class="steel-content-layer">✨ AI</span>
+    </button>
     <button type="button" class="hamb" id="menu-btn" aria-label="選單" aria-expanded="false"
       aria-controls="menu-pop"><span></span><span></span><span></span></button>
   </header>
@@ -1425,6 +1443,12 @@
 </div>
 
 <script src="config.js"></script>
+<!-- **設計系統的動態反光。** `build.sh` 把它複製到這個目錄並蓋指紋(跟 CSS 同一條路),
+     所以這裡引的是相對路徑,不是 `../design-system/` —— Vercel 的 root 只有 tokyo-trip/。
+     它自己會在 DOMContentLoaded 時 init:**不需要任何權限**就綁上捲動和觸控拖曳
+     (桌機另外綁滑鼠移動),高光跟著手指走。陀螺儀是再多一種推動方式,要權限,這裡不要。
+     不引它也只是高光不動,其他都照常。 -->
+<script src="retro-modern.js"></script>
 
 <script>
 (() => {
@@ -1458,12 +1482,22 @@
   ];
 
   const DAYS = [
-    { n: 1, date: "2026-10-03", w: "六", color: "#F39700" },
-    { n: 2, date: "2026-10-04", w: "日", color: "#E60012" },
-    { n: 3, date: "2026-10-05", w: "一", color: "#009944" },
-    { n: 4, date: "2026-10-06", w: "二", color: "#00A7DB" },
-    { n: 5, date: "2026-10-07", w: "三", color: "#9B7CB6" },
-    { n: 6, date: "2026-10-08", w: "四", color: "#B6007A" },
+    /* **六天的顏色用設計系統的 token,含點綴色。**(Lulu 的決定,2026-09-24)
+       寫 `var(--color-…)` 不寫色碼:設計系統調色的時候這裡跟著走。
+
+       **`on` 是「字壓在這個顏色上時該用什麼色」**,因為同一個顏色會出現在兩種地方:
+       行程編號的圓點和地圖上的標記,數字是直接壓在色塊上的。
+       淺色配深字、深色配白字,兩種都算過對比,不是看起來順眼就好。
+
+       第一版只挑「壓得住白字」的六個,結果四個都在紅棕色系,分不出是哪一天 ——
+       **那個限制是我自己加的**:因為選到的那天整張卡刷滿顏色、字全轉白。
+       改成「淡底 + 深字」之後那個限制就沒了,點綴色全部可用,色相才拉得開。 */
+    { n: 1, date: "2026-10-03", w: "六", color: "var(--color-sun-mustard)",   on: "var(--color-ink)" },
+    { n: 2, date: "2026-10-04", w: "日", color: "var(--color-sun-coral)",     on: "var(--color-ink)" },
+    { n: 3, date: "2026-10-05", w: "一", color: "var(--color-botanical-olive)", on: "#fff" },
+    { n: 4, date: "2026-10-06", w: "二", color: "var(--color-sky-chambray)",  on: "var(--color-ink)" },
+    { n: 5, date: "2026-10-07", w: "三", color: "var(--color-earth-cork)",    on: "#fff" },
+    { n: 6, date: "2026-10-08", w: "四", color: "var(--color-earth-terracotta)", on: "var(--color-ink)" },
   ];
 
   /* 航班節點固定釘在時間軸上,不可刪 */
@@ -2494,7 +2528,7 @@
       /* 「全部已排」:六天全部。編號是第幾天、顏色是那天的顏色 ——
          同一個編號會出現好幾次,那是對的:它回答的是「這個點排在哪一天」。 */
       DAYS.forEach(d => dayList(d.date).forEach((x, i) => out.push({
-        item: x, k: "p" + d.date + "-" + i, n: d.n, cls: "plan", color: d.color,
+        item: x, k: "p" + d.date + "-" + i, n: d.n, cls: "plan", color: d.color, on: d.on,
         tip: "DAY " + d.n + " " + (x.time || "") + " " + x.title,
       })));
     } else if (layers.plan) {
@@ -2504,6 +2538,7 @@
       const today = DAYS.find(x => x.date === state.day);
       dayList(state.day).forEach((x, i) => out.push({
         item: x, k: "d" + i, n: i + 1, cls: "plan", color: today ? today.color : "",
+        on: today ? today.on : "",
         tip: (i + 1) + ". " + x.title + (x.place ? " \u00b7 " + x.place : ""),
       }));
     }
@@ -3319,6 +3354,7 @@
         '" href="' + gmap(p.place, p) + '" target="_blank" rel="noopener" style="left:' +
         Math.round(left + projX(p.lo, v.z) * TILE) + "px; top:" + Math.round(top + projY(p.la, v.z) * TILE) +
         "px" + (p.color ? "; background:" + p.color : "") +
+        (p.on ? "; color:" + p.on : "") +
         '" title="' + esc(p.tip) + '">' + esc(p.n) +
         '<span class="lab">' + esc((p.ap ? "約 " : "") + p.title) + '</span></a>';
     });
@@ -3620,7 +3656,8 @@
     el("days").innerHTML = DAYS.map(d => {
       const cnt = stopsOn(d.date).length + (online ? 0 : (ANCHORS[d.date] || []).length);
       const mark = d.date < t ? " past" : d.date === t ? " today" : "";
-      return '<button type="button" class="day' + mark + '" style="--dc:' + d.color + '" data-day="' + d.date +
+      return '<button type="button" class="day' + mark + '" style="--dc:' + d.color +
+        "; --dc-on:" + d.on + '" data-day="' + d.date +
         '" aria-pressed="' + (d.date === state.day) + '"><span class="dn">DAY ' + d.n + '</span><span class="dd">' +
         d.date.slice(5).replace("-", "/") + '</span><span class="dw">週' + d.w + " · " + cnt + " 項</span>" +
         wxLine(TOKYO, d.date) + "</button>";
@@ -3671,6 +3708,7 @@
     el("day-title").textContent = "DAY " + d.n + " · " + state.day.slice(5).replace("-", "/") + " 週" + d.w;
     const route = el("route");
     route.style.setProperty("--dc", d.color);
+    route.style.setProperty("--dc-on", d.on);
     /* 兩個模式都要跟著換天 —— 許願頁的地圖也放著那一天的行程 */
     if (sheetMode) loadSheetMap();
     if (!list.length) {
@@ -4749,6 +4787,41 @@
     saveSnap();
     return want.length;
   }
+
+  /* ---- 那顆 AI 按鈕的自動掃掠 ----
+     **掃掠本身是設計系統的 `RetroModern.sweep()`,這裡不再自己抄一份。**
+     (第一版抄了,因為那時候還沒有把 JS 送過來的路。抄的那份沒有指紋,
+      走鐘不會有人講 —— 那正是不該抄的理由。)
+
+     **那條「時間到就收」的後路已經收進 `sweep()` 了**(2026-09-24),所以這裡不再自己補。
+     它本來是必要的:`sweep()` 靠 `animationend` 收尾,而 headless Chrome 在
+     `--virtual-time-budget` 下一個動畫事件都不觸發 —— promise 不會結束,
+     class 會永遠留在按鈕上,而且看不出來(掃掠層本來就是透明的)。
+     現在那件事在設計系統那一邊處理,**同一段邏輯只存在一個地方**。
+
+     **一直掃,不停。**(Lulu 的決定)第一版寫成「開過一次就不再掃」,
+     理由是「他已經知道它在那裡了」—— 她要的不是那個。
+     `prefers-reduced-motion` 還是擋掉:那不是偏好設定,是有人看了會不舒服。
+     頁面切到背景時也不掃 —— 看不到的動畫只是在耗電。 */
+  (function initAiPulse() {
+    const btn = el("ai-btn");
+    if (!btn) return;
+    const still = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let timer = 0;
+    async function sweep() {
+      /* 看不到就不掃:切到別的分頁(`hidden`)、或按鈕不在版面上的時候。 */
+      if (still || document.hidden || btn.offsetParent === null) return;
+      const RM = window.RetroModern;
+      if (!RM || !RM.sweep) return;     /* 沒載到 JS 就安靜地不掃,不要炸 */
+      await RM.sweep(btn);
+    }
+    /* 進站等一下再掃:一載入就掃,使用者還在看整頁,那一下等於沒發生。 */
+    timer = setTimeout(function again() {
+      sweep();
+      timer = setTimeout(again, 10000);
+    }, 3000);
+
+  })();
 
   el("ai-btn").addEventListener("click", openAI);
   el("ai-cancel").addEventListener("click", closeAI);
