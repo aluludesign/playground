@@ -8,6 +8,14 @@
  */
 @import "./retro-modern.css";
 
-/* 掃描範圍：只有這個資料夾。retro-modern.css 關掉了自動偵測，所以要自己講。 */
-@source "./";
+/* 掃描範圍：只有畫面檔，不是整個資料夾。
+ *
+ * 掃「./」會把 build.sh、shadowed-declarations.js、package-lock.json 一起掃進去，
+ * 而 Tailwind 的掃描器不分辨字出現在什麼語法位置 —— 量過一次：產出裡有一條
+ * .transform，來源是 shadowed-declarations.js 裡的一個 transform 字樣，
+ * 而 demo.html 用到它 0 次。
+ *
+ * 那條規則沒人用只是浪費；真正的問題是它讓「產出跟畫面對得起來」這件事不成立，
+ * 而且非畫面的程式一改，產出就跟著變。 */
+@source "./demo.html";
 @import "tailwindcss/preflight.css" layer(base);

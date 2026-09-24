@@ -160,11 +160,26 @@ node -e '
   const fs = require("fs"), path = require("path");
   const entry = process.argv[1], dir = path.dirname(entry);
   const files = [entry];
+  const src = fs.readFileSync(entry, "utf8");
   /* 只跟一層本機 @import；套件名（"tailwindcss/..."）不算，那是相依不是原始碼 */
-  for (const m of fs.readFileSync(entry, "utf8").matchAll(/@import\s+"([^"]+)"/g)) {
+  for (const m of src.matchAll(/@import\s+"([^"]+)"/g)) {
     const spec = m[1];
     if (!spec.startsWith(".") && !spec.startsWith("/")) continue;
     files.push(spec.startsWith("/") ? spec : path.join(dir, spec));
+  }
+  /* 被掃描的內容也是輸入 —— Tailwind 是 content-driven 的，demo.html 改了
+     產出就會變，而指紋原本只涵蓋 CSS，所以那種過期看不出來。
+     只收得進「指向單一檔案」的 @source；指向資料夾或 glob 的話列舉不可靠，
+     那就要說出來，不能假裝涵蓋到了。 */
+  let vagueSource = [];
+  for (const m of src.matchAll(/@source\s+(?:not\s+)?"([^"]+)"/g)) {
+    const f = path.resolve(dir, m[1]);
+    if (fs.existsSync(f) && fs.statSync(f).isFile()) files.push(f);
+    else vagueSource.push(m[1]);
+  }
+  if (vagueSource.length) {
+    console.error("  ⚠ 指紋涵蓋不到這些 @source（不是單一檔案）: " + vagueSource.join(", "));
+    console.error("    那些檔案改了，產出會變但指紋不會變 —— 過期偵測不到。");
   }
   let h = 2166136261;                        /* FNV-1a，夠用又不必動到 crypto */
   for (const f of files) {

@@ -63,8 +63,8 @@ DOM。那種只有跑在頁面上的探針量得到。
 /* my-trip/app.css */
 @import "../design-system/retro-modern.css";
 
-/* 掃描範圍：只有這個資料夾。這行是必要的，不是選項 —— 見下面。 */
-@source "./";
+/* 掃描範圍：指到畫面檔，不是整個資料夾。這行是必要的，不是選項 —— 見下面。 */
+@source "./index.html";
 
 /* 全新專案才加這行。既有網站不要加 —— 見「接上去會改變什麼」。 */
 @import "tailwindcss/preflight.css" layer(base);
@@ -91,12 +91,26 @@ HTML 只要字型和那支編好的 CSS：
 
 `demo.entry.css` 就是活生生的範本，照抄它就對了。
 
-**`@source "./"` 那行不能省。** `retro-modern.css` 用 `source(none)` 關掉了
+**`@source` 那行不能省。** `retro-modern.css` 用 `source(none)` 關掉了
 Tailwind 的自動範圍偵測，所以掃描範圍要你自己講。
 
 關掉是刻意的：不關的話，Tailwind 會連 `design-system/` 一起掃，把 `demo.html`
 用到的 utility 全編進你的產出。量過一次是 **206 個 class**，其中 `bg-steel-*`、
 `bg-day-*`、`rounded-arch` 都不是你在用的；關掉之後是 58 個。
+
+**指到畫面檔，不要指整個資料夾。** 掃描器不分辨字出現在什麼語法位置 ——
+指到資料夾的話，跑在伺服器上的程式、建置腳本、鎖定檔全都會被當成 markup 掃。
+實際踩過兩次：
+
+| 來源 | 編出了什麼 |
+| --- | --- |
+| `api/ai.js` 裡 Gemini 的 `contents: [{ parts }]` | `.contents{display:contents}` |
+| `shadowed-declarations.js` 裡一個 `transform` 字樣 | `.transform{…}` 加五個 `@property` |
+
+兩條都沒人用。**浪費體積是小事，真正的問題是產出跟畫面對不起來了** ——
+而且非畫面的程式一改，產出就跟著變。收窄之後 demo 的產出少了 2.2KB。
+
+真的需要掃多個檔就列多個 `@source`，或用 `@source not "./api"` 把特定目錄排除。
 
 **體積是小事，真正的傷害是下一段那件事會失效** —— 你要寫的 utility 幾乎一定
 已經在裡面了（demo 用過），所以忘了重編也看不出來。失效的樣子是「一切正常」。
