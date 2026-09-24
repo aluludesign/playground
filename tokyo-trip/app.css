@@ -23,9 +23,18 @@
  *
  * 產生檔就放在被掃的資料夾裡,看起來會自我餵養,但實測 Tailwind 不掃 .css ——
  * 在產出裡塞一個 .bg-day-4 再重編,它不會被撿回來。而且連編三次位元組完全相同。
- * 所以這裡不需要 @source not,加了也是空的。 */
+ * 所以產生檔不需要 @source not。
+ *
+ * **但 `api/` 需要,而且是 2026-09-24 才需要的。**
+ * 那底下是跑在伺服器上的程式,不是畫面 —— 它的字被當成 class 名來掃,
+ * 只會撿到假的。`api/ai.js` 裡 Gemini 的請求長這樣:`contents: [{ parts }]`,
+ * 於是編出來的 CSS 多了一條 `.contents{display:contents}` ——
+ * 沒有人用它,但**每跑一次驗收,產生檔就跟 repo 裡那份不一樣**,
+ * 工作樹永遠是髒的,而「工作樹乾淨」正是基準截圖的前提。
+ * (上面那句「不需要 @source not」寫於 `api/` 還只有 notion.js 的年代。) */
 @import "../design-system/retro-modern.css";
 @source "./";
+@source not "./api";
 
 /* ---- 一個已知的偵測盲區,事前登記 ----
  *
