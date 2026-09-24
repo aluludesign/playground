@@ -18,4 +18,5 @@
  * 那條規則沒人用只是浪費；真正的問題是它讓「產出跟畫面對得起來」這件事不成立，
  * 而且非畫面的程式一改，產出就跟著變。 */
 @source "./demo.html";
+@source "./demo.js";
 @import "tailwindcss/preflight.css" layer(base);

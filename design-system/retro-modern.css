@@ -362,6 +362,69 @@
     filter: contrast(105%) saturate(var(--iri-saturate));
   }
 
+  /* 實驗版：白光層固定不動，底層虹光跟著陀螺儀流。
+     跟 .sheen-iridescent 的差別是白光不再跟著游標跑 —— 一層定、一層動。 */
+  .steel-sheen-surface.sheen-static-white-dynamic-iri::before {
+    background: linear-gradient(
+      var(--sheen-angle),
+      rgba(255, 255, 255, 0) 0%,
+      rgba(122, 172, 245, 0.35) calc(var(--sheen-x) - 30%),
+      rgba(225, 150, 240, 0.45) calc(var(--sheen-x) - 15%),
+      rgba(250, 195, 120, 0.48) calc(var(--sheen-x) + 15%),
+      rgba(130, 230, 195, 0.35) calc(var(--sheen-x) + 30%),
+      rgba(255, 255, 255, 0) 100%
+    );
+    filter: contrast(105%) saturate(var(--iri-saturate));
+    mix-blend-mode: overlay;
+  }
+  .steel-sheen-surface.sheen-static-white-dynamic-iri::after {
+    background:
+      radial-gradient(
+        circle 300px at 50% 50%,
+        rgba(255, 255, 255, 0.6) 0%,
+        rgba(255, 255, 255, 0.15) 40%,
+        rgba(255, 255, 255, 0) 70%
+      ),
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0) 38%,
+        rgba(255, 255, 255, 0.4) 46%,
+        rgba(255, 255, 255, 0.85) 50%,
+        rgba(255, 255, 255, 0.4) 54%,
+        rgba(255, 255, 255, 0) 62%,
+        rgba(255, 255, 255, 0) 100%
+      );
+    mix-blend-mode: overlay;
+    opacity: 1;
+    filter: contrast(110%);
+  }
+
+  /* 規格書原稿的名字。我在系統裡改過名，但她那份 HTML 的 markup 要能直接貼 ——
+     所以兩邊都認得。左邊是她的寫法，右邊是系統的正名。 */
+  .gradient-crisp-steel-dark { /* = .gradient-crisp-steel */
+    background: linear-gradient(135deg, #EBEEF2 0%, #BAC3CD 22%, #8B95A2 50%, #A3ADB9 74%, #5F6975 100%);
+    box-shadow: inset 0 1.5px 1px rgba(255, 255, 255, 0.8), inset 0 -2px 1.5px rgba(45, 50, 58, 0.25);
+  }
+  .text-steel-engraved-title {   /* = .text-steel-engraved */
+    color: var(--color-ink);
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.45), 0 -0.5px 0.5px rgba(0, 0, 0, 0.15);
+  }
+  .shake-flare-active { animation: rm-shimmer-burst 0.75s ease-out forwards; }   /* = .sheen-flare */
+  .tag-transition { transition: all 0.2s var(--ease-tactile); }
+  .toast-transition { transition: all 0.3s var(--ease-overshoot); }
+  /* 掛勾用，沒有樣式 —— 規格書用它標記「這顆按鈕吃觸覺回饋」 */
+  .steel-interactive-btn { }
+
+  /* 自動掃掠也吃規格書的 class 名 */
+  .btn-steel-hybrid.auto-sheen-active .steel-iridescent-overlay { opacity: 1; }
+  .btn-steel-hybrid.auto-sweep-sheen .directional-sheen {
+    animation: rm-sweep-sheen 1.6s var(--ease-tactile) forwards;
+  }
+  .btn-steel-hybrid.auto-sweep-flash .white-sweep-flare {
+    animation: rm-sweep-flare 1s var(--ease-tactile) forwards;
+  }
+
   /* 內容一律騎在反光之上 */
   .steel-sheen-surface > * { position: relative; z-index: 10; }
   .steel-content-layer { position: relative; z-index: 10; }
@@ -545,7 +608,7 @@
      用法：兩個 span 都放進按鈕，再由 JS 加 class 觸發（見 retro-modern.js）。 */
 
   /* 虹光掃掠：不改背景，改遮罩的位置 —— 讓既有的虹光層被一條斜帶逐段揭開 */
-  .btn-steel-hybrid .directional-sheen {
+  .directional-sheen {
     position: absolute;
     inset: 0;
     pointer-events: none;
@@ -574,7 +637,7 @@
   }
 
   /* 白光掃掠：疊在虹光之上（z-index 5），時間短一截，收尾用 */
-  .btn-steel-hybrid .white-sweep-flare {
+  .white-sweep-flare {
     position: absolute;
     inset: 0;
     pointer-events: none;
