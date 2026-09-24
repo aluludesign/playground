@@ -420,6 +420,62 @@ RetroModern.copy('#D54C15', 'accent');     // 複製並跳 toast
 格子愈小、線愈細，愈接近 Retro Editorial 的排版底紋；格子大、線粗則偏向
 70s 海報的活潑感。demo 裡那兩組（24px/2px 與 14px/1.5px）就是這兩端。
 
+## 可切換與可移除的標籤
+
+```html
+<!-- 按鈕：狀態在 aria-pressed -->
+<button class="rm-chip rm-chip--selectable" aria-pressed="false">景點</button>
+
+<!-- label + checkbox：狀態在 checkbox，表單送得出去 -->
+<label class="rm-chip rm-chip--selectable"><input type="checkbox" name="who" hidden> 阿輝</label>
+
+<!-- 可移除 -->
+<span class="rm-chip rm-chip--removable">Sky Blue
+  <button class="rm-chip__remove" aria-label="移除 Sky Blue">✕</button>
+</span>
+```
+
+**狀態寫在屬性上，不是靠 JS 抽換 class。** 抽換 class 的做法要記住十個名字的增減
+順序，少刪一個就卡在半途；而且 screen reader 讀不出它是被按下的。
+`aria-pressed` 和 `:has(input:checked)` 兩種都支援，因為兩種都是真實用法 ——
+前者是純互動、後者送得進表單。
+
+**選取時不只換顏色**：邊框變實、加硬派投影。所以灰階列印和色盲情境下也分得出來，
+不是只靠色相。
+
+## 自動掃掠
+
+hover 要使用者先碰到；掃掠是「不碰它也想讓它被看見」用的。虹光從右掃到左閃入
+閃出，接著白色高光再掃一次：
+
+```html
+<button class="rm-btn btn-steel-hybrid steel-sheen-surface">
+  <span class="steel-iridescent-overlay"></span>
+  <span class="directional-sheen"></span>
+  <span class="white-sweep-flare"></span>
+  <span>按鈕文字</span>
+</button>
+```
+
+```js
+RetroModern.sweep(btn);   // 回傳 Promise，兩段都跑完才 resolve
+```
+
+兩段是**接續**不是同時 —— 白光那層是 overlay 混合、虹光那層是遮罩位移，疊在一起
+會互相洗掉。時長寫在 CSS 的 `animation` 上，JS 只負責加 class 和收尾，
+**時長只存在一個地方**。
+
+`prefers-reduced-motion: reduce` 下 `sweep()` 直接 resolve，兩層都不動。
+
+### 虹光的彩度
+
+```css
+:root { --iri-saturate: 1.2; }   /* 1 = 原本的薄膜色 */
+```
+
+跟 `--sheen-*` 一樣是執行期旋鈕，不在 `@theme` 裡 —— demo 有一根滑桿可以調到
+滿意為止，調定之後它就是一個常數。
+
 ## 組件 class
 
 `rm-` 開頭的是這套系統新增的；沒有前綴的
@@ -431,7 +487,7 @@ RetroModern.copy('#D54C15', 'accent');     // 複製並跳 toast
 | `.rm-btn` + `--cta` `--action` `--secondary` `--ghost` `--steel` `--sm` `--lg` | 按鈕 |
 | `.btn-steel-hybrid` + 子層 `.steel-iridescent-overlay` | 混合不鏽鋼按鈕（B ⇄ C）|
 | `.rm-card` + `--surface` `--expressive` `--raised` `--arch` | 卡片 |
-| `.rm-chip` + `--solid` `--accent` | 標籤 |
+| `.rm-chip` + `--solid` `--accent` `--selectable` `--removable` + `.rm-chip__remove` | 標籤 |
 | `.rm-input` `.rm-label` | 表單 |
 | `.rm-day-pin` | 行程號碼牌／地圖圖釘 |
 | `.rm-overline` `.rm-divider` `.rm-toast` | 小零件 |

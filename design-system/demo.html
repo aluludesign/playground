@@ -279,10 +279,23 @@
         白光嚴格保留給點擊 —— 這樣「有回應」和「被按下」才不會混成同一件事。
       </p>
     </div>
-    <button class="rm-btn btn-steel-hybrid steel-sheen-surface w-full shrink-0 sm:w-auto" onclick="RetroModern.pressFlash(this, () => RetroModern.toast('✨ 點擊才觸發白光微閃'))">
-      <span class="steel-iridescent-overlay"></span>
-      <span>Hover 閃虹光 · Click 閃白光</span>
-    </button>
+    <div class="flex w-full shrink-0 flex-col gap-2 sm:w-auto">
+      <button id="sweep-target" class="rm-btn btn-steel-hybrid steel-sheen-surface" onclick="RetroModern.pressFlash(this, () => RetroModern.toast('✨ 點擊才觸發白光微閃'))">
+        <span class="steel-iridescent-overlay"></span>
+        <span class="directional-sheen"></span>
+        <span class="white-sweep-flare"></span>
+        <span>Hover 閃虹光 · Click 閃白光</span>
+      </button>
+      <div class="flex items-center gap-2">
+        <button class="rm-btn rm-btn--sm flex-1" onclick="RetroModern.sweep(document.getElementById('sweep-target'))">▶ 自動掃掠一次</button>
+        <label class="flex items-center gap-1.5 font-mono text-caption text-ink-muted">
+          彩度
+          <input type="range" id="iri-sat" min="50" max="250" value="120" class="w-24"
+                 oninput="document.documentElement.style.setProperty('--iri-saturate', this.value/100); document.getElementById('iri-sat-out').textContent = (this.value/100).toFixed(2)">
+          <output id="iri-sat-out" class="w-8 font-mono text-caption">1.20</output>
+        </label>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -391,7 +404,63 @@
     </div>
   </div>
 
-  <h4 class="mb-4 font-serif text-h4 text-ink">C. Cards</h4>
+  <div class="rm-card rm-card--surface mb-8">
+    <h4 class="mb-1 font-serif text-h4 text-ink">C. Tags</h4>
+    <p class="mb-4 max-w-prose text-caption text-ink-soft">
+      狀態寫在 <code class="font-mono">aria-pressed</code> 或底下的 checkbox 上，不是靠 JS 抽換 class。
+      選取時除了換色還會加實邊和硬派投影 —— 灰階列印和色盲情境下也分得出來。
+    </p>
+
+    <div class="mb-5">
+      <div class="rm-overline mb-2">唯讀</div>
+      <div class="flex flex-wrap gap-2">
+        <span class="rm-chip">景點</span>
+        <span class="rm-chip rm-chip--solid">餐飲</span>
+        <span class="rm-chip rm-chip--accent">交通</span>
+      </div>
+    </div>
+
+    <div class="mb-5">
+      <div class="rm-overline mb-2">可切換 · button + aria-pressed</div>
+      <div class="flex flex-wrap gap-2">
+        <button class="rm-chip rm-chip--selectable" aria-pressed="true"
+                onclick="this.setAttribute('aria-pressed', this.getAttribute('aria-pressed') !== 'true')">Retro Modern</button>
+        <button class="rm-chip rm-chip--selectable" aria-pressed="false"
+                onclick="this.setAttribute('aria-pressed', this.getAttribute('aria-pressed') !== 'true')">Craft Material</button>
+        <button class="rm-chip rm-chip--selectable" aria-pressed="false"
+                onclick="this.setAttribute('aria-pressed', this.getAttribute('aria-pressed') !== 'true')">70s Optimism</button>
+      </div>
+    </div>
+
+    <div class="mb-5">
+      <div class="rm-overline mb-2">可切換 · label + checkbox（表單送得出去）</div>
+      <div class="flex flex-wrap gap-2">
+        <label class="rm-chip rm-chip--selectable"><input type="checkbox" name="who" value="a" checked hidden> 阿輝</label>
+        <label class="rm-chip rm-chip--selectable"><input type="checkbox" name="who" value="b" hidden> 佳瑜</label>
+        <label class="rm-chip rm-chip--selectable"><input type="checkbox" name="who" value="c" checked hidden> 雅倫</label>
+      </div>
+    </div>
+
+    <div>
+      <div class="rm-overline mb-2">可移除</div>
+      <div class="flex flex-wrap gap-2">
+        <span class="rm-chip rm-chip--removable" style="background:var(--color-sky-chambray);color:var(--color-foundation-muslin);border-width:2px;box-shadow:var(--shadow-hard-sm)">
+          Sky Blue
+          <button class="rm-chip__remove" aria-label="移除 Sky Blue" onclick="this.parentElement.remove()">
+            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          </button>
+        </span>
+        <span class="rm-chip rm-chip--removable" style="background:var(--color-earth-terracotta);color:var(--color-foundation-muslin);border-width:2px;box-shadow:var(--shadow-hard-sm)">
+          Terracotta
+          <button class="rm-chip__remove" aria-label="移除 Terracotta" onclick="this.parentElement.remove()">
+            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          </button>
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <h4 class="mb-4 font-serif text-h4 text-ink">D. Cards</h4>
   <div class="grid grid-cols-1 gap-6 md:grid-cols-3">
     <div class="rm-card">
       <div class="mb-4 flex items-center justify-between"><span class="rm-overline">80% Neutral</span><span class="h-2 w-2 rounded-full bg-positive"></span></div>

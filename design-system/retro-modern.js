@@ -113,6 +113,34 @@
     }
   }
 
+  /* 自動掃掠：虹光從右掃到左閃入閃出，接著白色高光再掃一次。
+     跟 hover 的差別是它不需要使用者先碰到 —— 用在「想讓人注意到這顆按鈕」的時候。
+     兩段是接續的不是同時的：白光等虹光走完才進場，疊在一起會互相洗掉。
+     時間寫在 CSS 的 animation 上，這裡只負責加 class 和在結束時拿掉 ——
+     **時長只存在一個地方**，改動畫不必回來改 JS。 */
+  function sweep(el) {
+    if (!el || reduceMotion) return Promise.resolve();
+    var once = function (cls, name) {
+      return new Promise(function (done) {
+        el.classList.remove(cls);
+        void el.offsetWidth;                 // 強制回流，動畫才會重播
+        /* 動畫跑在子層，事件是冒泡上來的 —— 所以要認 animationName。
+           不認的話，使用者在掃掠途中按一下按鈕，steel-press-flash 結束時
+           冒上來的那個 animationend 會把這一段提早收掉。 */
+        var end = function (e) {
+          if (e.animationName !== name) return;
+          el.classList.remove(cls);
+          el.removeEventListener('animationend', end);
+          done();
+        };
+        el.addEventListener('animationend', end);
+        el.classList.add(cls);
+      });
+    };
+    return once('is-sweeping-sheen', 'rm-sweep-sheen')
+      .then(function () { return once('is-sweeping-flare', 'rm-sweep-flare'); });
+  }
+
   /* 按鈕的觸覺回饋。callback 延後 160ms 才跑，
      讓使用者先看到金屬凹下去，再看到事情發生。 */
   function pressFlash(el, callback) {
@@ -203,6 +231,7 @@
   global.RetroModern = {
     init: init,
     flare: flare,
+    sweep: sweep,
     pressFlash: pressFlash,
     requestMotion: requestMotion,
     toast: toast,

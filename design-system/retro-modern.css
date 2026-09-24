@@ -189,6 +189,11 @@
   --sheen-angle: 135deg;
   --sheen-intensity: 0.55;
   --sheen-specular: 0.75;
+
+  /* 虹光的彩度。1 是原本的薄膜色，規格書選定 1.2（提亮兩成）。
+     跟 --sheen-* 一樣放這裡而不是 @theme —— 它是可以在頁面上調到滿意為止的
+     旋鈕，demo 有一根滑桿；調定之後就是一個常數。 */
+  --iri-saturate: 1.2;
   color-scheme: light;
 }
 
@@ -493,6 +498,7 @@
     inset: 0;
     pointer-events: none;
     z-index: 4;
+    filter: saturate(var(--iri-saturate));
     background: linear-gradient(135deg, #F6F8FB 0%, #E0E5F0 16%, #B8CBD8 36%, #B2B6C6 52%, #D8CDC2 70%, #C3CBD2 84%, #88919A 100%);
     opacity: 0;
     transition: opacity 0.3s ease-out;
@@ -525,6 +531,65 @@
   /* 鍵盤操作不分裝置，所以 focus-visible 放在 media query 外面 */
   .btn-steel-hybrid:focus-visible .steel-iridescent-overlay,
   .btn-steel-hybrid:focus-visible .steel-iridescent-overlay::after { opacity: 1; }
+
+  /* ── 自動掃掠 ──────────────────────────────────────────────────────
+     hover 是使用者主動觸發的；這兩層是「不碰它也想讓它被看見」用的 ——
+     虹光從右掃到左閃入閃出，接著白色高光再掃一次。
+     兩層分開而不是一個動畫，因為它們的時長不同（1.6s / 1s），而且
+     白光那層是 overlay 混合、虹光那層是遮罩位移，疊在一起會互相洗掉。
+     用法：兩個 span 都放進按鈕，再由 JS 加 class 觸發（見 retro-modern.js）。 */
+
+  /* 虹光掃掠：不改背景，改遮罩的位置 —— 讓既有的虹光層被一條斜帶逐段揭開 */
+  .btn-steel-hybrid .directional-sheen {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 4;
+    background: linear-gradient(135deg, #F6F8FB 0%, #E0E5F0 16%, #B8CBD8 36%, #B2B6C6 52%, #D8CDC2 70%, #C3CBD2 84%, #88919A 100%);
+    border-radius: inherit;
+    /* 兩側留 30% 的全透明安全區，掃到邊緣才不會出現生硬的切邊 */
+    mask-image: linear-gradient(to right, transparent 0%, transparent 30%, black 50%, transparent 70%, transparent 100%);
+    mask-size: 300% 100%;
+    mask-position: 100% 0;
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, transparent 30%, black 50%, transparent 70%, transparent 100%);
+    -webkit-mask-size: 300% 100%;
+    -webkit-mask-position: 100% 0;
+    opacity: 0;
+    /* 提亮兩成五：遮罩壓暗了整層，不補回來會像一塊灰影掃過去 */
+    filter: brightness(1.25) saturate(var(--iri-saturate));
+  }
+  .btn-steel-hybrid.is-sweeping-sheen .directional-sheen {
+    animation: rm-sweep-sheen 1.6s var(--ease-tactile) forwards;
+  }
+  @keyframes rm-sweep-sheen {
+    0%   { mask-position: 100% 0; -webkit-mask-position: 100% 0; opacity: 0; }
+    5%   { opacity: 1; }
+    95%  { opacity: 1; }
+    100% { mask-position: 0 0; -webkit-mask-position: 0 0; opacity: 0; }
+  }
+
+  /* 白光掃掠：疊在虹光之上（z-index 5），時間短一截，收尾用 */
+  .btn-steel-hybrid .white-sweep-flare {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 5;
+    background: linear-gradient(to right, transparent 0%, transparent 45%, rgba(255, 255, 255, 0.85) 50%, transparent 55%, transparent 100%);
+    background-size: 300% 100%;
+    background-position: 100% 0;
+    mix-blend-mode: overlay;
+    border-radius: inherit;
+    opacity: 0;
+  }
+  .btn-steel-hybrid.is-sweeping-flare .white-sweep-flare {
+    animation: rm-sweep-flare 1s var(--ease-tactile) forwards;
+  }
+  @keyframes rm-sweep-flare {
+    0%   { background-position: 100% 0; opacity: 0; }
+    5%   { opacity: 1; }
+    95%  { opacity: 1; }
+    100% { background-position: 0 0; opacity: 0; }
+  }
 
   /* Cards —— 80% 中性底蘊 */
   .rm-card {
@@ -562,6 +627,66 @@
   }
   .rm-chip--solid { background: var(--color-foundation-clove); color: var(--color-foundation-muslin); }
   .rm-chip--accent { background: var(--color-accent); color: var(--color-accent-ink); border-color: var(--color-foundation-clove); }
+
+  /* 可切換的標籤。狀態寫在 `aria-pressed`（button）或底下的 checkbox 上，
+     **不是靠 JS 抽換 class** —— 換 class 的做法要記住十個名字的增減順序，
+     少刪一個就卡在半途，而且 screen reader 讀不出它是被按下的。
+     兩種都支援，因為兩種都是真實用法：
+       <button class="rm-chip rm-chip--selectable" aria-pressed="false">
+       <label class="rm-chip rm-chip--selectable"><input type="checkbox" hidden> …
+     tokyo-trip 用的是第二種（十顆膠囊當「誰分攤」的多選）。 */
+  .rm-chip--selectable {
+    cursor: pointer;
+    background: var(--color-foundation-muslin);
+    border-color: color-mix(in oklab, var(--color-foundation-clove) 40%, transparent);
+    box-shadow: none;
+    transition: background-color 0.2s var(--ease-tactile),
+                border-color 0.2s var(--ease-tactile),
+                box-shadow 0.2s var(--ease-tactile);
+  }
+  .rm-chip--selectable:hover {
+    border-color: var(--color-foundation-clove);
+    background: color-mix(in oklab, var(--color-foundation-sandstone) 30%, transparent);
+  }
+  .rm-chip--selectable:focus-visible,
+  .rm-chip--selectable:has(input:focus-visible) {
+    outline: 3px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+  /* 選取：換成陶土色並浮起來。**不只是換色** —— 邊框變實、加硬派投影，
+     所以在灰階列印和色盲情境下也分得出來，不是只靠色相。 */
+  .rm-chip--selectable[aria-pressed="true"],
+  .rm-chip--selectable:has(input:checked) {
+    background: var(--color-earth-terracotta);
+    color: var(--color-foundation-muslin);
+    border: 2px solid var(--color-foundation-clove);
+    box-shadow: var(--shadow-hard-sm);
+  }
+  .rm-chip--selectable[aria-pressed="true"]:hover,
+  .rm-chip--selectable:has(input:checked):hover {
+    background: var(--color-earth-cork);
+  }
+
+  /* 可移除的標籤。右邊留給那顆 ✕，所以右內距收窄、由按鈕自己補回來。 */
+  .rm-chip--removable { padding-right: 0.25rem; }
+  .rm-chip__remove {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.25rem;
+    height: 1.25rem;
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-pill);
+    background: transparent;
+    color: inherit;      /* 跟著標籤的文字色，不必為每種底色各寫一次 */
+    cursor: pointer;
+    transition: background-color 0.2s var(--ease-tactile);
+  }
+  .rm-chip__remove:hover {
+    background: color-mix(in oklab, var(--color-foundation-clove) 20%, transparent);
+  }
+  .rm-chip__remove:focus-visible { outline: 2px solid currentColor; outline-offset: 1px; }
 
   /* Overline：小標題上方那行全大寫的 mono 標記 */
   .rm-overline {
@@ -659,6 +784,10 @@
     .rm-toast { transition: none; }
     .btn-steel-hybrid .steel-iridescent-overlay,
     .btn-steel-hybrid .steel-iridescent-overlay::after { transition: none; }
+    .btn-steel-hybrid .directional-sheen,
+    .btn-steel-hybrid .white-sweep-flare { animation: none; opacity: 0; }
+    .rm-chip--selectable,
+    .rm-chip__remove { transition: none; }
     .rm-btn--cta:hover { transform: none; }
   }
 }
