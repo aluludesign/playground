@@ -184,6 +184,46 @@ function pinsOf(k) { return pins()[k]; }
     ok("沒填地點的沒有被標上去(teamLab)",
       !labs.some(function (t) { return /teamLab/.test(t); }), labs);
 
+    // 2 之前 ---- 沒有行程的那一天:空狀態要能動手 ----
+    /* **空狀態最容易變成「有字沒作用」**:寫一句話、指一個別的地方的按鈕,
+       然後沒有人檢查那句話指的東西按不按得到。
+       以前這裡寫的是「按右上角『加行程』開始」—— 而使用者的手就在這裡。
+       現在那一句自己帶一顆按鈕,所以要問三件事:在不在、碰不碰得到、按了有沒有事。
+       地圖那半也問:一個點都沒有的時候以前是**整片空白**,
+       而空白分不出「還沒排」和「壞了」。 */
+    (function () {
+      var d2 = [].slice.call(d.querySelectorAll("#days .day")).find(function (b) {
+        return /10\/04/.test(b.textContent || "");
+      });
+      if (d2) d2.click();
+    })();
+    await sleep(500);
+    var cta = q("#empty-add-stop");
+    ok("沒有行程的那一天,空狀態自己帶一顆按鈕", !!cta, q("#route").textContent.trim().slice(0, 30));
+    if (cta) {
+      var cb = cta.getBoundingClientRect();
+      var chit = d.elementFromPoint(Math.round(cb.left + cb.width / 2), Math.round(cb.top + cb.height / 2));
+      ok("**那顆按鈕碰得到**(不是被別的東西蓋住的裝飾)",
+        !!chit && cta.contains(chit), chit && chit.tagName);
+      cta.click();
+      ok("按了真的開加行程的對話框",
+        await until(function () { return q("#stop-add-overlay").hidden === false; }),
+        q("#stop-add-overlay").hidden);
+      q("#sf-cancel").click();
+      await sleep(150);
+    }
+    ok("地圖一個點都沒有的時候會講一句話(空白分不出「還沒排」和「壞了」)",
+      !!q(".map-empty") && /\S/.test(q(".map-empty").textContent || ""),
+      q(".map-empty") && q(".map-empty").textContent);
+    /* 回到有行程的那一天,後面每一段都是在那一天上量的 */
+    (function () {
+      var d3 = [].slice.call(d.querySelectorAll("#days .day")).find(function (b) {
+        return /10\/05/.test(b.textContent || "");
+      });
+      if (d3) d3.click();
+    })();
+    await sleep(500);
+
     // 2a ---- 網址會變成看得出來、點得到的連結 ----
     /* **這件事以前一條斷言都沒有。** 它壞掉的樣子是無聲的:
        某次改版把某張卡的 `linkify()` 拿掉、或那條底線的 CSS 被蓋掉,

@@ -177,6 +177,10 @@
     .btn-ghost{border-color:transparent; background:none; color:var(--muted);}
     .btn-ghost:hover{background:var(--surface-2); color:var(--ink); border-color:transparent;}
     .empty{padding:26px 18px; text-align:center; color:var(--muted); font-size:13px;}
+    /* 空狀態裡的那顆按鈕:它是這一塊唯一的動作,所以給它呼吸的空間。 */
+    .empty-cta{display:grid; gap:12px; justify-items:center; padding:34px 18px;}
+    .empty-cta p{margin:0;}
+    .empty-cta .sub{font-size:12px;}
     .note{display:flex; gap:9px; align-items:flex-start; padding:10px 13px; border-radius:8px; background:var(--warn-soft); color:var(--warn); font-size:12.5px; line-height:1.5;}
     .num{font-family:var(--font-mono); font-variant-numeric:tabular-nums;}
 
@@ -539,6 +543,9 @@
     /* 擠不下的讓位:先試標記下面,再擠不下就先藏起來,滑過／聚焦時照樣冒出來 */
     .map .pin .lab.below{bottom:auto; top:calc(100% + 5px);}
     .map .pin .lab.hide{display:none;}
+    /* 地圖空的時候那一句。置中、灰字、不要搶戲 —— 它只是在說「這裡不是壞了」。 */
+    .map-empty{position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+      padding:0 28px; text-align:center; color:var(--muted); font-size:12.5px; line-height:1.6;}
     .map .pin.hot .lab.hide,.map .pin.on .lab.hide{display:block;}
     .map .pin.hot .lab{border-color:var(--accent); color:var(--accent);}
     .map .pin.hot{opacity:1; z-index:4; transform:translate(-50%,-50%) scale(1.25);
@@ -3606,7 +3613,16 @@
   function drawMap(box, pts, keep) {
     const w = box.clientWidth, h = box.clientHeight;
     if (!w || !h) return;
-    if (!pts.length) { box.innerHTML = ""; box._v = null; return; }
+    if (!pts.length) {
+      /* **一個點都沒有的時候以前是整片空白。** 沒有圖磚、沒有文字、什麼都沒有 ——
+         而使用者分不出那是「這天還沒排」還是「地圖壞了」。
+         那兩件事該長得不一樣,所以這裡講一句。 */
+      box.innerHTML = '<div class="map-empty">' +
+        (sheetMode === "wish" ? "還沒有人許願,或是許的地方還沒標定。"
+          : "這天還沒有排地點。加了之後會出現在這裡。") + "</div>";
+      box._v = null;
+      return;
+    }
 
     /* 取景看哪些點(Lulu 的決定):
        **「大家的許願」開著 → 所有願望都要框得進來**,不管在哪個分頁。
@@ -3712,7 +3728,19 @@
     /* 兩個模式都要跟著換天 —— 許願頁的地圖也放著那一天的行程 */
     if (sheetMode) loadSheetMap();
     if (!list.length) {
-      route.innerHTML = '<div class="empty">這天還沒排。' + (editable() ? "按右上角「加行程」開始。" : "") + "</div>";
+      /* **空狀態要能動手,不是只說一句話。**
+         以前寫「按右上角『加行程』開始」—— 那是叫人去找另一個地方的按鈕,
+         而他人就在這裡、手就在這裡。現在這一句自己帶一顆按鈕。
+         沒有通行碼的人看到的是不同的一句:對他來說那顆按鈕按不了,
+         給他一顆按不動的按鈕比不給更糟。 */
+      route.innerHTML = '<div class="empty empty-cta">' +
+        "<p>這天還沒有行程。</p>" +
+        (editable()
+          ? '<button type="button" class="btn btn-main" id="empty-add-stop">＋ 加第一筆行程</button>'
+          : "<p class=\"sub\">等有人排進來,這裡就會有東西。</p>") +
+        "</div>";
+      const ea = el("empty-add-stop");
+      if (ea) ea.addEventListener("click", openStopAdd);
       return;
     }
     const movable = s => !s.anchor && editable();
