@@ -82,6 +82,26 @@ function ok(name, cond, extra) {
   ok("上游不回應 → 有等待上限,不會一直掛著", took < 40000, took + "ms");
   ok("而且講的是人話", /太久沒回應/.test((r.res.body || {}).error || ""), r.res.body);
 
+  /* ---- 上游說「太忙」 ----
+     **這一段是被線上一句真的錯誤訊息逼出來的**(2026-09-24):
+     使用者看到「沒成功:AI 沒回應成功:This model is currently experiencing
+     high demand…」—— 兩層「失敗」加一句他看不懂的英文,而那句英文講的是
+     「過幾分鐘再試」。而且那時候程式直接放棄,沒有換另一個模型 ——
+     忙碌正是換一個最可能成功的時候。 */
+  r = await call({ text: "x" }, n => (n < 3
+    ? { ok: false, status: 503, json: async () => ({ error: { message: "This model is currently experiencing high demand." } }) }
+    : okJson(GOOD)));
+  ok("第一個模型忙 → 換下一個,最後成功", r.res.code === 200 && r.seen.length === 3,
+    { code: r.res.code, 試了幾個: r.seen.length });
+
+  r = await call({ text: "x" }, () => ({ ok: false, status: 503,
+    json: async () => ({ error: { message: "This model is currently experiencing high demand." } }) }));
+  ok("三個都忙 → 講人話,不是丟英文原話",
+    /太忙/.test((r.res.body || {}).error || "") &&
+    !/high demand|model/i.test((r.res.body || {}).error || ""), r.res.body);
+  ok("**而且沒有兩層「失敗」**(前端還會再包一層,這裡不能先包)",
+    !/沒回應成功|沒成功:/.test((r.res.body || {}).error || ""), r.res.body);
+
   /* ---- 額度用完 ---- */
   r = await call({ text: "想去築地市場" }, () => ({ ok: false, status: 429,
     json: async () => ({ error: { message: "quota" } }) }));
