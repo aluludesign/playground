@@ -1044,7 +1044,16 @@
          卻佔掉一整條橫在行程上面 —— 在手機上那一條就是地圖少掉的一截。 -->
     <!-- AI 按鈕:丟一段話或一張圖,AI 判斷要建哪一種資料,確認後才存。
          放在選單旁邊,因為它不屬於任何一頁 —— 許願、行程、座位都從這裡進。 -->
-    <button type="button" class="btn btn-sm" id="ai-btn" aria-haspopup="dialog">✨ AI</button>
+    <!-- **設計系統的 `.btn-steel-hybrid`(自動掃掠那顆)。** 它要四層:
+         虹光(hover／focus 用)、方向性掃掠、白光收尾,和裝文字的那層 ——
+         前三層是 `pointer-events:none` 的裝飾,文字那層要在上面才點得到。
+         `aria-hidden` 是給讀螢幕的人省掉三個沒有意義的空節點。 -->
+    <button type="button" class="btn-steel-hybrid rm-btn rm-btn--sm" id="ai-btn" aria-haspopup="dialog">
+      <span class="steel-iridescent-overlay" aria-hidden="true"></span>
+      <span class="directional-sheen" aria-hidden="true"></span>
+      <span class="white-sweep-flare" aria-hidden="true"></span>
+      <span class="steel-content-layer">✨ AI</span>
+    </button>
     <button type="button" class="hamb" id="menu-btn" aria-label="選單" aria-expanded="false"
       aria-controls="menu-pop"><span></span><span></span><span></span></button>
   </header>
@@ -4749,6 +4758,58 @@
     saveSnap();
     return want.length;
   }
+
+  /* ---- 那顆 AI 按鈕的自動掃掠 ----
+     **設計系統有一支 `sweep()`,這裡沒有直接用它,理由要寫下來。**
+     它靠 `animationend` 把 class 拿掉,而 `設計系統建立` 那邊量過:
+     headless Chrome 在 `--virtual-time-budget` 下**一個動畫事件都不觸發**。
+     我們的截圖和探針都跑在那個環境裡 —— 用它的話,class 會永遠留在按鈕上,
+     而那件事在畫面上看不出來(掃掠層本來就是透明的),只會安靜地累積。
+
+     所以這裡聽 `animationend`,**但同時給一個時間到就收的後路**。
+     時長仍然只寫在 CSS 裡,這邊的數字是「上限」不是「時長」——
+     它只在事件沒來的時候才生效,而事件沒來就是那個環境的事實。
+
+     **一直掃,不停。**(Lulu 的決定)第一版寫成「開過一次就不再掃」,
+     理由是「他已經知道它在那裡了」—— 她要的不是那個。
+     `prefers-reduced-motion` 還是擋掉:那不是偏好設定,是有人看了會不舒服。
+     頁面切到背景時也不掃 —— 看不到的動畫只是在耗電。 */
+  (function initAiPulse() {
+    const btn = el("ai-btn");
+    if (!btn) return;
+    const still = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let timer = 0;
+    function once(cls, name, cap) {
+      return new Promise(done => {
+        btn.classList.remove(cls);
+        void btn.offsetWidth;            /* 強制回流,動畫才會重播 */
+        let over = 0;
+        const end = e => {
+          /* 動畫跑在子層,事件是冒上來的 —— 不認名字的話,別的動畫結束也會收掉它 */
+          if (e && e.animationName !== name) return;
+          clearTimeout(over);
+          btn.removeEventListener("animationend", end);
+          btn.classList.remove(cls);
+          done();
+        };
+        btn.addEventListener("animationend", end);
+        over = setTimeout(() => end(null), cap);
+        btn.classList.add(cls);
+      });
+    }
+    async function sweep() {
+      /* 看不到就不掃:切到別的分頁(`hidden`)、或按鈕不在版面上的時候。 */
+      if (still || document.hidden || btn.offsetParent === null) return;
+      await once("is-sweeping-sheen", "rm-sweep-sheen", 2200);
+      await once("is-sweeping-flare", "rm-sweep-flare", 1500);
+    }
+    /* 進站等一下再掃:一載入就掃,使用者還在看整頁,那一下等於沒發生。 */
+    timer = setTimeout(function again() {
+      sweep();
+      timer = setTimeout(again, 20000);
+    }, 3000);
+
+  })();
 
   el("ai-btn").addEventListener("click", openAI);
   el("ai-cancel").addEventListener("click", closeAI);
