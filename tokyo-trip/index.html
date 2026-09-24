@@ -4806,7 +4806,7 @@
     /* 進站等一下再掃:一載入就掃,使用者還在看整頁,那一下等於沒發生。 */
     timer = setTimeout(function again() {
       sweep();
-      timer = setTimeout(again, 20000);
+      timer = setTimeout(again, 10000);
     }, 3000);
 
   })();
