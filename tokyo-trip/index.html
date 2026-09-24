@@ -4727,7 +4727,9 @@
       if (!res.ok) throw new Error(body.error || ("HTTP " + res.status));
       aiConfirm(body.result || {});
     } catch (e) {
-      aiErr("ai-err", "沒成功:" + e.message);
+      /* 伺服器回的已經是一句完整的中文,再加「沒成功:」會變成兩層失敗。
+         只有連不上(fetch 自己丟的)才需要補一句。 */
+      aiErr("ai-err", /^[A-Za-z]/.test(e.message) ? "連不上 AI,檢查一下網路" : e.message);
     } finally {
       go.disabled = false; go.textContent = "交給 AI";
     }
