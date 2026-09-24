@@ -4770,12 +4770,11 @@
      (第一版抄了,因為那時候還沒有把 JS 送過來的路。抄的那份沒有指紋,
       走鐘不會有人講 —— 那正是不該抄的理由。)
 
-     這裡只加一件它還沒有的事:**時間到就收的後路**。
-     它靠 `animationend` 收尾,而 headless Chrome 在 `--virtual-time-budget` 下
-     **一個動畫事件都不觸發**(`設計系統建立` 量過)。我們的截圖和探針都跑在那裡 ——
-     沒有後路的話,那個 promise 永遠不會結束,class 也永遠留在按鈕上,
-     而那件事在畫面上看不出來(掃掠層本來就是透明的)。
-     已經請他把這條收進 `sweep()`;收進去之後這裡就可以整段拿掉。
+     **那條「時間到就收」的後路已經收進 `sweep()` 了**(2026-09-24),所以這裡不再自己補。
+     它本來是必要的:`sweep()` 靠 `animationend` 收尾,而 headless Chrome 在
+     `--virtual-time-budget` 下一個動畫事件都不觸發 —— promise 不會結束,
+     class 會永遠留在按鈕上,而且看不出來(掃掠層本來就是透明的)。
+     現在那件事在設計系統那一邊處理,**同一段邏輯只存在一個地方**。
 
      **一直掃,不停。**(Lulu 的決定)第一版寫成「開過一次就不再掃」,
      理由是「他已經知道它在那裡了」—— 她要的不是那個。
@@ -4786,15 +4785,12 @@
     if (!btn) return;
     const still = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let timer = 0;
-    const wait = ms => new Promise(r => setTimeout(r, ms));
     async function sweep() {
       /* 看不到就不掃:切到別的分頁(`hidden`)、或按鈕不在版面上的時候。 */
       if (still || document.hidden || btn.offsetParent === null) return;
       const RM = window.RetroModern;
       if (!RM || !RM.sweep) return;     /* 沒載到 JS 就安靜地不掃,不要炸 */
-      await Promise.race([RM.sweep(btn), wait(4200)]);
-      /* 後路:事件沒來的時候它不會自己收,這裡替它收掉 */
-      btn.classList.remove("is-sweeping-sheen", "is-sweeping-flare");
+      await RM.sweep(btn);
     }
     /* 進站等一下再掃:一載入就掃,使用者還在看整頁,那一下等於沒發生。 */
     timer = setTimeout(function again() {

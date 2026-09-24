@@ -120,25 +120,34 @@
      **時長只存在一個地方**，改動畫不必回來改 JS。 */
   function sweep(el) {
     if (!el || reduceMotion) return Promise.resolve();
-    var once = function (cls, name) {
+    var once = function (cls, name, ms) {
       return new Promise(function (done) {
         el.classList.remove(cls);
         void el.offsetWidth;                 // 強制回流，動畫才會重播
         /* 動畫跑在子層，事件是冒泡上來的 —— 所以要認 animationName。
            不認的話，使用者在掃掠途中按一下按鈕，steel-press-flash 結束時
            冒上來的那個 animationend 會把這一段提早收掉。 */
-        var end = function (e) {
-          if (e.animationName !== name) return;
+        var timer;
+        var finish = function () {
+          clearTimeout(timer);
           el.classList.remove(cls);
           el.removeEventListener('animationend', end);
           done();
         };
+        var end = function (e) { if (e.animationName === name) finish(); };
         el.addEventListener('animationend', end);
         el.classList.add(cls);
+        /* 時間到就收的後路。animationend 不是保證會來的：元素被隱藏、
+           動畫被 CSS 蓋掉、或是在不觸發動畫事件的環境裡（headless 的虛擬時間
+           就是這樣），它一次都不會來，而那個 class 會永遠留在元素上。
+           寬限 500ms 是為了不跟正常結束搶。 */
+        timer = setTimeout(finish, ms + 500);
       });
     };
-    return once('is-sweeping-sheen', 'rm-sweep-sheen')
-      .then(function () { return once('is-sweeping-flare', 'rm-sweep-flare'); });
+    /* 時長跟 CSS 的 animation 對齊。改 CSS 要記得改這裡 —— 這是唯一一處重複，
+       而它換到的是「事件沒來也一定會收尾」。 */
+    return once('is-sweeping-sheen', 'rm-sweep-sheen', 1600)
+      .then(function () { return once('is-sweeping-flare', 'rm-sweep-flare', 1000); });
   }
 
   /* 按鈕的觸覺回饋。callback 延後 160ms 才跑，
@@ -249,4 +258,4 @@
   }
 })(typeof window !== 'undefined' ? window : globalThis);
 
-/*src:1hbfx7e:../design-system/retro-modern.js*/
+/*src:12xux95:../design-system/retro-modern.js*/
