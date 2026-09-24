@@ -381,13 +381,13 @@ md / lg 的別名，規格書原稿的 markup 貼過來不會變形。
   小字套下去筆畫會糊掉，反而更難讀
 - `.steel-sheen-surface` 會 `overflow:hidden`，圓角要同時給容器和紋理層
 
-### 混合按鈕：Version B ⇄ C
+### 混合按鈕：Version A ⇄ C
 
 一顆按鈕三種狀態，各自獨立不互相干擾：
 
 | 狀態 | 表現 |
 | --- | --- |
-| 靜止 | Version B 的冷鋼 |
+| 靜止 | Version A 的柔霧中性灰 |
 | Hover / 鍵盤 focus | Version C 的薄膜虹光在 0.3 秒內淡入 —— 天青、淡紫、香檳金、薄荷綠 |
 | Click | 白光微閃（`steel-press-flash`）|
 
