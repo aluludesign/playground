@@ -84,7 +84,7 @@ HTML 只要字型和那支編好的 CSS：
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Fraunces:opsz,wght@9..144,600;9..144,700;9..144,800&family=JetBrains+Mono:wght@400;600&family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@700&display=swap">
 
 <link rel="stylesheet" href="./style.css">
-<script src="../design-system/retro-modern.js"></script>   <!-- 可選 -->
+<script src="./retro-modern.js"></script>   <!-- 可選；build.sh 複製過來的 -->
 
 <body class="rm-base">
 ```
@@ -165,6 +165,34 @@ utility，沒重編的新 class 等於不存在 —— 而且不會有錯誤訊�
 **命名空間幫了大忙。** token 都帶 v4 的前綴（`--color-ink`、`--radius-lg`），
 所以消費端用裸名（`--ink`、`--accent`）不會撞。實測 `tokyo-trip` 24 個自訂變數
 只撞 1 個。**不要為了好寫而把 `--color-ink` 簡化成 `--ink`** —— 那會直接製造衝突。
+
+## JS 跟 CSS 走同一條路
+
+`build.sh` 編出 CSS 的同時，會把 `retro-modern.js` 複製一份到**同一個目錄**，
+一樣蓋指紋。所以消費端引的是自己目錄裡那份：
+
+```html
+<script src="./retro-modern.js"></script>
+```
+
+**不要寫 `../design-system/retro-modern.js`** —— 部署時的 root 通常只有消費端
+自己的資料夾（`tokyo-trip` 的 Vercel Root Directory 就是），那條路徑在線上不存在。
+也不要自己抄一份：抄的那份沒有指紋，走鐘不會有人講。
+
+不引也不會壞，只是金屬的高光固定在中間不動。
+
+### 不引 JS、或不給感應器權限，會怎樣
+
+| | 高光會動嗎 |
+| --- | --- |
+| 沒引 JS | 不會，固定在中間 |
+| 引了，沒有任何權限 | **會** —— 捲動頁面、手指拖曳都會推動它；桌機還吃滑鼠移動 |
+| 引了，而且授權了陀螺儀 | 加上「傾斜裝置」這一種 |
+
+**陀螺儀是加分項，不是必要條件。** iOS 要使用者手勢觸發才給權限，而且會跳系統
+對話框 —— **為了讓漸層會動而跳權限框是不成比例的**，所以正式站不該主動要。
+`RetroModern.requestMotion()` 是留給願意要的地方（demo 頁有一顆按鈕），
+不呼叫它就不會跳。
 
 ## 接上去會改變什麼、不會改變什麼
 

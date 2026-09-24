@@ -199,6 +199,28 @@ node -e '
   console.error("  指紋涵蓋: " + list);
 ' "$IN" "$OUT"
 
+# 動態反光的 JS 也要送到消費端。CSS 有這條路（編到對方目錄、進對方版控），
+# JS 原本沒有 —— 而 Vercel 的 Root Directory 只看消費端自己的資料夾，
+# `<script src="../design-system/…">` 在線上不存在。
+# 所以跟 CSS 同一個模式：複製一份過去、蓋指紋，走鐘就被掃描抓到。
+# 編 demo 的時候輸出就在原地，不用複製。
+node -e '
+  const fs = require("fs"), path = require("path");
+  const outDir = path.dirname(path.resolve(process.argv[1]));
+  const src = path.resolve(__dirname, "retro-modern.js");
+  if (outDir === path.dirname(src)) process.exit(0);   /* demo 自己，跳過 */
+  const dest = path.join(outDir, "retro-modern.js");
+  const t = fs.readFileSync(src, "utf8");
+  let h = 2166136261;
+  for (let i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); }
+  const rel = path.relative(outDir, src);
+  fs.writeFileSync(dest, t + "\n/*src:" + (h >>> 0).toString(36) + ":" + rel + "*/\n");
+  /* 路徑印相對於 repo 根，跟落後掃描的訊息同一個基準 —— 不然會印出一串 ../.. */
+  const root = path.resolve(__dirname, "..");
+  const show = dest.startsWith(root + path.sep) ? path.relative(root, dest) : dest;
+  console.error("  → " + show + "（動態反光，可選；不引也只是高光不動）");
+' "$OUT"
+
 # 落後掃描。改了設計系統之後，各消費端的產出不會自動跟上 —— 而它們是各自
 # commit 進自己目錄的（Vercel 的部署範圍只看那個資料夾）。
 # 所以每次建置完，順手檢查整個 repo 裡帶著我們指紋的產出還對不對。
@@ -221,7 +243,7 @@ node -e '
       if (e.name.startsWith(".") || SKIP.has(e.name)) continue;
       const f = path.join(d, e.name);
       if (e.isDirectory()) { walk(f); continue; }
-      if (!e.name.endsWith(".css")) continue;
+      if (!e.name.endsWith(".css") && !e.name.endsWith(".js")) continue;
       scanned++;
       const m = STAMP.exec(fs.readFileSync(f, "utf8"));
       if (!m) continue;
@@ -248,7 +270,14 @@ node -e '
     return r.startsWith(".") ? r : "./" + r;
   };
   for (const [f, entry] of stale) {
-    console.error("  ⚠ " + f + " 比它的來源舊了，重編: ./build.sh " + rel(entry) + " " + rel(f));
+    /* JS 副本不是自己編出來的，它是跟著同目錄那份 CSS 一起複製過去的。
+       印一個 `./build.sh 舊.js 新.js` 看起來很合理但那條指令是錯的 ——
+       一個錯的指令比沒有指令糟，所以這裡描述而不是假裝知道。 */
+    if (f.endsWith(".js")) {
+      console.error("  ⚠ " + f + " 比它的來源舊了，重編同目錄那份 CSS 就會一起更新它");
+    } else {
+      console.error("  ⚠ " + f + " 比它的來源舊了，重編: ./build.sh " + rel(entry) + " " + rel(f));
+    }
   }
 
   /* 成功也要出聲，而且要報數字。原本這段只在 stale／unsure 有東西時才印，
@@ -259,8 +288,8 @@ node -e '
     /* 一份都沒找到不能說成「全部最新」——那句話是真的但沒有意義，
        而且它跟「兩份都驗過」用同一個句型，讀的人分不出來。 */
     console.error(stamped
-      ? "  產出檢查: " + stamped + " 份帶指紋的產出全部最新（掃過 " + scanned + " 個 .css）"
-      : "  ⚠ 產出檢查沒找到任何帶指紋的產出（掃過 " + scanned + " 個 .css），這次等於沒檢查。");
+      ? "  產出檢查: " + stamped + " 份帶指紋的產出全部最新（掃過 " + scanned + " 個 .css/.js）"
+      : "  ⚠ 產出檢查沒找到任何帶指紋的產出（掃過 " + scanned + " 個 .css/.js），這次等於沒檢查。");
   }
 ' "$OUT"
 
