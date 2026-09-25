@@ -60,6 +60,7 @@ Environment Variables 加這幾個:
 | `TRIP_KEY` | 自己訂一組通行碼,給另外四個人 | 必要 |
 | `GEOCODE_KEY` | 地名查詢退路的金鑰 | 選填,見「[標錯了怎麼辦](#標錯了怎麼辦再查一次)」 |
 | `GEMINI_KEY` | Google AI Studio 的 API 金鑰 | 選填,見「[AI 按鈕](#ai-按鈕)」 |
+| `LINE_CHANNEL_SECRET` | LINE Login channel 的密鑰 | 選填,見「[用 LINE 登入](#用-line-登入)」 |
 
 Deploy。之後每次 push 都會自動重新部署。
 
@@ -90,6 +91,43 @@ Deploy。之後每次 push 都會自動重新部署。
 > **Application restrictions 選 None(呼叫的是伺服器,不是瀏覽器)**、
 > **API restrictions 只勾 Geocoding API**,再設一個每日用量上限 ——
 > 這條退路是人按一下才查一次,正常一天不會有幾筆。
+
+## 用 LINE 登入
+
+**它回答的不是「你能不能改」,是「你是誰」。** 這兩件事在這裡是分開的:
+
+| | 回答什麼 | 誰有 |
+| --- | --- | --- |
+| 通行碼 `TRIP_KEY` | 動不動得了行程和帳 | 五個人共用一組 |
+| LINE 登入 | 你是誰 | 每個人自己的 |
+
+許願本來就不用通行碼(後端對 `wishes` 開了口),所以在這之前「我是誰」是
+`localStorage` 裡一個誰都能改的字串 —— 誰都能用別人的名字許願、投票。
+LINE 登入把那件事變成伺服器認得的憑據。**沒登入照樣看得到全部**,那是刻意的。
+
+設定要做三件,缺一件登入就是不會動:
+
+1. <https://developers.line.biz/console/> 建一個 **LINE Login channel**,
+   **Callback URL 填 `https://playground-beta-liart.vercel.app/api/auth`** ——
+   LINE 會逐字比對,差一個斜線就會說 `redirect_uri` 不符。
+2. 把 **Channel secret** 貼進 Vercel 的 `LINE_CHANNEL_SECRET`。
+   **只能放那裡**,理由跟 `NOTION_TOKEN` 一樣:放進網頁就是公開。
+3. 把 channel 從 **Developing 切成 Published**。
+   > 這一個最容易漏,而且症狀會騙人:**開發中的狀態只有 channel 的擁有者登得進去**,
+   > 所以你自己測一切正常,別人按下去看到的是登不了。
+
+沒設 `LINE_CHANNEL_SECRET` 的話,後端會直說「還沒設定」而不是「登入失敗」——
+後者會讓人一直重試一顆永遠不會成功的按鈕。
+
+其他欄位不用動。**Assertion Signing Key 不要註冊** —— 那是「不想用 channel secret」
+的替代做法,註冊了就多一把私鑰要保管,而我們用不到。
+
+> **只有註冊過的網址登得進去。** 預覽部署(`playground-git-<分支>-…`)的網址
+> 沒註冊在 channel 裡,在那邊按登入會被 LINE 擋下來。要在預覽上試登入,
+> 就把那個網址也加進 Callback URL 清單(LINE 那一欄可以填好幾行)。
+
+驗收在 `adopt-harness/api-auth-test.js`(伺服器那半:簽章、state、逾時)
+和 `adopt-harness/probes/line-login.js`(畫面那半:按鈕在不在、按下去會不會真的走)。
 
 ## 誰能改
 

@@ -2,7 +2,8 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "functions": {
     "api/notion.js": { "maxDuration": 15 },
-    "api/ai.js": { "maxDuration": 30 }
+    "api/ai.js": { "maxDuration": 30 },
+    "api/auth.js": { "maxDuration": 15 }
   },
   "headers": [
     {

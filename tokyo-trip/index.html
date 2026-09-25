@@ -176,6 +176,10 @@
     .btn-sm{padding:4px 9px; font-size:12px;}
     .btn-ghost{border-color:transparent; background:none; color:var(--muted);}
     .btn-ghost:hover{background:var(--surface-2); color:var(--ink); border-color:transparent;}
+    /* LINE 的綠是它自己的品牌色,**不跟著設計系統走** —— 這顆按鈕要讓人一眼認出
+       「按下去會跳到 LINE」,認錯的成本是他不敢按。 */
+    .btn-line{background:#06C755; border-color:#06C755; color:#fff;}
+    .btn-line:hover{background:#06C755; border-color:#06C755; filter:brightness(1.06);}
     .empty{padding:26px 18px; text-align:center; color:var(--muted); font-size:13px;}
     /* 空狀態裡的那顆按鈕:它是這一塊唯一的動作,所以給它呼吸的空間。 */
     .empty-cta{display:grid; gap:12px; justify-items:center; padding:34px 18px;}
@@ -968,7 +972,10 @@
     .cloudbar .led{width:7px; height:7px; border-radius:50%; flex:0 0 auto; background:var(--muted);}
     .cloudbar.on .led{background:var(--pos);}
     .cloudbar.off .led{background:var(--warn);}
-    .cloudbar .sp{margin-left:auto; display:flex; gap:7px;}
+    /* 三顆按鈕(重新整理、LINE、管理員)在 390px 上排不下,所以這一列也要會換行 ——
+       不換行的話最後一顆會被切掉一半,而**被切掉的按鈕還是按得到一半**,
+       看起來像排版壞了而不是「這裡放不下」。 */
+    .cloudbar .sp{margin-left:auto; display:flex; flex-wrap:wrap; gap:7px;}
 
     /* **內容比畫面高的時候要捲得動。**
        `align-items:center` 加上溢出是 flex 的老坑:項目比容器高時,**上緣溢出到
@@ -1233,9 +1240,11 @@
 <div class="overlay" id="signin-overlay" hidden>
   <form class="signin" id="signin-form">
     <h2>東京五人行</h2>
+    <p id="si-hint">用 LINE 登入,許的願望就會掛你的名字。只想看看的話,直接進去也行。</p>
     <div class="ops" id="si-choose">
-      <button type="button" class="btn btn-main" id="si-read">直接進入</button>
-      <button type="button" class="btn btn-ghost btn-sm" id="si-admin">我是管理員</button>
+      <button type="button" class="btn btn-line" id="si-line">用 LINE 登入</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="si-read">先看看就好</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="si-admin">我有通行碼</button>
     </div>
     <div id="si-adminbox" hidden>
       <div class="fld"><label class="rm-label" for="si-key">通行碼</label><input class="rm-input" type="password" id="si-key" autocomplete="current-password"></div>
@@ -1629,6 +1638,11 @@
   const SNAPLS = "tokyo5-snap";
   const CFG = window.TRIP_CONFIG || {};
   const API = (CFG.apiBase || "").replace(/\/$/, "") + "/api/notion";
+  const AUTH = (CFG.apiBase || "").replace(/\/$/, "") + "/api/auth";
+  /* 用 LINE 登進來的人。**這個值前端偽造不了也留不住** —— 它每次都要跟伺服器問,
+     因為證據是一張 HttpOnly 的 cookie,JS 讀不到。所以這裡放的是「伺服器說你是誰」,
+     不是「這台裝置自稱是誰」(那是下面的 MELS,兩件事不要混在一起)。 */
+  let lineUser = null;
   let storageOK = true;
   let online = false;
   let tripKey = "";
@@ -2139,16 +2153,22 @@
       ? (snapAt
           ? "離線 · 這是 " + snapWhen(snapAt) + " 讀到的資料 · 不能編輯"
           : "離線模式 —— 紀錄只存在這台裝置")
-      : canEdit
-        ? "已連上 Notion · 管理員 · 五個人共用同一份紀錄"
-        : "已連上 Notion";
+      : (canEdit
+          ? "已連上 Notion · 管理員 · 五個人共用同一份紀錄"
+          : "已連上 Notion") + (lineUser ? " · " + lineUser.name : "");
     el("cloud-ops").innerHTML = online
       ? '<button type="button" class="btn btn-sm btn-ghost" id="cloud-sync">重新整理</button>' +
+        (lineUser
+          ? '<button type="button" class="btn btn-sm btn-ghost" id="cloud-lineout">登出 LINE</button>'
+          : '<button type="button" class="btn btn-sm btn-line" id="cloud-linein">用 LINE 登入</button>') +
         (canEdit
-          ? '<button type="button" class="btn btn-sm btn-ghost" id="cloud-out">登出</button>'
+          ? '<button type="button" class="btn btn-sm btn-ghost" id="cloud-out">登出管理員</button>'
           : '<button type="button" class="btn btn-sm" id="cloud-admin">管理員登入</button>')
       : '<button type="button" class="btn btn-sm" id="cloud-in">連上 Notion</button>';
     const sync = el("cloud-sync"), out = el("cloud-out"), inn = el("cloud-in"), adm = el("cloud-admin");
+    const lin = el("cloud-linein"), lout = el("cloud-lineout");
+    if (lin) lin.addEventListener("click", goLine);
+    if (lout) lout.addEventListener("click", () => { location.href = AUTH + "?go=logout"; });
     if (sync) sync.addEventListener("click", () => withSpinner(sync, async () => {
       /* 天氣抓不到不擋 Notion 那邊 —— refreshWeather 自己吞掉錯誤,不會讓這裡失敗 */
       await Promise.all([pull(), refreshWeather()]);
@@ -2209,6 +2229,59 @@
     el("si-choose").hidden = open;
     el("si-adminbox").hidden = !open;
     if (open) el("si-key").focus();
+  }
+
+  /* ================= LINE 登入 =================
+
+     **這裡跟通行碼是兩件事,不要合併。**
+       通行碼   回答「你動得動行程和帳嗎」—— 管理員,五個人共用一組
+       LINE     回答「你是誰」—— 每個人不一樣,而且伺服器認得
+     許願本來就不用通行碼(後端對 wishes 開了口),所以在這之前「我是誰」是
+     localStorage 裡一個誰都能改的字串。LINE 把那件事變成有憑據的。
+
+     登入的證據是一張 HttpOnly cookie,**前端讀不到也偽造不了** ——
+     代價是「我是誰」每次都得問伺服器一趟,不能存在這邊。 */
+
+  function goLine() { location.href = AUTH + "?go=login"; }
+
+  /* 問伺服器現在是誰。**失敗一律當成沒登入** —— 網路斷了、函式還沒部署、
+     secret 還沒設,對使用者來說都是同一件事:他還沒登入,而那是有畫面的狀態。 */
+  async function askWhoAmI() {
+    try {
+      const res = await fetch(AUTH + "?go=me", { credentials: "same-origin" });
+      const body = await res.json();
+      lineUser = (body && body.user) || null;
+    } catch (_) {
+      lineUser = null;
+    }
+    if (lineUser) adoptLineIdentity();
+  }
+
+  /* 登進來的人如果就是那五個裡的一個,順手把「我是誰」設好 ——
+     他不用再選一次自己。名字對不上就什麼都不做:**寧可他自己選,
+     也不要幫他選錯一個人然後把票投在別人頭上。** */
+  function adoptLineIdentity() {
+    const n = (lineUser.name || "").trim();
+    if (!n) return;
+    const m = MEMBERS.find(x => x.def === n || x.full === n || x.key === n);
+    if (m) setMe(m.id);
+  }
+
+  /* 從 LINE 回來時網址上會帶一句。講完就把它從網址擦掉 ——
+     留著的話重新整理會再講一次,而那時候它已經不是真的了。 */
+  function showLoginResult() {
+    const m = /[?&]login=([a-z]+)/.exec(location.search);
+    if (!m) return;
+    const say = {
+      ok: lineUser ? "已登入:" + lineUser.name : "已登入",
+      cancel: "沒有登入 —— 你在 LINE 那邊按了取消",
+      state: "登入等太久了,再按一次",
+      token: "LINE 那邊拒絕了這次登入,再試一次",
+      profile: "拿不到你的 LINE 名字,再試一次",
+      fail: "連不上 LINE,等一下再試一次",
+    }[m[1]];
+    if (say) flash(say);
+    try { history.replaceState(null, "", location.pathname + location.hash); } catch (_) {}
   }
 
   /* ================= 分帳計算 ================= */
@@ -5281,6 +5354,7 @@
     renderCloudBar();
   }
 
+  el("si-line").addEventListener("click", goLine);
   el("si-read").addEventListener("click", () => { el("signin-overlay").hidden = true; });
   el("si-admin").addEventListener("click", () => showAdminBox(true));
   el("si-back").addEventListener("click", () => { showSigninError(""); showAdminBox(false); });
@@ -5836,6 +5910,12 @@
       return;
     }
 
+    /* 先問伺服器「現在是誰」,再決定要不要擋一張登入畫面。
+       順序不能反:反過來的話,已經登入的人每次重新整理都會再被問一次。 */
+    await askWhoAmI();
+    renderCloudBar();
+    showLoginResult();
+
     /* 上次登入過就直接回到管理員模式,不用再問一次 */
     let saved = "";
     try { saved = localStorage.getItem(KEYLS) || ""; } catch (_) {}
@@ -5847,6 +5927,8 @@
         try { localStorage.removeItem(KEYLS); } catch (__) {}
       }
     }
+    /* 已經用 LINE 登入的人不用再看一次登入畫面 */
+    if (lineUser) return;
     openSignin(false);
   })();
 })();
