@@ -1471,16 +1471,38 @@
   "use strict";
 
   /* ================= 固定資料:從機票訂單來的事實 ================= */
-  const MEMBERS = [
-    /* def 是畫面上顯示的名字,key 是 Notion「付款人／分攤者」select 的選項字串。
-       兩個分開才能改中文名而不用去動 Notion 既有的每一筆紀錄。 */
+  /* **這五個人現在是「預設值」,不是「事實」。** 事實在 Notion 的「成員」表裡,
+     連上線之後 `loadTeam()` 會把這份換掉。留著它的理由有兩個,都還在:
+       · 離線、或網站放在沒有後端的地方(GitHub Pages)時,它是唯一的人名來源
+       · 後端讀不到「成員」那張表時,寧可用舊的五個人,也不要變成一個沒有人的畫面
+     **所以它不能刪,但也不要再去改它** —— 要改人名和顏色,改 Notion 那張表。
+
+     def 是畫面上顯示的名字,key 是 Notion「付款人／分攤者」select 的選項字串。
+     兩個分開才能改中文名而不用去動 Notion 既有的每一筆紀錄。 */
+  let MEMBERS = [
     { id: "hsieh_chinhui", def: "阿輝", key: "Chinhui", full: "HSIEH CHINHUI", color: "#E60012" },
     { id: "chang_chiayu",  def: "佳瑜", key: "Chiayu",  full: "CHANG CHIAYU",  color: "#F39700" },
     { id: "chang_chihwei", def: "志偉", key: "Chihwei", full: "CHANG CHIHWEI", color: "#009944" },
     { id: "chang_yalun",   def: "雅倫", key: "Yalun",   full: "CHANG YALUN",   color: "#00A7DB" },
     { id: "chen_suchih",   def: "媽",   key: "Suchih",  full: "CHEN SUCHIH",   color: "#9B7CB6" },
   ];
-  const IDS = MEMBERS.map(m => m.id);
+  let IDS = [];
+  /* 人名在 Notion 用暱稱,程式內部用 id */
+  const idByName = {};
+
+  /* **換人的時候三樣東西要一起換。** `MEMBERS` 被六十幾個地方讀,
+     而 `IDS` 和 `idByName` 是從它算出來的 —— 只換第一個的話,
+     分帳會照舊的五個人算、Notion 讀回來的付款人會對不到新的人,
+     而畫面上看起來只是「這筆沒有付款人」。所以只能從這裡換。 */
+  function setMembers(list) {
+    MEMBERS = list;
+    IDS = MEMBERS.map(m => m.id);
+    Object.keys(idByName).forEach(k => delete idByName[k]);
+    /* 讀 Notion 時兩種都認:正式的 key,以及顯示名 —— 萬一哪天有人在 Notion
+       直接把選項改成中文,舊紀錄也不會突然變成「未指定付款人」。 */
+    MEMBERS.forEach(m => { idByName[m.key] = m.id; idByName[m.def] = m.id; });
+  }
+  setMembers(MEMBERS);
 
   /* 訂位單上的座位(data/trip.json)。回程 D/E/F 三個位子跟去程不一樣,別記錯。 */
   const SEATS = {
@@ -1643,6 +1665,16 @@
      因為證據是一張 HttpOnly 的 cookie,JS 讀不到。所以這裡放的是「伺服器說你是誰」,
      不是「這台裝置自稱是誰」(那是下面的 MELS,兩件事不要混在一起)。 */
   let lineUser = null;
+  /* 這次看的是哪一團。**第 2 期網址會一定帶 `?t=`**,現在先認得它 ——
+     認得了之後,第 2 期只要把讀取權限接上去,不用再回頭改這裡。 */
+  const TRIP = (function () {
+    const m = /[?&]t=([a-z0-9_-]{1,40})/.exec(location.search);
+    return (m && m[1]) || CFG.trip || "tokyo";
+  })();
+  /* 這一團本身(名稱、日期、三個權限開關),以及我在這一團是哪一個位子。
+     讀不到就都是 null —— 那時候走的是下面那份內建的五個人。 */
+  let trip = null;
+  let myMember = null;
   let storageOK = true;
   let online = false;
   let tripKey = "";
@@ -1674,13 +1706,39 @@
   const CAT_TO_NOTION = { transport: "交通", stay: "住宿", food: "餐飲", sight: "景點", shop: "購物", other: "其他" };
   const CAT_FROM_NOTION = {};
   Object.keys(CAT_TO_NOTION).forEach(k => CAT_FROM_NOTION[CAT_TO_NOTION[k]] = k);
-  /* 人名在 Notion 用暱稱,程式內部用 id */
-  const idByName = {};
-  /* 讀 Notion 時兩種都認:正式的 key,以及顯示名 —— 萬一哪天有人在 Notion
-     直接把選項改成中文,舊紀錄也不會突然變成「未指定付款人」。 */
-  MEMBERS.forEach(m => { idByName[m.key] = m.id; idByName[m.def] = m.id; });
   /* 寫回 Notion 一律用 key,不要在那邊長出第二組選項 */
   const nameById = id => (MEMBERS.find(m => m.id === id) || {}).key || null;
+
+  /* 這一團有誰。**成功才換掉預設的五個人。**
+     失敗就留著內建那五個 —— 一個沒有人的畫面比一份舊名單更糟:
+     Notion 讀回來的「付款人 = Chiayu」會對不到任何 id,每一筆都變成「未指定付款人」,
+     而畫面上看起來完全正常,只是錢算錯。 */
+  async function loadTeam() {
+    const body = await api("?resource=team&t=" + encodeURIComponent(TRIP));
+    if (!body || !body.trip || !Array.isArray(body.members) || !body.members.length) {
+      throw new Error("這一團一個成員都沒有");
+    }
+    trip = body.trip;
+    myMember = body.me || null;
+    setMembers(body.members.map(m => ({
+      id: m.id,
+      def: m.name || m.id,
+      /* 寫回 Notion 用的字串。沒有舊代號的新成員就用 id —— **不要留空**,
+         留空的話那一筆寫回去會變成沒有付款人。 */
+      key: m.key || m.id,
+      full: m.name || m.id,
+      color: m.color || "#7E8796",
+      role: m.role || "成員",
+      claimed: !!m.claimed,
+    })));
+  }
+
+  /* 讀不到就用內建那五個人繼續。**但要講出來** —— 這個專案最貴的失敗
+     全部都是「看起來正常」那一種:名單是舊的,畫面一切如常,只有錢算錯。 */
+  async function refreshTeam() {
+    try { await loadTeam(); }
+    catch (e) { flash("讀不到這一團的成員,先用內建的名單:" + e.message); }
+  }
 
   async function api(path, init) {
     const res = await fetch(API + path, {
@@ -2170,6 +2228,10 @@
     if (lin) lin.addEventListener("click", goLine);
     if (lout) lout.addEventListener("click", () => { location.href = AUTH + "?go=logout"; });
     if (sync) sync.addEventListener("click", () => withSpinner(sync, async () => {
+      /* **成員也要重抓。** 團主在 Notion 加了一個人、改了名字、或是打開了一個
+         權限開關,重新整理就該看得到 —— 不然唯一的辦法是整頁重載,
+         而使用者不會知道要那樣做。順序跟開機時一樣:人先換,再拉資料。 */
+      await refreshTeam();
       /* 天氣抓不到不擋 Notion 那邊 —— refreshWeather 自己吞掉錯誤,不會讓這裡失敗 */
       await Promise.all([pull(), refreshWeather()]);
       render();
@@ -2204,6 +2266,10 @@
 
   /* 讀是公開的,所以先進得來再說,能不能編輯之後才決定 */
   async function goOnline() {
+    /* **人要先換,再拉資料。** `pull()` 把 Notion 的「付款人 = Chiayu」對回內部 id
+       靠的是 `idByName`,而那是 `setMembers()` 建的。順序反過來的話,
+       第一次拉回來的每一筆都會對不到人 —— 而畫面上看起來很正常,只是錢算錯。 */
+    await refreshTeam();
     await pull();
     online = true;
     fillPeopleControls();

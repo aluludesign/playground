@@ -19,79 +19,18 @@
 //   /api/auth?go=logout   → 清掉
 
 const crypto = require("crypto");
+const S = require("./_session.js");
 
 const AUTHZ = "https://access.line.me/oauth2/v2.1/authorize";
 const TOKEN = "https://api.line.me/oauth2/v2.1/token";
 const PROFILE = "https://api.line.me/v2/profile";
 
 const CHANNEL_ID = process.env.LINE_CHANNEL_ID || "2011733122";
-const SESSION_COOKIE = "trip_u";
-const STATE_COOKIE = "trip_s";
-const SESSION_DAYS = 30;
 const CALL_MS = 10000;
 
-/* ---------- 簽章 ----------
-
-   session cookie 的內容是明文的(名字、頭像網址),重點不是藏起來,是
-   **不能被改**。所以帶一段 HMAC;金鑰從 channel secret 推出來,不另外
-   跟使用者要第二個密鑰 —— 少一個要保管的東西就少一個會外流的東西。
-   推導過一次的用意是:萬一簽章外洩也推不回 channel secret。 */
-function hmacKey() {
-  const s = process.env.LINE_CHANNEL_SECRET;
-  if (!s) return null;
-  return crypto.createHash("sha256").update(s + "|tokyo-trip-session").digest();
-}
-const b64u = buf => Buffer.from(buf).toString("base64url");
-
-function sign(obj, key) {
-  const body = b64u(JSON.stringify(obj));
-  const mac = b64u(crypto.createHmac("sha256", key).update(body).digest());
-  return "v1." + body + "." + mac;
-}
-
-/* 壞掉的 cookie 一律回 null,不丟例外 —— 使用者不該因為手上有一張過期的票
-   就看到一個錯誤頁。回 null 的意思是「沒登入」,而那是有畫面的狀態。 */
-function unsign(raw, key) {
-  if (!raw || !key) return null;
-  const parts = String(raw).split(".");
-  if (parts.length !== 3 || parts[0] !== "v1") return null;
-  const want = Buffer.from(crypto.createHmac("sha256", key).update(parts[1]).digest().toString("base64url"));
-  const got = Buffer.from(parts[2]);
-  if (want.length !== got.length || !crypto.timingSafeEqual(want, got)) return null;
-  let obj;
-  try { obj = JSON.parse(Buffer.from(parts[1], "base64url").toString("utf8")); }
-  catch (_) { return null; }
-  if (!obj || typeof obj !== "object") return null;
-  if (!obj.exp || Date.now() > obj.exp) return null;
-  return obj;
-}
-
-/* ---------- cookie ---------- */
-function readCookies(req) {
-  const out = {};
-  const raw = req.headers.cookie || "";
-  raw.split(";").forEach(p => {
-    const i = p.indexOf("=");
-    if (i < 0) return;
-    out[p.slice(0, i).trim()] = decodeURIComponent(p.slice(i + 1).trim());
-  });
-  return out;
-}
-function setCookie(res, name, value, maxAge) {
-  const bits = [
-    name + "=" + encodeURIComponent(value),
-    "Path=/",
-    "HttpOnly",
-    "Secure",
-    "SameSite=Lax",
-    "Max-Age=" + maxAge,
-  ];
-  const prev = res.getHeader("Set-Cookie");
-  const all = prev ? (Array.isArray(prev) ? prev.slice() : [prev]) : [];
-  all.push(bits.join("; "));
-  res.setHeader("Set-Cookie", all);
-}
-const clearCookie = (res, name) => setCookie(res, name, "", 0);
+/* 簽章、cookie、「這次是誰」都在 `_session.js`。**發票的是這裡,驗票的是 notion.js**,
+   兩邊看的必須是同一件事 —— 複製一份的話,改了格式會變成「發的人改了、驗的人沒改」,
+   而症狀是所有人突然都變成沒登入,一行錯誤訊息都沒有。 */
 
 /* ---------- 回呼網址 ----------
 
@@ -136,7 +75,7 @@ async function get(url, token) {
 module.exports = async (req, res) => {
   res.setHeader("Cache-Control", "no-store");
 
-  const key = hmacKey();
+  const key = S.hmacKey();
   const go = String((req.query && req.query.go) || "");
   const q = req.query || {};
 
@@ -148,12 +87,12 @@ module.exports = async (req, res) => {
   }
 
   if (go === "me") {
-    const u = unsign(readCookies(req)[SESSION_COOKIE], key);
+    const u = S.unsign(S.readCookies(req)[S.SESSION_COOKIE], key);
     return res.status(200).json({ user: u ? { id: u.sub, name: u.name, avatar: u.pic || "" } : null, ready: true });
   }
 
   if (go === "logout") {
-    clearCookie(res, SESSION_COOKIE);
+    S.clearCookie(res, S.SESSION_COOKIE);
     return home(res);
   }
 
@@ -161,7 +100,7 @@ module.exports = async (req, res) => {
     /* state 擋的是「別人把一段 callback 網址塞給你點」。存成 cookie 再比對,
        意思是「這趟是從這台瀏覽器出發的」。 */
     const state = crypto.randomBytes(16).toString("base64url");
-    setCookie(res, STATE_COOKIE, state, 600);
+    S.setCookie(res, S.STATE_COOKIE, state, 600);
     const url = AUTHZ + "?" + new URLSearchParams({
       response_type: "code",
       client_id: CHANNEL_ID,
@@ -184,8 +123,8 @@ module.exports = async (req, res) => {
     return res.status(200).json({ ok: true, hint: "/api/auth?go=login" });
   }
 
-  const want = readCookies(req)[STATE_COOKIE];
-  clearCookie(res, STATE_COOKIE);
+  const want = S.readCookies(req)[S.STATE_COOKIE];
+  S.clearCookie(res, S.STATE_COOKIE);
   if (!want || String(q.state || "") !== want) return home(res, "login=state");
 
   try {
@@ -203,12 +142,12 @@ module.exports = async (req, res) => {
     const pj = await pr.json().catch(() => ({}));
     if (!pr.ok || !pj.userId) return home(res, "login=profile");
 
-    setCookie(res, SESSION_COOKIE, sign({
+    S.setCookie(res, S.SESSION_COOKIE, S.sign({
       sub: pj.userId,
       name: String(pj.displayName || "").slice(0, 60),
       pic: String(pj.pictureUrl || "").slice(0, 300),
-      exp: Date.now() + SESSION_DAYS * 86400000,
-    }, key), SESSION_DAYS * 86400);
+      exp: Date.now() + S.SESSION_DAYS * 86400000,
+    }, key), S.SESSION_DAYS * 86400);
     return home(res, "login=ok");
   } catch (_) {
     /* 逾時、LINE 掛掉、網路斷掉都到這裡。**不要把原始錯誤丟到網址上** ——

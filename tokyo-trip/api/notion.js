@@ -10,6 +10,8 @@
 //   GEOCODE_KEY      地名查詢退路的金鑰(選填;沒設就只是那條退路不能用,
 //                    網站其他部分照常。理由和它擋住什麼,見下面 resource=geocode)
 
+const S = require("./_session.js");
+
 const NOTION = "https://api.notion.com/v1";
 const VERSION = "2022-06-28";
 const GEOCODE = "https://maps.googleapis.com/maps/api/geocode/json";
@@ -18,6 +20,11 @@ const DB = {
   expenses: process.env.NOTION_DB_EXPENSES || "bc4321f89f224137845f5e528730f042",
   itinerary: process.env.NOTION_DB_ITINERARY || "3b2d1f3045fc4b2490e93e3238c26b3a",
   seats: process.env.NOTION_DB_SEATS || "35e32ca036ee4901b1951c9e22dd9f7e",
+  /* 多租戶的三張表。**這三張回答的是「你是誰、你在哪一團、你動得了什麼」**,
+     上面三張回答的是「這一團有什麼」—— 兩組不要混。 */
+  people: process.env.NOTION_DB_PEOPLE || "c38c62febb87434ca29e264cd9fd24b5",
+  trips: process.env.NOTION_DB_TRIPS || "9342c88d03c94c35acd6bc35130a541e",
+  members: process.env.NOTION_DB_MEMBERS || "12f3ff46521d4af196e4e2cb59cbbdbf",
 };
 
 /* ---------- Notion 呼叫 ---------- */
@@ -268,6 +275,71 @@ async function listAll(shape) {
    `git log -S wishAsksForItsOwnPlace` 找得回完整實作。 */
 
 
+/* ---------- 團、成員 ----------
+
+   **成員可以是一個還沒有人認領的位子。** 阿輝他們在用 LINE 登入之前就是這樣:
+   位子在那裡(名字、顏色、舊代號都有),只是「人」那一欄是空的。
+   這不是過渡期的權宜 —— 舊資料裡的「付款人 = Chinhui」要對得回一個人,
+   而那個人可能永遠不會登入。**位子和人是兩件事。** */
+function tripOut(page) {
+  const p = page.properties;
+  return {
+    code: ttl(p["代號"]),
+    name: txt(p["名稱"]) || ttl(p["代號"]),
+    start: dat(p["開始日"]),
+    end: dat(p["結束日"]),
+    rate: (p["匯率"] && p["匯率"].number) || 0,
+    kitty: (p["基金"] && p["基金"].number) || 0,
+    /* 成員能不能動這三塊,由團主決定。**預設全關** —— 沒設定不等於不設防,
+       跟 TRIP_KEY 那條規則是同一條。 */
+    can: {
+      plan: !!(p["成員可管行程"] && p["成員可管行程"].checkbox),
+      cost: !!(p["成員可管分帳"] && p["成員可管分帳"].checkbox),
+      seat: !!(p["成員可管機位"] && p["成員可管機位"].checkbox),
+    },
+  };
+}
+
+/* **`line` 只在伺服器裡用,不會出現在回給瀏覽器的東西裡。**
+   它是別人的 LINE 使用者編號,前端一個字都不需要。 */
+function memberOut(page) {
+  const p = page.properties;
+  const full = ttl(p["代號"]);
+  return {
+    id: full.indexOf(":") >= 0 ? full.slice(full.indexOf(":") + 1) : full,
+    trip: txt(p["團"]),
+    name: txt(p["名字"]),
+    key: txt(p["舊代號"]),
+    color: txt(p["顏色"]) || "#888",
+    role: sel(p["角色"]) || "成員",
+    line: txt(p["人"]),
+    invite: txt(p["邀請碼"]),
+  };
+}
+
+async function findTrip(code) {
+  const page = await notion("/databases/" + DB.trips + "/query", {
+    method: "POST",
+    body: JSON.stringify({ page_size: 1, filter: { property: "代號", title: { equals: code } } }),
+  });
+  return page.results.length ? tripOut(page.results[0]) : null;
+}
+
+async function membersOf(code) {
+  const rows = [];
+  let cursor;
+  do {
+    const page = await notion("/databases/" + DB.members + "/query", {
+      method: "POST",
+      body: JSON.stringify({ page_size: 100, start_cursor: cursor,
+        filter: { property: "團", rich_text: { equals: code } } }),
+    });
+    page.results.forEach(r => rows.push(memberOut(r)));
+    cursor = page.has_more ? page.next_cursor : null;
+  } while (cursor);
+  return rows;
+}
+
 /* ---------- 入口 ---------- */
 module.exports = async (req, res) => {
   res.setHeader("Cache-Control", "no-store");
@@ -289,6 +361,48 @@ module.exports = async (req, res) => {
   }
 
   const resource = (req.query && req.query.resource) || "";
+
+  /* 這一團是什麼、有誰。**讀是公開的**,所以這支不要通行碼也不要登入 ——
+     但它回的東西裡**一個 LINE ID 都沒有**:誰認領了哪個位子只回一個真假值。
+     名字和顏色本來就會印在畫面上,LINE 的使用者編號不會。 */
+  if (resource === "team") {
+    if (req.method !== "GET") {
+      res.setHeader("Allow", "GET");
+      return res.status(405).json({ error: "不支援的方法" });
+    }
+    const code = String((req.query && req.query.t) || "tokyo").trim();
+    if (!/^[a-z0-9_-]{1,40}$/.test(code)) return res.status(400).json({ error: "團的代號不對" });
+
+    let trip, members;
+    try {
+      trip = await findTrip(code);
+      members = trip ? await membersOf(code) : [];
+    } catch (e) {
+      /* **「讀不到」和「沒有資料」要分得出來。** integration 沒被加到那一頁的時候,
+         Notion 回的是 404 object_not_found —— 而如果這裡安靜地回一張空名單,
+         畫面上看起來就只是「這團沒有人」,沒有任何地方會說一句。
+         這個專案被這種無聲失敗咬過太多次了。 */
+      const lost = e.status === 404 || /object_not_found|Could not find/i.test(e.message || "");
+      return res.status(lost ? 503 : (e.status || 500)).json({
+        error: lost
+          ? "後端讀不到「團/成員」那兩張表 —— 多半是 Notion 那一頁還沒把 integration 加進 Connections"
+          : e.message,
+      });
+    }
+    if (!trip) return res.status(404).json({ error: "沒有這一團:" + code });
+
+    const me = S.whoIs(req);
+    const mine = me ? members.find(m => m.line && m.line === me.sub) : null;
+    return res.status(200).json({
+      trip,
+      /* line 不出去 —— 只說這個位子有沒有人認領 */
+      members: members.map(m => ({
+        id: m.id, name: m.name, key: m.key, color: m.color,
+        role: m.role, claimed: !!m.line,
+      })),
+      me: mine ? { id: mine.id, role: mine.role } : null,
+    });
+  }
 
   /* 管理員登入用:只驗通行碼,不碰 Notion */
   if (resource === "auth") {
