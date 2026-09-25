@@ -30,12 +30,34 @@ async function call(query, opts) {
   const o = opts || {};
   if (o.noSecret) delete process.env.LINE_CHANNEL_SECRET;
   else process.env.LINE_CHANNEL_SECRET = SECRET;
+  /* 「人」那張表。`people` 給幾列就代表現在有幾個人;沒設就當成沒有 NOTION_TOKEN,
+     那條路整個跳過(既有的每一條都走這裡,所以它們一個字都不用改)。 */
+  if (o.people === undefined) delete process.env.NOTION_TOKEN;
+  else process.env.NOTION_TOKEN = "ntn_test";
+  process.env.TRIP_MAX_PEOPLE = String(o.limit || 30);
+  delete require.cache[require.resolve("../tokyo-trip/api/_people.js")];
   process.env.LINE_REDIRECT = "https://example.test/api/auth";
   delete require.cache[require.resolve(path)];
   const handler = require(path);
   const seen = [];
   global.fetch = (u, init) => {
-    seen.push({ url: String(u), body: String((init && init.body) || ""), init });
+    const su = String(u);
+    /* Notion 的呼叫不算在 LINE 的次數裡 —— `stub(n)` 數的是第幾次打 LINE。 */
+    if (su.indexOf("api.notion.com") >= 0) {
+      notionCalls.push({ url: su, method: (init && init.method) || "GET",
+                         body: String((init && init.body) || "") });
+      if (o.notionDown) return Promise.resolve({ ok: false, status: 500,
+        json: async () => ({ message: "Notion 掛了" }) });
+      if (/\/query/.test(su)) {
+        const b = JSON.parse((init && init.body) || "{}");
+        const byId = b.filter && b.filter.title && b.filter.title.equals;
+        const rows = o.people || [];
+        return Promise.resolve({ ok: true, status: 200, json: async () => ({
+          results: byId ? rows.filter(r => r.id === byId) : rows }) });
+      }
+      return Promise.resolve({ ok: true, status: 200, json: async () => ({ id: "new" }) });
+    }
+    seen.push({ url: su, body: String((init && init.body) || ""), init });
     const r = (o.stub || (() => ({ ok: false, status: 500, json: async () => ({}) })))(seen.length);
     if (r === "hang") {
       return new Promise((_, no) => {
@@ -73,6 +95,7 @@ const PROFILE_OK = { ok: true, status: 200, json: async () => ({
   pictureUrl: "https://profile.line-scdn.net/abc" }) };
 const happy = n => (n === 1 ? TOKEN_OK : PROFILE_OK);
 
+let notionCalls = [];
 let fails = 0;
 function ok(name, cond, extra) {
   console.log((cond ? "✓ " : "✗ ") + name + (cond ? "" : "   ← " + JSON.stringify(extra)));
@@ -168,6 +191,43 @@ function ok(name, cond, extra) {
     took < 12000 && /login=fail/.test(r.res.getHeader("location") || ""), { took, loc: r.res.getHeader("location") });
   ok("而且網址上只有一個代號,沒有原始錯誤",
     !/aborted|Error|timeout/i.test(r.res.getHeader("location") || ""), r.res.getHeader("location"));
+
+  /* ---- 試用名額 ---- */
+  const person = id => ({ id });
+  const thirty = Array.from({ length: 30 }, (_, i) => person("U" + i));
+
+  notionCalls = [];
+  r = await call({ code: "c1", state: "s1" },
+    { cookie: "trip_s=s1", stub: happy, people: thirty });
+  ok("**名額滿了 → 擋在登入,而且不發身分**",
+    /login=full/.test(r.res.getHeader("location") || "") && !cookies(r.res).trip_u,
+    { loc: r.res.getHeader("location"), cookie: cookies(r.res).trip_u });
+  ok("而且沒有把第三十一個人寫進去",
+    !notionCalls.some(c => c.method === "POST" && /\/pages$/.test(c.url)), notionCalls.map(c => c.method + " " + c.url));
+
+  notionCalls = [];
+  r = await call({ code: "c1", state: "s1" },
+    { cookie: "trip_s=s1", stub: happy, people: thirty.slice(0, 29) });
+  ok("還有位子 → 進得來,而且真的寫進「人」那張表",
+    !!cookies(r.res).trip_u &&
+    notionCalls.some(c => c.method === "POST" && /\/pages$/.test(c.url)), notionCalls.length);
+
+  notionCalls = [];
+  const me = { id: "U0000000000000000000000000000001" };
+  r = await call({ code: "c1", state: "s1" },
+    { cookie: "trip_s=s1", stub: happy, people: thirty.map((x, i) => i ? x : me) });
+  ok("**來過的人不佔新名額** —— 滿的時候他照樣進得來",
+    !!cookies(r.res).trip_u, cookies(r.res));
+  ok("而且是更新那一列,不是又開一列",
+    notionCalls.some(c => c.method === "PATCH") &&
+    !notionCalls.some(c => c.method === "POST" && /\/pages$/.test(c.url)),
+    notionCalls.map(c => c.method));
+
+  r = await call({ code: "c1", state: "s1" },
+    { cookie: "trip_s=s1", stub: happy, people: thirty, notionDown: true });
+  ok("**Notion 掛掉時放行,不是把所有人鎖在外面**(那張表是記帳用的,不是安全邊界)",
+    !!cookies(r.res).trip_u && /login=ok/.test(r.res.getHeader("location") || ""),
+    { loc: r.res.getHeader("location") });
 
   /* ---- 登出 ---- */
   r = await call({ go: "logout" }, { cookie: "trip_u=" + encodeURIComponent(good) });

@@ -53,6 +53,10 @@ var reply = null, asked = [], osm = [];
 var osmReply = [];
 /* 這三個是「切換成唯讀」那一段用的,預設關著 —— 前面每一段都還是離線模式。 */
 var serveNotion = false, notionWrites = [], notionWishes = [];
+/* 「這一團有誰」。**預設 null = 伺服器讀不到** —— 前面每一段都靠內建那五個人,
+   而那正是「後端還沒接上」時使用者看到的東西,本來就該測得到。
+   下面 14z 那一段會把它換成另一份名單,看畫面跟不跟著換。 */
+var teamReply = null;
 w.fetch = function (url, init) {
   // 順便把平常那家線上查詢也擋掉並記下來:這一支不該依賴網路,
   // 而「有沒有人在沒按按鈕的情況下發查詢」本身就是要看的事。
@@ -70,6 +74,13 @@ w.fetch = function (url, init) {
      探針就能把自己切成那三個人的身分。
      (ADOPTION.md 驗收規則第 5 點:「我驗不到」跟「我預期它會變」一樣是一個斷言,
       一樣要有根據。這一條原本要被寫進「沒有驗到的」,查了才發現不必。) */
+  if (serveNotion && /resource=team/.test(String(url))) {
+    if (!teamReply) return Promise.resolve({ ok: false, status: 503,
+      json: function () { return Promise.resolve({ error: "後端讀不到「團/成員」那兩張表" }); } });
+    var tr = teamReply;
+    return Promise.resolve({ ok: true, status: 200,
+      json: function () { return Promise.resolve(tr); } });
+  }
   if (serveNotion && /\/api\/notion/.test(String(url))) {
     var m = String(url).match(/resource=([a-z]+)/);
     var kind = m ? m[1] : "";
@@ -680,8 +691,13 @@ function pinsOf(k) { return pins()[k]; }
        (順帶記一筆給下一個人:現在同時存在 `已更新` 和 `已更新 `(後面多一個空格),
        那是兩個字面、一句話。不是我的改動,沒有動它,但它遲早會讓這個數字
        多算一個,而看的人會以為又多了一句話。) */
+    /* 34 這一次:`loadTeam()` 讀不到「成員」那張表時那一句
+       (`讀不到這一團的成員,先用內建的名單:`)。它跟既有的 `連不上 Notion:`
+       **同一套**:退路走得下去,但要講出來走的是退路。
+       這一條特別重要 —— 那個失敗的樣子是「畫面完全正常,只是人名是舊的」,
+       不講的話沒有任何地方會說一句。 */
     ok("flash() 的字面數沒有暴增(那三句沒回來,新增的是既有那一套的同類)",
-      out.flash字面數 <= 33, out.flash字面數);
+      out.flash字面數 <= 34, out.flash字面數);
     out.sayHere字面數 = (d.documentElement.outerHTML.match(/sayHere\(/g) || []).length;
 
     /* ======================================================================
@@ -1033,6 +1049,62 @@ function pinsOf(k) { return pins()[k]; }
     await sleep(250);
     ok("再點一次還是開著的", bd.open && legH() > 40, { open: bd.open, 高: legH() });
 
+    /* ======================================================================
+       14z ---- 這一團有誰,是伺服器說了算,不是程式裡寫死的
+
+       **這一段必須擺在最後**,因為它會把成員名單整個換掉,而前面每一段
+       都靠著內建那五個人(願望的作者、投票的人、座位圖)。換完再跑前面的東西
+       會紅一片,而紅的不是程式。
+
+       前面所有段落跑的都是「伺服器讀不到成員」那條路(`teamReply` 預設 null)——
+       也就是後端還沒接上時使用者看到的樣子:內建的五個人照常運作。
+       那條路本來就該有人測,所以先確認它,再確認「接上之後會換」。
+       ================================================================== */
+    function whoNamesQuiet() {
+      var sel = q("#wf-by");
+      return sel ? [].slice.call(sel.options).filter(function (o) { return o.value; }) : [];
+    }
+    /* **要按那顆按鈕,不要直接叫函式。** `openWishAdd()` 在頁面的 IIFE 裡,
+       探針根本拿不到;而且真人就是按那一顆。 */
+    function whoNames() {
+      q("#add-wish-btn").click();
+      return whoNamesQuiet().map(function (o) { return o.textContent; });
+    }
+    var before = whoNames();
+    var wfx = q("#wf-cancel"); if (wfx) wfx.click();
+    ok("讀不到成員的時候,畫面上還是那五個內建的人(**不是變成一個沒有人的畫面**)",
+      before.length === 5 && before.indexOf("佳瑜") >= 0, before);
+    ok("而且它有講出來走的是退路", flashed(/讀不到這一團的成員/), flashes.slice(-6));
+
+    /* 換成另一份名單 —— 名字、顏色、人數全都不一樣,才分得出畫面是真的跟著換,
+       還是剛好長得像。 */
+    teamReply = {
+      trip: { code: "tokyo", name: "東京五人行", start: "2026-10-03", end: "2026-10-08",
+              rate: 0.21, kitty: 30000, can: { plan: false, cost: false, seat: false } },
+      members: [
+        { id: "aaa", name: "小明", key: "Ming", color: "#123456", role: "團主", claimed: true },
+        { id: "bbb", name: "小華", key: "Hua", color: "#654321", role: "成員", claimed: false },
+        { id: "ccc", name: "小美", key: "Mei", color: "#abcdef", role: "成員", claimed: false },
+      ],
+      me: { id: "aaa", role: "團主" },
+    };
+    q("#menu-btn").click();
+    await sleep(120);
+    var sy = q("#cloud-sync");
+    ok("重新整理那顆在(成員換了要看得到,唯一的辦法不能是整頁重載)", !!sy, q("#cloud-ops").innerHTML);
+    sy.click();
+    await until(function () { return whoNamesQuiet().length === 3; }, 60);
+    var after = whoNames();
+    var wfx2 = q("#wf-cancel"); if (wfx2) wfx2.click();
+    ok("**伺服器給三個人,畫面上就是那三個人**", after.length === 3, after);
+    ok("而且是伺服器那三個名字,不是內建的五個",
+      after.indexOf("小明") >= 0 && after.indexOf("佳瑜") < 0, after);
+
+    /* 顏色也要跟著換 —— 分帳和座位圖靠它認人,只換名字不換顏色的話
+       兩個人會長得一樣,而那不會有任何地方報錯。 */
+    var chips = q("#people");
+    ok("顏色也換了(分帳那一塊靠它認人)",
+      chips && chips.innerHTML.indexOf("#123456") >= 0, chips && chips.innerHTML.slice(0, 200));
 
   } catch (e) {
     out.爆掉了 = String((e && e.stack) || e);

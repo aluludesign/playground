@@ -79,14 +79,73 @@ def snap():
     d["stops"] = STOPS + [SNAP_ONLY]
     return {"at": SNAP_AT, "data": d}
 
+# 「已經用 LINE 登入的人」開機時看到什麼。
+#
+# **這一段是探針唯一到得了那條路的方法。** 登入的證據是一張 HttpOnly cookie,
+# 而開機那一趟 `askWhoAmI()` / `loadTeam()` 在探針裝樁之前就跑完了 ——
+# 也就是說「登入之後的畫面」在這之前**一條斷言都驗不到**,而那正是身分那一整塊。
+# (到不了就等於沒驗。這個專案吃過太多次「綠燈證明的是程式接得到,不是人到得了」。)
+#
+# 所以樁裝在頁面自己身上,在 index.html 的 <script> 之前:
+# 網址帶 `?fake=login` 的時候,`/api/auth?go=me` 和 `?resource=team` 由它回答。
+# 沒帶就原樣轉交,所有既有的截圖和探針一個字都不受影響。
+FAKE_ME = {"user": {"id": "U-fake-0001", "name": "測試的人", "avatar": ""}, "ready": True}
+FAKE_TEAM = {
+  "trip": {"code": "tokyo", "name": "東京五人行", "start": "2026-10-03", "end": "2026-10-08",
+           "rate": 0.21, "kitty": 30000, "can": {"plan": False, "cost": False, "seat": False}},
+  "members": [
+    {"id": "hsieh_chinhui", "name": "阿輝", "key": "Chinhui", "color": "#E60012", "role": "成員", "claimed": False},
+    {"id": "chang_chiayu",  "name": "佳瑜", "key": "Chiayu",  "color": "#F39700", "role": "團主", "claimed": False},
+    {"id": "chang_chihwei", "name": "志偉", "key": "Chihwei", "color": "#009944", "role": "成員", "claimed": True},
+    {"id": "chang_yalun",   "name": "雅倫", "key": "Yalun",   "color": "#00A7DB", "role": "成員", "claimed": False},
+    {"id": "chen_suchih",   "name": "媽",   "key": "Suchih",  "color": "#9B7CB6", "role": "成員", "claimed": False},
+  ],
+  "me": None,
+}
+
+FAKE_JS = """(function(){
+  if (location.search.indexOf('fake=login') < 0) return;
+  var real = window.fetch.bind(window);
+  var ME = %s, TEAM = %s, claimed = null;
+  function reply(body){ return Promise.resolve({ ok:true, status:200,
+    json:function(){ return Promise.resolve(body); } }); }
+  window.fetch = function(u, init){
+    var s = String(u);
+    if (s.indexOf('/api/auth?go=me') >= 0) return reply(ME);
+    if (s.indexOf('resource=team') >= 0) {
+      var t = JSON.parse(JSON.stringify(TEAM));
+      if (claimed) {
+        t.members.forEach(function(m){ if (m.id === claimed) m.claimed = true; });
+        t.me = { id: claimed, role: (t.members.filter(function(m){return m.id===claimed;})[0]||{}).role };
+      }
+      return reply(t);
+    }
+    /* **其他 /api/notion 也要接。** 不接的話 `pull()` 會 404,`goOnline()` 拋例外,
+       開機那一段直接 `goLocal()` 然後 return —— 問「我是誰」和認領那張卡
+       一行都不會跑到,而畫面上看起來只是「連不上 Notion」。
+       第一版就是這樣:探針說「沒有位子可以選」,而程式是好的。 */
+    if (s.indexOf('resource=claim') >= 0) {
+      var b = {};
+      try { b = JSON.parse((init && init.body) || '{}'); } catch(e){}
+      claimed = b.member || null;
+      window.__claimCalls = (window.__claimCalls || []).concat([b]);
+      return reply({ me: claimed ? { id: claimed, role: 'x' } : null });
+    }
+    if (s.indexOf('/api/notion') >= 0) return reply({ rows: [] });
+    return real(u, init);
+  };
+})();"""
+
 def seed():
     j = lambda o: json.dumps(json.dumps(o, ensure_ascii=False))
     extra = ("localStorage.setItem('tokyo5-snap',"+j(snap())+");"
              if os.environ.get("SNAP") else "")
+    fake = (FAKE_JS % (json.dumps(FAKE_ME, ensure_ascii=False),
+                       json.dumps(FAKE_TEAM, ensure_ascii=False)))
     return CLOCK + ("<script>try{"
       "localStorage.setItem('tokyo5-v1',"+j(STATE)+");"
       "localStorage.setItem('tokyo5-wx',"+j(WX)+");"
       "localStorage.setItem('tokyo5-pin3',"+j(PINS)+");"
       "localStorage.setItem('tokyo5-me','hsieh_chinhui');"
       + extra +
-      "}catch(e){}</script>\n")
+      "}catch(e){}</script>\n<script>" + fake + "</script>\n")

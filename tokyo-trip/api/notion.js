@@ -10,6 +10,8 @@
 //   GEOCODE_KEY      地名查詢退路的金鑰(選填;沒設就只是那條退路不能用,
 //                    網站其他部分照常。理由和它擋住什麼,見下面 resource=geocode)
 
+const S = require("./_session.js");
+
 const NOTION = "https://api.notion.com/v1";
 const VERSION = "2022-06-28";
 const GEOCODE = "https://maps.googleapis.com/maps/api/geocode/json";
@@ -18,6 +20,11 @@ const DB = {
   expenses: process.env.NOTION_DB_EXPENSES || "bc4321f89f224137845f5e528730f042",
   itinerary: process.env.NOTION_DB_ITINERARY || "3b2d1f3045fc4b2490e93e3238c26b3a",
   seats: process.env.NOTION_DB_SEATS || "35e32ca036ee4901b1951c9e22dd9f7e",
+  /* 多租戶的三張表。**這三張回答的是「你是誰、你在哪一團、你動得了什麼」**,
+     上面三張回答的是「這一團有什麼」—— 兩組不要混。 */
+  people: process.env.NOTION_DB_PEOPLE || "c38c62febb87434ca29e264cd9fd24b5",
+  trips: process.env.NOTION_DB_TRIPS || "9342c88d03c94c35acd6bc35130a541e",
+  members: process.env.NOTION_DB_MEMBERS || "12f3ff46521d4af196e4e2cb59cbbdbf",
 };
 
 /* ---------- Notion 呼叫 ---------- */
@@ -268,6 +275,105 @@ async function listAll(shape) {
    `git log -S wishAsksForItsOwnPlace` 找得回完整實作。 */
 
 
+/* ---------- 團、成員 ----------
+
+   **成員可以是一個還沒有人認領的位子。** 阿輝他們在用 LINE 登入之前就是這樣:
+   位子在那裡(名字、顏色、舊代號都有),只是「人」那一欄是空的。
+   這不是過渡期的權宜 —— 舊資料裡的「付款人 = Chinhui」要對得回一個人,
+   而那個人可能永遠不會登入。**位子和人是兩件事。** */
+function tripOut(page) {
+  const p = page.properties;
+  return {
+    code: ttl(p["代號"]),
+    name: txt(p["名稱"]) || ttl(p["代號"]),
+    start: dat(p["開始日"]),
+    end: dat(p["結束日"]),
+    rate: (p["匯率"] && p["匯率"].number) || 0,
+    kitty: (p["基金"] && p["基金"].number) || 0,
+    /* 成員能不能動這三塊,由團主決定。**預設全關** —— 沒設定不等於不設防,
+       跟 TRIP_KEY 那條規則是同一條。 */
+    can: {
+      plan: !!(p["成員可管行程"] && p["成員可管行程"].checkbox),
+      cost: !!(p["成員可管分帳"] && p["成員可管分帳"].checkbox),
+      seat: !!(p["成員可管機位"] && p["成員可管機位"].checkbox),
+    },
+  };
+}
+
+/* **`line` 只在伺服器裡用,不會出現在回給瀏覽器的東西裡。**
+   它是別人的 LINE 使用者編號,前端一個字都不需要。 */
+function memberOut(page) {
+  const p = page.properties;
+  const full = ttl(p["代號"]);
+  return {
+    page: page.id,
+    id: full.indexOf(":") >= 0 ? full.slice(full.indexOf(":") + 1) : full,
+    trip: txt(p["團"]),
+    name: txt(p["名字"]),
+    key: txt(p["舊代號"]),
+    color: txt(p["顏色"]) || "#888",
+    role: sel(p["角色"]) || "成員",
+    line: txt(p["人"]),
+    invite: txt(p["邀請碼"]),
+  };
+}
+
+async function findTrip(code) {
+  const page = await notion("/databases/" + DB.trips + "/query", {
+    method: "POST",
+    body: JSON.stringify({ page_size: 1, filter: { property: "代號", title: { equals: code } } }),
+  });
+  return page.results.length ? tripOut(page.results[0]) : null;
+}
+
+async function membersOf(code) {
+  const rows = [];
+  let cursor;
+  do {
+    const page = await notion("/databases/" + DB.members + "/query", {
+      method: "POST",
+      body: JSON.stringify({ page_size: 100, start_cursor: cursor,
+        filter: { property: "團", rich_text: { equals: code } } }),
+    });
+    page.results.forEach(r => rows.push(memberOut(r)));
+    cursor = page.has_more ? page.next_cursor : null;
+  } while (cursor);
+  return rows;
+}
+
+/* 認領一個位子。**位子有名字,人有 LINE ID,認領就是把兩者接起來。**
+   為什麼要有這一步而不是登入時自動配對:LINE 上的顯示名跟團裡叫什麼是兩回事
+   (「媽」不會是誰的 LINE 名稱),而**猜錯的代價是把票投在別人頭上**。 */
+async function claimSeat(memberId, trip, me) {
+  const rows = await membersOf(trip);
+  const seat = rows.find(m => m.id === memberId);
+  if (!seat) return { status: 404, error: "這一團沒有這個位子" };
+  if (seat.line && seat.line !== me.sub) return { status: 409, error: "這個位子已經有人了" };
+
+  /* 一個人在同一團只能占一個位子。**先放掉舊的,再認新的** ——
+     反過來的話中途失敗會變成一個人占兩個位子,而分帳會把他算兩次。 */
+  const held = rows.find(m => m.line === me.sub && m.id !== memberId);
+  if (held) await notion("/pages/" + held.page, { method: "PATCH",
+    body: JSON.stringify({ properties: { "人": { rich_text: richText("") } } }) });
+
+  await notion("/pages/" + seat.page, { method: "PATCH",
+    body: JSON.stringify({ properties: {
+      "人": { rich_text: richText(me.sub) },
+      "加入時間": { date: { start: new Date().toISOString().slice(0, 10) } },
+    } }) });
+  return { status: 200, id: memberId, role: seat.role, released: held ? held.id : null };
+}
+
+/* 放掉自己那個位子。**只能放自己的** —— 位子上的 LINE ID 不是我的就不動。 */
+async function releaseSeat(trip, me) {
+  const rows = await membersOf(trip);
+  const held = rows.find(m => m.line === me.sub);
+  if (!held) return { status: 200, id: null };
+  await notion("/pages/" + held.page, { method: "PATCH",
+    body: JSON.stringify({ properties: { "人": { rich_text: richText("") } } }) });
+  return { status: 200, id: null, released: held.id };
+}
+
 /* ---------- 入口 ---------- */
 module.exports = async (req, res) => {
   res.setHeader("Cache-Control", "no-store");
@@ -276,19 +382,131 @@ module.exports = async (req, res) => {
     return res.status(500).json({ error: "伺服器還沒設定 NOTION_TOKEN" });
   }
 
-  /* 讀(GET)開放給所有人,寫(POST/DELETE)一定要通行碼。
-     TRIP_KEY 沒設的時候一律擋掉寫入 —— 沒設定不等於不設防。 */
+  /* 讀(GET)開放給所有人。寫要嘛是這一團的成員,要嘛拿得出通行碼。
+     TRIP_KEY 沒設的時候通行碼那條路整個關掉 —— 沒設定不等於不設防。 */
   const writing = req.method === "POST" || req.method === "PATCH" || req.method === "DELETE";
   const hasKey = !!process.env.TRIP_KEY;
   const keyOK = hasKey && req.headers["x-trip-key"] === process.env.TRIP_KEY;
 
-  function denyWrite() {
-    if (!hasKey) return { status: 503, error: "伺服器還沒設定 TRIP_KEY,目前不開放編輯" };
-    if (!keyOK) return { status: 401, error: "通行碼不對" };
-    return null;
+  /* 哪一張表對應團主開的哪一個開關。**沒列在這裡的東西成員一律動不了** ——
+     新增一張表的人要自己決定它屬於哪一塊,而不是預設放行。 */
+  const BUCKET = { itinerary: "plan", expenses: "cost", seats: "seat" };
+
+  const tripCode = () => {
+    const c = String((req.query && req.query.t) || "tokyo").trim();
+    return /^[a-z0-9_-]{1,40}$/.test(c) ? c : "";
+  };
+
+  /* **通行碼還在,但它現在是備援。** 五個人裡還沒有人認領位子之前,
+     沒有它就沒有人編輯得了 —— 通行碼退場是第 4 期的事,不是現在。
+
+     回 null 代表放行。回物件代表擋下來,而**每一種擋法的理由都不一樣**:
+     沒登入、登入了但沒認領、認領了但團主沒開那一塊 —— 三句話不能混成一句,
+     因為使用者下一步要做的事完全不同。 */
+  async function denyWrite(what) {
+    if (keyOK) return null;
+
+    const me = S.whoIs(req);
+    if (!me) {
+      return hasKey
+        ? { status: 401, error: "要編輯請先用 LINE 登入,或用通行碼" }
+        : { status: 401, error: "要編輯請先用 LINE 登入" };
+    }
+    const code = tripCode();
+    if (!code) return { status: 400, error: "團的代號不對" };
+
+    let mine, t;
+    try {
+      const rows = await membersOf(code);
+      mine = rows.find(m => m.line === me.sub);
+      t = await findTrip(code);
+    } catch (e) {
+      const lost = e.status === 404 || /object_not_found|Could not find/i.test(e.message || "");
+      return { status: lost ? 503 : (e.status || 500),
+        error: lost ? "後端讀不到「團/成員」那兩張表,暫時不能編輯" : e.message };
+    }
+    if (!mine) return { status: 403, error: "你還沒認領這一團的位子 —— 上面那條按「我是哪一位?」" };
+    if (mine.role === "團主") return null;
+
+    const b = BUCKET[what];
+    if (b && t && t.can[b]) return null;
+    return { status: 403, error: "這一塊目前只有團主動得了" };
   }
 
   const resource = (req.query && req.query.resource) || "";
+
+  /* 這一團是什麼、有誰。**讀是公開的**,所以這支不要通行碼也不要登入 ——
+     但它回的東西裡**一個 LINE ID 都沒有**:誰認領了哪個位子只回一個真假值。
+     名字和顏色本來就會印在畫面上,LINE 的使用者編號不會。 */
+  if (resource === "team") {
+    if (req.method !== "GET") {
+      res.setHeader("Allow", "GET");
+      return res.status(405).json({ error: "不支援的方法" });
+    }
+    const code = String((req.query && req.query.t) || "tokyo").trim();
+    if (!/^[a-z0-9_-]{1,40}$/.test(code)) return res.status(400).json({ error: "團的代號不對" });
+
+    let trip, members;
+    try {
+      trip = await findTrip(code);
+      members = trip ? await membersOf(code) : [];
+    } catch (e) {
+      /* **「讀不到」和「沒有資料」要分得出來。** integration 沒被加到那一頁的時候,
+         Notion 回的是 404 object_not_found —— 而如果這裡安靜地回一張空名單,
+         畫面上看起來就只是「這團沒有人」,沒有任何地方會說一句。
+         這個專案被這種無聲失敗咬過太多次了。 */
+      const lost = e.status === 404 || /object_not_found|Could not find/i.test(e.message || "");
+      return res.status(lost ? 503 : (e.status || 500)).json({
+        error: lost
+          ? "後端讀不到「團/成員」那兩張表 —— 多半是 Notion 那一頁還沒把 integration 加進 Connections"
+          : e.message,
+      });
+    }
+    if (!trip) return res.status(404).json({ error: "沒有這一團:" + code });
+
+    const me = S.whoIs(req);
+    const mine = me ? members.find(m => m.line && m.line === me.sub) : null;
+    return res.status(200).json({
+      trip,
+      /* line 不出去 —— 只說這個位子有沒有人認領 */
+      members: members.map(m => ({
+        id: m.id, name: m.name, key: m.key, color: m.color,
+        role: m.role, claimed: !!m.line,
+      })),
+      me: mine ? { id: mine.id, role: mine.role } : null,
+    });
+  }
+
+  /* 認領／放掉位子。**一定要登入** —— 這支做的事就是「把一個位子綁到一個
+     伺服器認得的身分上」,沒有身分就沒有事情可做。 */
+  if (resource === "claim") {
+    if (req.method !== "POST") {
+      res.setHeader("Allow", "POST");
+      return res.status(405).json({ error: "不支援的方法" });
+    }
+    const me = S.whoIs(req);
+    if (!me) return res.status(401).json({ error: "請先用 LINE 登入" });
+
+    let body = req.body;
+    if (typeof body === "string") { try { body = JSON.parse(body); } catch (_) { body = {}; } }
+    body = body || {};
+    const code = String(body.trip || "tokyo").trim();
+    if (!/^[a-z0-9_-]{1,40}$/.test(code)) return res.status(400).json({ error: "團的代號不對" });
+    const want = String(body.member || "").trim();
+    if (want && !/^[a-z0-9_:-]{1,60}$/.test(want)) return res.status(400).json({ error: "位子的代號不對" });
+
+    try {
+      const out = want ? await claimSeat(want, code, me) : await releaseSeat(code, me);
+      if (out.error) return res.status(out.status).json({ error: out.error });
+      return res.status(200).json({ me: out.id ? { id: out.id, role: out.role } : null });
+    } catch (e) {
+      const lost = e.status === 404 || /object_not_found|Could not find/i.test(e.message || "");
+      return res.status(lost ? 503 : (e.status || 500)).json({
+        error: lost ? "後端讀不到「成員」那張表 —— Notion 那一頁的 Connections 還沒加 integration"
+                    : e.message,
+      });
+    }
+  }
 
   /* 管理員登入用:只驗通行碼,不碰 Notion */
   if (resource === "auth") {
@@ -296,8 +514,10 @@ module.exports = async (req, res) => {
       res.setHeader("Allow", "GET");
       return res.status(405).json({ error: "不支援的方法" });
     }
-    const no = denyWrite();
-    if (no) return res.status(no.status).json({ error: no.error });
+    /* 這一支是「通行碼對不對」,不是「你能不能編輯」 —— 所以它只看通行碼。
+       混進成員判斷的話,登入過的人按「管理員登入」會直接通過,而他根本沒輸入碼。 */
+    if (!hasKey) return res.status(503).json({ error: "伺服器還沒設定 TRIP_KEY,目前不開放編輯" });
+    if (!keyOK) return res.status(401).json({ error: "通行碼不對" });
     return res.status(200).json({ ok: true });
   }
 
@@ -499,7 +719,7 @@ module.exports = async (req, res) => {
      但刪掉別人的願望還是管理員的事(DELETE),排進行程也是(走 itinerary)。 */
   const openWrite = shape.open && (req.method === "POST" || req.method === "PATCH");
   if (writing && !openWrite) {
-    const no = denyWrite();
+    const no = await denyWrite(resource);
     if (no) return res.status(no.status).json({ error: no.error });
   }
 

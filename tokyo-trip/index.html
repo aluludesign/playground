@@ -178,6 +178,10 @@
     .btn-ghost:hover{background:var(--surface-2); color:var(--ink); border-color:transparent;}
     /* LINE 的綠是它自己的品牌色,**不跟著設計系統走** —— 這顆按鈕要讓人一眼認出
        「按下去會跳到 LINE」,認錯的成本是他不敢按。 */
+    /* 認領那張卡上的每一個位子。左邊那一點是那個人的顏色 —— 分帳和座位圖
+       都靠顏色認人,在這裡先讓他看到自己要拿的是哪一個顏色。 */
+    .claim-one{display:flex; align-items:center; gap:9px; justify-content:flex-start;}
+    .claim-one .dot{width:10px; height:10px; border-radius:50%; background:var(--mc,#888); flex:0 0 auto;}
     .btn-line{background:#06C755; border-color:#06C755; color:#fff;}
     .btn-line:hover{background:#06C755; border-color:#06C755; filter:brightness(1.06);}
     .empty{padding:26px 18px; text-align:center; color:var(--muted); font-size:13px;}
@@ -1258,6 +1262,18 @@
 </div>
 
 
+<div class="overlay" id="claim-overlay" hidden>
+  <div class="signin" id="claim-card">
+    <h2>你是哪一位?</h2>
+    <p id="claim-hint">選一個位子,之後你許的願、你付的錢都會掛在它上面。</p>
+    <div class="ops" id="claim-list"></div>
+    <div class="err" id="claim-err" hidden></div>
+    <div class="ops">
+      <button type="button" class="btn btn-ghost btn-sm" id="claim-skip">都不是我,先跳過</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="exp-edit-overlay" hidden>
   <form class="signin wide" id="exp-edit-form">
     <h2>改這一筆</h2>
@@ -1471,16 +1487,38 @@
   "use strict";
 
   /* ================= 固定資料:從機票訂單來的事實 ================= */
-  const MEMBERS = [
-    /* def 是畫面上顯示的名字,key 是 Notion「付款人／分攤者」select 的選項字串。
-       兩個分開才能改中文名而不用去動 Notion 既有的每一筆紀錄。 */
+  /* **這五個人現在是「預設值」,不是「事實」。** 事實在 Notion 的「成員」表裡,
+     連上線之後 `loadTeam()` 會把這份換掉。留著它的理由有兩個,都還在:
+       · 離線、或網站放在沒有後端的地方(GitHub Pages)時,它是唯一的人名來源
+       · 後端讀不到「成員」那張表時,寧可用舊的五個人,也不要變成一個沒有人的畫面
+     **所以它不能刪,但也不要再去改它** —— 要改人名和顏色,改 Notion 那張表。
+
+     def 是畫面上顯示的名字,key 是 Notion「付款人／分攤者」select 的選項字串。
+     兩個分開才能改中文名而不用去動 Notion 既有的每一筆紀錄。 */
+  let MEMBERS = [
     { id: "hsieh_chinhui", def: "阿輝", key: "Chinhui", full: "HSIEH CHINHUI", color: "#E60012" },
     { id: "chang_chiayu",  def: "佳瑜", key: "Chiayu",  full: "CHANG CHIAYU",  color: "#F39700" },
     { id: "chang_chihwei", def: "志偉", key: "Chihwei", full: "CHANG CHIHWEI", color: "#009944" },
     { id: "chang_yalun",   def: "雅倫", key: "Yalun",   full: "CHANG YALUN",   color: "#00A7DB" },
     { id: "chen_suchih",   def: "媽",   key: "Suchih",  full: "CHEN SUCHIH",   color: "#9B7CB6" },
   ];
-  const IDS = MEMBERS.map(m => m.id);
+  let IDS = [];
+  /* 人名在 Notion 用暱稱,程式內部用 id */
+  const idByName = {};
+
+  /* **換人的時候三樣東西要一起換。** `MEMBERS` 被六十幾個地方讀,
+     而 `IDS` 和 `idByName` 是從它算出來的 —— 只換第一個的話,
+     分帳會照舊的五個人算、Notion 讀回來的付款人會對不到新的人,
+     而畫面上看起來只是「這筆沒有付款人」。所以只能從這裡換。 */
+  function setMembers(list) {
+    MEMBERS = list;
+    IDS = MEMBERS.map(m => m.id);
+    Object.keys(idByName).forEach(k => delete idByName[k]);
+    /* 讀 Notion 時兩種都認:正式的 key,以及顯示名 —— 萬一哪天有人在 Notion
+       直接把選項改成中文,舊紀錄也不會突然變成「未指定付款人」。 */
+    MEMBERS.forEach(m => { idByName[m.key] = m.id; idByName[m.def] = m.id; });
+  }
+  setMembers(MEMBERS);
 
   /* 訂位單上的座位(data/trip.json)。回程 D/E/F 三個位子跟去程不一樣,別記錯。 */
   const SEATS = {
@@ -1643,6 +1681,16 @@
      因為證據是一張 HttpOnly 的 cookie,JS 讀不到。所以這裡放的是「伺服器說你是誰」,
      不是「這台裝置自稱是誰」(那是下面的 MELS,兩件事不要混在一起)。 */
   let lineUser = null;
+  /* 這次看的是哪一團。**第 2 期網址會一定帶 `?t=`**,現在先認得它 ——
+     認得了之後,第 2 期只要把讀取權限接上去,不用再回頭改這裡。 */
+  const TRIP = (function () {
+    const m = /[?&]t=([a-z0-9_-]{1,40})/.exec(location.search);
+    return (m && m[1]) || CFG.trip || "tokyo";
+  })();
+  /* 這一團本身(名稱、日期、三個權限開關),以及我在這一團是哪一個位子。
+     讀不到就都是 null —— 那時候走的是下面那份內建的五個人。 */
+  let trip = null;
+  let myMember = null;
   let storageOK = true;
   let online = false;
   let tripKey = "";
@@ -1674,15 +1722,53 @@
   const CAT_TO_NOTION = { transport: "交通", stay: "住宿", food: "餐飲", sight: "景點", shop: "購物", other: "其他" };
   const CAT_FROM_NOTION = {};
   Object.keys(CAT_TO_NOTION).forEach(k => CAT_FROM_NOTION[CAT_TO_NOTION[k]] = k);
-  /* 人名在 Notion 用暱稱,程式內部用 id */
-  const idByName = {};
-  /* 讀 Notion 時兩種都認:正式的 key,以及顯示名 —— 萬一哪天有人在 Notion
-     直接把選項改成中文,舊紀錄也不會突然變成「未指定付款人」。 */
-  MEMBERS.forEach(m => { idByName[m.key] = m.id; idByName[m.def] = m.id; });
   /* 寫回 Notion 一律用 key,不要在那邊長出第二組選項 */
   const nameById = id => (MEMBERS.find(m => m.id === id) || {}).key || null;
 
+  /* 這一團有誰。**成功才換掉預設的五個人。**
+     失敗就留著內建那五個 —— 一個沒有人的畫面比一份舊名單更糟:
+     Notion 讀回來的「付款人 = Chiayu」會對不到任何 id,每一筆都變成「未指定付款人」,
+     而畫面上看起來完全正常,只是錢算錯。 */
+  async function loadTeam() {
+    const body = await api("?resource=team&t=" + encodeURIComponent(TRIP));
+    if (!body || !body.trip || !Array.isArray(body.members) || !body.members.length) {
+      throw new Error("這一團一個成員都沒有");
+    }
+    trip = body.trip;
+    myMember = body.me || null;
+    /* **能不能編輯,現在是從身分算出來的。** 團主永遠可以;成員要看團主
+       開了哪些開關。**三個全開才等於「成員可共編」** —— 只開其中一項的話
+       伺服器會放行,但介面維持唯讀。那是刻意的:逐項的介面還沒做,
+       而**讓人按了才被拒絕,比讓他看不到更糟**。 */
+    if (myMember) {
+      const c = (trip && trip.can) || {};
+      if (myMember.role === "團主" || (c.plan && c.cost && c.seat)) canEdit = true;
+    }
+    setMembers(body.members.map(m => ({
+      id: m.id,
+      def: m.name || m.id,
+      /* 寫回 Notion 用的字串。沒有舊代號的新成員就用 id —— **不要留空**,
+         留空的話那一筆寫回去會變成沒有付款人。 */
+      key: m.key || m.id,
+      full: m.name || m.id,
+      color: m.color || "#7E8796",
+      role: m.role || "成員",
+      claimed: !!m.claimed,
+    })));
+  }
+
+  /* 讀不到就用內建那五個人繼續。**但要講出來** —— 這個專案最貴的失敗
+     全部都是「看起來正常」那一種:名單是舊的,畫面一切如常,只有錢算錯。 */
+  async function refreshTeam() {
+    try { await loadTeam(); }
+    catch (e) { flash("讀不到這一團的成員,先用內建的名單:" + e.message); }
+  }
+
   async function api(path, init) {
+    /* **每一趟都帶著團的代號。** 伺服器要靠它決定「你是不是這一團的成員」,
+       而寫入的那些請求跟讀取走的是同一個 `api()` —— 只在讀的時候帶的話,
+       寫入會全部被判成「不知道你在哪一團」。 */
+    if (path.indexOf("t=") < 0) path += (path.indexOf("?") < 0 ? "?" : "&") + "t=" + encodeURIComponent(TRIP);
     const res = await fetch(API + path, {
       ...init,
       headers: { "Content-Type": "application/json", "x-trip-key": tripKey, ...(init && init.headers) },
@@ -2159,7 +2245,9 @@
     el("cloud-ops").innerHTML = online
       ? '<button type="button" class="btn btn-sm btn-ghost" id="cloud-sync">重新整理</button>' +
         (lineUser
-          ? '<button type="button" class="btn btn-sm btn-ghost" id="cloud-lineout">登出 LINE</button>'
+          ? '<button type="button" class="btn btn-sm btn-ghost" id="cloud-seat">' +
+            (myMember ? "我是「" + esc(nameOf(myMember.id)) + "」" : "我是哪一位?") + "</button>" +
+            '<button type="button" class="btn btn-sm btn-ghost" id="cloud-lineout">登出 LINE</button>'
           : '<button type="button" class="btn btn-sm btn-line" id="cloud-linein">用 LINE 登入</button>') +
         (canEdit
           ? '<button type="button" class="btn btn-sm btn-ghost" id="cloud-out">登出管理員</button>'
@@ -2167,9 +2255,15 @@
       : '<button type="button" class="btn btn-sm" id="cloud-in">連上 Notion</button>';
     const sync = el("cloud-sync"), out = el("cloud-out"), inn = el("cloud-in"), adm = el("cloud-admin");
     const lin = el("cloud-linein"), lout = el("cloud-lineout");
+    const seat = el("cloud-seat");
+    if (seat) seat.addEventListener("click", openClaim);
     if (lin) lin.addEventListener("click", goLine);
     if (lout) lout.addEventListener("click", () => { location.href = AUTH + "?go=logout"; });
     if (sync) sync.addEventListener("click", () => withSpinner(sync, async () => {
+      /* **成員也要重抓。** 團主在 Notion 加了一個人、改了名字、或是打開了一個
+         權限開關,重新整理就該看得到 —— 不然唯一的辦法是整頁重載,
+         而使用者不會知道要那樣做。順序跟開機時一樣:人先換,再拉資料。 */
+      await refreshTeam();
       /* 天氣抓不到不擋 Notion 那邊 —— refreshWeather 自己吞掉錯誤,不會讓這裡失敗 */
       await Promise.all([pull(), refreshWeather()]);
       render();
@@ -2204,6 +2298,10 @@
 
   /* 讀是公開的,所以先進得來再說,能不能編輯之後才決定 */
   async function goOnline() {
+    /* **人要先換,再拉資料。** `pull()` 把 Notion 的「付款人 = Chiayu」對回內部 id
+       靠的是 `idByName`,而那是 `setMembers()` 建的。順序反過來的話,
+       第一次拉回來的每一筆都會對不到人 —— 而畫面上看起來很正常,只是錢算錯。 */
+    await refreshTeam();
     await pull();
     online = true;
     fillPeopleControls();
@@ -2267,6 +2365,64 @@
     if (m) setMe(m.id);
   }
 
+  /* ================= 認領位子 =================
+
+     **位子有名字,人有 LINE ID,認領就是把兩者接起來。**
+     為什麼不在登入時自動配對:LINE 上的顯示名跟團裡叫什麼是兩回事
+     (「媽」不會是誰的 LINE 名稱),而**猜錯的代價是把票投在別人頭上**。 */
+
+  function showClaimError(msg) {
+    const box = el("claim-err");
+    box.textContent = msg;
+    box.hidden = !msg;
+  }
+
+  function openClaim() {
+    const free = MEMBERS.filter(m => !m.claimed || (myMember && m.id === myMember.id));
+    /* 沒有位子可認領的時候不要開一張空卡 —— 那比不開更難懂。 */
+    if (!free.length) return;
+    el("claim-list").innerHTML = free.map(m =>
+      '<button type="button" class="btn claim-one" data-m="' + esc(m.id) + '" style="--mc:' + esc(m.color) + '">' +
+      '<span class="dot"></span>' + esc(m.def) +
+      (myMember && m.id === myMember.id ? "(現在是你)" : "") + "</button>").join("");
+    el("claim-hint").textContent = myMember
+      ? "換一個位子,或按「這不是我」放掉現在這個。"
+      : "選一個位子,之後你許的願、你付的錢都會掛在它上面。";
+    el("claim-list").querySelectorAll(".claim-one").forEach(b =>
+      b.addEventListener("click", () => takeSeat(b.dataset.m, b)));
+    el("claim-skip").textContent = myMember ? "這不是我(放掉這個位子)" : "都不是我,先跳過";
+    showClaimError("");
+    el("claim-overlay").hidden = false;
+  }
+
+  async function takeSeat(id, btn) {
+    if (btn) { btn.disabled = true; }
+    showClaimError("");
+    try {
+      const body = await api("?resource=claim", {
+        method: "POST",
+        body: JSON.stringify({ trip: TRIP, member: id }),
+      });
+      myMember = body.me || null;
+      /* 認領完把這台裝置的「我是誰」也對齊 —— 兩邊不一致的話,
+         +1 會判錯是不是自己投的。 */
+      if (myMember) setMe(myMember.id);
+      await refreshTeam();
+      el("claim-overlay").hidden = true;
+      render();
+      renderCloudBar();
+      flash(myMember ? "你是「" + nameOf(myMember.id) + "」了" : "已經放掉那個位子");
+    } catch (e) {
+      showClaimError(e.message);
+    }
+    if (btn) { btn.disabled = false; }
+  }
+
+  el("claim-skip").addEventListener("click", () => {
+    if (myMember) { takeSeat("", null); return; }
+    el("claim-overlay").hidden = true;
+  });
+
   /* 從 LINE 回來時網址上會帶一句。講完就把它從網址擦掉 ——
      留著的話重新整理會再講一次,而那時候它已經不是真的了。 */
   function showLoginResult() {
@@ -2279,6 +2435,9 @@
       token: "LINE 那邊拒絕了這次登入,再試一次",
       profile: "拿不到你的 LINE 名字,再試一次",
       fail: "連不上 LINE,等一下再試一次",
+      /* 試用名額滿了。**這一句要說得出「不是你做錯什麼」** ——
+         他按了一顆正常的按鈕,然後被擋下來,不講清楚會以為是自己的問題。 */
+      full: "試用名額目前滿了,沒辦法再開新的帳號 —— 跟找你來的人說一聲",
     }[m[1]];
     if (say) flash(say);
     try { history.replaceState(null, "", location.pathname + location.hash); } catch (_) {}
@@ -4860,9 +5019,10 @@
     seekReset("ai-title"); seekClear("ai-title");
     el("ai-title").value = r.title || "";
     el("ai-note").value = r.note || "";
-    const me = myName();
+    const me = myMember ? myMember.id : myName();
     el("ai-by").innerHTML = '<option value="">— 選一下 —</option>' + MEMBERS.map(m =>
       '<option value="' + m.id + '"' + (m.id === me ? " selected" : "") + ">" + esc(nameOf(m.id)) + "</option>").join("");
+    lockWho(el("ai-by"));
     el("ai-flight").innerHTML = FLIGHTS.map(f => '<option value="' + f.no + '">' + esc(f.label) + "</option>").join("");
     const f = FLIGHTS.find(x => x.no === r.flight);
     el("ai-flight").value = f ? f.no : FLIGHTS[0].no;
@@ -5030,10 +5190,19 @@
     }
   });
 
+  /* **認領過位子的人不能再選別人。** 那正是整件事的重點:身分是伺服器認得的,
+     不是自己在下拉選單裡宣稱的。沒登入、沒認領的人照舊自己選 ——
+     離線那份和沒有後端的那份只有這條路。 */
+  function lockWho(sel) {
+    if (!myMember) { sel.disabled = false; return; }
+    sel.value = myMember.id;
+    sel.disabled = true;
+  }
   function fillWishWho() {
-    const me = myName();
+    const me = myMember ? myMember.id : myName();
     el("wf-by").innerHTML = '<option value="">— 選一下 —</option>' +
       MEMBERS.map(m => '<option value="' + m.id + '"' + (m.id === me ? " selected" : "") + ">" + esc(nameOf(m.id)) + "</option>").join("");
+    lockWho(el("wf-by"));
   }
   function showWishError(msg) {
     const box = el("wf-err");
@@ -5942,6 +6111,10 @@
     await askWhoAmI();
     renderCloudBar();
     showLoginResult();
+
+    /* 登入了但還沒有位子 → 問他是哪一位。**只問登入過的人** ——
+       沒登入的人照舊在表單裡自己選,那條路是給離線和沒有後端的那份用的。 */
+    if (lineUser && !myMember) openClaim();
 
     /* 上次登入過就直接回到管理員模式,不用再問一次 */
     let saved = "";
