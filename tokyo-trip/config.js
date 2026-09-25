@@ -1,4 +1,4 @@
-// 東京五人行 · 前端設定
+// Trippps · 前端設定
 //
 // apiBase  後端所在位置。同一個 Vercel 專案的話留空字串就好。
 //          如果網站放 GitHub Pages、後端另外部署在 Vercel,

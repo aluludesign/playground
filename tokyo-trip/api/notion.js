@@ -1,4 +1,4 @@
-// 東京五人行 · Notion 代理
+// Trippps · Notion 代理
 //
 // 瀏覽器不能直接打 Notion API(沒有 CORS,而且 token 不能放前端),
 // 所以由這支 serverless function 代收代送。token 只存在 Vercel 的環境變數裡。
