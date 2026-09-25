@@ -44,15 +44,17 @@ function tripPage(can) {
   } };
 }
 function memberPage(id, name, key, color, role, line, invite) {
-  return { properties: {
+  return { id: "page-" + id, properties: {
     "代號": title("tokyo:" + id), "團": text("tokyo"), "名字": text(name),
     "舊代號": text(key), "顏色": text(color), "角色": { select: { name: role } },
     "人": text(line), "邀請碼": text(invite),
   } };
 }
 
+let patches = [];
 async function call(query, opts) {
   const o = opts || {};
+  patches = [];
   process.env.NOTION_TOKEN = "ntn_test";
   process.env.LINE_CHANNEL_SECRET = SECRET;
   delete require.cache[require.resolve(SRC)];
@@ -70,10 +72,15 @@ async function call(query, opts) {
     if (/\/databases\/12f3ff46/.test(url)) {
       return { ok: true, status: 200, json: async () => ({ results: o.members || [], has_more: false }) };
     }
+    if (/\/pages\//.test(url) && (init && init.method) === "PATCH") {
+      patches.push({ page: url.slice(url.lastIndexOf("/") + 1), body: body });
+      return { ok: true, status: 200, json: async () => ({ id: "ok" }) };
+    }
     return { ok: false, status: 500, json: async () => ({ message: "樁沒認出這個網址: " + url }) };
   };
   const res = mkres();
-  await handler({ method: o.method || "GET", query, headers: { cookie: o.cookie || "" } }, res);
+  await handler({ method: o.method || "GET", query, body: o.post,
+                  headers: { cookie: o.cookie || "" } }, res);
   return res;
 }
 
@@ -157,6 +164,60 @@ function ok(name, cond, extra) {
   r = await call({ resource: "team" }, { members: FIVE });
   ok("沒帶 t → 預設 tokyo(現在只有這一團;第 2 期網址會一定帶)",
     r.code === 200 && r.body.trip.code === "tokyo", r.body && r.body.trip);
+
+  /* ================= 認領位子 ================= */
+  const CLAIM = { resource: "claim" };
+  const post = (obj, extra) => Object.assign({ method: "POST", post: JSON.stringify(obj), members: FIVE }, extra);
+
+  r = await call(CLAIM, post({ trip: "tokyo", member: "hsieh_chinhui" }));
+  ok("沒登入就想認領 → 401,而且叫他先登入",
+    r.code === 401 && /登入/.test(r.body.error || ""), { code: r.code, body: r.body });
+  ok("而且一筆都沒寫進 Notion", patches.length === 0, patches);
+
+  r = await call(CLAIM, post({ trip: "tokyo", member: "hsieh_chinhui" }, { cookie: cookieFor(LINE_B) }));
+  ok("認領一個沒人的位子 → 成功,而且回的是那個位子",
+    r.code === 200 && r.body.me && r.body.me.id === "hsieh_chinhui", { code: r.code, body: r.body });
+  ok("**真的寫回 Notion 那一列**(不是只回一個成功)",
+    patches.length === 1 && patches[0].page === "page-hsieh_chinhui", patches);
+  ok("寫的是我的 LINE ID,還有加入時間",
+    JSON.stringify(patches[0].body).indexOf(LINE_B) > 0 && !!patches[0].body.properties["加入時間"],
+    patches[0].body);
+
+  r = await call(CLAIM, post({ trip: "tokyo", member: "chang_chiayu" }, { cookie: cookieFor(LINE_B) }));
+  ok("**認領已經有人的位子 → 409,不是默默蓋過去**",
+    r.code === 409 && /已經有人/.test(r.body.error || ""), { code: r.code, body: r.body });
+  ok("而且沒有寫任何東西", patches.length === 0, patches);
+
+  r = await call(CLAIM, post({ trip: "tokyo", member: "chang_chiayu" }, { cookie: cookieFor(LINE_A) }));
+  ok("認領自己已經占著的那個位子 → 不當成衝突", r.code === 200 && r.body.me.id === "chang_chiayu",
+    { code: r.code, body: r.body });
+
+  /* 換位子:A 占著佳瑜,改認阿輝 */
+  r = await call(CLAIM, post({ trip: "tokyo", member: "hsieh_chinhui" }, { cookie: cookieFor(LINE_A) }));
+  ok("換到另一個位子 → 成功", r.code === 200 && r.body.me.id === "hsieh_chinhui", r.body);
+  ok("**先放掉舊的,再認新的**(一個人占兩個位子的話,分帳會把他算兩次)",
+    patches.length === 2 && patches[0].page === "page-chang_chiayu" &&
+    patches[1].page === "page-hsieh_chinhui", patches.map(x => x.page));
+  ok("舊那一列的「人」被清空", JSON.stringify(patches[0].body.properties["人"]).indexOf(LINE_A) < 0,
+    patches[0].body.properties["人"]);
+
+  r = await call(CLAIM, post({ trip: "tokyo", member: "" }, { cookie: cookieFor(LINE_A) }));
+  ok("放掉自己的位子 → me 變回 null", r.code === 200 && r.body.me === null, r.body);
+  ok("而且只動自己那一列", patches.length === 1 && patches[0].page === "page-chang_chiayu", patches);
+
+  r = await call(CLAIM, post({ trip: "tokyo", member: "" }, { cookie: cookieFor(LINE_B) }));
+  ok("沒占任何位子的人放手 → 什麼都不做,也不報錯",
+    r.code === 200 && r.body.me === null && patches.length === 0, { code: r.code, patches: patches });
+
+  r = await call(CLAIM, post({ trip: "tokyo", member: "不存在的位子" }, { cookie: cookieFor(LINE_B) }));
+  ok("位子代號長得不對 → 400", r.code === 400, { code: r.code, body: r.body });
+
+  r = await call(CLAIM, post({ trip: "tokyo", member: "nobody_here" }, { cookie: cookieFor(LINE_B) }));
+  ok("沒有這個位子 → 404", r.code === 404, { code: r.code, body: r.body });
+
+  r = await call(CLAIM, Object.assign(post({ trip: "tokyo", member: "hsieh_chinhui" },
+    { cookie: cookieFor(LINE_B) }), { method: "GET" }));
+  ok("用 GET 打認領 → 405", r.code === 405, r.code);
 
   console.log(fails ? "\n✗ " + fails + " 項沒過" : "\n全部通過");
   process.exit(fails ? 1 : 0);

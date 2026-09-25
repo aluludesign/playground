@@ -306,6 +306,7 @@ function memberOut(page) {
   const p = page.properties;
   const full = ttl(p["代號"]);
   return {
+    page: page.id,
     id: full.indexOf(":") >= 0 ? full.slice(full.indexOf(":") + 1) : full,
     trip: txt(p["團"]),
     name: txt(p["名字"]),
@@ -338,6 +339,39 @@ async function membersOf(code) {
     cursor = page.has_more ? page.next_cursor : null;
   } while (cursor);
   return rows;
+}
+
+/* 認領一個位子。**位子有名字,人有 LINE ID,認領就是把兩者接起來。**
+   為什麼要有這一步而不是登入時自動配對:LINE 上的顯示名跟團裡叫什麼是兩回事
+   (「媽」不會是誰的 LINE 名稱),而**猜錯的代價是把票投在別人頭上**。 */
+async function claimSeat(memberId, trip, me) {
+  const rows = await membersOf(trip);
+  const seat = rows.find(m => m.id === memberId);
+  if (!seat) return { status: 404, error: "這一團沒有這個位子" };
+  if (seat.line && seat.line !== me.sub) return { status: 409, error: "這個位子已經有人了" };
+
+  /* 一個人在同一團只能占一個位子。**先放掉舊的,再認新的** ——
+     反過來的話中途失敗會變成一個人占兩個位子,而分帳會把他算兩次。 */
+  const held = rows.find(m => m.line === me.sub && m.id !== memberId);
+  if (held) await notion("/pages/" + held.page, { method: "PATCH",
+    body: JSON.stringify({ properties: { "人": { rich_text: richText("") } } }) });
+
+  await notion("/pages/" + seat.page, { method: "PATCH",
+    body: JSON.stringify({ properties: {
+      "人": { rich_text: richText(me.sub) },
+      "加入時間": { date: { start: new Date().toISOString().slice(0, 10) } },
+    } }) });
+  return { status: 200, id: memberId, role: seat.role, released: held ? held.id : null };
+}
+
+/* 放掉自己那個位子。**只能放自己的** —— 位子上的 LINE ID 不是我的就不動。 */
+async function releaseSeat(trip, me) {
+  const rows = await membersOf(trip);
+  const held = rows.find(m => m.line === me.sub);
+  if (!held) return { status: 200, id: null };
+  await notion("/pages/" + held.page, { method: "PATCH",
+    body: JSON.stringify({ properties: { "人": { rich_text: richText("") } } }) });
+  return { status: 200, id: null, released: held.id };
 }
 
 /* ---------- 入口 ---------- */
@@ -402,6 +436,37 @@ module.exports = async (req, res) => {
       })),
       me: mine ? { id: mine.id, role: mine.role } : null,
     });
+  }
+
+  /* 認領／放掉位子。**一定要登入** —— 這支做的事就是「把一個位子綁到一個
+     伺服器認得的身分上」,沒有身分就沒有事情可做。 */
+  if (resource === "claim") {
+    if (req.method !== "POST") {
+      res.setHeader("Allow", "POST");
+      return res.status(405).json({ error: "不支援的方法" });
+    }
+    const me = S.whoIs(req);
+    if (!me) return res.status(401).json({ error: "請先用 LINE 登入" });
+
+    let body = req.body;
+    if (typeof body === "string") { try { body = JSON.parse(body); } catch (_) { body = {}; } }
+    body = body || {};
+    const code = String(body.trip || "tokyo").trim();
+    if (!/^[a-z0-9_-]{1,40}$/.test(code)) return res.status(400).json({ error: "團的代號不對" });
+    const want = String(body.member || "").trim();
+    if (want && !/^[a-z0-9_:-]{1,60}$/.test(want)) return res.status(400).json({ error: "位子的代號不對" });
+
+    try {
+      const out = want ? await claimSeat(want, code, me) : await releaseSeat(code, me);
+      if (out.error) return res.status(out.status).json({ error: out.error });
+      return res.status(200).json({ me: out.id ? { id: out.id, role: out.role } : null });
+    } catch (e) {
+      const lost = e.status === 404 || /object_not_found|Could not find/i.test(e.message || "");
+      return res.status(lost ? 503 : (e.status || 500)).json({
+        error: lost ? "後端讀不到「成員」那張表 —— Notion 那一頁的 Connections 還沒加 integration"
+                    : e.message,
+      });
+    }
   }
 
   /* 管理員登入用:只驗通行碼,不碰 Notion */

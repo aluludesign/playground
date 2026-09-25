@@ -178,6 +178,10 @@
     .btn-ghost:hover{background:var(--surface-2); color:var(--ink); border-color:transparent;}
     /* LINE 的綠是它自己的品牌色,**不跟著設計系統走** —— 這顆按鈕要讓人一眼認出
        「按下去會跳到 LINE」,認錯的成本是他不敢按。 */
+    /* 認領那張卡上的每一個位子。左邊那一點是那個人的顏色 —— 分帳和座位圖
+       都靠顏色認人,在這裡先讓他看到自己要拿的是哪一個顏色。 */
+    .claim-one{display:flex; align-items:center; gap:9px; justify-content:flex-start;}
+    .claim-one .dot{width:10px; height:10px; border-radius:50%; background:var(--mc,#888); flex:0 0 auto;}
     .btn-line{background:#06C755; border-color:#06C755; color:#fff;}
     .btn-line:hover{background:#06C755; border-color:#06C755; filter:brightness(1.06);}
     .empty{padding:26px 18px; text-align:center; color:var(--muted); font-size:13px;}
@@ -1258,6 +1262,18 @@
 </div>
 
 
+<div class="overlay" id="claim-overlay" hidden>
+  <div class="signin" id="claim-card">
+    <h2>你是哪一位?</h2>
+    <p id="claim-hint">選一個位子,之後你許的願、你付的錢都會掛在它上面。</p>
+    <div class="ops" id="claim-list"></div>
+    <div class="err" id="claim-err" hidden></div>
+    <div class="ops">
+      <button type="button" class="btn btn-ghost btn-sm" id="claim-skip">都不是我,先跳過</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="exp-edit-overlay" hidden>
   <form class="signin wide" id="exp-edit-form">
     <h2>改這一筆</h2>
@@ -2217,7 +2233,9 @@
     el("cloud-ops").innerHTML = online
       ? '<button type="button" class="btn btn-sm btn-ghost" id="cloud-sync">重新整理</button>' +
         (lineUser
-          ? '<button type="button" class="btn btn-sm btn-ghost" id="cloud-lineout">登出 LINE</button>'
+          ? '<button type="button" class="btn btn-sm btn-ghost" id="cloud-seat">' +
+            (myMember ? "我是「" + esc(nameOf(myMember.id)) + "」" : "我是哪一位?") + "</button>" +
+            '<button type="button" class="btn btn-sm btn-ghost" id="cloud-lineout">登出 LINE</button>'
           : '<button type="button" class="btn btn-sm btn-line" id="cloud-linein">用 LINE 登入</button>') +
         (canEdit
           ? '<button type="button" class="btn btn-sm btn-ghost" id="cloud-out">登出管理員</button>'
@@ -2225,6 +2243,8 @@
       : '<button type="button" class="btn btn-sm" id="cloud-in">連上 Notion</button>';
     const sync = el("cloud-sync"), out = el("cloud-out"), inn = el("cloud-in"), adm = el("cloud-admin");
     const lin = el("cloud-linein"), lout = el("cloud-lineout");
+    const seat = el("cloud-seat");
+    if (seat) seat.addEventListener("click", openClaim);
     if (lin) lin.addEventListener("click", goLine);
     if (lout) lout.addEventListener("click", () => { location.href = AUTH + "?go=logout"; });
     if (sync) sync.addEventListener("click", () => withSpinner(sync, async () => {
@@ -2332,6 +2352,64 @@
     const m = MEMBERS.find(x => x.def === n || x.full === n || x.key === n);
     if (m) setMe(m.id);
   }
+
+  /* ================= 認領位子 =================
+
+     **位子有名字,人有 LINE ID,認領就是把兩者接起來。**
+     為什麼不在登入時自動配對:LINE 上的顯示名跟團裡叫什麼是兩回事
+     (「媽」不會是誰的 LINE 名稱),而**猜錯的代價是把票投在別人頭上**。 */
+
+  function showClaimError(msg) {
+    const box = el("claim-err");
+    box.textContent = msg;
+    box.hidden = !msg;
+  }
+
+  function openClaim() {
+    const free = MEMBERS.filter(m => !m.claimed || (myMember && m.id === myMember.id));
+    /* 沒有位子可認領的時候不要開一張空卡 —— 那比不開更難懂。 */
+    if (!free.length) return;
+    el("claim-list").innerHTML = free.map(m =>
+      '<button type="button" class="btn claim-one" data-m="' + esc(m.id) + '" style="--mc:' + esc(m.color) + '">' +
+      '<span class="dot"></span>' + esc(m.def) +
+      (myMember && m.id === myMember.id ? "(現在是你)" : "") + "</button>").join("");
+    el("claim-hint").textContent = myMember
+      ? "換一個位子,或按「這不是我」放掉現在這個。"
+      : "選一個位子,之後你許的願、你付的錢都會掛在它上面。";
+    el("claim-list").querySelectorAll(".claim-one").forEach(b =>
+      b.addEventListener("click", () => takeSeat(b.dataset.m, b)));
+    el("claim-skip").textContent = myMember ? "這不是我(放掉這個位子)" : "都不是我,先跳過";
+    showClaimError("");
+    el("claim-overlay").hidden = false;
+  }
+
+  async function takeSeat(id, btn) {
+    if (btn) { btn.disabled = true; }
+    showClaimError("");
+    try {
+      const body = await api("?resource=claim", {
+        method: "POST",
+        body: JSON.stringify({ trip: TRIP, member: id }),
+      });
+      myMember = body.me || null;
+      /* 認領完把這台裝置的「我是誰」也對齊 —— 兩邊不一致的話,
+         +1 會判錯是不是自己投的。 */
+      if (myMember) setMe(myMember.id);
+      await refreshTeam();
+      el("claim-overlay").hidden = true;
+      render();
+      renderCloudBar();
+      flash(myMember ? "你是「" + nameOf(myMember.id) + "」了" : "已經放掉那個位子");
+    } catch (e) {
+      showClaimError(e.message);
+    }
+    if (btn) { btn.disabled = false; }
+  }
+
+  el("claim-skip").addEventListener("click", () => {
+    if (myMember) { takeSeat("", null); return; }
+    el("claim-overlay").hidden = true;
+  });
 
   /* 從 LINE 回來時網址上會帶一句。講完就把它從網址擦掉 ——
      留著的話重新整理會再講一次,而那時候它已經不是真的了。 */
@@ -4926,9 +5004,10 @@
     seekReset("ai-title"); seekClear("ai-title");
     el("ai-title").value = r.title || "";
     el("ai-note").value = r.note || "";
-    const me = myName();
+    const me = myMember ? myMember.id : myName();
     el("ai-by").innerHTML = '<option value="">— 選一下 —</option>' + MEMBERS.map(m =>
       '<option value="' + m.id + '"' + (m.id === me ? " selected" : "") + ">" + esc(nameOf(m.id)) + "</option>").join("");
+    lockWho(el("ai-by"));
     el("ai-flight").innerHTML = FLIGHTS.map(f => '<option value="' + f.no + '">' + esc(f.label) + "</option>").join("");
     const f = FLIGHTS.find(x => x.no === r.flight);
     el("ai-flight").value = f ? f.no : FLIGHTS[0].no;
@@ -5096,10 +5175,19 @@
     }
   });
 
+  /* **認領過位子的人不能再選別人。** 那正是整件事的重點:身分是伺服器認得的,
+     不是自己在下拉選單裡宣稱的。沒登入、沒認領的人照舊自己選 ——
+     離線那份和沒有後端的那份只有這條路。 */
+  function lockWho(sel) {
+    if (!myMember) { sel.disabled = false; return; }
+    sel.value = myMember.id;
+    sel.disabled = true;
+  }
   function fillWishWho() {
-    const me = myName();
+    const me = myMember ? myMember.id : myName();
     el("wf-by").innerHTML = '<option value="">— 選一下 —</option>' +
       MEMBERS.map(m => '<option value="' + m.id + '"' + (m.id === me ? " selected" : "") + ">" + esc(nameOf(m.id)) + "</option>").join("");
+    lockWho(el("wf-by"));
   }
   function showWishError(msg) {
     const box = el("wf-err");
@@ -6008,6 +6096,10 @@
     await askWhoAmI();
     renderCloudBar();
     showLoginResult();
+
+    /* 登入了但還沒有位子 → 問他是哪一位。**只問登入過的人** ——
+       沒登入的人照舊在表單裡自己選,那條路是給離線和沒有後端的那份用的。 */
+    if (lineUser && !myMember) openClaim();
 
     /* 上次登入過就直接回到管理員模式,不用再問一次 */
     let saved = "";

@@ -111,9 +111,16 @@ sleep 1
 # block-04 的主角就是 :521 那條手機覆寫,在 1100px 上它不存在。
 #   WIDTH=390 ./probe.sh probes/inputs.js
 WIDTH=${WIDTH:-1100}
+# PAGE= 換掉 iframe 載的網址。**這不是方便功能,是「到得了」的問題。**
+# 登入的證據是一張 HttpOnly cookie,而開機那一趟(問「我是誰」、拉這一團有誰)
+# 在探針裝樁之前就跑完了 —— 也就是說「登入之後的畫面」以前一條斷言都驗不到,
+# 而那是身分那一整塊。fixture.py 看到 `?fake=login` 就在頁面自己身上裝樁,
+# 所以要有辦法把那個參數帶進去:
+#   PAGE='/index.html?fake=login' ./probe.sh probes/claim.js
+PAGE=${PAGE:-/index.html}
 {
   echo '<!doctype html><meta charset="utf-8"><body style="margin:0">'
-  echo '<iframe id="f" src="/index.html" style="width:'"$WIDTH"'px;height:900px;border:0"></iframe>'
+  echo '<iframe id="f" src="'"$PAGE"'" style="width:'"$WIDTH"'px;height:900px;border:0"></iframe>'
   echo '<pre id="r"></pre><script>'
   echo 'document.getElementById("f").onload = function(){'
   echo '  var d = this.contentDocument, w = this.contentWindow;'
