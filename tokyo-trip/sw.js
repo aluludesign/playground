@@ -1,4 +1,4 @@
-/* 東京五人行 · service worker
+/* Trippps · service worker
  *
  * 它只負責一件事:**沒網路的時候,網頁本身還打得開**。
  * 行程、花費、分帳那些「資料」不歸它管 —— 那是 index.html 把每次讀到的內容
