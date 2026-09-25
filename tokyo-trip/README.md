@@ -129,6 +129,16 @@ LINE 登入把那件事變成伺服器認得的憑據。**沒登入照樣看得�
 > **只有註冊過的網址登得進去。** 預覽部署(`playground-git-<分支>-…`)的網址
 > 沒註冊在 channel 裡,在那邊按登入會被 LINE 擋下來。要在預覽上試登入,
 > 就把那個網址也加進 Callback URL 清單(LINE 那一欄可以填好幾行)。
+>
+> **登記分支網址,不要登記部署網址。** Vercel 每部署一次就發一個新網址
+> (`playground-76p0lsaoy-…`),舊的那個永遠停在舊版;分支網址
+> (`playground-git-feat-tenant-members-lulu-6af6.vercel.app`)永遠指向那個分支最新的一版。
+> 登記部署網址的話,下一個 commit 就又對不上了。要登記的值不用猜:
+> LINE 錯誤頁網址列裡 `redirect_uri=` 後面那段就是,把 `%3A` 換回 `:`、`%2F` 換回 `/`。
+>
+> **預覽要登入,密鑰也要給預覽。** `LINE_CHANNEL_SECRET` 在 Vercel 要勾 **Preview**,
+> 不是只勾 Production。而且 **環境變數只給之後的部署** —— 改完要 Redeploy,
+> 否則那一版照舊回「還沒設定」。症狀會騙人:開到舊的部署網址,看起來就像設定沒存進去。
 
 驗收在 `adopt-harness/api-auth-test.js`(伺服器那半:簽章、state、逾時)
 和 `adopt-harness/probes/line-login.js`(畫面那半:按鈕在不在、按下去會不會真的走)。
