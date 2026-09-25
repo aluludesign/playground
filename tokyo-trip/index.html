@@ -3753,7 +3753,15 @@
     }).join("");
     const cur = el("days").querySelector('[aria-pressed="true"]');
     if (cur && cur.scrollIntoView) {
-      const centre = () => cur.scrollIntoView({ block: "nearest", inline: "center" });
+      /* **每次都重新問是哪一顆,不要抓著這一顆不放。** 這個函式一開頭就把整排
+         `innerHTML` 重寫,所以上一輪那顆按鈕已經從文件上拆下來了 ——
+         而下面那個延後的呼叫如果抓著它,`scrollIntoView` 會對一個孤兒節點執行,
+         **不會捲動,也不會報錯**。字體什麼時候到決定了它捲不捲得到,
+         於是同一份程式碼連拍兩次,這一排會停在兩個位置。截圖的抖動就是這樣來的。 */
+      const centre = () => {
+        const now = el("days").querySelector('[aria-pressed="true"]');
+        if (now) now.scrollIntoView({ block: "nearest", inline: "center" });
+      };
       centre();
       /* **字體是外部資源,它可能晚一步才到。** 到了之後每張日期卡都變寬,
          而剛剛那個置中是照舊寬度算的 —— 整排就停在一個偏掉的位置,
@@ -5898,6 +5906,25 @@
   /* 開機時把 sheet 放到預設那一段。**要在 switchTab 之後** —— `--tabh` 是它量的,
      而三段的高度是從那個數字算出來的。 */
   setDet(1);
+
+  /* **這一頁有三樣東西是量出來的**:日期那排捲到哪、sheet 多高、地圖框哪一塊。
+     三樣都在字體到達之前就量了 —— 而字體是外部資源,它可能晚一步到,
+     到了之後每張卡片都變寬、每個尺寸都變了,三樣一起偏掉。
+
+     偏多少要看字什麼時候到,所以**同一份程式碼連拍兩次會停在兩個不同的地方**。
+     驗收截圖就是這樣開始說謊的:它把這個抖動報成「改動」,而真正換了三個字的
+     那一張反而因為像素數太少被判成抖動。**把門檻調高只會讓它漏掉更多真的改動,
+     要修的是抖動本身。**
+
+     網路快的時候這一段不會跑(`status` 已經是 `loaded`)。 */
+  if (document.fonts && document.fonts.status !== "loaded") {
+    document.fonts.ready.then(() => {
+      renderDays();          /* 日期那排重新置中 */
+      setDet(planDet);       /* sheet 的三段高度重算 */
+      loadSheetMap(true);    /* 地圖重新取景 —— 蓋住多少變了,框的那一塊就變了 */
+    });
+  }
+
   loadWeather();   /* 跟 Notion 無關,離線模式也照抓 */
 
   (async () => {
