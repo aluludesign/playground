@@ -20,6 +20,7 @@
 
 const crypto = require("crypto");
 const S = require("./_session.js");
+const P = require("./_people.js");
 
 const AUTHZ = "https://access.line.me/oauth2/v2.1/authorize";
 const TOKEN = "https://api.line.me/oauth2/v2.1/token";
@@ -142,12 +143,22 @@ module.exports = async (req, res) => {
     const pj = await pr.json().catch(() => ({}));
     if (!pr.ok || !pj.userId) return home(res, "login=profile");
 
-    S.setCookie(res, S.SESSION_COOKIE, S.sign({
+    const who = {
       sub: pj.userId,
       name: String(pj.displayName || "").slice(0, 60),
       pic: String(pj.pictureUrl || "").slice(0, 300),
+    };
+
+    /* **名額滿了就在這裡擋,而且不要發身分。** 發了再擋的話,他會拿著一張
+       登入成功的票看到一個處處說不行的畫面 —— 那比一開始就講清楚更難懂。
+       (Notion 那邊出事時 `seeUser` 會放行,理由寫在 `_people.js`:
+        那張表是記帳用的,不是安全邊界。) */
+    const seen = await P.seeUser(who);
+    if (!seen.ok) return home(res, "login=full");
+
+    S.setCookie(res, S.SESSION_COOKIE, S.sign(Object.assign({
       exp: Date.now() + S.SESSION_DAYS * 86400000,
-    }, key), S.SESSION_DAYS * 86400);
+    }, who), key), S.SESSION_DAYS * 86400);
     return home(res, "login=ok");
   } catch (_) {
     /* 逾時、LINE 掛掉、網路斷掉都到這裡。**不要把原始錯誤丟到網址上** ——

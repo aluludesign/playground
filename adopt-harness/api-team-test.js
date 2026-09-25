@@ -72,6 +72,10 @@ async function call(query, opts) {
     if (/\/databases\/12f3ff46/.test(url)) {
       return { ok: true, status: 200, json: async () => ({ results: o.members || [], has_more: false }) };
     }
+    if (/\/pages$/.test(url) && (init && init.method) === "POST") {
+      patches.push({ page: "新的一列", body: body });
+      return { ok: true, status: 200, json: async () => ({ id: "new", properties: {} }) };
+    }
     if (/\/pages\//.test(url) && (init && init.method) === "PATCH") {
       patches.push({ page: url.slice(url.lastIndexOf("/") + 1), body: body });
       return { ok: true, status: 200, json: async () => ({ id: "ok" }) };
@@ -80,7 +84,7 @@ async function call(query, opts) {
   };
   const res = mkres();
   await handler({ method: o.method || "GET", query, body: o.post,
-                  headers: { cookie: o.cookie || "" } }, res);
+                  headers: { cookie: o.cookie || "", "x-trip-key": o.key || "" } }, res);
   return res;
 }
 
@@ -218,6 +222,60 @@ function ok(name, cond, extra) {
   r = await call(CLAIM, Object.assign(post({ trip: "tokyo", member: "hsieh_chinhui" },
     { cookie: cookieFor(LINE_B) }), { method: "GET" }));
   ok("用 GET 打認領 → 405", r.code === 405, r.code);
+
+  /* ================= 誰動得了什麼 ================= */
+  process.env.TRIP_KEY = "the-passcode";
+  const write = (resource, extra) => Object.assign({
+    method: "POST", members: FIVE,
+    post: JSON.stringify({ title: "測試", day: "2026-10-05" }),
+  }, extra);
+  const W = res => Object.assign({ resource: res, t: "tokyo" });
+
+  r = await call(W("itinerary"), write("itinerary"));
+  ok("沒登入也沒通行碼 → 擋下來,而且叫他去登入",
+    r.code === 401 && /登入/.test(r.body.error || ""), { code: r.code, body: r.body });
+
+  r = await call(W("itinerary"), write("itinerary", { key: "the-passcode" }));
+  ok("通行碼還通(它是備援,不是退場) —— 五個人都還沒認領之前,沒有它就沒人編輯得了",
+    r.code === 200, { code: r.code, body: r.body });
+
+  r = await call(W("itinerary"), write("itinerary", { cookie: cookieFor(LINE_B) }));
+  ok("登入了但沒認領位子 → 403,而且說得出下一步是認領",
+    r.code === 403 && /認領/.test(r.body.error || ""), { code: r.code, body: r.body });
+
+  /* 阿輝那個位子給 B,角色是成員 */
+  const WITH_B = [
+    memberPage("chang_chiayu", "佳瑜", "Chiayu", "#F39700", "團主", LINE_A, "q4wn8t"),
+    memberPage("hsieh_chinhui", "阿輝", "Chinhui", "#E60012", "成員", LINE_B, "hx7k2m"),
+  ];
+
+  r = await call(W("itinerary"), write("itinerary", { cookie: cookieFor(LINE_B), members: WITH_B }));
+  ok("**成員 + 開關關著 → 403**(預設只有團主動得了)",
+    r.code === 403 && /團主/.test(r.body.error || ""), { code: r.code, body: r.body });
+
+  r = await call(W("itinerary"), write("itinerary",
+    { cookie: cookieFor(LINE_B), members: WITH_B, can: { plan: true } }));
+  ok("團主打開「成員可管行程」→ 成員排得了行程", r.code === 200, { code: r.code, body: r.body });
+
+  r = await call(W("expenses"), write("expenses",
+    { cookie: cookieFor(LINE_B), members: WITH_B, can: { plan: true } }));
+  ok("**但分帳那一塊沒開,他就動不了** —— 三個開關是分開的,不是一個",
+    r.code === 403, { code: r.code, body: r.body });
+
+  r = await call(W("expenses"), write("expenses", { cookie: cookieFor(LINE_A), members: WITH_B }));
+  ok("團主不用任何開關,三塊都動得了", r.code === 200, { code: r.code, body: r.body });
+
+  r = await call(W("seats"), write("seats", { cookie: cookieFor(LINE_A), members: WITH_B }));
+  ok("團主也動得了機位", r.code === 200, { code: r.code, body: r.body });
+
+  r = await call(W("wishes"), write("wishes", { cookie: cookieFor(LINE_B), members: FIVE }));
+  ok("許願照舊誰都能許(**這一條沒有變**,那三個人本來就靠它)",
+    r.code === 200, { code: r.code, body: r.body });
+
+  r = await call(W("itinerary"), write("itinerary",
+    { cookie: cookieFor(LINE_B), members: WITH_B, can: { plan: true }, lost: true }));
+  ok("讀不到「成員」表的時候 → 擋下來並說清楚,不是默默放行",
+    r.code === 503 && /不能編輯/.test(r.body.error || ""), { code: r.code, body: r.body });
 
   console.log(fails ? "\n✗ " + fails + " 項沒過" : "\n全部通過");
   process.exit(fails ? 1 : 0);

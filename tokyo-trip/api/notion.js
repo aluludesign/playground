@@ -382,16 +382,55 @@ module.exports = async (req, res) => {
     return res.status(500).json({ error: "伺服器還沒設定 NOTION_TOKEN" });
   }
 
-  /* 讀(GET)開放給所有人,寫(POST/DELETE)一定要通行碼。
-     TRIP_KEY 沒設的時候一律擋掉寫入 —— 沒設定不等於不設防。 */
+  /* 讀(GET)開放給所有人。寫要嘛是這一團的成員,要嘛拿得出通行碼。
+     TRIP_KEY 沒設的時候通行碼那條路整個關掉 —— 沒設定不等於不設防。 */
   const writing = req.method === "POST" || req.method === "PATCH" || req.method === "DELETE";
   const hasKey = !!process.env.TRIP_KEY;
   const keyOK = hasKey && req.headers["x-trip-key"] === process.env.TRIP_KEY;
 
-  function denyWrite() {
-    if (!hasKey) return { status: 503, error: "伺服器還沒設定 TRIP_KEY,目前不開放編輯" };
-    if (!keyOK) return { status: 401, error: "通行碼不對" };
-    return null;
+  /* 哪一張表對應團主開的哪一個開關。**沒列在這裡的東西成員一律動不了** ——
+     新增一張表的人要自己決定它屬於哪一塊,而不是預設放行。 */
+  const BUCKET = { itinerary: "plan", expenses: "cost", seats: "seat" };
+
+  const tripCode = () => {
+    const c = String((req.query && req.query.t) || "tokyo").trim();
+    return /^[a-z0-9_-]{1,40}$/.test(c) ? c : "";
+  };
+
+  /* **通行碼還在,但它現在是備援。** 五個人裡還沒有人認領位子之前,
+     沒有它就沒有人編輯得了 —— 通行碼退場是第 4 期的事,不是現在。
+
+     回 null 代表放行。回物件代表擋下來,而**每一種擋法的理由都不一樣**:
+     沒登入、登入了但沒認領、認領了但團主沒開那一塊 —— 三句話不能混成一句,
+     因為使用者下一步要做的事完全不同。 */
+  async function denyWrite(what) {
+    if (keyOK) return null;
+
+    const me = S.whoIs(req);
+    if (!me) {
+      return hasKey
+        ? { status: 401, error: "要編輯請先用 LINE 登入,或用通行碼" }
+        : { status: 401, error: "要編輯請先用 LINE 登入" };
+    }
+    const code = tripCode();
+    if (!code) return { status: 400, error: "團的代號不對" };
+
+    let mine, t;
+    try {
+      const rows = await membersOf(code);
+      mine = rows.find(m => m.line === me.sub);
+      t = await findTrip(code);
+    } catch (e) {
+      const lost = e.status === 404 || /object_not_found|Could not find/i.test(e.message || "");
+      return { status: lost ? 503 : (e.status || 500),
+        error: lost ? "後端讀不到「團/成員」那兩張表,暫時不能編輯" : e.message };
+    }
+    if (!mine) return { status: 403, error: "你還沒認領這一團的位子 —— 上面那條按「我是哪一位?」" };
+    if (mine.role === "團主") return null;
+
+    const b = BUCKET[what];
+    if (b && t && t.can[b]) return null;
+    return { status: 403, error: "這一塊目前只有團主動得了" };
   }
 
   const resource = (req.query && req.query.resource) || "";
@@ -475,8 +514,10 @@ module.exports = async (req, res) => {
       res.setHeader("Allow", "GET");
       return res.status(405).json({ error: "不支援的方法" });
     }
-    const no = denyWrite();
-    if (no) return res.status(no.status).json({ error: no.error });
+    /* 這一支是「通行碼對不對」,不是「你能不能編輯」 —— 所以它只看通行碼。
+       混進成員判斷的話,登入過的人按「管理員登入」會直接通過,而他根本沒輸入碼。 */
+    if (!hasKey) return res.status(503).json({ error: "伺服器還沒設定 TRIP_KEY,目前不開放編輯" });
+    if (!keyOK) return res.status(401).json({ error: "通行碼不對" });
     return res.status(200).json({ ok: true });
   }
 
@@ -678,7 +719,7 @@ module.exports = async (req, res) => {
      但刪掉別人的願望還是管理員的事(DELETE),排進行程也是(走 itinerary)。 */
   const openWrite = shape.open && (req.method === "POST" || req.method === "PATCH");
   if (writing && !openWrite) {
-    const no = denyWrite();
+    const no = await denyWrite(resource);
     if (no) return res.status(no.status).json({ error: no.error });
   }
 

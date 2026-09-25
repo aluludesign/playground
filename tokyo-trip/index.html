@@ -1736,6 +1736,14 @@
     }
     trip = body.trip;
     myMember = body.me || null;
+    /* **能不能編輯,現在是從身分算出來的。** 團主永遠可以;成員要看團主
+       開了哪些開關。**三個全開才等於「成員可共編」** —— 只開其中一項的話
+       伺服器會放行,但介面維持唯讀。那是刻意的:逐項的介面還沒做,
+       而**讓人按了才被拒絕,比讓他看不到更糟**。 */
+    if (myMember) {
+      const c = (trip && trip.can) || {};
+      if (myMember.role === "團主" || (c.plan && c.cost && c.seat)) canEdit = true;
+    }
     setMembers(body.members.map(m => ({
       id: m.id,
       def: m.name || m.id,
@@ -1757,6 +1765,10 @@
   }
 
   async function api(path, init) {
+    /* **每一趟都帶著團的代號。** 伺服器要靠它決定「你是不是這一團的成員」,
+       而寫入的那些請求跟讀取走的是同一個 `api()` —— 只在讀的時候帶的話,
+       寫入會全部被判成「不知道你在哪一團」。 */
+    if (path.indexOf("t=") < 0) path += (path.indexOf("?") < 0 ? "?" : "&") + "t=" + encodeURIComponent(TRIP);
     const res = await fetch(API + path, {
       ...init,
       headers: { "Content-Type": "application/json", "x-trip-key": tripKey, ...(init && init.headers) },
@@ -2423,6 +2435,9 @@
       token: "LINE 那邊拒絕了這次登入,再試一次",
       profile: "拿不到你的 LINE 名字,再試一次",
       fail: "連不上 LINE,等一下再試一次",
+      /* 試用名額滿了。**這一句要說得出「不是你做錯什麼」** ——
+         他按了一顆正常的按鈕,然後被擋下來,不講清楚會以為是自己的問題。 */
+      full: "試用名額目前滿了,沒辦法再開新的帳號 —— 跟找你來的人說一聲",
     }[m[1]];
     if (say) flash(say);
     try { history.replaceState(null, "", location.pathname + location.hash); } catch (_) {}
