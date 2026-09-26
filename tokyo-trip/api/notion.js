@@ -26,6 +26,7 @@ const DB = {
   expenses: process.env.NOTION_DB_EXPENSES || "06b4de9448ff427eb0e68481a2b48a11",
   itinerary: process.env.NOTION_DB_ITINERARY || "fb55bb99d77749aea5b41cf897f566e7",
   seats: process.env.NOTION_DB_SEATS || "16c8f7cfc12c4e6d89cab63011295888",
+  flights: process.env.NOTION_DB_FLIGHTS || "4c438316581d4cb89a08258f0ebbe57e",
   /* 多租戶的三張表。**這三張回答的是「你是誰、你在哪一團、你動得了什麼」**,
      上面三張回答的是「這一團有什麼」—— 兩組不要混。
      「人」沿用舊的那張:它只記誰登入過(三十人名額),跟哪一團無關。 */
@@ -234,7 +235,44 @@ function seatIn(b) {
   return props;
 }
 
+/* 航班:一列 = 一班飛機。**第 2 期以前這些是寫死在前端的**(樂桃 MM626/MM631、
+   起降時間、機場)—— 那只對東京五人行成立。現在看板、倒數、行程上的報到/起飛/抵達、
+   機位圖都從這裡長出來,座位表的「航班」對的就是這裡的航班號。
+   時間存「當地時間、不帶時區」的字串(2026-10-03T10:50):畫面上要的就是登機證上那個數字,
+   換算成某個時區反而會在跨日的深夜班機上錯一天。 */
+const DIRS = ["去程", "回程", "其他"];
+const localTime = v => (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(String(v || "")) ? v : null);
+function flightOut(page) {
+  const p = page.properties;
+  const t = x => (x && x.date && x.date.start ? String(x.date.start).slice(0, 16) : null);
+  return {
+    id: page.id,
+    no: ttl(p["航班號"]).toUpperCase().replace(/\s+/g, ""),
+    dir: sel(p["方向"]) || "其他",
+    airline: txt(p["航空公司"]),
+    depart: t(p["起飛"]),
+    from: txt(p["起飛機場"]),
+    arrive: t(p["抵達"]),
+    to: txt(p["抵達機場"]),
+    note: txt(p["備註"]),
+  };
+}
+function flightIn(b) {
+  const props = {};
+  if (b.no !== undefined) props["航班號"] = { title: richText(String(b.no || "").toUpperCase().replace(/\s+/g, "")) };
+  if (b.dir !== undefined) props["方向"] = { select: { name: DIRS.indexOf(b.dir) >= 0 ? b.dir : "其他" } };
+  if (b.airline !== undefined) props["航空公司"] = { rich_text: richText(b.airline) };
+  if (b.from !== undefined) props["起飛機場"] = { rich_text: richText(b.from) };
+  if (b.to !== undefined) props["抵達機場"] = { rich_text: richText(b.to) };
+  if (b.note !== undefined) props["備註"] = { rich_text: richText(b.note) };
+  /* 不帶時區的字串照原樣存:Notion 看到沒有時區的 datetime 就當成「浮動時間」 */
+  if (b.depart !== undefined) props["起飛"] = localTime(b.depart) ? { date: { start: b.depart } } : { date: null };
+  if (b.arrive !== undefined) props["抵達"] = localTime(b.arrive) ? { date: { start: b.arrive } } : { date: null };
+  return props;
+}
+
 const SHAPES = {
+  flights: { db: DB.flights, out: flightOut, in: flightIn, sort: [{ property: "起飛", direction: "ascending" }] },
   expenses: { db: DB.expenses, out: expenseOut, in: expenseIn, sort: [{ property: "日期", direction: "ascending" }] },
   itinerary: { db: DB.itinerary, out: stopOut, in: stopIn, sort: [{ property: "日期", direction: "ascending" }] },
   seats: { db: DB.seats, out: seatOut, in: seatIn, sort: [{ property: "航班", direction: "ascending" }] },
@@ -844,7 +882,7 @@ module.exports = async (req, res) => {
 
   /* 哪一張表對應團主開的哪一個開關。**沒列在這裡的東西成員一律動不了** ——
      新增一張表的人要自己決定它屬於哪一塊,而不是預設放行。 */
-  const BUCKET = { itinerary: "plan", expenses: "cost", seats: "seat" };
+  const BUCKET = { itinerary: "plan", expenses: "cost", seats: "seat", flights: "seat" };
 
   try {
     const c = await context(q.t);

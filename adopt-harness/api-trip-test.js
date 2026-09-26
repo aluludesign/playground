@@ -29,6 +29,7 @@ const DB = {
   itinerary: "fb55bb99d77749aea5b41cf897f566e7",
   expenses: "06b4de9448ff427eb0e68481a2b48a11",
   seats: "16c8f7cfc12c4e6d89cab63011295888",
+  flights: "4c438316581d4cb89a08258f0ebbe57e",
 };
 const dash = id => id.replace(/^(.{8})(.{4})(.{4})(.{4})(.{12})$/, "$1-$2-$3-$4-$5");
 let pages = [];
@@ -109,7 +110,7 @@ async function call(who, method, query, body) {
   process.env.NOTION_TOKEN = "ntn_test";
   process.env.LINE_CHANNEL_SECRET = SECRET;
   delete process.env.TRIP_KEY;
-  ["NOTION_DB_EXPENSES", "NOTION_DB_ITINERARY", "NOTION_DB_SEATS", "NOTION_DB_TRIPS", "NOTION_DB_MEMBERS"]
+  ["NOTION_DB_EXPENSES", "NOTION_DB_ITINERARY", "NOTION_DB_SEATS", "NOTION_DB_FLIGHTS", "NOTION_DB_TRIPS", "NOTION_DB_MEMBERS"]
     .forEach(k => delete process.env[k]);
   delete require.cache[require.resolve(SRC)];
   const handler = require(SRC);
@@ -273,6 +274,27 @@ const memberRow = (code, sub) => rowsIn(DB.members).find(p => plain(p.properties
   ok("花費:付款人、分攤者記成員代號,重複的和格式不對的拿掉",
     r.code === 200 && r.body.row.payer === B_ID &&
     JSON.stringify(r.body.row.participants) === JSON.stringify([B_ID, D_ID]), r.body.row);
+
+  /* ================= 航班(第 2 期以前寫死在前端) ================= */
+  r = await call(LINE_B, "POST", { resource: "flights", t: T1 }, { no: "mm626", dir: "去程" });
+  ok("成員加航班、團主沒開「成員可管機位」→ 403", r.code === 403, r.body);
+  r = await call(LINE_A, "POST", { resource: "flights", t: T1 },
+    { no: "mm 626", dir: "去程", airline: "樂桃航空", depart: "2026-10-03T10:50", from: "TPE 桃園 T1",
+      arrive: "2026-10-03T15:20", to: "NRT 成田 T1" });
+  ok("團主加航班:航班號轉大寫去空白,起降時間照登機證上的當地時間存(不換時區)",
+    r.code === 200 && r.body.row.no === "MM626" && r.body.row.dir === "去程" &&
+    r.body.row.depart === "2026-10-03T10:50" && r.body.row.arrive === "2026-10-03T15:20", r.body);
+  const fl = r.body.row.id;
+  r = await call(LINE_A, "PATCH", { resource: "flights", t: T1, id: fl }, { dir: "亂寫", depart: "10:50" });
+  ok("方向不認得就當「其他」;時間格式不對就清掉,不存一個讀不懂的字串",
+    r.code === 200 && r.body.row.dir === "其他" && r.body.row.depart === null && r.body.row.no === "MM626", r.body);
+  await call(LINE_A, "PATCH", { resource: "team", t: T1 }, { can: { seat: true } });
+  r = await call(LINE_B, "GET", { resource: "flights", t: T1 });
+  ok("成員讀得到航班", r.code === 200 && r.body.rows.length === 1, r.body);
+  r = await call(LINE_B, "POST", { resource: "flights", t: T1 }, { no: "MM631", dir: "回程" });
+  ok("團主打開機位開關之後,成員加得了航班", r.code === 200, r.body);
+  r = await call(LINE_C, "GET", { resource: "flights", t: T2 });
+  ok("別團讀不到這一團的航班", r.code === 200 && r.body.rows.length === 0, r.body);
 
   /* ================= 許願 ================= */
   await call(LINE_A, "PATCH", { resource: "team", t: T1 }, { can: { plan: false } });
