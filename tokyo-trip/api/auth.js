@@ -46,9 +46,23 @@ function redirectUri(req) {
 
 /* 登入成功或失敗都回首頁,理由帶在網址上給前端講人話。
    直接在這裡印一頁錯誤訊息的話,使用者會卡在一個沒有「回去」的畫面上。 */
-function home(res, query) {
+/* **登入完要回到出發的那一頁,不是首頁。** 第 2 期的邀請連結長這樣:
+   `/?t=團代號&i=邀請碼` —— 朋友點開、還沒登入、按 LINE 登入,回來的時候
+   如果落在首頁,邀請就不見了,他只會看到「你還沒有任何團」。
+
+   出發前把那一頁記在 cookie 裡(跟 state 同一種壽命),回來時取出來。
+   **只收站內的相對路徑**:以 `/` 開頭、第二個字不是 `/` 或 `\`、只有網址安全的字元 ——
+   否則就是一個「登入完把你送去任何網站」的洞。 */
+const BACK_COOKIE = "trip_b";
+function safeBack(v) {
+  const s = String(v || "");
+  return /^\/(?![\/\\])[A-Za-z0-9._~\-\/?=&%]{0,300}$/.test(s) ? s : "/";
+}
+function home(res, query, back) {
+  const to = safeBack(back);
+  const join = to.indexOf("?") >= 0 ? "&" : "?";
   res.statusCode = 302;
-  res.setHeader("Location", "/" + (query ? "?" + query : ""));
+  res.setHeader("Location", to + (query ? join + query : ""));
   res.end();
 }
 
@@ -102,6 +116,7 @@ module.exports = async (req, res) => {
        意思是「這趟是從這台瀏覽器出發的」。 */
     const state = crypto.randomBytes(16).toString("base64url");
     S.setCookie(res, S.STATE_COOKIE, state, 600);
+    S.setCookie(res, BACK_COOKIE, safeBack(q.back), 600);
     const url = AUTHZ + "?" + new URLSearchParams({
       response_type: "code",
       client_id: CHANNEL_ID,
@@ -116,8 +131,11 @@ module.exports = async (req, res) => {
 
   /* ---------- 回呼 ---------- */
 
+  const back = safeBack(S.readCookies(req)[BACK_COOKIE]);
+  if (q.code || q.error) S.clearCookie(res, BACK_COOKIE);
+
   /* 使用者在 LINE 那頁按了取消,也會走這裡。那不是錯誤,是一個決定。 */
-  if (q.error) return home(res, "login=cancel");
+  if (q.error) return home(res, "login=cancel", back);
 
   if (!q.code) {
     /* 不帶任何參數直接打這支的人(含搜尋引擎)——給他一個入口就好 */
@@ -126,7 +144,7 @@ module.exports = async (req, res) => {
 
   const want = S.readCookies(req)[S.STATE_COOKIE];
   S.clearCookie(res, S.STATE_COOKIE);
-  if (!want || String(q.state || "") !== want) return home(res, "login=state");
+  if (!want || String(q.state || "") !== want) return home(res, "login=state", back);
 
   try {
     const tok = await post(TOKEN, new URLSearchParams({
@@ -137,11 +155,11 @@ module.exports = async (req, res) => {
       client_secret: process.env.LINE_CHANNEL_SECRET,
     }).toString());
     const tj = await tok.json().catch(() => ({}));
-    if (!tok.ok || !tj.access_token) return home(res, "login=token");
+    if (!tok.ok || !tj.access_token) return home(res, "login=token", back);
 
     const pr = await get(PROFILE, tj.access_token);
     const pj = await pr.json().catch(() => ({}));
-    if (!pr.ok || !pj.userId) return home(res, "login=profile");
+    if (!pr.ok || !pj.userId) return home(res, "login=profile", back);
 
     const who = {
       sub: pj.userId,
@@ -154,15 +172,15 @@ module.exports = async (req, res) => {
        (Notion 那邊出事時 `seeUser` 會放行,理由寫在 `_people.js`:
         那張表是記帳用的,不是安全邊界。) */
     const seen = await P.seeUser(who);
-    if (!seen.ok) return home(res, "login=full");
+    if (!seen.ok) return home(res, "login=full", back);
 
     S.setCookie(res, S.SESSION_COOKIE, S.sign(Object.assign({
       exp: Date.now() + S.SESSION_DAYS * 86400000,
     }, who), key), S.SESSION_DAYS * 86400);
-    return home(res, "login=ok");
+    return home(res, "login=ok", back);
   } catch (_) {
     /* 逾時、LINE 掛掉、網路斷掉都到這裡。**不要把原始錯誤丟到網址上** ——
        那一串對使用者沒有意義,而且有機會把內部細節印在網址列上。 */
-    return home(res, "login=fail");
+    return home(res, "login=fail", back);
   }
 };

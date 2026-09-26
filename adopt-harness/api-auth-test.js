@@ -141,6 +141,23 @@ function ok(name, cond, extra) {
     /HttpOnly/.test(sess) && /Secure/.test(sess) && /SameSite=Lax/.test(sess), sess);
   ok("**secret 沒有跟著 cookie 出去**", sess.indexOf(SECRET) < 0, sess);
 
+  /* ---- 登入完回到出發的那一頁(第 2 期:邀請連結 /?t=…&i=…) ---- */
+  r = await call({ go: "login", back: "/?t=k7p2x9ab&i=q4wn8t" });
+  ok("出發時把那一頁記下來", /trip_b=/.test(cookies(r.res).trip_b || "") &&
+    decodeURIComponent(cookies(r.res).trip_b).indexOf("/?t=k7p2x9ab&i=q4wn8t") >= 0, cookies(r.res).trip_b);
+  r = await call({ code: "c1", state: "s1" },
+    { cookie: "trip_s=s1; trip_b=" + encodeURIComponent("/?t=k7p2x9ab&i=q4wn8t"), stub: happy });
+  ok("回來之後落在那一頁,後面接上 login=ok(邀請沒有不見)",
+    r.res.getHeader("location") === "/?t=k7p2x9ab&i=q4wn8t&login=ok", r.res.getHeader("location"));
+  for (const evil of ["//evil.example/x", "https://evil.example", "/\\evil.example", "javascript:alert(1)", "/?t=<x>"]) {
+    r = await call({ go: "login", back: evil });
+    ok("**不是站內路徑就不記(" + evil + ")** —— 不然登入完會被送去別的網站",
+      decodeURIComponent(cookies(r.res).trip_b || "").split(";")[0] === "trip_b=/", cookies(r.res).trip_b);
+  }
+  r = await call({ code: "c1", state: "s1" },
+    { cookie: "trip_s=s1; trip_b=" + encodeURIComponent("//evil.example"), stub: happy });
+  ok("cookie 被竄改成外站 → 回呼那一步也擋,回首頁", r.res.getHeader("location") === "/?login=ok", r.res.getHeader("location"));
+
   const good = valueOf(sess);
   r = await call({ go: "me" }, { cookie: "trip_u=" + encodeURIComponent(good) });
   ok("拿著這張 cookie 回來問 → 認得出是誰",
