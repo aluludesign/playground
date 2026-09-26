@@ -88,6 +88,9 @@ w.fetch = function (url, init) {
     if (method !== "GET") notionWrites.push({ 方法: method, 網址: String(url), 內容: init && init.body });
     var body;
     if (method === "PATCH") body = { row: JSON.parse((init && init.body) || "{}") };
+    /* 航班和座位沿用 fixture 那份 —— 第 2 期起看板是從它們長出來的,給空的就只剩「還沒有航班」,
+       第 15 段(看板永遠攤開)就沒有對象了。 */
+    else if (kind === "flights" || kind === "seats") body = { rows: (w.__rows && w.__rows[kind]) || [] };
     else body = { rows: kind === "wishes" ? notionWishes : [] };
     return Promise.resolve({ ok: true, status: 200, json: function () { return Promise.resolve(body); } });
   }
@@ -411,8 +414,8 @@ function pinsOf(k) { return pins()[k]; }
       asked.length + osm.length === netBefore2, { 之前: netBefore2, 之後: asked.length + osm.length });
 
     // 11 ---- 問題一:人工表被規則一連帶砍掉的那一筆 ----
-    /* ANCHORS["2026-10-03"][0] =
-         { title: "桃園機場 第一航廈 報到", place: "樂桃 MM626 · 建議起飛前 2.5 小時" }
+    /* 報到那一筆(第 2 期起從航班推出來,以前是寫死的 ANCHORS):
+         { title: "桃園 T1 報到", place: "樂桃航空 MM626 · 建議起飛前 2.5 小時" }
        地點欄裡填的是航班備註,而「桃園」寫在標題裡,OUTSIDE 表裡也有。
        規則一把標題從候選裡拿掉的時候,**連帶讓這張表也比對不到** ——
        於是它掉到線上查詢,拿一句航班備註去問,而「再查一次」那條路根本沒查表。 */
@@ -421,10 +424,10 @@ function pinsOf(k) { return pins()[k]; }
     d.querySelector('#days [data-day="2026-10-03"]').click();
     await until(function () {
       return [].slice.call(d.querySelectorAll("#route .stop"))
-        .some(function (r) { return /桃園機場 第一航廈 報到/.test(r.textContent); });
+        .some(function (r) { return /桃園.*報到/.test(r.textContent); });
     });
     var tpe = [].slice.call(d.querySelectorAll("#route .stop"))
-      .filter(function (r) { return /桃園機場 第一航廈 報到/.test(r.textContent); })[0];
+      .filter(function (r) { return /桃園.*報到/.test(r.textContent); })[0];
     ok("找得到桃園機場報到那一列", !!tpe, null);
     tpe.click();
     /* **這一段原本問的是那條小字講了什麼**(「在人工確認過的表裡」、「不在日本境內」、
@@ -458,7 +461,7 @@ function pinsOf(k) { return pins()[k]; }
       !!pins()["TPE 桃園 T1"] && pins()["TPE 桃園 T1"].via === "TPE 桃園 T1",
       pins()["TPE 桃園 T1"]);
     var nrt = [].slice.call(d.querySelectorAll("#route .stop"))
-      .filter(function (r) { return /抵達成田機場/.test(r.textContent); })[0];
+      .filter(function (r) { return /抵達 成田/.test(r.textContent); })[0];
     nrt.click();
     /* **這一條原本斷言的是「`pins["NRT 成田 T1"]` 在快取裡、而且帶 via」,而那是錯的。**
        量過了:成田在地圖上**有** pin,但那個 key 從來沒進過 `tokyo5-pin3` ——
@@ -476,7 +479,7 @@ function pinsOf(k) { return pins()[k]; }
     ok("成田那一筆在地圖上有 pin(人工表接住它,而且它在日本境內)",
       await until(function () {
         return [].some.call(d.querySelectorAll(".map .pin .lab"),
-          function (e) { return /抵達成田機場/.test(e.textContent); });
+          function (e) { return /抵達 成田/.test(e.textContent); });
       }),
       [].map.call(d.querySelectorAll(".map .pin .lab"), function (e) { return e.textContent; }));
     ok("而且接住它沒有發出任何查詢(表就是答案,不花錢)",
@@ -791,8 +794,26 @@ function pinsOf(k) { return pins()[k]; }
     notionWishes = wishRows;
 
     // 14a ---- 切換到唯讀之前,先確認那條路真的把我們帶過去 ----
+    /* **第 2 期起唯讀是一種身分,不是一種連線狀態。** 以前的路是「離線模式 → 按連上 Notion
+       → 已連上但沒有通行碼」;本機模式和通行碼都拿掉了。現在走得到唯讀的真路是:
+       團主那邊把你的身分改掉(這裡:伺服器說我是成員、團主一個開關都沒開),
+       你按「重新整理」。 */
+    teamReply = {
+      trip: { code: "fixture1", name: "東京五人行", country: "日本", city: "東京", currency: "JPY",
+              start: "2026-10-03", end: "2026-10-08", rate: 0.21, kitty: 30000,
+              can: { plan: false, cost: false, seat: false } },
+      members: [
+        { id: "hsieh_chinhui", name: "阿輝", color: "#E60012", role: "成員" },
+        { id: "chang_chiayu",  name: "佳瑜", color: "#F39700", role: "團主" },
+        { id: "chang_chihwei", name: "志偉", color: "#009944", role: "成員" },
+        { id: "chang_yalun",   name: "雅倫", color: "#00A7DB", role: "成員" },
+        { id: "chen_suchih",   name: "媽",   color: "#9B7CB6", role: "成員" },
+      ],
+      me: { id: "hsieh_chinhui", name: "阿輝", color: "#E60012", role: "成員", invite: "q4wn8t" },
+    };
     serveNotion = true;
-    ok("切換之前是離線模式(對照的起點)", /離線模式/.test(q("#cloud-msg").textContent), q("#cloud-msg").textContent);
+    ok("切換之前是團主、可以編輯(對照的起點)", q("#add-stop-btn").hidden === false && /團主/.test(q("#cloud-msg").textContent),
+      { 加行程藏著: q("#add-stop-btn").hidden, 狀態列: q("#cloud-msg").textContent });
     /* **先打開漢堡選單,因為人就是這樣按的。**
        連線那幾顆搬進選單之後,`q("#cloud-in").click()` 照樣會觸發 ——
        對 `display:none` 的元素呼叫 `.click()` 是會動的。於是這一段仍然綠,
@@ -801,16 +822,16 @@ function pinsOf(k) { return pins()[k]; }
     q("#menu-btn").click();
     await sleep(120);
     ok("按漢堡之後選單打開", q("#menu-pop").hidden === false, q("#menu-pop").hidden);
-    var cin = q("#cloud-in");
-    ok("畫面上有「連上 Notion」這條路(唯讀是從這裡進去的)", !!cin, q("#cloud-ops").innerHTML);
+    var cin = q("#cloud-sync");
+    ok("畫面上有「重新整理」(團主改了你的身分,按它就看得到)", !!cin, q("#cloud-ops").innerHTML);
     /* 而且它真的按得到 —— 不是只有 DOM 裡有。 */
     var cr = cin.getBoundingClientRect();
     var chit = d.elementFromPoint(Math.round(cr.left + cr.width / 2), Math.round(cr.top + cr.height / 2));
     ok("而且那顆按得到(不是只有程式碰得到)", !!chit && (chit === cin || cin.contains(chit)),
       chit && (chit.tagName.toLowerCase() + (chit.id ? "#" + chit.id : "")));
     cin.click();
-    ok("連上之後是**已連上但不是管理員**(= 那三個人的身分)",
-      await until(function () { return /^已連上 Notion$/.test(q("#cloud-msg").textContent); }),
+    ok("重新整理之後是**成員、團主一個開關都沒開**",
+      await until(function () { return /^阿輝$/.test(q("#cloud-msg").textContent); }),
       q("#cloud-msg").textContent);
     /* **這一條是上面那句身分宣告的憑證。** 只看 cloud-msg 的話,我只是在讀一段
        我自己也可以寫錯的文案;`add-stop-btn` 被收起來是 `renderEditAbility()`
@@ -1070,23 +1091,24 @@ function pinsOf(k) { return pins()[k]; }
       q("#add-wish-btn").click();
       return whoNamesQuiet().map(function (o) { return o.textContent; });
     }
+    /* 第 2 期起沒有「內建的五個人」這條退路了 —— 名單只從伺服器來。
+       這裡的對照起點是 14a 那份名單(五個人,佳瑜是團主)。 */
     var before = whoNames();
     var wfx = q("#wf-cancel"); if (wfx) wfx.click();
-    ok("讀不到成員的時候,畫面上還是那五個內建的人(**不是變成一個沒有人的畫面**)",
-      before.length === 5 && before.indexOf("佳瑜") >= 0, before);
-    ok("而且它有講出來走的是退路", flashed(/讀不到這一團的成員/), flashes.slice(-6));
+    ok("對照的起點:畫面上是伺服器上一次給的那五個人", before.length === 5 && before.indexOf("佳瑜") >= 0, before);
 
     /* 換成另一份名單 —— 名字、顏色、人數全都不一樣,才分得出畫面是真的跟著換,
        還是剛好長得像。 */
     teamReply = {
-      trip: { code: "tokyo", name: "東京五人行", start: "2026-10-03", end: "2026-10-08",
-              rate: 0.21, kitty: 30000, can: { plan: false, cost: false, seat: false } },
+      trip: { code: "fixture1", name: "東京五人行", country: "日本", city: "東京", currency: "JPY",
+              start: "2026-10-03", end: "2026-10-08", rate: 0.21, kitty: 30000,
+              can: { plan: false, cost: false, seat: false } },
       members: [
-        { id: "aaa", name: "小明", key: "Ming", color: "#123456", role: "團主", claimed: true },
-        { id: "bbb", name: "小華", key: "Hua", color: "#654321", role: "成員", claimed: false },
-        { id: "ccc", name: "小美", key: "Mei", color: "#abcdef", role: "成員", claimed: false },
+        { id: "aaa", name: "小明", color: "#123456", role: "團主" },
+        { id: "bbb", name: "小華", color: "#654321", role: "成員" },
+        { id: "ccc", name: "小美", color: "#abcdef", role: "成員" },
       ],
-      me: { id: "aaa", role: "團主" },
+      me: { id: "aaa", name: "小明", color: "#123456", role: "團主", invite: "a1b2c3" },
     };
     q("#menu-btn").click();
     await sleep(120);

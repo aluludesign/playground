@@ -20,7 +20,6 @@ EXPENSES = [
  {"id":"e3","date":"2026-09-15","title":"樂桃來回機票","category":"transport","amount":61100,"currency":"TWD",
   "payerId":"hsieh_chinhui","participants":["hsieh_chinhui","chang_chiayu","chang_chihwei","chang_yalun","chen_suchih"],"note":"訂單 PTETF3","createdAt":"2026-09-15T00:00:00Z"},
 ]
-STATE = {"version":3,"rate":0.21,"names":{},"expenses":EXPENSES,"stops":STOPS,"wishes":WISHES}
 # 固定天氣:六天都給同一組,免得預報變動害比對失真
 DAYS = ["2026-10-0%d" % d for d in range(3,9)]
 WX = {"35.68,139.65":{"at":9e14,"days":{d:[40,24.0,18.0] for d in DAYS}},
@@ -60,92 +59,152 @@ CLOCK = """<script>(function(){
 })();</script>
 """ % FREEZE
 
-# SNAP=1 時多灌一份「離線副本」(index.html 的 tokyo5-snap)。
+# ---------------------------------------------------------------------------
+# 第 2 期:**沒有「沒有後端」這種模式了。** 以前每一張截圖都是「本機模式」拍的
+# (fixture 灌 localStorage 的 tokyo5-v1,程式連不上後端就讀它)。第 2 期起沒登入什麼都
+# 看不到,本機模式整個拿掉 —— 所以這裡改成在頁面自己身上裝一個**假的後端**,
+# 預設扮演「已經登入的團主,打開東京五人行」,畫面上的資料跟以前那份一模一樣。
 #
-# 預設不灌,而這件事是刻意的:灌了的話每一張截圖都會變成「離線 · 唯讀」那一套
-# ——「加行程」「改」那些按鈕全部消失,十四張基準圖一次全紅。
-# 所以它是一個開關,跟 SRC= / WIDTH= / PREFLIGHT= 同一個家族:
-#   SNAP=1 ./probe.sh probes/pwa.js
-#
-# 副本裡故意多一筆 LS 沒有的行程。兩份資料長得一樣的話,探針沒辦法分辨
-# 「畫面上顯示的是副本」還是「副本根本沒被讀到、顯示的是 LS」——
-# 那兩種情況的畫面會一模一樣,而後者正是要防的 bug。
+# 網址上的 `fake=` 換成別的角色(PAGE= 帶進去):
+#   (沒帶)     團主,資料齊全 —— 所有截圖都在這個世界
+#   anon        沒登入              → 登入卡
+#   new         登入了、一團都沒有  → 開團卡
+#   member      一般成員、團主一個開關都沒開 → 唯讀
+#   join        登入了、不是這一團的人 → 加入卡(帶 i= 的話先看一眼)
+# SNAP=1:後端整個連不上,這台裝置上有這一團的副本 → 離線唯讀。
+TRIP_CODE = "fixture1"
+ME_ID = "hsieh_chinhui"   # 以前 fixture 設的「我是誰」(tokyo5-me)也是他
+CAT_ZH = {"transport": "交通", "stay": "住宿", "food": "餐飲", "sight": "景點", "shop": "購物", "other": "其他"}
+FAKE_TRIP = {"code": TRIP_CODE, "name": "東京五人行", "country": "日本", "city": "東京", "currency": "JPY",
+             "start": "2026-10-03", "end": "2026-10-08", "rate": 0.21, "kitty": 30000,
+             "can": {"plan": False, "cost": False, "seat": False}}
+FAKE_MEMBERS = [
+  {"id": "hsieh_chinhui", "name": "阿輝", "color": "#E60012", "role": "團主"},
+  {"id": "chang_chiayu",  "name": "佳瑜", "color": "#F39700", "role": "成員"},
+  {"id": "chang_chihwei", "name": "志偉", "color": "#009944", "role": "成員"},
+  {"id": "chang_yalun",   "name": "雅倫", "color": "#00A7DB", "role": "成員"},
+  {"id": "chen_suchih",   "name": "媽",   "color": "#9B7CB6", "role": "成員"},
+]
+FAKE_FLIGHTS = [
+  {"id": "f1", "no": "MM626", "dir": "去程", "airline": "樂桃航空", "depart": "2026-10-03T10:50", "from": "TPE 桃園 T1",
+   "arrive": "2026-10-03T15:20", "to": "NRT 成田 T1", "note": "託運 1 件／人 · 手提 2 件 7kg"},
+  {"id": "f2", "no": "MM631", "dir": "回程", "airline": "樂桃航空", "depart": "2026-10-08T21:50", "from": "NRT 成田 T1",
+   "arrive": "2026-10-09T00:40", "to": "TPE 桃園 T1", "note": ""},
+]
+_OUT = {"chang_chiayu": "27A", "hsieh_chinhui": "27B", "chang_yalun": "27D", "chen_suchih": "27E", "chang_chihwei": "27F"}
+_BACK = {"chang_chiayu": "27A", "hsieh_chinhui": "27B", "chang_chihwei": "27D", "chang_yalun": "27E", "chen_suchih": "27F"}
+FAKE_SEATS = ([{"id": "so" + k, "flight": "MM626", "date": "2026-10-03", "passenger": k, "seat": v} for k, v in _OUT.items()] +
+              [{"id": "sb" + k, "flight": "MM631", "date": "2026-10-08", "passenger": k, "seat": v} for k, v in _BACK.items()])
+def _exp_row(e):
+    return {"id": e["id"], "date": e["date"], "title": e["title"], "category": CAT_ZH[e["category"]],
+            "amount": e["amount"], "currency": e["currency"], "payer": e["payerId"],
+            "participants": e["participants"], "note": e["note"], "createdAt": e["createdAt"]}
+FAKE_ROWS = {
+  "expenses": [_exp_row(e) for e in EXPENSES],
+  "itinerary": STOPS,
+  "wishes": WISHES,
+  "seats": FAKE_SEATS,
+  "flights": FAKE_FLIGHTS,
+}
+
+# 副本(SNAP=1)。故意多一筆後端沒有的行程:兩份長得一樣的話,探針分不出
+# 「畫面上是副本」還是「副本根本沒被讀到」—— 後者正是要防的 bug。
 SNAP_ONLY = {"id":"snap1","day":"2026-10-05","time":"16:30",
              "title":"只有離線副本裡才有的行程","place":"","note":""}
 SNAP_AT = "2026-09-19T01:30:00Z"   # 凍住的時鐘往前 1.5 小時
 
 def snap():
-    d = dict(STATE)
-    d["stops"] = STOPS + [SNAP_ONLY]
+    d = {"version": 4, "rate": 0.21, "names": {}, "expenses": EXPENSES, "stops": STOPS + [SNAP_ONLY],
+         "wishes": WISHES, "seats": FAKE_SEATS, "flights": FAKE_FLIGHTS, "trip": FAKE_TRIP,
+         "members": [{"id": m["id"], "def": m["name"], "key": m["id"], "full": m["name"], "color": m["color"], "role": m["role"]}
+                     for m in FAKE_MEMBERS],
+         "me": {"id": ME_ID, "name": "阿輝", "color": "#E60012", "role": "團主", "invite": "q4wn8t"}}
     return {"at": SNAP_AT, "data": d}
 
-# 「已經用 LINE 登入的人」開機時看到什麼。
-#
-# **這一段是探針唯一到得了那條路的方法。** 登入的證據是一張 HttpOnly cookie,
-# 而開機那一趟 `askWhoAmI()` / `loadTeam()` 在探針裝樁之前就跑完了 ——
-# 也就是說「登入之後的畫面」在這之前**一條斷言都驗不到**,而那正是身分那一整塊。
-# (到不了就等於沒驗。這個專案吃過太多次「綠燈證明的是程式接得到,不是人到得了」。)
-#
-# 所以樁裝在頁面自己身上,在 index.html 的 <script> 之前:
-# 網址帶 `?fake=login` 的時候,`/api/auth?go=me` 和 `?resource=team` 由它回答。
-# 沒帶就原樣轉交,所有既有的截圖和探針一個字都不受影響。
-FAKE_ME = {"user": {"id": "U-fake-0001", "name": "測試的人", "avatar": ""}, "ready": True}
-FAKE_TEAM = {
-  "trip": {"code": "tokyo", "name": "東京五人行", "start": "2026-10-03", "end": "2026-10-08",
-           "rate": 0.21, "kitty": 30000, "can": {"plan": False, "cost": False, "seat": False}},
-  "members": [
-    {"id": "hsieh_chinhui", "name": "阿輝", "key": "Chinhui", "color": "#E60012", "role": "成員", "claimed": False},
-    {"id": "chang_chiayu",  "name": "佳瑜", "key": "Chiayu",  "color": "#F39700", "role": "團主", "claimed": False},
-    {"id": "chang_chihwei", "name": "志偉", "key": "Chihwei", "color": "#009944", "role": "成員", "claimed": True},
-    {"id": "chang_yalun",   "name": "雅倫", "key": "Yalun",   "color": "#00A7DB", "role": "成員", "claimed": False},
-    {"id": "chen_suchih",   "name": "媽",   "key": "Suchih",  "color": "#9B7CB6", "role": "成員", "claimed": False},
-  ],
-  "me": None,
-}
-
-FAKE_JS = """(function(){
-  if (location.search.indexOf('fake=login') < 0) return;
-  var real = window.fetch.bind(window);
-  var ME = %s, TEAM = %s, claimed = null;
-  function reply(body){ return Promise.resolve({ ok:true, status:200,
-    json:function(){ return Promise.resolve(body); } }); }
+FAKE_JS = r"""(function(){
+  /* 頁面上沒被接住的錯誤都記下來。**程式在開機時當掉,畫面不會說** —— 一整塊空白
+     看起來跟「還沒載入」一樣。探針回傳 window.__errors 就問得出來。 */
+  window.__errors = [];
+  window.addEventListener("error", function(e){ window.__errors.push(String(e.message || e)); });
+  window.addEventListener("unhandledrejection", function(e){ window.__errors.push("promise: " + String(e.reason && e.reason.message || e.reason)); });
+  var q = location.search, mode = (/[?&]fake=([a-z]+)/.exec(q) || [])[1] || "owner";
+  var CODE = %(code)s, TRIP = %(trip)s, MEMBERS = %(members)s, ROWS = %(rows)s, ME_ID = %(me)s;
+  var OFFLINE = %(offline)s;
+  /* 沒帶團代號就補上 —— 截圖和大部分探針要的是「打開這一團」那個畫面。
+     new(一團都沒有)要的是首頁,不補。 */
+  if (mode !== "new" && !/[?&]t=/.test(q)) {
+    history.replaceState(null, "", location.pathname + (q ? q + "&" : "?") + "t=" + CODE);
+  }
+  var real = window.fetch.bind(window), seq = 0;
+  window.__rows = ROWS;   /* 探針要問「存下去了沒」就讀這裡(以前讀 localStorage 的 tokyo5-v1) */
+  /* 呼叫紀錄跨頁面留著 —— 開團/加入成功會跳頁,跳過去之後還要看得到剛剛送了什麼 */
+  window.__calls = []; try { window.__calls = JSON.parse(sessionStorage.getItem("fake-calls") || "[]"); } catch (e) {}
+  if (mode === "member") { MEMBERS.forEach(function(m){ m.role = m.id === ME_ID ? "成員" : m.role; });
+                           MEMBERS[1].role = "團主"; }
+  var me = mode === "anon" ? null : { id: "U-fake-0001", name: "測試的人", avatar: "" };
+  var joined = mode !== "join" && mode !== "new";
+  function reply(body, status){ status = status || 200; return Promise.resolve({ ok: status < 400, status: status,
+    json: function(){ return Promise.resolve(JSON.parse(JSON.stringify(body))); } }); }
+  function param(s, k){ var m = new RegExp("[?&]" + k + "=([^&]*)").exec(s); return m ? decodeURIComponent(m[1]) : ""; }
   window.fetch = function(u, init){
-    var s = String(u);
-    if (s.indexOf('/api/auth?go=me') >= 0) return reply(ME);
-    if (s.indexOf('resource=team') >= 0) {
-      var t = JSON.parse(JSON.stringify(TEAM));
-      if (claimed) {
-        t.members.forEach(function(m){ if (m.id === claimed) m.claimed = true; });
-        t.me = { id: claimed, role: (t.members.filter(function(m){return m.id===claimed;})[0]||{}).role };
-      }
-      return reply(t);
+    var s = String(u), method = (init && init.method) || "GET", body = {};
+    try { body = JSON.parse((init && init.body) || "{}"); } catch (e) {}
+    if (s.indexOf("/api/") < 0) return real(u, init);
+    window.__calls.push({ url: s, method: method, body: body });
+    try { sessionStorage.setItem("fake-calls", JSON.stringify(window.__calls)); } catch (e) {}
+    if (OFFLINE) return Promise.reject(new TypeError("Failed to fetch"));
+    if (s.indexOf("/api/auth?go=me") >= 0) return reply({ user: me, ready: true });
+    if (s.indexOf("/api/notion") < 0) return real(u, init);
+    var r = param(s, "resource");
+    if (!me) return reply({ error: "請先用 LINE 登入", why: "login" }, 401);
+    var mine = MEMBERS.filter(function(m){ return m.id === ME_ID; })[0];
+    if (r === "trips") {
+      if (method === "POST") return reply({ code: "newtrip1", me: { id: "mnew01", name: body.myName, color: "#E60012", role: "團主" } });
+      return reply({ trips: joined ? [{ code: CODE, name: TRIP.name, country: TRIP.country, city: TRIP.city,
+        start: TRIP.start, end: TRIP.end, role: mine.role }] : [] });
     }
-    /* **其他 /api/notion 也要接。** 不接的話 `pull()` 會 404,`goOnline()` 拋例外,
-       開機那一段直接 `goLocal()` 然後 return —— 問「我是誰」和認領那張卡
-       一行都不會跑到,而畫面上看起來只是「連不上 Notion」。
-       第一版就是這樣:探針說「沒有位子可以選」,而程式是好的。 */
-    if (s.indexOf('resource=claim') >= 0) {
-      var b = {};
-      try { b = JSON.parse((init && init.body) || '{}'); } catch(e){}
-      claimed = b.member || null;
-      window.__claimCalls = (window.__claimCalls || []).concat([b]);
-      return reply({ me: claimed ? { id: claimed, role: 'x' } : null });
+    if (r === "join") {
+      if (method === "GET") return param(s, "code") === "q4wn8t"
+        ? reply({ joined: false, trip: { code: CODE, name: TRIP.name }, host: "佳瑜" })
+        : reply({ error: "邀請碼不對,或已經換掉了 —— 跟邀請你的人再要一次", why: "bad_invite" }, 403);
+      if (body.invite !== "q4wn8t") return reply({ error: "邀請碼不對,或已經換掉了 —— 跟邀請你的人再要一次", why: "bad_invite" }, 403);
+      joined = true;
+      return reply({ joined: true, me: { id: ME_ID, name: body.name, color: "#E60012", role: "成員" }, trip: { code: CODE, name: TRIP.name } });
     }
-    if (s.indexOf('/api/notion') >= 0) return reply({ rows: [] });
-    return real(u, init);
+    if (!joined) return reply({ error: "你還不是這一團的人 —— 要有邀請碼才能加入", why: "not_member" }, 403);
+    if (r === "team") {
+      if (method === "PATCH") { Object.keys(body).forEach(function(k){ if (k !== "can") TRIP[k] = body[k]; });
+        if (body.can) Object.keys(body.can).forEach(function(k){ TRIP.can[k] = body.can[k]; });
+        return reply({ trip: TRIP }); }
+      return reply({ trip: TRIP, members: MEMBERS, me: { id: mine.id, name: mine.name, color: mine.color, role: mine.role, invite: "q4wn8t" } });
+    }
+    if (r === "me") {
+      if (body.name) mine.name = body.name;
+      if (body.color) mine.color = body.color;
+      return reply({ me: { id: mine.id, name: mine.name, color: mine.color, role: mine.role, invite: body.invite ? "z9z9z9" : "q4wn8t" } });
+    }
+    var rows = ROWS[r];
+    if (!rows) return reply({ error: "不認識的資料表:" + r }, 400);
+    var id = param(s, "id");
+    if (method === "GET") return reply({ rows: rows });
+    if (method === "POST") { var row = Object.assign({ id: "new" + (++seq) }, body); rows.push(row); return reply({ row: row }); }
+    var hit = rows.filter(function(x){ return x.id === id; })[0];
+    if (!hit) return reply({ error: "這一團沒有這一筆" }, 404);
+    if (method === "PATCH") { Object.assign(hit, body); return reply({ row: hit }); }
+    if (method === "DELETE") { rows.splice(rows.indexOf(hit), 1); return reply({ ok: true }); }
+    return reply({ error: "不支援的方法" }, 405);
   };
 })();"""
 
 def seed():
     j = lambda o: json.dumps(json.dumps(o, ensure_ascii=False))
-    extra = ("localStorage.setItem('tokyo5-snap',"+j(snap())+");"
-             if os.environ.get("SNAP") else "")
-    fake = (FAKE_JS % (json.dumps(FAKE_ME, ensure_ascii=False),
-                       json.dumps(FAKE_TEAM, ensure_ascii=False)))
+    offline = bool(os.environ.get("SNAP"))
+    extra = ("localStorage.setItem('trippps-snap:" + TRIP_CODE + "'," + j(snap()) + ");" if offline else "")
+    d = lambda o: json.dumps(o, ensure_ascii=False)
+    fake = FAKE_JS % {"code": d(TRIP_CODE), "trip": d(FAKE_TRIP), "members": d(FAKE_MEMBERS),
+                      "rows": d(FAKE_ROWS), "me": d(ME_ID), "offline": "true" if offline else "false"}
     return CLOCK + ("<script>try{"
-      "localStorage.setItem('tokyo5-v1',"+j(STATE)+");"
-      "localStorage.setItem('tokyo5-wx',"+j(WX)+");"
+      "localStorage.setItem('trippps-wx',"+j(WX)+");"
       "localStorage.setItem('tokyo5-pin3',"+j(PINS)+");"
-      "localStorage.setItem('tokyo5-me','hsieh_chinhui');"
       + extra +
       "}catch(e){}</script>\n<script>" + fake + "</script>\n")

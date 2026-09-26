@@ -221,7 +221,8 @@ var SIX = [0, 1, 2, 3, 4, 5].map(function (i) {
        是靠**只有挑過的時候才寫 `place`** —— 而「沒有 place 就不查、不上地圖」
        是本來就在的規則。所以這三條測的是那個落點,不是地圖那條路。 */
     function stops() {
-      try { return (JSON.parse(w.localStorage.getItem("tokyo5-v1") || "{}").stops) || []; }
+      /* 第 2 期起沒有本機模式,存下去的東西在假後端(fixture.py)那邊 */
+      try { return (w.__rows && w.__rows.itinerary) || []; }
       catch (e) { return []; }
     }
     ok("舊的地點欄真的不存在了(不是只藏起來)",
@@ -297,7 +298,7 @@ var SIX = [0, 1, 2, 3, 4, 5].map(function (i) {
        `merge-place-field.md` 那三種情況不是可以隨手簡化的分支,所以三種各量一次。
        fixture 的 tokyo5-me 是 hsieh_chinhui,他許的是 w2「橫濱 港灣未來」。 */
     function wishes() {
-      return JSON.parse(w.localStorage.getItem("tokyo5-v1") || "{}").wishes || [];
+      return (w.__rows && w.__rows.wishes) || [];
     }
     function wishRow(re) {
       return [].slice.call(d.querySelectorAll("#wish-list [data-wish]"))

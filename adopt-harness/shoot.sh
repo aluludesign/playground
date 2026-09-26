@@ -426,8 +426,11 @@ shot 19-fly-mobile      390  900 "d.getElementById('tab-fly').click();" \
 # **這一層一張都沒拍過** —— 它是每個人看到的第一個畫面,卻沒有任何一張圖證明
 # 它蓋得住後面。她在 iPad 上拍到的正是這個:門旁邊擺著一張清清楚楚、
 # 還能拖能點的地圖。矩形和 z 軸是兩件事,而兩件事都只有眼睛看得出來。
-shot 20-signin-gate    1440  900 "d.getElementById('signin-overlay').hidden=false;" \
-                                  "#signin-overlay:not([hidden]) .signin:1+"
+# 第 2 期:門換成 #home-overlay,內容由 openHome("signin") 產生(那個函式在頁面的 IIFE 裡,碰不到)。
+# 這一張要的是「門蓋不蓋得住後面那張有資料的頁面」,所以照舊在團主的畫面上打開它,
+# 內容照抄 openHome("signin") 的 markup —— 改了那邊的文案,這裡要跟著改。
+shot 20-signin-gate    1440  900 "d.getElementById('home-card').innerHTML='<h2 id=\\'home-title\\'>Trippps</h2><p>跟朋友一起排行程、許願、分帳。用 LINE 登入就能開始。</p><div class=\\'ops\\'><button type=\\'button\\' class=\\'btn btn-line\\'>用 LINE 登入</button></div>';d.getElementById('home-overlay').hidden=false;" \
+                                  "#home-overlay:not([hidden]) .signin:1+"
 
 # 21:窄桌機(1100)的「許願」分頁。
 # **這個寬度的許願以前是一條釘在底部的 bar,現在是分頁** —— 而 02 拍的是行程頁,

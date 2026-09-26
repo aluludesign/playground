@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>東京五人行 · Trippps</title>
-<meta name="description" content="2026 年 10 月東京六日遊的行程規劃、花費紀錄與五人分帳結算。">
+<title>Trippps</title>
+<meta name="description" content="跟朋友一起排行程、許願、記帳分帳。">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="icon" href="icon-192.png" sizes="192x192" type="image/png">
 
@@ -180,8 +180,6 @@
        「按下去會跳到 LINE」,認錯的成本是他不敢按。 */
     /* 認領那張卡上的每一個位子。左邊那一點是那個人的顏色 —— 分帳和座位圖
        都靠顏色認人,在這裡先讓他看到自己要拿的是哪一個顏色。 */
-    .claim-one{display:flex; align-items:center; gap:9px; justify-content:flex-start;}
-    .claim-one .dot{width:10px; height:10px; border-radius:50%; background:var(--mc,#888); flex:0 0 auto;}
     .btn-line{background:#06C755; border-color:#06C755; color:#fff;}
     .btn-line:hover{background:#06C755; border-color:#06C755; filter:brightness(1.06);}
     .empty{padding:26px 18px; text-align:center; color:var(--muted); font-size:13px;}
@@ -446,7 +444,7 @@
          一張清清楚楚、還能拖能點的地圖擺在門旁邊。
          (它擋不住資料:「直接進入」不用密碼。但一扇蓋不住後面的門,
          看起來像是壞了,而不是像一個選擇。) */
-      body.drawer-open #signin-overlay{right:0;}
+      body.drawer-open #home-overlay{right:0;}
       /* **三塊都關不掉,所以那顆 ✕ 是騙人的。** 一個按了會被立刻復原的關閉鈕,
          比沒有那個按鈕更糟:使用者會以為自己弄壞了什麼。 */
       #map-sheet-x{display:none;}
@@ -988,7 +986,7 @@
     /* **門要在抽屜上面。** 對話框是 z60、抽屜是 z70 —— 只把門的矩形拉回整個視窗
      還不夠,地圖照樣畫在它上面,而且拖得動、點得到。z 軸和矩形是兩件事,
      我第一次只修了矩形,探針用 elementFromPoint 問「手指會碰到誰」才問出來。 */
-  #signin-overlay{z-index:80;}
+
   .overlay{position:fixed; inset:0; z-index:60; display:flex; justify-content:center; padding:20px;
       overflow-y:auto; overscroll-behavior:contain;
       background:color-mix(in srgb, var(--paper) 86%, transparent); backdrop-filter:blur(6px);}
@@ -998,7 +996,30 @@
     .signin p{font-size:12.5px; color:var(--muted); line-height:1.55;}
     .signin .err{font-size:12.5px; color:var(--neg); line-height:1.5;}
     .signin .ops{display:grid; gap:8px;}
-    .signin #si-adminbox{display:grid; gap:14px;}
+    /* 第 2 期的入口卡片 */
+    #home-overlay{z-index:80;}
+    .home-list{display:grid; gap:8px;}
+    .home-trip{display:grid; grid-template-columns:1fr auto; gap:2px 10px; align-items:center; text-align:left;
+      padding:12px 14px; border:1px solid var(--line); border-radius:10px; background:var(--surface); cursor:pointer;
+      color:inherit; text-decoration:none;}
+    .home-trip:hover{border-color:var(--ink);}
+    .home-trip b{font-size:15px; font-weight:600;}
+    .home-trip small{grid-column:1; font-size:12px; color:var(--muted);}
+    .home-trip .role{grid-row:1 / span 2; grid-column:2; font-size:11px; color:var(--muted);}
+    .home-card-form{display:grid; gap:12px;}
+    .set-sep{border:0; border-top:1px solid var(--line); margin:4px 0;}
+    .inv-row{display:flex; gap:8px; align-items:center;}
+    .inv-row code{flex:1 1 auto; min-width:0; overflow-wrap:anywhere; font-family:var(--font-mono); font-size:12px;
+      padding:8px 10px; border:1px solid var(--line); border-radius:8px; background:var(--paper);}
+    .inv-row code.inv-code{font-size:18px; letter-spacing:.2em; text-align:center;}
+    #invite-overlay .btn-line{text-align:center; text-decoration:none;}
+    .seatform{display:grid; grid-template-columns:auto 1fr; gap:6px 10px; align-items:center;}
+    /* 看板是深底,設計系統的淺色按鈕放上去像貼了一張便條紙 —— 改成看板自己的線和字色 */
+    .board .pen, .board .board-add{background:transparent; border:1px solid var(--board-line); color:var(--board-muted); box-shadow:none;}
+    .board .pen:hover, .board .board-add:hover{color:var(--board-ink); border-color:var(--board-muted);}
+    .board .pen{margin-left:6px; vertical-align:middle;}
+    .board-add{justify-self:start;}
+    .board-empty .seats{color:var(--board-ink);}
     /* 花費那張表欄位多,要寬一點,而且手機上高度會爆,所以讓它自己捲 */
     .signin.wide{max-width:440px; max-height:calc(100vh - 40px); overflow-y:auto; gap:12px;}
 
@@ -1062,7 +1083,7 @@
   <header class="topbar">
     <!-- 航班那一行搬去「搭機」分頁了,這裡不再重複;倒數那一行也不要標籤,
          留「倒數 N 天」本身就說得完。**頂列越短,地圖和清單就越長。** -->
-    <div class="brand"><h1>東京五人行</h1></div>
+    <div class="brand"><h1 id="trip-name">Trippps</h1></div>
     <div class="countdown" id="countdown"></div>
     <!-- 連線狀態和管理員登入／登出收進這裡。**它們是一年按不到幾次的東西**,
          卻佔掉一整條橫在行程上面 —— 在手機上那一條就是地圖少掉的一截。 -->
@@ -1146,34 +1167,7 @@
          航班、座位、行李額度是整趟不變的東西,壓在每天的行程上面只是把當天的事推下去。
          搬過來之後預設攤開:一整頁只放一張收起來的卡沒有意義。 -->
     <section class="panel" id="panel-fly" role="tabpanel" aria-labelledby="tab-fly" hidden>
-    <details class="board" id="board" open>
-      <summary class="board-head">
-        <span class="bh-name">Peach Aviation · PTETF3</span>
-        <span class="bh-brief">MM626 10/03 → MM631 10/08</span>
-        <span class="live">5 PAX</span>
-        <svg class="i bh-caret" aria-hidden="true"><use href="#i-chevron-down"></use></svg>
-      </summary>
-      <div class="leg">
-        <span class="leg-tag">去程 OUT</span><span></span><span class="leg-no">MM626 · 10/03 SAT</span>
-        <div class="leg-route">
-          <div class="port"><span class="code">TPE</span><span class="sub">台北 桃園 T1</span><span class="time">10:50</span></div>
-          <div class="dash"><svg class="i" aria-hidden="true"><use href="#i-plane"></use></svg></div>
-          <div class="port"><span class="code">NRT</span><span class="sub">東京 成田 T1</span><span class="time">15:20</span></div>
-        </div>
-        <div class="seatmap" id="seat-out"></div>
-        <div class="seats">託運 1 件／人 · 手提 2 件 7kg</div>
-      </div>
-      <div class="leg">
-        <span class="leg-tag">回程 IN</span><span></span><span class="leg-no">MM631 · 10/08 THU</span>
-        <div class="leg-route">
-          <div class="port"><span class="code">NRT</span><span class="sub">東京 成田 T1</span><span class="time">21:50</span></div>
-          <div class="dash"><svg class="i" aria-hidden="true"><use href="#i-plane"></use></svg></div>
-          <div class="port"><span class="code">TPE</span><span class="sub">台北 桃園 T1</span><span class="time">00:40 <span class="next">+1</span></span></div>
-        </div>
-        <div class="seatmap" id="seat-back"></div>
-        <div class="seats">10/09 FRI 凌晨抵台 · <span id="seat-swap"></span></div>
-      </div>
-    </details>
+    <div id="board-wrap"></div>
     </section>
 
     <section class="panel" id="panel-cost" role="tabpanel" aria-labelledby="tab-cost" hidden>
@@ -1216,7 +1210,7 @@
         <div class="fund" id="fund"></div>
       </div>
       <div class="sec">
-        <div class="sec-head"><h2>每個人的帳</h2><button class="btn btn-sm btn-ghost" id="rename-btn" type="button">改名字</button></div>
+        <div class="sec-head"><h2>每個人的帳</h2></div>
         <div class="people" id="people"></div>
       </div>
       <div class="sec">
@@ -1228,50 +1222,105 @@
 
   <footer>
     <div class="foot-row">
-      <span>2026.10.03 – 10.09 · 東京 6 天 5 夜 · 5 人</span>
+      <span id="trip-foot"></span>
       <span class="sync" id="sync"></span>
     </div>
     <div class="backup">
       <button class="btn btn-sm" id="export-btn" type="button">匯出備份</button>
-      <button class="btn btn-sm" id="import-btn" type="button">匯入備份</button>
-      <button class="btn btn-sm btn-ghost" id="reset-btn" type="button">清除本機紀錄</button>
-      <input type="file" id="import-file" accept="application/json,.json" hidden>
     </div>
     <p style="margin-top:10px; line-height:1.55" id="backup-note"></p>
   </footer>
 </div>
 
-<div class="overlay" id="signin-overlay" hidden>
-  <form class="signin" id="signin-form">
-    <h2>Trippps</h2>
-    <p id="si-hint">用 LINE 登入,許的願望就會掛你的名字。只想看看的話,直接進去也行。</p>
-    <div class="ops" id="si-choose">
-      <button type="button" class="btn btn-line" id="si-line">用 LINE 登入</button>
-      <button type="button" class="btn btn-ghost btn-sm" id="si-read">先看看就好</button>
-      <button type="button" class="btn btn-ghost btn-sm" id="si-admin">我有通行碼</button>
-    </div>
-    <div id="si-adminbox" hidden>
-      <div class="fld"><label class="rm-label" for="si-key">通行碼</label><input class="rm-input" type="password" id="si-key" autocomplete="current-password"></div>
-      <div class="err" id="si-err" hidden></div>
-      <div class="ops">
-        <button type="submit" class="btn btn-main" id="si-submit">登入</button>
-        <button type="button" class="btn btn-ghost btn-sm" id="si-back">返回</button>
+<!-- 第 2 期:進到一團之前的每一張卡都在這裡 —— 登入、我的團、開團、加入、
+     沒有這一團。它們共用一張卡(#home-card),內容由 openHome() 換。
+     分成好幾個 overlay 的話,同時開兩張的那種狀態就可能出現,而那種狀態沒有人設計過。 -->
+<div class="overlay" id="home-overlay" hidden>
+  <div class="signin" id="home-card" role="dialog" aria-modal="true" aria-labelledby="home-title"></div>
+</div>
+
+<!-- 團的設定:團主改團名、國家、城市、日期、匯率、基金、三個開關。
+     「我在這團的名字和顏色」每個人都能改,所以跟團的設定分開放在同一張卡的下半。 -->
+<div class="overlay" id="settings-overlay" hidden>
+  <form class="signin wide" id="settings-form">
+    <h2>團的設定</h2>
+    <div id="set-trip">
+      <div class="fld"><label class="rm-label" for="st-name">團名</label><input class="rm-input" type="text" id="st-name" maxlength="40" required></div>
+      <div class="grid2">
+        <div class="fld"><label class="rm-label" for="st-country">國家</label><select class="rm-input" id="st-country"><option value="日本">日本</option><option value="台灣">台灣</option></select></div>
+        <div class="fld"><label class="rm-label" for="st-city">主要城市</label><input class="rm-input" type="text" id="st-city" maxlength="30"></div>
       </div>
+      <div class="grid2">
+        <div class="fld"><label class="rm-label" for="st-start">第一天</label><input class="rm-input" type="date" id="st-start" required></div>
+        <div class="fld"><label class="rm-label" for="st-end">最後一天</label><input class="rm-input" type="date" id="st-end" required></div>
+      </div>
+      <div class="grid2">
+        <div class="fld" id="st-rate-fld"><label class="rm-label" for="st-rate">匯率(1 外幣 = ? 台幣)</label><input class="rm-input" type="number" id="st-rate" step="0.0001" min="0"></div>
+        <div class="fld"><label class="rm-label" for="st-kitty">每人共同基金(台幣)</label><input class="rm-input" type="number" id="st-kitty" step="1" min="0"></div>
+      </div>
+      <div class="fld"><span class="rm-label">成員也能改的</span>
+        <div class="who">
+          <label class="rm-chip"><input type="checkbox" id="st-can-plan">行程</label>
+          <label class="rm-chip"><input type="checkbox" id="st-can-cost">分帳</label>
+          <label class="rm-chip"><input type="checkbox" id="st-can-seat">航班和座位</label>
+        </div>
+      </div>
+    </div>
+    <p id="set-trip-ro" hidden>團的設定只有團主能改。</p>
+    <hr class="set-sep">
+    <div class="grid2">
+      <div class="fld"><label class="rm-label" for="st-myname">我在這團叫</label><input class="rm-input" type="text" id="st-myname" maxlength="20" required></div>
+      <div class="fld"><label class="rm-label" for="st-mycolor">我的顏色</label><input class="rm-input" type="color" id="st-mycolor"></div>
+    </div>
+    <div class="err" id="st-err" hidden></div>
+    <div class="ops">
+      <button type="submit" class="btn btn-main" id="st-save">存起來</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="st-cancel">取消</button>
     </div>
   </form>
 </div>
 
-
-<div class="overlay" id="claim-overlay" hidden>
-  <div class="signin" id="claim-card">
-    <h2>你是哪一位?</h2>
-    <p id="claim-hint">選一個位子,之後你許的願、你付的錢都會掛在它上面。</p>
-    <div class="ops" id="claim-list"></div>
-    <div class="err" id="claim-err" hidden></div>
+<!-- 邀請朋友:網址 + 我的邀請碼,一鍵複製、一鍵丟到 LINE。 -->
+<div class="overlay" id="invite-overlay" hidden>
+  <div class="signin" role="dialog" aria-modal="true" aria-labelledby="inv-title">
+    <h2 id="inv-title">邀請朋友</h2>
+    <p>把網址傳給朋友,他用 LINE 登入、輸入邀請碼就進來了。<b>這是你自己的邀請碼</b> —— 朋友用它加入,團裡會記得是你邀請的。</p>
+    <div class="fld"><span class="rm-label">網址</span><div class="inv-row"><code id="inv-url"></code><button type="button" class="btn btn-sm" id="inv-copy-url">複製</button></div></div>
+    <div class="fld"><span class="rm-label">邀請碼</span><div class="inv-row"><code class="inv-code" id="inv-code"></code><button type="button" class="btn btn-sm" id="inv-copy-code">複製</button></div></div>
     <div class="ops">
-      <button type="button" class="btn btn-ghost btn-sm" id="claim-skip">都不是我,先跳過</button>
+      <a class="btn btn-line" id="inv-line" target="_blank" rel="noopener">用 LINE 傳給朋友</a>
+      <button type="button" class="btn btn-ghost btn-sm" id="inv-renew">換一組邀請碼(舊的就不能用了)</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="inv-close">關掉</button>
     </div>
   </div>
+</div>
+
+<!-- 加航班 / 改航班(第 2 期)。座位也在這裡填 —— 以前只能靠 AI 按鈕改座位。 -->
+<div class="overlay" id="flight-overlay" hidden>
+  <form class="signin wide" id="flight-form">
+    <h2 id="fl-title">加航班</h2>
+    <div class="grid2">
+      <div class="fld"><label class="rm-label" for="fl-dir">哪一段</label><select class="rm-input" id="fl-dir"><option value="去程">去程</option><option value="回程">回程</option><option value="其他">其他(轉機、國內線)</option></select></div>
+      <div class="fld"><label class="rm-label" for="fl-no">航班號</label><input class="rm-input" type="text" id="fl-no" maxlength="8" placeholder="MM626" autocapitalize="characters" required></div>
+    </div>
+    <div class="fld"><label class="rm-label" for="fl-airline">航空公司</label><input class="rm-input" type="text" id="fl-airline" maxlength="40" placeholder="樂桃航空"></div>
+    <div class="grid2">
+      <div class="fld"><label class="rm-label" for="fl-depart">起飛(當地時間)</label><input class="rm-input" type="datetime-local" id="fl-depart" required></div>
+      <div class="fld"><label class="rm-label" for="fl-from">從哪裡</label><input class="rm-input" type="text" id="fl-from" maxlength="40" placeholder="TPE 桃園 T1"></div>
+    </div>
+    <div class="grid2">
+      <div class="fld"><label class="rm-label" for="fl-arrive">抵達(當地時間)</label><input class="rm-input" type="datetime-local" id="fl-arrive"></div>
+      <div class="fld"><label class="rm-label" for="fl-to">到哪裡</label><input class="rm-input" type="text" id="fl-to" maxlength="40" placeholder="NRT 成田 T1"></div>
+    </div>
+    <div class="fld"><label class="rm-label" for="fl-note">備註</label><input class="rm-input" type="text" id="fl-note" maxlength="120" placeholder="例如 託運 1 件/人 · 手提 7kg"></div>
+    <div class="fld"><span class="rm-label">座位(不知道就空著)</span><div class="seatform" id="fl-seats"></div></div>
+    <div class="err" id="fl-err" hidden></div>
+    <div class="ops">
+      <button type="submit" class="btn btn-main" id="fl-save">存起來</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="fl-del" hidden>刪掉這一班</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="fl-cancel">取消</button>
+    </div>
+  </form>
 </div>
 
 <div class="overlay" id="exp-edit-overlay" hidden>
@@ -1487,21 +1536,10 @@
   "use strict";
 
   /* ================= 固定資料:從機票訂單來的事實 ================= */
-  /* **這五個人現在是「預設值」,不是「事實」。** 事實在 Notion 的「成員」表裡,
-     連上線之後 `loadTeam()` 會把這份換掉。留著它的理由有兩個,都還在:
-       · 離線、或網站放在沒有後端的地方(GitHub Pages)時,它是唯一的人名來源
-       · 後端讀不到「成員」那張表時,寧可用舊的五個人,也不要變成一個沒有人的畫面
-     **所以它不能刪,但也不要再去改它** —— 要改人名和顏色,改 Notion 那張表。
-
-     def 是畫面上顯示的名字,key 是 Notion「付款人／分攤者」select 的選項字串。
-     兩個分開才能改中文名而不用去動 Notion 既有的每一筆紀錄。 */
-  let MEMBERS = [
-    { id: "hsieh_chinhui", def: "阿輝", key: "Chinhui", full: "HSIEH CHINHUI", color: "#E60012" },
-    { id: "chang_chiayu",  def: "佳瑜", key: "Chiayu",  full: "CHANG CHIAYU",  color: "#F39700" },
-    { id: "chang_chihwei", def: "志偉", key: "Chihwei", full: "CHANG CHIHWEI", color: "#009944" },
-    { id: "chang_yalun",   def: "雅倫", key: "Yalun",   full: "CHANG YALUN",   color: "#00A7DB" },
-    { id: "chen_suchih",   def: "媽",   key: "Suchih",  full: "CHEN SUCHIH",   color: "#9B7CB6" },
-  ];
+  /* **這一團有誰,只從伺服器來。** 第 1 期以前這裡寫死五個人,當作離線和讀不到時的退路;
+     第 2 期起每一團的人都不一樣,寫死的名單對任何一團都是錯的 —— 所以開場是空的,
+     `loadTeam()` 填進來。id 是成員代號,花費的付款人、分攤者、座位的旅客記的都是它。 */
+  let MEMBERS = [];
   let IDS = [];
   /* 人名在 Notion 用暱稱,程式內部用 id */
   const idByName = {};
@@ -1514,28 +1552,13 @@
     MEMBERS = list;
     IDS = MEMBERS.map(m => m.id);
     Object.keys(idByName).forEach(k => delete idByName[k]);
-    /* 讀 Notion 時兩種都認:正式的 key,以及顯示名 —— 萬一哪天有人在 Notion
-       直接把選項改成中文,舊紀錄也不會突然變成「未指定付款人」。 */
-    MEMBERS.forEach(m => { idByName[m.key] = m.id; idByName[m.def] = m.id; });
+    MEMBERS.forEach(m => { idByName[m.id] = m.id; });
   }
   setMembers(MEMBERS);
 
-  /* 訂位單上的座位(data/trip.json)。回程 D/E/F 三個位子跟去程不一樣,別記錯。 */
-  const SEATS = {
-    out:  { chang_chiayu: "27A", hsieh_chinhui: "27B", chang_yalun: "27D", chen_suchih: "27E", chang_chihwei: "27F" },
-    back: { chang_chiayu: "27A", hsieh_chinhui: "27B", chang_chihwei: "27D", chang_yalun: "27E", chen_suchih: "27F" },
-  };
-  /* A320 是 3-3,他們訂的是 A B / D E F,C 空著 —— 走道在 C 和 D 中間 */
-  const SEAT_ORDER = ["27A", "27B", "27D", "27E", "27F"];
-  /* 航班號 → 畫面上的哪一段。Notion「座位」資料庫用航班號當標題(之後航班不只兩班),
-     這張表只決定**這一趟的畫面**把哪一班畫在去程、哪一班畫在回程。
-     上面的 SEATS 是離線／Notion 讀不到時的備援,也是座位資料庫一開始的內容。 */
-  const FLIGHTS = [
-    { no: "MM626", leg: "out",  date: "2026-10-03", label: "去程 MM626 · 10/03" },
-    { no: "MM631", leg: "back", date: "2026-10-08", label: "回程 MM631 · 10/08" },
-  ];
-
-  const DAYS = [
+  /* 日子那一排從「團」的開始日、結束日推出來(第 2 期以前寫死 10/03–10/08)。
+     顏色照順序循環用下面六個。 */
+  const DAY_COLORS = [
     /* **六天的顏色用設計系統的 token,含點綴色。**(Lulu 的決定,2026-09-24)
        寫 `var(--color-…)` 不寫色碼:設計系統調色的時候這裡跟著走。
 
@@ -1546,27 +1569,30 @@
        第一版只挑「壓得住白字」的六個,結果四個都在紅棕色系,分不出是哪一天 ——
        **那個限制是我自己加的**:因為選到的那天整張卡刷滿顏色、字全轉白。
        改成「淡底 + 深字」之後那個限制就沒了,點綴色全部可用,色相才拉得開。 */
-    { n: 1, date: "2026-10-03", w: "六", color: "var(--color-sun-mustard)",   on: "var(--color-ink)" },
-    { n: 2, date: "2026-10-04", w: "日", color: "var(--color-sun-coral)",     on: "var(--color-ink)" },
-    { n: 3, date: "2026-10-05", w: "一", color: "var(--color-botanical-olive)", on: "#fff" },
-    { n: 4, date: "2026-10-06", w: "二", color: "var(--color-sky-chambray)",  on: "var(--color-ink)" },
-    { n: 5, date: "2026-10-07", w: "三", color: "var(--color-earth-cork)",    on: "#fff" },
-    { n: 6, date: "2026-10-08", w: "四", color: "var(--color-earth-terracotta)", on: "var(--color-ink)" },
+    { color: "var(--color-sun-mustard)", on: "var(--color-ink)" },
+    { color: "var(--color-sun-coral)", on: "var(--color-ink)" },
+    { color: "var(--color-botanical-olive)", on: "#fff" },
+    { color: "var(--color-sky-chambray)", on: "var(--color-ink)" },
+    { color: "var(--color-earth-cork)", on: "#fff" },
+    { color: "var(--color-earth-terracotta)", on: "var(--color-ink)" },
   ];
-
-  /* 航班節點固定釘在時間軸上,不可刪 */
-  const ANCHORS = {
-    "2026-10-03": [
-      { time: "08:00", title: "桃園機場 第一航廈 報到", place: "樂桃 MM626 · 建議起飛前 2.5 小時", note: "託運行李每人 1 件" },
-      { time: "10:50", title: "MM626 起飛", place: "TPE 桃園 T1" },
-      { time: "15:20", title: "抵達成田機場 第一航廈", place: "NRT 成田 T1", note: "入境 + 領行李 + 進市區約 2 小時" },
-    ],
-    "2026-10-08": [
-      { time: "18:00", title: "最晚出發前往成田機場", place: "都心 → NRT 約 60–90 分鐘", note: "起飛前 2 小時到 T1" },
-      { time: "21:50", title: "MM631 起飛", place: "NRT 成田 T1" },
-      { day: "2026-10-09", time: "00:40", title: "抵達桃園機場", place: "TPE 桃園 T1", note: "深夜班機,先安排好回家的車" },
-    ],
-  };
+  const WEEKDAY = "日一二三四五六";
+  const addDays = (iso, n) => { const d = new Date(iso + "T00:00:00Z"); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+  let DAYS = [];
+  /* 最後一天,以及它的隔天。**紅眼班機那一晚**(回程半夜落地)落在隔天凌晨,
+     但它還算最後一天的行程 —— 所以時間軸把 OVERNIGHT 併進 LAST_DAY 顯示。 */
+  let LAST_DAY = "";
+  let OVERNIGHT = "";
+  function setDays(start, end) {
+    DAYS = [];
+    if (!start || !end || end < start) { LAST_DAY = OVERNIGHT = ""; return; }
+    for (let d = start, n = 1; d <= end && n <= 61; d = addDays(d, 1), n++) {
+      const c = DAY_COLORS[(n - 1) % DAY_COLORS.length];
+      DAYS.push({ n, date: d, w: WEEKDAY[new Date(d + "T00:00:00Z").getUTCDay()], color: c.color, on: c.on });
+    }
+    LAST_DAY = end;
+    OVERNIGHT = addDays(end, 1);
+  }
 
   const CATS = [
     { id: "transport", name: "交通",  color: "#00A7DB" },
@@ -1578,27 +1604,11 @@
   ];
   const catOf = id => CATS.find(c => c.id === id) || CATS[5];
 
-  /* 第一次開啟時的初始內容 */
-  const SEED = {
-    rate: 0.21,
-    names: {},
-    expenses: [{
-      id: "seed-peach",
-      date: "2026-09-15",
-      title: "樂桃來回機票 MM626／MM631",
-      category: "transport",
-      amount: 61100,
-      currency: "TWD",
-      payerId: "hsieh_chinhui",
-      participants: IDS.slice(),
-      note: "訂單 PTETF3 · 含稅與附加費、不含保險 · 含託運行李 1 件/人",
-      createdAt: "2026-09-15T23:09:00+08:00",
-    }],
-    stops: [],
-  };
+  /* 一團剛開的樣子:什麼都沒有。第 2 期以前這裡放著東京那一筆樂桃機票。 */
+  const SEED = { rate: 0.21, names: {}, expenses: [], stops: [] };
 
   /* ================= 狀態 ================= */
-  const state = { tab: "plan", day: "2026-10-03", rate: (window.TRIP_CONFIG || {}).rate || SEED.rate,
+  const state = { tab: "plan", day: "", rate: (window.TRIP_CONFIG || {}).rate || SEED.rate,
     kitty: Number((window.TRIP_CONFIG || {}).kitty) || 30000, names: {}, expenses: [], stops: [], wishes: [], seats: [] };
   const nameOf = id => state.names[id] || (MEMBERS.find(m => m.id === id) || {}).def || id;
   const colorOf = id => (MEMBERS.find(m => m.id === id) || {}).color || "#7E8796";
@@ -1667,13 +1677,14 @@
 
   /* ================= 儲存:Notion 優先,連不上就退回本機 ================= */
   const LS = "tokyo5-v1";
-  const KEYLS = "tokyo5-key";
   /* 最後一次從 Notion 讀到的東西,連同讀到的時間。離線時拿它來顯示。
      跟 LS 是**兩個不同的東西**,不共用一個 key:
        LS      這台裝置自己的那份紀錄(從沒連上過後端時才用,例如 GitHub Pages 那份)
        SNAPLS  五個人共用的那份紀錄的副本,唯讀
      混在一起的話,離線改的東西會蓋掉副本,下次連上網再拉一次就無聲消失。 */
-  const SNAPLS = "tokyo5-snap";
+  /* **每一團各存一份。** 第 2 期以前只有一團,key 寫死;現在同一台手機可能進好幾團,
+     共用一個 key 的話,打開乙團離線時看到的會是甲團的副本。 */
+  const SNAPLS = "trippps-snap:" + ((/[?&]t=([a-z0-9_-]{1,40})/.exec(location.search) || [])[1] || "none");
   const CFG = window.TRIP_CONFIG || {};
   const API = (CFG.apiBase || "").replace(/\/$/, "") + "/api/notion";
   const AUTH = (CFG.apiBase || "").replace(/\/$/, "") + "/api/auth";
@@ -1681,22 +1692,19 @@
      因為證據是一張 HttpOnly 的 cookie,JS 讀不到。所以這裡放的是「伺服器說你是誰」,
      不是「這台裝置自稱是誰」(那是下面的 MELS,兩件事不要混在一起)。 */
   let lineUser = null;
-  /* 這次看的是哪一團。**第 2 期網址會一定帶 `?t=`**,現在先認得它 ——
-     認得了之後,第 2 期只要把讀取權限接上去,不用再回頭改這裡。 */
-  const TRIP = (function () {
-    const m = /[?&]t=([a-z0-9_-]{1,40})/.exec(location.search);
-    return (m && m[1]) || CFG.trip || "tokyo";
-  })();
+  /* 這次看的是哪一團。**沒帶 `?t=` 就是「我的團」那一頁**(第 2 期以前預設東京)。
+     `?i=` 是邀請碼:朋友點邀請連結進來時帶著,加入那張卡會先幫他填好。 */
+  const TRIP = ((/[?&]t=([a-z0-9_-]{1,40})/.exec(location.search) || [])[1]) || "";
+  const INVITE = ((/[?&]i=([a-z0-9]{6})/.exec(location.search) || [])[1]) || "";
   /* 這一團本身(名稱、日期、三個權限開關),以及我在這一團是哪一個位子。
      讀不到就都是 null —— 那時候走的是下面那份內建的五個人。 */
   let trip = null;
   let myMember = null;
   let storageOK = true;
   let online = false;
-  let tripKey = "";
   /* 離線時手上這份副本是什麼時候抓的(ISO 字串);沒有副本就是空字串。 */
   let snapAt = "";
-  /* 連著 Notion 時,沒通行碼就只能看。 */
+  /* 連著 Notion 時能不能改,看你在這團是誰(團主,或團主開了開關的成員)。 */
   let canEdit = false;
   /* 離線分兩種,能不能編輯不一樣:
        有副本  顯示的是五個人共用的那份紀錄 → **唯讀**。
@@ -1722,59 +1730,70 @@
   const CAT_TO_NOTION = { transport: "交通", stay: "住宿", food: "餐飲", sight: "景點", shop: "購物", other: "其他" };
   const CAT_FROM_NOTION = {};
   Object.keys(CAT_TO_NOTION).forEach(k => CAT_FROM_NOTION[CAT_TO_NOTION[k]] = k);
-  /* 寫回 Notion 一律用 key,不要在那邊長出第二組選項 */
-  const nameById = id => (MEMBERS.find(m => m.id === id) || {}).key || null;
+  /* 寫回 Notion 的是成員代號本身 */
+  const nameById = id => (id && MEMBERS.some(m => m.id === id) ? id : null);
 
-  /* 這一團有誰。**成功才換掉預設的五個人。**
-     失敗就留著內建那五個 —— 一個沒有人的畫面比一份舊名單更糟:
-     Notion 讀回來的「付款人 = Chiayu」會對不到任何 id,每一筆都變成「未指定付款人」,
-     而畫面上看起來完全正常,只是錢算錯。 */
+  /* 這一團是什麼、有誰、我是誰。**第 2 期起這一支擋得住人**:沒登入、不是這團的人、
+     沒有這一團,伺服器各回一種 `why`,開機那一段照它決定要畫哪一張卡。 */
   async function loadTeam() {
     const body = await api("?resource=team&t=" + encodeURIComponent(TRIP));
-    if (!body || !body.trip || !Array.isArray(body.members) || !body.members.length) {
-      throw new Error("這一團一個成員都沒有");
-    }
     trip = body.trip;
     myMember = body.me || null;
-    /* **能不能編輯,現在是從身分算出來的。** 團主永遠可以;成員要看團主
-       開了哪些開關。**三個全開才等於「成員可共編」** —— 只開其中一項的話
-       伺服器會放行,但介面維持唯讀。那是刻意的:逐項的介面還沒做,
-       而**讓人按了才被拒絕,比讓他看不到更糟**。 */
-    if (myMember) {
-      const c = (trip && trip.can) || {};
-      if (myMember.role === "團主" || (c.plan && c.cost && c.seat)) canEdit = true;
-    }
+    /* **能不能編輯,是從身分算出來的。** 團主永遠可以;成員要看團主開了哪些開關。
+       **三個全開才等於「成員可共編」** —— 只開其中一項的話伺服器會放行,
+       但介面維持唯讀。逐項的介面還沒做,而**讓人按了才被拒絕,比讓他看不到更糟**。 */
+    const c = (trip && trip.can) || {};
+    canEdit = !!myMember && (myMember.role === "團主" || !!(c.plan && c.cost && c.seat));
     setMembers(body.members.map(m => ({
-      id: m.id,
-      def: m.name || m.id,
-      /* 寫回 Notion 用的字串。沒有舊代號的新成員就用 id —— **不要留空**,
-         留空的話那一筆寫回去會變成沒有付款人。 */
-      key: m.key || m.id,
-      full: m.name || m.id,
-      color: m.color || "#7E8796",
-      role: m.role || "成員",
-      claimed: !!m.claimed,
+      id: m.id, def: m.name || m.id, key: m.id, full: m.name || m.id,
+      color: m.color || "#7E8796", role: m.role || "成員",
     })));
+    applyTrip();
   }
 
-  /* 讀不到就用內建那五個人繼續。**但要講出來** —— 這個專案最貴的失敗
-     全部都是「看起來正常」那一種:名單是舊的,畫面一切如常,只有錢算錯。 */
+  /* 團的設定改了(開機、重新整理、團主存了設定)就把畫面上跟它有關的地方都換掉 */
+  function applyTrip() {
+    if (!trip) return;
+    setDays(trip.start, trip.end);
+    if (!DAYS.some(d => d.date === state.day)) state.day = initialDay();
+    state.rate = trip.rate || state.rate;
+    setTripRegion();
+    /* 台灣的團只有台幣:幣別選單收起來,預設台幣 */
+    const twdOnly = trip.currency === "TWD";
+    ["ef-cur", "xe-cur"].forEach(id => {
+      const box = el(id); if (!box) return;
+      const fld = box.closest(".fld"); if (fld) fld.hidden = twdOnly;
+      box.value = twdOnly ? "TWD" : (box.value || "JPY");
+    });
+    document.title = trip.name + " · Trippps";
+    el("trip-name").textContent = trip.name;
+    const nights = Math.max(0, DAYS.length - 1);
+    el("trip-foot").textContent = (trip.start || "").replace(/-/g, ".") + " – " + (trip.end || "").slice(5).replace("-", ".") +
+      " · " + (trip.city || trip.country) + " " + DAYS.length + " 天 " + nights + " 夜 · " + MEMBERS.length + " 人";
+  }
+
   async function refreshTeam() {
-    try { await loadTeam(); }
-    catch (e) { flash("讀不到這一團的成員,先用內建的名單:" + e.message); }
+    await loadTeam();
   }
 
   async function api(path, init) {
     /* **每一趟都帶著團的代號。** 伺服器要靠它決定「你是不是這一團的成員」,
        而寫入的那些請求跟讀取走的是同一個 `api()` —— 只在讀的時候帶的話,
        寫入會全部被判成「不知道你在哪一團」。 */
-    if (path.indexOf("t=") < 0) path += (path.indexOf("?") < 0 ? "?" : "&") + "t=" + encodeURIComponent(TRIP);
+    if (TRIP && path.indexOf("t=") < 0) path += (path.indexOf("?") < 0 ? "?" : "&") + "t=" + encodeURIComponent(TRIP);
     const res = await fetch(API + path, {
       ...init,
-      headers: { "Content-Type": "application/json", "x-trip-key": tripKey, ...(init && init.headers) },
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json", ...(init && init.headers) },
     });
     const body = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(body.error || ("HTTP " + res.status));
+    if (!res.ok) {
+      /* `why` 帶著走:login / not_member / no_trip / bad_invite —— 呼叫的人靠它決定畫哪一張卡 */
+      const err = new Error(body.error || ("HTTP " + res.status));
+      err.why = body.why || "";
+      err.status = res.status;
+      throw err;
+    }
     return body;
   }
 
@@ -1782,14 +1801,14 @@
     id: r.id, date: r.date, title: r.title,
     category: CAT_FROM_NOTION[r.category] || "other",
     amount: Number(r.amount) || 0, currency: r.currency || "JPY",
-    payerId: idByName[r.payer] || null,
-    participants: (r.participants || []).map(n => idByName[n]).filter(Boolean),
+    payerId: r.payer || null,
+    participants: (r.participants || []).slice(),
     note: r.note || "", createdAt: r.createdAt,
   });
   const expToRow = e => ({
     title: e.title, date: e.date, category: CAT_TO_NOTION[e.category] || "其他",
     amount: e.amount, currency: e.currency,
-    payer: nameById(e.payerId),
+    payer: nameById(e.payerId) || "",
     participants: (e.participants || []).map(nameById).filter(Boolean),
     note: e.note,
   });
@@ -1812,10 +1831,15 @@
     state.stops = Array.isArray(d.stops) ? clone(d.stops) : [];
     state.wishes = Array.isArray(d.wishes) ? clone(d.wishes) : [];
     state.seats = Array.isArray(d.seats) ? clone(d.seats) : [];
+    state.flights = Array.isArray(d.flights) ? clone(d.flights) : [];
     sortExpenses();
   }
   function snapshot() {
-    return { version: 3, rate: state.rate, names: state.names, expenses: state.expenses, stops: state.stops, wishes: state.wishes, seats: state.seats };
+    /* 第 2 期起副本也帶著團和成員:離線打開時,團名、日期、誰是誰都要從這裡來 */
+    return { version: 4, rate: state.rate, names: state.names, expenses: state.expenses, stops: state.stops,
+             wishes: state.wishes, seats: state.seats, flights: state.flights, trip, members: MEMBERS,
+             /* 「我在這團是誰」也要帶著:離線時自己許的願才認得出是自己的(不然 .mine 全部消失) */
+             me: myMember };
   }
   function saveLocal() {
     /* snapAt 有值 = 現在顯示的是共用紀錄的副本,不是這台裝置自己的紀錄。
@@ -2026,7 +2050,7 @@
     const w = state.wishes.find(x => x.id === id);
     if (!w) return;
     const me = myName();
-    if (!me) { flash("先在許願表單選一下你是誰"); return; }
+    if (!me) { flash("要先加入這一團才能 +1"); return; }
     const had = (w.votes || []).indexOf(me);
     const before = (w.votes || []).slice();
     w.votes = had > -1 ? w.votes.filter(v => v !== me) : (w.votes || []).concat(me);
@@ -2125,15 +2149,17 @@
 
   /* --- 從 Notion 讀 --- */
   async function pull() {
-    /* 座位**讀不到不算失敗**:它是後來才加的資料庫,讀不到就用程式裡的 SEATS,
-       不能因為它拖垮整份資料。null = 讀不到,保留手上原本的。 */
-    const [ex, st, wi, se] = await Promise.all([
+    /* 五張表一起抓,全部回來才算數 —— 第 2 期起座位和航班都是這一團自己的資料,
+       讀不到就是讀不到,沒有寫死的備援可以退。 */
+    const [ex, st, wi, se, fl] = await Promise.all([
       api("?resource=expenses"),
       api("?resource=itinerary"),
       api("?resource=wishes"),
-      api("?resource=seats").catch(() => null),
+      api("?resource=seats"),
+      api("?resource=flights"),
     ]);
-    if (se) state.seats = se.rows;
+    state.seats = se.rows;
+    state.flights = fl.rows;
     state.expenses = ex.rows.map(expFromRow);
     state.stops = st.rows.filter(r => r.day).map(stopFromRow);
     state.wishes = wi.rows;
@@ -2180,7 +2206,7 @@
   /* 唯讀時把所有會改資料的入口收起來 */
   function renderEditAbility() {
     const on = editable();
-    ["add-stop-btn", "add-exp-btn", "rename-btn", "import-btn", "reset-btn"].forEach(id => {
+    ["add-stop-btn", "add-exp-btn"].forEach(id => {
       const b = el(id);
       if (b) b.hidden = !on;
     });
@@ -2190,7 +2216,7 @@
     const note = el("backup-note");
     if (note) {
       note.textContent = online
-        ? "紀錄存在 Notion,五個人共用同一份。「匯出備份」拿到的是現在畫面上這份的 JSON。"
+        ? "紀錄存在 Notion,團裡每個人看到的是同一份。「匯出備份」拿到的是現在畫面上這份的 JSON。"
         : snapAt
           ? "這是離線副本,改不了也傳不回去。連上網之後會自動換成最新的。"
           : "紀錄存在這台裝置的瀏覽器裡。要跟其他人對帳,按「匯出備份」把 JSON 傳給對方,對方用「匯入備份」讀進去。";
@@ -2213,8 +2239,6 @@
       closeStopAdd();
       closeWishAdd();
       const ef = el("exp-form"); if (ef) ef.hidden = true;
-      const rn = el("rename-form");
-      if (rn) rn.hidden = true;
     }
     /* 「改」的判準不是 `editable()`,所以它不能掛在上面那個 `if (!on)` 裡:
        線上唯讀(有連線、沒通行碼)時那張表**該**留著,那正是這條路存在的理由。
@@ -2228,79 +2252,31 @@
     if (onSnapshot()) closeWishEdit();
   }
 
-  function renderCloudBar() {
-    const bar = el("cloudbar");
-    bar.hidden = false;
-    bar.className = "cloudbar " + (online ? "on" : "off");
-    /* 離線的兩種要分開講,而且**一定要講出時間**。
-       「離線模式」四個字對拿著副本的人是錯的:他看到的是真的行程,
-       只是舊的。不說多舊,他會拿三天前的版本去趕車。 */
-    el("cloud-msg").textContent = !online
-      ? (snapAt
-          ? "離線 · 這是 " + snapWhen(snapAt) + " 讀到的資料 · 不能編輯"
-          : "離線模式 —— 紀錄只存在這台裝置")
-      : (canEdit
-          ? "已連上 Notion · 管理員 · 五個人共用同一份紀錄"
-          : "已連上 Notion") + (lineUser ? " · " + lineUser.name : "");
-    el("cloud-ops").innerHTML = online
-      ? '<button type="button" class="btn btn-sm btn-ghost" id="cloud-sync">重新整理</button>' +
-        (lineUser
-          ? '<button type="button" class="btn btn-sm btn-ghost" id="cloud-seat">' +
-            (myMember ? "我是「" + esc(nameOf(myMember.id)) + "」" : "我是哪一位?") + "</button>" +
-            '<button type="button" class="btn btn-sm btn-ghost" id="cloud-lineout">登出 LINE</button>'
-          : '<button type="button" class="btn btn-sm btn-line" id="cloud-linein">用 LINE 登入</button>') +
-        (canEdit
-          ? '<button type="button" class="btn btn-sm btn-ghost" id="cloud-out">登出管理員</button>'
-          : '<button type="button" class="btn btn-sm" id="cloud-admin">管理員登入</button>')
-      : '<button type="button" class="btn btn-sm" id="cloud-in">連上 Notion</button>';
-    const sync = el("cloud-sync"), out = el("cloud-out"), inn = el("cloud-in"), adm = el("cloud-admin");
-    const lin = el("cloud-linein"), lout = el("cloud-lineout");
-    const seat = el("cloud-seat");
-    if (seat) seat.addEventListener("click", openClaim);
-    if (lin) lin.addEventListener("click", goLine);
-    if (lout) lout.addEventListener("click", () => { location.href = AUTH + "?go=logout"; });
-    if (sync) sync.addEventListener("click", () => withSpinner(sync, async () => {
-      /* **成員也要重抓。** 團主在 Notion 加了一個人、改了名字、或是打開了一個
-         權限開關,重新整理就該看得到 —— 不然唯一的辦法是整頁重載,
-         而使用者不會知道要那樣做。順序跟開機時一樣:人先換,再拉資料。 */
-      await refreshTeam();
-      /* 天氣抓不到不擋 Notion 那邊 —— refreshWeather 自己吞掉錯誤,不會讓這裡失敗 */
-      await Promise.all([pull(), refreshWeather()]);
-      render();
-      flash("已更新");
-    }));
-    if (out) out.addEventListener("click", () => {
-      try { localStorage.removeItem(KEYLS); } catch (_) {}
-      location.reload();
-    });
-    if (inn) inn.addEventListener("click", async () => {
-      try { await goOnline(); flash("已連上 Notion"); }
-      catch (e) { flash("還是連不上:" + e.message); }
-    });
-    if (adm) adm.addEventListener("click", () => openSignin(true));
-  }
-
+  /* 連不上伺服器、但這台裝置有這一團的副本:顯示副本,唯讀。
+     **沒有副本就不進來** —— 第 2 期以前這裡會退回「這台裝置自己的紀錄」(GitHub Pages 那份),
+     現在每一團都要登入才讀得到,一份不屬於任何一團的本機紀錄沒有意義。 */
   function goLocal() {
     online = false;
     canEdit = false;
-    el("signin-overlay").hidden = true;
-    /* 有副本就顯示副本 —— 那才是五個人的行程。沒有才退回這台裝置自己的紀錄。
-       順序不能反:反過來的話,連過 Notion 的裝置離線會看到 SEED 的空行程,
-       而且看起來完全正常。 */
     const snap = loadSnap();
-    if (snap) { snapAt = snap.at; apply(snap.data); }
-    else { snapAt = ""; loadLocal(); }
+    if (!snap) return false;
+    snapAt = snap.at;
+    apply(snap.data);
+    if (snap.data.trip) { trip = snap.data.trip; }
+    if (Array.isArray(snap.data.members)) setMembers(snap.data.members);
+    if (snap.data.me) myMember = snap.data.me;
+    applyTrip();
     fillPeopleControls();
     render();
     renderEditAbility();
     renderCloudBar();
+    loadWeather();
+    return true;
   }
 
-  /* 讀是公開的,所以先進得來再說,能不能編輯之後才決定 */
   async function goOnline() {
-    /* **人要先換,再拉資料。** `pull()` 把 Notion 的「付款人 = Chiayu」對回內部 id
-       靠的是 `idByName`,而那是 `setMembers()` 建的。順序反過來的話,
-       第一次拉回來的每一筆都會對不到人 —— 而畫面上看起來很正常,只是錢算錯。 */
+    /* **人要先換,再拉資料。** 花費的付款人、座位的旅客記的是成員代號,
+       名單沒換好就畫的話,每一筆都會是「未指定付款人」—— 畫面看起來正常,只是錢算錯。 */
     await refreshTeam();
     await pull();
     online = true;
@@ -2308,25 +2284,8 @@
     render();
     renderEditAbility();
     renderCloudBar();
+    loadWeather();
     window.addEventListener("focus", schedulePull);
-  }
-
-  function showSigninError(msg) {
-    const box = el("si-err");
-    box.textContent = msg;
-    box.hidden = !msg;
-  }
-
-  /* open=true 直接展開通行碼欄位,給「管理員登入」按鈕用 */
-  function openSignin(open) {
-    el("signin-overlay").hidden = false;
-    showSigninError("");
-    showAdminBox(!!open);
-  }
-  function showAdminBox(open) {
-    el("si-choose").hidden = open;
-    el("si-adminbox").hidden = !open;
-    if (open) el("si-key").focus();
   }
 
   /* ================= LINE 登入 =================
@@ -2340,10 +2299,16 @@
      登入的證據是一張 HttpOnly cookie,**前端讀不到也偽造不了** ——
      代價是「我是誰」每次都得問伺服器一趟,不能存在這邊。 */
 
-  function goLine() { location.href = AUTH + "?go=login"; }
+  /* 帶著現在這一頁出發:邀請連結(/?t=…&i=…)登入完要回到這裡,不是首頁 */
+  function goLine() {
+    location.href = AUTH + "?go=login&back=" + encodeURIComponent(location.pathname + location.search.replace(/[?&]login=[a-z]+/, ""));
+  }
 
   /* 問伺服器現在是誰。**失敗一律當成沒登入** —— 網路斷了、函式還沒部署、
      secret 還沒設,對使用者來說都是同一件事:他還沒登入,而那是有畫面的狀態。 */
+  /* 問不到(網路斷了)跟「問到了,答案是沒登入」是兩件事:前者手上有副本就該顯示副本,
+     後者才是登入卡。混在一起的話,在飛機上打開行程會看到一張「請用 LINE 登入」。 */
+  let whoUnknown = false;
   async function askWhoAmI() {
     try {
       const res = await fetch(AUTH + "?go=me", { credentials: "same-origin" });
@@ -2351,77 +2316,9 @@
       lineUser = (body && body.user) || null;
     } catch (_) {
       lineUser = null;
+      whoUnknown = true;
     }
-    if (lineUser) adoptLineIdentity();
   }
-
-  /* 登進來的人如果就是那五個裡的一個,順手把「我是誰」設好 ——
-     他不用再選一次自己。名字對不上就什麼都不做:**寧可他自己選,
-     也不要幫他選錯一個人然後把票投在別人頭上。** */
-  function adoptLineIdentity() {
-    const n = (lineUser.name || "").trim();
-    if (!n) return;
-    const m = MEMBERS.find(x => x.def === n || x.full === n || x.key === n);
-    if (m) setMe(m.id);
-  }
-
-  /* ================= 認領位子 =================
-
-     **位子有名字,人有 LINE ID,認領就是把兩者接起來。**
-     為什麼不在登入時自動配對:LINE 上的顯示名跟團裡叫什麼是兩回事
-     (「媽」不會是誰的 LINE 名稱),而**猜錯的代價是把票投在別人頭上**。 */
-
-  function showClaimError(msg) {
-    const box = el("claim-err");
-    box.textContent = msg;
-    box.hidden = !msg;
-  }
-
-  function openClaim() {
-    const free = MEMBERS.filter(m => !m.claimed || (myMember && m.id === myMember.id));
-    /* 沒有位子可認領的時候不要開一張空卡 —— 那比不開更難懂。 */
-    if (!free.length) return;
-    el("claim-list").innerHTML = free.map(m =>
-      '<button type="button" class="btn claim-one" data-m="' + esc(m.id) + '" style="--mc:' + esc(m.color) + '">' +
-      '<span class="dot"></span>' + esc(m.def) +
-      (myMember && m.id === myMember.id ? "(現在是你)" : "") + "</button>").join("");
-    el("claim-hint").textContent = myMember
-      ? "換一個位子,或按「這不是我」放掉現在這個。"
-      : "選一個位子,之後你許的願、你付的錢都會掛在它上面。";
-    el("claim-list").querySelectorAll(".claim-one").forEach(b =>
-      b.addEventListener("click", () => takeSeat(b.dataset.m, b)));
-    el("claim-skip").textContent = myMember ? "這不是我(放掉這個位子)" : "都不是我,先跳過";
-    showClaimError("");
-    el("claim-overlay").hidden = false;
-  }
-
-  async function takeSeat(id, btn) {
-    if (btn) { btn.disabled = true; }
-    showClaimError("");
-    try {
-      const body = await api("?resource=claim", {
-        method: "POST",
-        body: JSON.stringify({ trip: TRIP, member: id }),
-      });
-      myMember = body.me || null;
-      /* 認領完把這台裝置的「我是誰」也對齊 —— 兩邊不一致的話,
-         +1 會判錯是不是自己投的。 */
-      if (myMember) setMe(myMember.id);
-      await refreshTeam();
-      el("claim-overlay").hidden = true;
-      render();
-      renderCloudBar();
-      flash(myMember ? "你是「" + nameOf(myMember.id) + "」了" : "已經放掉那個位子");
-    } catch (e) {
-      showClaimError(e.message);
-    }
-    if (btn) { btn.disabled = false; }
-  }
-
-  el("claim-skip").addEventListener("click", () => {
-    if (myMember) { takeSeat("", null); return; }
-    el("claim-overlay").hidden = true;
-  });
 
   /* 從 LINE 回來時網址上會帶一句。講完就把它從網址擦掉 ——
      留著的話重新整理會再講一次,而那時候它已經不是真的了。 */
@@ -2476,11 +2373,19 @@
   }
 
   /* ================= 繪製 ================= */
+  /* 航班的時間是登機證上的當地時間、不帶時區。拿這台裝置的時區去讀 ——
+     倒數差個一兩小時沒關係,重點是跨日不能錯 */
+  const localDate = v => (v ? new Date(v.length <= 10 ? v + "T00:00" : v) : null);
   function renderCountdown() {
-    const go = new Date("2026-10-03T10:50:00+08:00");
-    const back = new Date("2026-10-09T00:40:00+08:00");
-    const now = new Date();
     const box = el("countdown");
+    if (!DAYS.length) { box.innerHTML = ""; return; }
+    /* 出發 = 第一班去程起飛,沒有航班就是第一天;回來 = 最後一班回程落地,沒有就是最後一天過完 */
+    const fl = state.flights || [];
+    const out = fl.filter(f => f.dir === "去程" && f.depart).sort((a, b) => a.depart.localeCompare(b.depart))[0];
+    const home = fl.filter(f => f.dir === "回程" && f.arrive).sort((a, b) => b.arrive.localeCompare(a.arrive))[0];
+    const go = localDate(out ? out.depart : DAYS[0].date);
+    const back = localDate(home ? home.arrive : OVERNIGHT);
+    const now = new Date();
     if (now > back) box.innerHTML = "<b>回味中</b>";
     else if (now >= go) {
       /* 數日曆上的第幾天,跟上面的 DAY 幾對得起來 —— 不是從起飛算滿 24 小時 */
@@ -2491,44 +2396,240 @@
       Math.ceil((go - now) / 86400000) + "</span> 天</b>";
   }
 
-  /* 現在誰坐哪裡:程式裡的 SEATS 打底,Notion「座位」資料庫有的就蓋上去。
-     認不得的航班(不在 FLIGHTS 裡)先不畫 —— 那是之後開放給別團時的事。 */
+  /* ================= 航班 =================
+     第 2 期以前這一塊整個寫死:樂桃 MM626/MM631、起降時間、機場、五個人的座位。
+     現在從「航班」和「座位」兩張表長出來:
+       - 看板一班一段,照起飛時間排
+       - 行程上的「報到/起飛/抵達」是從航班推出來的固定節點(不能拖、不能刪,改航班才會變)
+       - 倒數算到第一班去程起飛
+     一班都沒有的時候,看板講「還沒有航班」,有權限的人看得到「加航班」。 */
+  const flightsSorted = () => (state.flights || []).slice()
+    .sort((a, b) => String(a.depart || "9").localeCompare(String(b.depart || "9")));
+  const DIR_TAG = { "去程": "去程 OUT", "回程": "回程 IN", "其他": "航班" };
+  /* 「TPE 桃園 T1」→ 代碼 TPE、其餘是說明。不是三個大寫字母開頭就整串當說明。 */
+  const port = s => { const m = /^([A-Z]{3})\s+(.*)$/.exec(String(s || "").trim()); return m ? { code: m[1], sub: m[2] } : { code: "", sub: String(s || "") }; };
+  const hhmm = v => (v && v.length >= 16 ? v.slice(11, 16) : "");
+  const dayOf = v => (v ? v.slice(0, 10) : "");
+  const mmdd = d => (d ? d.slice(5).replace("-", "/") : "");
+  const EN_W = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+  const enWeek = d => (d ? EN_W[new Date(d + "T00:00:00Z").getUTCDay()] : "");
+
+  /* 行程上的固定節點。報到抓起飛前 2.5 小時(國際線的慣例),只有去程和回程才加 ——
+     「其他」多半是國內線或轉機,報到時間差很多,寧可不寫也不要寫錯。 */
+  function anchorsOn(day) {
+    const out = [];
+    flightsSorted().forEach(f => {
+      const d0 = dayOf(f.depart), d1 = dayOf(f.arrive);
+      if (d0 === day && f.dir !== "其他") {
+        const t = toMin(hhmm(f.depart));
+        if (t != null && t >= 150) out.push({ time: toHHMM(t - 150), title: port(f.from).sub + " 報到",
+          place: (f.airline ? f.airline + " " : "") + f.no + " · 建議起飛前 2.5 小時", note: f.note || "" });
+      }
+      if (d0 === day) out.push({ time: hhmm(f.depart), title: f.no + " 起飛", place: f.from });
+      /* 半夜落地(OVERNIGHT)的那一筆併在最後一天顯示,跟 stopsOn 同一條規則 */
+      if (d1 === day || (day === LAST_DAY && d1 === OVERNIGHT && d0 !== d1))
+        out.push({ day: d1, time: hhmm(f.arrive), title: "抵達 " + (port(f.to).sub || f.to), place: f.to });
+    });
+    return out.filter(a => a.time).map(a => Object.assign({ anchor: true }, a));
+  }
+
+  /* 誰坐哪裡:航班號 → { 成員代號: 座位 } */
   function seatsNow() {
-    const S = { out: Object.assign({}, SEATS.out), back: Object.assign({}, SEATS.back) };
+    const S = {};
     (state.seats || []).forEach(r => {
-      const f = FLIGHTS.find(x => x.no === r.flight);
-      const m = MEMBERS.find(x => x.key === r.passenger);
-      if (f && m && r.seat) S[f.leg][m.id] = r.seat;
+      if (!r.flight || !r.passenger || !r.seat) return;
+      (S[r.flight] = S[r.flight] || {})[r.passenger] = r.seat;
     });
     return S;
   }
-  /* 座位照排、再照字母排。走道畫在 C 和 D 之間(A320 是 3-3) ——
-     以前寫死「27D 前面」,座位一換成別排就畫不出來了。 */
+  /* 座位照排、再照字母排。走道畫在 C 和 D 之間(A320 是 3-3) */
   const seatKey = x => { const m = /^(\d+)([A-Z])$/.exec(x) || [0, 0, ""]; return [+m[1], m[2]]; };
+  const mayFly = () => editable() && (online ? !!(myMember && (myMember.role === "團主" || (trip && trip.can && trip.can.seat))) : false);
+
   function renderSeats() {
+    const box = el("board-wrap");
+    if (!box) return;
+    const fl = flightsSorted();
     const S = seatsNow();
-    const draw = (leg, box) => {
-      const list = MEMBERS.filter(m => S[leg][m.id]).map(m => ({ m, seat: S[leg][m.id] }))
+    const can = mayFly();
+    const addBtn = can ? '<button type="button" class="btn btn-sm board-add" data-flight-add>加航班</button>' : "";
+    if (!fl.length) {
+      box.innerHTML = '<div class="board board-empty"><div class="board-head"><span class="bh-name">航班</span></div>' +
+        '<div class="leg"><span class="seats">還沒有航班。' + (can ? "加上去程和回程,看板、倒數和行程上的報到/起飛/抵達就會出現。" : "團主加了之後會出現在這裡。") +
+        "</span>" + (addBtn ? '<div class="seats">' + addBtn + "</div>" : "") + "</div></div>";
+      return;
+    }
+    const airlines = Array.from(new Set(fl.map(f => f.airline).filter(Boolean)));
+    const pax = new Set(); Object.values(S).forEach(m => Object.keys(m).forEach(k => pax.add(k)));
+    const firstSeat = {};   /* 每個人第一班的座位 —— 之後換了位子的標成琥珀色,免得照去程的記憶亂坐 */
+    const legs = fl.map(f => {
+      const seats = S[f.no] || {};
+      const list = MEMBERS.filter(m => seats[m.id]).map(m => ({ m, seat: seats[m.id] }))
         .sort((a, b) => { const x = seatKey(a.seat), y = seatKey(b.seat); return x[0] - y[0] || x[1].localeCompare(y[1]); });
       let prev = "";
-      box.innerHTML = list.map(({ m, seat }) => {
+      const chips = list.map(({ m, seat }) => {
         const letter = seatKey(seat)[1];
-        /* 回程換了位子的人標成琥珀色,免得照去程的記憶亂坐 */
-        const moved = leg === "back" && S.out[m.id] && S.out[m.id] !== seat;
-        const chip = '<span class="seat' + (moved ? " moved" : "") + '" style="--sc:' + m.color + '">' +
-          "<b>" + esc(seat) + "</b><span>" + esc(nameOf(m.id)) + "</span></span>";
+        const moved = firstSeat[m.id] && firstSeat[m.id] !== seat;
         const aisle = prev && prev < "D" && letter >= "D";
         prev = letter;
-        return (aisle ? '<span class="aisle">走道</span>' : "") + chip;
+        return (aisle ? '<span class="aisle">走道</span>' : "") +
+          '<span class="seat' + (moved ? " moved" : "") + '" style="--sc:' + m.color + '"><b>' + esc(seat) + "</b><span>" + esc(nameOf(m.id)) + "</span></span>";
       }).join("");
-    };
-    draw("out", el("seat-out"));
-    draw("back", el("seat-back"));
-    const moved = MEMBERS.filter(m => S.out[m.id] && S.back[m.id] && S.out[m.id] !== S.back[m.id]);
-    el("seat-swap").textContent = moved.length
-      ? moved.map(m => nameOf(m.id)).join("、") + " 回程換位子"
-      : "";
+      /* 最下面那一行:半夜落地講出是哪一天,換了位子講出是誰(以前寫死「10/09 FRI 凌晨抵台 · 志偉、雅倫、媽 回程換位子」) */
+      const movedNames = list.filter(({ m, seat }) => firstSeat[m.id] && firstSeat[m.id] !== seat).map(({ m }) => nameOf(m.id));
+      list.forEach(({ m, seat }) => { if (!firstSeat[m.id]) firstSeat[m.id] = seat; });
+      const a = port(f.from), b = port(f.to);
+      const d0 = dayOf(f.depart), d1 = dayOf(f.arrive);
+      const plus = d0 && d1 && d1 > d0 ? ' <span class="next">+1</span>' : "";
+      return '<div class="leg">' +
+        '<span class="leg-tag">' + esc(DIR_TAG[f.dir] || "航班") + "</span><span></span>" +
+        '<span class="leg-no">' + esc(f.no) + (d0 ? " · " + mmdd(d0) + " " + enWeek(d0) : "") +
+        (can ? ' <button type="button" class="pen" data-flight-edit="' + esc(f.id) + '" aria-label="改這一班"><svg class="i" aria-hidden="true"><use href="#i-pen"></use></svg></button>' : "") + "</span>" +
+        '<div class="leg-route">' +
+        '<div class="port"><span class="code">' + esc(a.code || "—") + '</span><span class="sub">' + esc(a.sub) + '</span><span class="time">' + esc(hhmm(f.depart)) + "</span></div>" +
+        '<div class="dash"><svg class="i" aria-hidden="true"><use href="#i-plane"></use></svg></div>' +
+        '<div class="port"><span class="code">' + esc(b.code || "—") + '</span><span class="sub">' + esc(b.sub) + '</span><span class="time">' + esc(hhmm(f.arrive)) + plus + "</span></div>" +
+        "</div>" +
+        '<div class="seatmap">' + chips + "</div>" +
+        (function () {
+          const bits = [];
+          if (f.note) bits.push(esc(f.note));
+          if (plus) bits.push(esc(mmdd(d1) + " " + enWeek(d1)) + " " + (+hhmm(f.arrive).slice(0, 2) < 6 ? "凌晨" : "") + "抵達");
+          if (movedNames.length) bits.push(esc(movedNames.join("、")) + " 這一班換位子");
+          return bits.length ? '<div class="seats">' + bits.join(" · ") + "</div>" : "";
+        })() + "</div>";
+    }).join("");
+    box.innerHTML = '<details class="board" id="board" open><summary class="board-head">' +
+      '<span class="bh-name">' + esc(airlines.join(" · ") || "航班") + "</span>" +
+      '<span class="bh-brief">' + esc(fl.map(f => f.no + " " + mmdd(dayOf(f.depart))).join(" → ")) + "</span>" +
+      '<span class="live">' + (pax.size || MEMBERS.length) + " PAX</span>" +
+      '<svg class="i bh-caret" aria-hidden="true"><use href="#i-chevron-down"></use></svg></summary>' +
+      legs + (addBtn ? '<div class="leg"><div class="seats">' + addBtn + "</div></div>" : "") + "</details>";
+    /* 機票那張卡永遠攤開(卡是每次重畫出來的,所以每次都要重新掛) */
+    const bd = el("board");
+    if (bd) bd.addEventListener("toggle", () => { if (!bd.open) bd.open = true; });
   }
+
+  /* ---------- 加航班 / 改航班 ---------- */
+  let flightEditing = null;
+  function showFlightErr(msg) { const b = el("fl-err"); b.textContent = msg || ""; b.hidden = !msg; }
+  function openFlight(id) {
+    if (!mayFly()) return;
+    const f = id ? (state.flights || []).find(x => x.id === id) : null;
+    flightEditing = f;
+    el("fl-title").textContent = f ? "改這一班" : "加航班";
+    const fl = state.flights || [];
+    el("fl-dir").value = f ? f.dir : (fl.some(x => x.dir === "去程") ? "回程" : "去程");
+    el("fl-airline").value = f ? f.airline : "";
+    el("fl-no").value = f ? f.no : "";
+    el("fl-depart").value = f && f.depart ? f.depart : (DAYS.length ? (el("fl-dir").value === "回程" ? LAST_DAY : DAYS[0].date) + "T10:00" : "");
+    el("fl-from").value = f ? f.from : "";
+    el("fl-arrive").value = f && f.arrive ? f.arrive : "";
+    el("fl-to").value = f ? f.to : "";
+    el("fl-note").value = f ? f.note : "";
+    const S = f ? (seatsNow()[f.no] || {}) : {};
+    el("fl-seats").innerHTML = MEMBERS.map(m =>
+      '<label class="rm-label" for="fl-seat-' + m.id + '">' + esc(nameOf(m.id)) + "</label>" +
+      '<input class="rm-input" type="text" id="fl-seat-' + m.id + '" maxlength="4" placeholder="例如 27A" value="' + esc(S[m.id] || "") + '">').join("");
+    el("fl-del").hidden = !f;
+    showFlightErr("");
+    el("flight-overlay").hidden = false;
+    el("fl-no").focus();
+  }
+  function closeFlight() { el("flight-overlay").hidden = true; flightEditing = null; }
+
+  /* 把某一班的座位寫回去。**空白代表「這個人這班沒有座位」**:原本有就刪掉 ——
+     不然清空之後存起來,舊的座位還躺在表裡,看板照樣畫它。 */
+  async function writeSeats(no, date, wanted) {
+    for (const m of MEMBERS) {
+      const seat = (wanted[m.id] || "").trim().toUpperCase();
+      const had = (state.seats || []).find(r => r.flight === no && r.passenger === m.id);
+      if (!seat && !had) continue;
+      if (!seat && had) {
+        await api("?resource=seats&id=" + encodeURIComponent(had.id), { method: "DELETE" });
+        state.seats = state.seats.filter(r => r.id !== had.id);
+        continue;
+      }
+      if (had && had.seat === seat) continue;
+      const body = JSON.stringify({ flight: no, date, passenger: m.id, seat });
+      const { row } = had
+        ? await api("?resource=seats&id=" + encodeURIComponent(had.id), { method: "PATCH", body })
+        : await api("?resource=seats", { method: "POST", body });
+      state.seats = (state.seats || []).filter(r => r.id !== row.id && !(r.flight === row.flight && r.passenger === row.passenger));
+      state.seats.push(row);
+    }
+  }
+
+  el("flight-form").addEventListener("submit", async ev => {
+    ev.preventDefault();
+    showFlightErr("");
+    const no = el("fl-no").value.trim().toUpperCase().replace(/\s+/g, "");
+    if (!/^[A-Z0-9]{2,8}$/.test(no)) { showFlightErr("航班號要像 MM626、BR198"); return; }
+    const depart = el("fl-depart").value, arrive = el("fl-arrive").value;
+    if (!depart) { showFlightErr("起飛時間要填"); return; }
+    if (arrive && arrive < depart) { showFlightErr("抵達時間比起飛早,是不是日期填錯了?"); return; }
+    const seats = {};
+    for (const m of MEMBERS) {
+      const v = el("fl-seat-" + m.id).value.trim().toUpperCase();
+      if (v && !/^\d{1,3}[A-K]$/.test(v)) { showFlightErr(nameOf(m.id) + " 的座位「" + v + "」看起來不對,要像 27A"); return; }
+      seats[m.id] = v;
+    }
+    const body = {
+      no, dir: el("fl-dir").value, airline: el("fl-airline").value.trim(),
+      depart, from: el("fl-from").value.trim(), arrive, to: el("fl-to").value.trim(), note: el("fl-note").value.trim(),
+    };
+    const btn = el("fl-save");
+    btn.disabled = true;
+    try {
+      const was = flightEditing;
+      const { row } = was
+        ? await api("?resource=flights&id=" + encodeURIComponent(was.id), { method: "PATCH", body: JSON.stringify(body) })
+        : await api("?resource=flights", { method: "POST", body: JSON.stringify(body) });
+      state.flights = (state.flights || []).filter(f => f.id !== row.id).concat([row]);
+      /* 改了航班號:舊號底下的座位跟著搬過去,不然它們會變成對不到任何一班的孤兒 */
+      if (was && was.no !== row.no) {
+        for (const r of (state.seats || []).filter(x => x.flight === was.no)) {
+          const { row: moved } = await api("?resource=seats&id=" + encodeURIComponent(r.id),
+            { method: "PATCH", body: JSON.stringify({ flight: row.no }) });
+          Object.assign(r, moved);
+        }
+      }
+      await writeSeats(row.no, dayOf(row.depart), seats);
+      saveSnap();
+      closeFlight();
+      render();
+      renderCountdown();
+      flash(was ? "改好了" : "加好了:" + row.no);
+    } catch (e) {
+      showFlightErr(e.message);
+    }
+    btn.disabled = false;
+  });
+  el("fl-del").addEventListener("click", async () => {
+    const f = flightEditing;
+    if (!f || !confirm("刪掉 " + f.no + "?這一班的座位也會一起刪掉。")) return;
+    try {
+      for (const r of (state.seats || []).filter(x => x.flight === f.no)) {
+        await api("?resource=seats&id=" + encodeURIComponent(r.id), { method: "DELETE" });
+      }
+      await api("?resource=flights&id=" + encodeURIComponent(f.id), { method: "DELETE" });
+      state.seats = (state.seats || []).filter(x => x.flight !== f.no);
+      state.flights = (state.flights || []).filter(x => x.id !== f.id);
+      saveSnap();
+      closeFlight();
+      render();
+      renderCountdown();
+      flash("刪掉了");
+    } catch (e) { showFlightErr(e.message); }
+  });
+  el("fl-cancel").addEventListener("click", closeFlight);
+  el("flight-overlay").addEventListener("click", ev => { if (ev.target === el("flight-overlay")) closeFlight(); });
+  el("panel-fly").addEventListener("click", ev => {
+    const add = ev.target.closest("[data-flight-add]");
+    const edit = ev.target.closest("[data-flight-edit]");
+    if (add) { ev.preventDefault(); openFlight(null); }
+    if (edit) { ev.preventDefault(); openFlight(edit.dataset.flightEdit); }
+  });
 
   /* ================= 天氣 ================= */
   /* Open-Meteo:免費、不用金鑰、瀏覽器直接打得到,所以不必經過 api/notion.js。
@@ -2538,9 +2639,59 @@
 
      預報只到今天之後 16 天。出發前太早看,行程那幾天還沒有資料,那幾格就
      不顯示 —— 寧可空白,也不要拿鄰近日期的數字混充。 */
-  const TOKYO = { lat: 35.6762, lon: 139.6503 };
-  const WXLS = "tokyo5-wx";     /* 座標 → 每日預報 */
-  const GEOLS = "tokyo5-geo";   /* 地點字串 → 座標(查不到就記 null,不再問第二次) */
+  /* **天氣和地圖以「團」的主要城市為準**(第 2 期以前寫死東京)。常見的城市先寫死 ——
+     理由跟下面 OUTSIDE 那張表一樣:線上地名查詢對短地名很不可靠,「台南」查得到
+     別國的同名地方,而一個很有自信的錯座標比空白還糟。表裡沒有的才問線上。 */
+  const CITIES = [
+    { c: "日本", keys: ["東京"], lat: 35.6762, lon: 139.6503 },
+    { c: "日本", keys: ["大阪"], lat: 34.6937, lon: 135.5023 },
+    { c: "日本", keys: ["京都"], lat: 35.0116, lon: 135.7681 },
+    { c: "日本", keys: ["奈良"], lat: 34.6851, lon: 135.8048 },
+    { c: "日本", keys: ["神戶", "神戸"], lat: 34.6901, lon: 135.1955 },
+    { c: "日本", keys: ["名古屋"], lat: 35.1815, lon: 136.9066 },
+    { c: "日本", keys: ["福岡", "博多"], lat: 33.5904, lon: 130.4017 },
+    { c: "日本", keys: ["札幌", "北海道"], lat: 43.0618, lon: 141.3545 },
+    { c: "日本", keys: ["沖繩", "沖縄", "那霸", "那覇"], lat: 26.2124, lon: 127.6809 },
+    { c: "日本", keys: ["橫濱", "横浜"], lat: 35.4437, lon: 139.638 },
+    { c: "日本", keys: ["廣島", "広島"], lat: 34.3853, lon: 132.4553 },
+    { c: "日本", keys: ["仙台"], lat: 38.2682, lon: 140.8694 },
+    { c: "日本", keys: ["金澤", "金沢"], lat: 36.5613, lon: 136.6562 },
+    { c: "台灣", keys: ["台北", "臺北"], lat: 25.033, lon: 121.5654 },
+    { c: "台灣", keys: ["新北"], lat: 25.012, lon: 121.4657 },
+    { c: "台灣", keys: ["桃園"], lat: 24.9936, lon: 121.301 },
+    { c: "台灣", keys: ["新竹"], lat: 24.8138, lon: 120.9675 },
+    { c: "台灣", keys: ["台中", "臺中"], lat: 24.1477, lon: 120.6736 },
+    { c: "台灣", keys: ["南投", "日月潭"], lat: 23.8657, lon: 120.9154 },
+    { c: "台灣", keys: ["嘉義", "阿里山"], lat: 23.48, lon: 120.4491 },
+    { c: "台灣", keys: ["台南", "臺南"], lat: 22.9999, lon: 120.227 },
+    { c: "台灣", keys: ["高雄"], lat: 22.6273, lon: 120.3014 },
+    { c: "台灣", keys: ["屏東", "墾丁"], lat: 22.0, lon: 120.75 },
+    { c: "台灣", keys: ["台東", "臺東"], lat: 22.7583, lon: 121.1444 },
+    { c: "台灣", keys: ["花蓮"], lat: 23.9769, lon: 121.6044 },
+    { c: "台灣", keys: ["宜蘭"], lat: 24.7021, lon: 121.7378 },
+    { c: "台灣", keys: ["基隆"], lat: 25.1276, lon: 121.7392 },
+    { c: "台灣", keys: ["澎湖"], lat: 23.5712, lon: 119.5793 },
+    { c: "台灣", keys: ["金門"], lat: 24.4493, lon: 118.3767 },
+  ];
+  const COUNTRY_CC = { "日本": "JP", "台灣": "TW" };
+  let CITY = { lat: CITIES[0].lat, lon: CITIES[0].lon };
+  /* 城市字串 → 座標。表 → 線上 → 國家的預設城市,三層都沒有才用東京(不會發生,但不要回 null) */
+  async function resolveCity() {
+    const country = (trip && trip.country) || "日本";
+    const name = (trip && trip.city) || "";
+    const hit = CITIES.find(x => x.c === country && x.keys.some(k => name.indexOf(k) >= 0));
+    if (hit) { CITY = { lat: hit.lat, lon: hit.lon }; return; }
+    try {
+      const res = await fetch("https://geocoding-api.open-meteo.com/v1/search?count=1&language=zh&countryCode=" +
+        (COUNTRY_CC[country] || "JP") + "&name=" + encodeURIComponent(name.slice(0, 20)));
+      const r = ((await res.json()).results || [])[0];
+      if (r) { CITY = { lat: r.latitude, lon: r.longitude }; return; }
+    } catch (_) {}
+    const dft = CITIES.find(x => x.c === country) || CITIES[0];
+    CITY = { lat: dft.lat, lon: dft.lon };
+  }
+  const WXLS = "trippps-wx";     /* 座標 → 每日預報 */
+  const GEOLS = "trippps-geo";   /* 地點字串 → 座標(查不到就記 null,不再問第二次) */
   const WX_TTL = 3 * 3600e3;
 
   /* 東京都以外、當天來回得了的地方。
@@ -2618,11 +2769,14 @@
     }
   }
 
-  /* 查詢服務回來的東西要驗過才敢用:得落在關東到中部這個範圍,而且不是東京都。
-     驗不過就當作查無 —— 拿不準的地方寧可不顯示。 */
+  /* 查詢服務回來的東西要驗過才敢用:得在這一團主要城市的一日生活圈裡(300 km 內),
+     而且不是城市本身(10 km 內 —— 那跟日子那一排的數字一樣,每列重印只是噪音)。
+     第 2 期以前這裡寫死「關東到中部、不是東京都」。驗不過就當作查無。 */
+  const kmFrom = (a, lat, lon) => Math.hypot((a.lat - lat) * 111, (a.lon - lon) * 111 * Math.cos(lat * Math.PI / 180));
   function plausible(r) {
-    return r && r.latitude > 34.5 && r.latitude < 37.5 &&
-      r.longitude > 137.5 && r.longitude < 141.2 && (r.admin1 || "") !== "東京都";
+    if (!r) return false;
+    const d = kmFrom(CITY, r.latitude, r.longitude);
+    return d > 10 && d < 300;
   }
 
   /* 地點字串 → 座標。表裡有就用表的,沒有才問線上,兩邊都沒有就回 null。
@@ -2641,7 +2795,8 @@
       /* 「都心 → NRT 約 60–90 分鐘」這種要先切掉後面的說明,只留前面那截 */
       const q = place.split(/[·・→(（,、]/)[0].trim().slice(0, 20);
       if (q) {
-        const res = await fetch("https://geocoding-api.open-meteo.com/v1/search?count=5&language=ja&countryCode=JP&name=" +
+        const cc = COUNTRY_CC[(trip && trip.country) || "日本"] || "JP";
+        const res = await fetch("https://geocoding-api.open-meteo.com/v1/search?count=5&language=" + (cc === "TW" ? "zh" : "ja") + "&countryCode=" + cc + "&name=" +
           encodeURIComponent(q));
         const ok = ((await res.json()).results || []).find(plausible);
         if (ok) found = { lat: ok.latitude, lon: ok.longitude };
@@ -2670,7 +2825,8 @@
 
   async function loadWeather() {
     const rev = wxRev;
-    await fetchWx(TOKYO.lat, TOKYO.lon);
+    await resolveCity();
+    await fetchWx(CITY.lat, CITY.lon);
     if (wxRev !== rev) { renderDays(); renderRoute(); }
   }
 
@@ -2679,7 +2835,7 @@
   async function refreshWeather() {
     const rev = wxRev;
     const keys = Object.keys(wxCache);
-    if (!keys.length) keys.push(wxKey(TOKYO.lat, TOKYO.lon));
+    if (!keys.length) keys.push(wxKey(CITY.lat, CITY.lon));
     for (const k of keys) {
       const p = k.split(",");
       await fetchWx(Number(p[0]), Number(p[1]), true);
@@ -2910,12 +3066,25 @@
        真要讓它有用,key 得放寬到「台北」「台灣」那種表答不出來的字 ——
        而這是東京行,那種字串現在一筆都沒有。要加之前先確認真的有人會打。 */
   ];
-  const TRIP_REGION = REGIONS.find(r => r.key.some(k => document.title.indexOf(k) >= 0)) || REGIONS[0];
+  /* 台灣的團(第 2 期)。上面那段「撤掉了」講的是東京行裡用不到;台灣的團整趟都在這一塊。
+     key 刻意不收「桃園/TPE」—— 那兩個會先被人工表答掉,理由見上面。 */
+  REGIONS.push({ key: ["台灣", "臺灣", "台北", "臺北", "新北", "台中", "臺中", "台南", "臺南", "高雄", "花蓮", "宜蘭",
+                       "台東", "臺東", "新竹", "嘉義", "基隆", "屏東", "墾丁", "南投", "澎湖", "金門"],
+                 cc: "tw", view: "118.2,26.4,122.1,21.8" });
+  /* 這趟在哪:看「團」的城市,認不出來就看國家(第 2 期以前看網頁標題) */
+  let TRIP_REGION = REGIONS[0];
+  function setTripRegion() {
+    const city = (trip && trip.city) || "";
+    TRIP_REGION = REGIONS.find(r => r.key.some(k => city.indexOf(k) >= 0)) ||
+      (countryName() === "台灣" ? REGIONS[REGIONS.length - 1] : REGIONS[0]);
+  }
 
   /* 這個字串要在哪一塊裡查。講了別的地方就去那一塊,沒講就用這趟的 —— 所以東京行
      裡的「新宿」還是在東京找,「京都車站」會去關西找。上面那份 REGIONS 的順序有
      意義:東京排第一,「東京都廳」才不會被中間那兩個字拐去京都。 */
-  const regionFor = s => REGIONS.find(r => r.key.some(k => s.indexOf(k) >= 0)) || TRIP_REGION;
+  /* 字串講了別的地方就去那一塊 —— 但**只在同一個國家裡跳**。台灣的團裡寫「京都」,
+     多半是店名(京都念慈菴?),拿去日本找才是錯的。 */
+  const regionFor = s => REGIONS.find(r => r.cc === TRIP_REGION.cc && r.key.some(k => s.indexOf(k) >= 0)) || TRIP_REGION;
   const TILE = 256;
 
   let pins = {};
@@ -3445,7 +3614,14 @@
 
   /* 日本境內。出發日的桃園機場查得到,但一張圖同時要裝下台灣和成田,就得縮到
      看得見鹿兒島,兩個點都擠到邊上 —— 那張圖排行程用不到,所以不標。 */
-  const inJapan = at => !!at && at.la > 30 && at.la < 46 && at.lo > 128 && at.lo < 146;
+  /* 第 2 期起看這一團的國家:台灣的團就框台灣(含金門、澎湖)。理由一樣 ——
+     一張圖同時裝下兩國,每個點都擠到邊上,那張圖排行程用不到。 */
+  const BOUNDS = {
+    "日本": at => at.la > 30 && at.la < 46 && at.lo > 128 && at.lo < 146,
+    "台灣": at => at.la > 21.5 && at.la < 26.6 && at.lo > 118 && at.lo < 122.5,
+  };
+  const inJapan = at => !!at && (BOUNDS[(trip && trip.country) || "日本"] || BOUNDS["日本"])(at);
+  const countryName = () => (trip && trip.country) || "日本";
 
   /* 存下去的當下就查一次。不然要等你打開地圖才發現少一個點,
      那時候已經想不起來是哪一筆打錯了。 */
@@ -3470,14 +3646,14 @@
       /* **文案跟著畫面改。** 兩欄合併之後畫面上沒有「地點欄」這個東西了,
          說「補上地點」等於叫使用者去找一個不存在的欄位。現在該講的動作是「按搜尋挑一個」。 */
       if (!k) { say("「" + item.title + "」還沒挑地點,地圖上不會有它 —— 按欄位旁邊的「搜尋」挑一個就會出現"); return; }
-      if (!inJapan(k)) say("「" + item.title + "」不在日本境內,地圖上不會顯示");
+      if (!inJapan(k)) say("「" + item.title + "」不在" + countryName() + "境內,地圖上不會顯示");
       return;
     }
     const at = await pinForItem(item);
     /* 查不到就要順手講「怎麼再試一次」—— 不然使用者只知道失敗,不知道還有退路。
        講的是站上已經有的那條路(開地圖、點那一列),不另外長一套提示機制。 */
     if (!at) say("「" + what + "」查不到 —— 試試把地名打完整,或開地圖點那一列再查一次");
-    else if (!inJapan(at)) say("「" + (at.via || what) + "」不在日本境內,地圖上不會顯示");
+    else if (!inJapan(at)) say("「" + (at.via || what) + "」不在" + countryName() + "境內,地圖上不會顯示");
   }
 
   /* **沒填「地點」就不查,一次查詢都不發。**
@@ -3902,13 +4078,13 @@
   function renderDays() {
     const t = todayISO();
     el("days").innerHTML = DAYS.map(d => {
-      const cnt = stopsOn(d.date).length + (online ? 0 : (ANCHORS[d.date] || []).length);
+      const cnt = stopsOn(d.date).length + anchorsOn(d.date).length;
       const mark = d.date < t ? " past" : d.date === t ? " today" : "";
       return '<button type="button" class="day' + mark + '" style="--dc:' + d.color +
         "; --dc-on:" + d.on + '" data-day="' + d.date +
         '" aria-pressed="' + (d.date === state.day) + '"><span class="dn">DAY ' + d.n + '</span><span class="dd">' +
         d.date.slice(5).replace("-", "/") + '</span><span class="dw">週' + d.w + " · " + cnt + " 項</span>" +
-        wxLine(TOKYO, d.date) + "</button>";
+        wxLine(CITY, d.date) + "</button>";
     }).join("");
     const cur = el("days").querySelector('[aria-pressed="true"]');
     if (cur && cur.scrollIntoView) {
@@ -3930,14 +4106,13 @@
     }
   }
 
-  const LAST_DAY = "2026-10-08";
-  const OVERNIGHT = "2026-10-09";
 
   function todayISO() {
     return new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
   }
   /* 旅行途中就停在今天那一格,不然從第一天開始 */
   function initialDay() {
+    if (!DAYS.length) return "";   /* 團還沒載入 —— 第 2 期起日子是從團推出來的,開機那一刻是空的 */
     const t = todayISO();
     if (DAYS.some(d => d.date === t)) return t;
     if (t === OVERNIGHT) return LAST_DAY;     /* 紅眼班機那晚還算最後一天 */
@@ -3952,8 +4127,8 @@
   /* 時間軸上的第 N 列就是地圖上的第 N 個標記,所以兩邊得用同一個清單、同一個排序。
      分開寫的話,同一分鐘的兩筆會因為排序穩定性而錯位。 */
   function dayList(day) {
-    /* 連著 Notion 時,航班節點已經是 Notion 裡的資料,不要再畫一次寫死的 */
-    const anchors = online ? [] : (ANCHORS[day] || []).map(a => Object.assign({ anchor: true }, a));
+    /* 航班推出來的固定節點(報到/起飛/抵達)。改航班才會變,時間軸上不能拖也不能刪。 */
+    const anchors = anchorsOn(day);
     const key = x => (x.day || day) + " " + (x.time || "");
     return anchors.concat(stopsOn(day)).sort((a, b) => key(a).localeCompare(key(b)));
   }
@@ -4002,14 +4177,9 @@
     loadStopWeather(list);
   }
 
-  /* 「我是誰」記在這台裝置上,+1 要靠它判斷是不是自己投的 */
-  const MELS = "tokyo5-me";
-  function myName() {
-    try { return localStorage.getItem(MELS) || ""; } catch (_) { return ""; }
-  }
-  function setMe(id) {
-    try { localStorage.setItem(MELS, id); } catch (_) {}
-  }
+  /* 「我是誰」= 伺服器說你在這團是哪一個成員。第 2 期以前這是 localStorage 裡
+     一個誰都能改的字串;現在伺服器也照這個認人(許願人、+1 都由它決定)。 */
+  function myName() { return myMember ? myMember.id : ""; }
 
   /* 票多的在前面。地圖上的編號要跟清單對得起來,所以兩邊共用這個排序。 */
   const wishOrder = () => state.wishes.slice().sort((a, b) =>
@@ -4080,7 +4250,7 @@
 
   function renderCost() {
     const total = state.expenses.reduce((s, e) => s + toTWD(e), 0);
-    const tripTotal = state.expenses.filter(e => e.date >= "2026-10-03").reduce((s, e) => s + toTWD(e), 0);
+    const tripTotal = state.expenses.filter(e => e.date >= (trip && trip.start || "")).reduce((s, e) => s + toTWD(e), 0);
     /* 記完一筆最想馬上知道的是基金還剩多少,所以擺在第一格 */
     const pot = state.kitty * IDS.length;
     const used = IDS.reduce((s, id) => s + ledger().book[id].owed, 0);
@@ -4091,7 +4261,7 @@
       tile("行前預訂", twd(total - tripTotal), "機票、住宿等"),
       tile("旅途中", twd(tripTotal), "10/03 起"),
     ].join("");
-    el("rate-hint").textContent = "1 JPY = " + state.rate + " TWD";
+    el("rate-hint").textContent = trip && trip.currency === "TWD" ? "" : "1 JPY = " + state.rate + " TWD";
 
     const sums = CATS.map(c => Object.assign({}, c, { v: state.expenses.filter(e => e.category === c.id).reduce((s, e) => s + toTWD(e), 0) }));
     const shown = sums.filter(c => c.v > 0);
@@ -4144,7 +4314,7 @@
     el("fund-sub").textContent = "每人 " + twd(per) + " · 共 " + twd(pot);
 
     /* 行前的花費(機票之類)如果也記進來了,要講出來,不然這個數字會被誤讀 */
-    const pre = state.expenses.filter(e => e.date < "2026-10-03").reduce((s, e) => s + toTWD(e), 0);
+    const pre = state.expenses.filter(e => e.date < (trip && trip.start || "")).reduce((s, e) => s + toTWD(e), 0);
 
     const rows = MEMBERS.map(m => {
       const u = res.book[m.id].owed;
@@ -4196,7 +4366,7 @@
       : "○ 瀏覽器不讓存檔,離開後會消失";
   }
 
-  function render() { renderSeats(); renderDays(); renderRoute(); renderWishes(); renderCost(); renderFund(); renderSplit(); renderSync(); }
+  function render() { renderCountdown(); renderSeats(); renderDays(); renderRoute(); renderWishes(); renderCost(); renderFund(); renderSplit(); renderSync(); }
 
   /* ================= 互動 ================= */
   /* **三塊並排的門檻,跟 CSS 那條 media query 同一個數字。**
@@ -4459,7 +4629,8 @@
   }
   function defaultDate() {
     const t = todayISO();
-    return t >= "2026-10-03" && t <= "2026-10-09" ? t : "2026-10-03";
+    if (!DAYS.length) return t;
+    return t >= DAYS[0].date && t <= OVERNIGHT ? t : DAYS[0].date;
   }
   el("add-exp-btn").addEventListener("click", () => {
     fillPeopleControls();
@@ -4984,12 +5155,12 @@
 
   function aiFillSeats(flightNo, fromAI) {
     const S = seatsNow();
-    const f = FLIGHTS.find(x => x.no === flightNo) || FLIGHTS[0];
+    const now = S[flightNo] || {};
     el("ai-seat-list").innerHTML = MEMBERS.map(m => {
       const got = (fromAI || []).find(x => x.member === m.id);
       return '<label class="rm-label" for="ai-seat-' + m.id + '">' + esc(nameOf(m.id)) + "</label>" +
         '<input class="rm-input" type="text" id="ai-seat-' + m.id + '" maxlength="4" placeholder="' +
-        esc(S[f.leg][m.id] || "") + '" value="' + esc(got ? got.seat : "") + '">';
+        esc(now[m.id] || "") + '" value="' + esc(got ? got.seat : "") + '">';
     }).join("");
   }
 
@@ -5023,12 +5194,15 @@
     el("ai-by").innerHTML = '<option value="">— 選一下 —</option>' + MEMBERS.map(m =>
       '<option value="' + m.id + '"' + (m.id === me ? " selected" : "") + ">" + esc(nameOf(m.id)) + "</option>").join("");
     lockWho(el("ai-by"));
-    el("ai-flight").innerHTML = FLIGHTS.map(f => '<option value="' + f.no + '">' + esc(f.label) + "</option>").join("");
-    const f = FLIGHTS.find(x => x.no === r.flight);
-    el("ai-flight").value = f ? f.no : FLIGHTS[0].no;
+    const fls = flightsSorted();
+    el("ai-flight").innerHTML = fls.map(f => '<option value="' + esc(f.no) + '">' + esc((f.dir === "其他" ? "" : f.dir + " ") + f.no + " · " + mmdd(dayOf(f.depart))) + "</option>").join("");
+    const f = fls.find(x => x.no === r.flight);
+    el("ai-flight").value = f ? f.no : (fls[0] ? fls[0].no : "");
     aiFillSeats(el("ai-flight").value, r.seats);
-    if (r.intent === "seats" && r.flight && !f)
-      el("ai-say").textContent = "圖上的航班是 " + r.flight + ",不是這趟的兩班。請選要改哪一班。";
+    if (r.intent === "seats" && !fls.length)
+      el("ai-say").textContent = "這一團還沒有航班。先到「搭機」分頁加航班,再來填座位。";
+    else if (r.intent === "seats" && r.flight && !f)
+      el("ai-say").textContent = "圖上的航班是 " + r.flight + ",不是這一團的航班。請選要改哪一班。";
     el("ai-form").hidden = true; el("ai-confirm").hidden = false;
     aiShowKind();
     /* 有地名就先幫他搜一次:**挑哪一個還是人挑**,這裡只是省他按一下「搜尋」。
@@ -5037,22 +5211,19 @@
   }
 
   async function saveSeats(flightNo) {
-    const f = FLIGHTS.find(x => x.no === flightNo);
+    const f = (state.flights || []).find(x => x.no === flightNo);
+    if (!f) throw new Error("先到「搭機」分頁加這一班航班");
     const want = MEMBERS.map(m => ({ m, seat: el("ai-seat-" + m.id).value.trim().toUpperCase() }))
       .filter(x => x.seat);
     if (!want.length) throw new Error("沒有要改的座位");
     const bad = want.find(x => !/^\d{1,3}[A-K]$/.test(x.seat));
     if (bad) throw new Error(nameOf(bad.m.id) + " 的座位「" + bad.seat + "」看起來不對,要像 27A");
     if (!online) throw new Error("座位要連上網才能存");
-    for (const { m, seat } of want) {
-      const had = (state.seats || []).find(r => r.flight === f.no && r.passenger === m.key);
-      const body = JSON.stringify({ flight: f.no, date: f.date, passenger: m.key, seat });
-      const { row } = had
-        ? await api("?resource=seats&id=" + encodeURIComponent(had.id), { method: "PATCH", body })
-        : await api("?resource=seats", { method: "POST", body });
-      state.seats = (state.seats || []).filter(r => r.id !== row.id && !(r.flight === row.flight && r.passenger === row.passenger));
-      state.seats.push(row);
-    }
+    /* 只寫有填的那幾個 —— AI 讀出來的圖常常只有一部分人,沒填的不代表要清掉 */
+    const keep = seatsNow()[f.no] || {};
+    const wanted = Object.assign({}, keep);
+    want.forEach(({ m, seat }) => { wanted[m.id] = seat; });
+    await writeSeats(f.no, dayOf(f.depart), wanted);
     saveSnap();
     return want.length;
   }
@@ -5153,7 +5324,6 @@
       if (!title) { aiErr("ai-cerr", "總要寫個地方。"); return; }
       const by = el("ai-by").value;
       if (!by) { aiErr("ai-cerr", "選一下你是誰,不然沒人知道這是誰許的。"); return; }
-      setMe(by);
       addWish({ id: uid(), title, place, note, by, votes: [by], createdAt: new Date().toISOString() });
       closeAI();
       switchTab("wish");
@@ -5190,12 +5360,9 @@
     }
   });
 
-  /* **認領過位子的人不能再選別人。** 那正是整件事的重點:身分是伺服器認得的,
-     不是自己在下拉選單裡宣稱的。沒登入、沒認領的人照舊自己選 ——
-     離線那份和沒有後端的那份只有這條路。 */
+  /* **許願的人就是你自己,選不了別人。** 伺服器也照這個認(送什麼都會被換成你)。 */
   function lockWho(sel) {
-    if (!myMember) { sel.disabled = false; return; }
-    sel.value = myMember.id;
+    if (myMember) sel.value = myMember.id;
     sel.disabled = true;
   }
   function fillWishWho() {
@@ -5270,7 +5437,6 @@
     if (!title) { showWishError("總要寫個地方。"); return; }
     const by = el("wf-by").value;
     if (!by) { showWishError("選一下你是誰,不然沒人知道這是誰許的。"); return; }
-    setMe(by);
     const place = locatedAt(title) ? title : "";
     addWish({
       id: uid(), title: title, place: place,
@@ -5452,106 +5618,296 @@
       state.day.slice(5).replace("-", "/") + ",幾點?");
   }
 
-  /* --- 改名字 --- */
-  const renameForm = document.createElement("form");
-  renameForm.className = "form"; renameForm.id = "rename-form"; renameForm.hidden = true;
-  el("people").parentNode.insertBefore(renameForm, el("people"));
-  el("rename-btn").addEventListener("click", () => {
-    renameForm.innerHTML = '<div class="grid2">' + MEMBERS.map(m =>
-      '<div class="fld"><label class="rm-label" for="rn-' + m.id + '">' + m.full + '</label><input class="rm-input" type="text" id="rn-' + m.id +
-      '" value="' + esc(nameOf(m.id)) + '" maxlength="12"></div>').join("") +
-      '</div><div class="form-ops"><button type="button" class="btn btn-ghost btn-sm" id="rn-cancel">取消</button>' +
-      '<button type="submit" class="btn btn-main btn-sm">存起來</button></div>';
-    renameForm.hidden = !renameForm.hidden;
-  });
-  renameForm.addEventListener("click", ev => { if (ev.target.id === "rn-cancel") renameForm.hidden = true; });
-  renameForm.addEventListener("submit", ev => {
-    ev.preventDefault();
-    const names = {};
-    MEMBERS.forEach(m => { const v = (el("rn-" + m.id).value || "").trim(); if (v) names[m.id] = v; });
-    state.names = names;
-    renameForm.hidden = true;
-    fillPeopleControls();
-    saveLocal(); render();
-  });
-
   /* --- 備份 --- */
   el("export-btn").addEventListener("click", () => {
     const blob = new Blob([JSON.stringify(snapshot(), null, 2)], { type: "application/json" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = "tokyo-trip-" + new Date().toISOString().slice(0, 10) + ".json";
+    a.download = "trippps-" + (trip ? trip.name : TRIP) + "-" + new Date().toISOString().slice(0, 10) + ".json";
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   });
-  el("import-btn").addEventListener("click", () => el("import-file").click());
-  el("import-file").addEventListener("change", ev => {
-    const file = ev.target.files && ev.target.files[0];
-    if (!file) return;
-    const r = new FileReader();
-    r.onload = () => {
-      try {
-        const d = JSON.parse(r.result);
-        if (!d || typeof d !== "object") throw new Error("bad");
-        if (online) { flash("連著 Notion 時不支援匯入,請先登出"); return; }
-        if (!confirm("匯入會覆蓋這台裝置上現有的紀錄,確定嗎?")) return;
-        apply(d); saveLocal(); render(); fillPeopleControls();
-        flash("已匯入 " + state.expenses.length + " 筆花費");
-      } catch (_) { flash("這個檔案讀不出來,請確認是匯出的 JSON"); }
-    };
-    r.readAsText(file);
-    ev.target.value = "";
-  });
-  el("reset-btn").addEventListener("click", () => {
-    if (online) { flash("連著 Notion 時請直接刪除個別紀錄"); return; }
-    if (!confirm("會清掉這台裝置上所有自己加的行程和花費,回到只有機票的初始狀態。確定嗎?")) return;
-    try { localStorage.removeItem(LS); } catch (_) {}
-    apply(SEED);
-    fillPeopleControls();
-    saveLocal();
-    render();
-    flash("已清除");
-  });
+  /* ================= 入口:登入、我的團、開團、加入 =================
 
-  /* --- 通行碼 --- */
-  /* 只驗證,不碰資料 —— 對就升級成可編輯 */
-  async function tryKey(key) {
-    tripKey = key;
-    try {
-      await api("?resource=auth");
-    } catch (e) {
-      tripKey = "";
-      throw e;
+     第 2 期的規則是「沒有公開這回事」:沒登入什麼都看不到,不是這一團的人連有誰都看不到。
+     所以開機之後、畫任何行程之前,先決定要給他哪一張卡。**每一張卡的下一步都不一樣**,
+     不能混成一句「你沒有權限」:
+       signin     還沒登入        → 用 LINE 登入
+       trips      登入了、沒帶團  → 我的團(空的就直接開團)
+       create     要開新的一團
+       join       帶著團代號、還不是這團的人 → 輸入邀請碼、填自己叫什麼
+       notrip     沒有這一團      → 回我的團
+       offline    連不上、也沒有這一團的副本 */
+  const COUNTRY_CITY = { "日本": "東京", "台灣": "台北" };
+  const card = () => el("home-card");
+  const homeErr = msg => { const b = el("home-err"); if (b) { b.textContent = msg || ""; b.hidden = !msg; } };
+  const fmtRange = (a, b) => (a ? a.replace(/-/g, "/") : "?") + " – " + (b ? b.slice(5).replace("-", "/") : "?");
+  function closeHome() { el("home-overlay").hidden = true; }
+
+  async function openHome(kind, opt) {
+    const o = opt || {};
+    el("home-overlay").hidden = false;
+    const c = card();
+    if (kind === "signin") {
+      c.innerHTML = '<h2 id="home-title">Trippps</h2>' +
+        (TRIP && INVITE
+          ? "<p>朋友邀請你加入一團。先用 LINE 登入,回來就能加入。</p>"
+          : "<p>跟朋友一起排行程、許願、分帳。用 LINE 登入就能開始。</p>") +
+        '<div class="ops"><button type="button" class="btn btn-line" id="h-line">用 LINE 登入</button></div>';
+      el("h-line").addEventListener("click", goLine);
+      return;
     }
-    canEdit = true;
-    try { localStorage.setItem(KEYLS, key); } catch (_) {}
-    if (!online) { await goOnline(); return; }
-    render();
-    renderEditAbility();
-    renderCloudBar();
+    if (kind === "trips") {
+      c.innerHTML = '<h2 id="home-title">我的團</h2><p>讀取中…</p>';
+      let trips = [];
+      try { trips = (await api("?resource=trips")).trips || []; }
+      catch (e) {
+        if (e.why === "login") return openHome("signin");
+        c.innerHTML = '<h2 id="home-title">我的團</h2><div class="err">讀不到你的團:' + esc(e.message) + "</div>";
+        return;
+      }
+      /* **一團都沒有就直接開團** —— 空的清單配一顆「開新的一團」,多一步沒有意義 */
+      if (!trips.length) return openHome("create", { first: true });
+      c.innerHTML = '<h2 id="home-title">我的團</h2>' +
+        '<div class="home-list">' + trips.map(t =>
+          '<a class="home-trip" href="?t=' + encodeURIComponent(t.code) + '"><b>' + esc(t.name) + "</b>" +
+          "<small>" + esc(t.city || t.country) + " · " + fmtRange(t.start, t.end) + "</small>" +
+          '<span class="role">' + esc(t.role) + "</span></a>").join("") + "</div>" +
+        '<div class="ops"><button type="button" class="btn btn-main" id="h-new">開新的一團</button>' +
+        '<button type="button" class="btn btn-ghost btn-sm" id="h-out">登出</button></div>';
+      el("h-new").addEventListener("click", () => openHome("create"));
+      el("h-out").addEventListener("click", logout);
+      return;
+    }
+    if (kind === "create") {
+      const hi = lineUser && lineUser.name ? esc(lineUser.name) : "";
+      c.innerHTML = '<h2 id="home-title">' + (o.first ? "開你的第一團" : "開新的一團") + "</h2>" +
+        (o.first ? "<p>" + (hi ? hi + ",歡迎!" : "歡迎!") + "你還沒有任何團。開一團,你就是團主 —— 之後可以把邀請碼傳給朋友。</p>" : "") +
+        '<form class="home-card-form" id="h-create">' +
+        '<div class="grid2">' +
+        '<div class="fld"><label class="rm-label" for="h-country">去哪裡玩</label><select class="rm-input" id="h-country"><option value="日本">日本</option><option value="台灣">台灣</option></select></div>' +
+        '<div class="fld"><label class="rm-label" for="h-city">主要城市</label><input class="rm-input" type="text" id="h-city" maxlength="30" placeholder="東京"></div>' +
+        "</div>" +
+        '<div class="fld"><label class="rm-label" for="h-name">團名</label><input class="rm-input" type="text" id="h-name" maxlength="40" placeholder="例如 東京五人行" required></div>' +
+        '<div class="grid2">' +
+        '<div class="fld"><label class="rm-label" for="h-start">第一天</label><input class="rm-input" type="date" id="h-start" required></div>' +
+        '<div class="fld"><label class="rm-label" for="h-end">最後一天</label><input class="rm-input" type="date" id="h-end" required></div>' +
+        "</div>" +
+        '<div class="fld"><label class="rm-label" for="h-me">你在這團叫什麼</label><input class="rm-input" type="text" id="h-me" maxlength="20" placeholder="朋友平常怎麼叫你" required value="' + hi + '"></div>' +
+        '<div class="err" id="home-err" hidden></div>' +
+        '<div class="ops"><button type="submit" class="btn btn-main" id="h-go">建立,開始排行程</button>' +
+        (o.first ? '<button type="button" class="btn btn-ghost btn-sm" id="h-out">登出</button>'
+                 : '<button type="button" class="btn btn-ghost btn-sm" id="h-back">回我的團</button>') + "</div></form>";
+      el("h-country").addEventListener("change", () => { el("h-city").placeholder = COUNTRY_CITY[el("h-country").value] || ""; });
+      el("h-start").addEventListener("change", () => {
+        if (!el("h-end").value || el("h-end").value < el("h-start").value) el("h-end").value = el("h-start").value;
+        el("h-end").min = el("h-start").value;
+      });
+      if (el("h-back")) el("h-back").addEventListener("click", () => openHome("trips"));
+      if (el("h-out")) el("h-out").addEventListener("click", logout);
+      el("h-create").addEventListener("submit", async ev => {
+        ev.preventDefault();
+        homeErr("");
+        const btn = el("h-go");
+        btn.disabled = true; btn.textContent = "建立中…";
+        try {
+          const out = await api("?resource=trips", { method: "POST", body: JSON.stringify({
+            country: el("h-country").value, city: el("h-city").value.trim(),
+            name: el("h-name").value.trim(), start: el("h-start").value, end: el("h-end").value,
+            myName: el("h-me").value.trim(),
+          }) });
+          location.href = "?t=" + encodeURIComponent(out.code) + "&new=1";
+        } catch (e) {
+          homeErr(e.message);
+          btn.disabled = false; btn.textContent = "建立,開始排行程";
+        }
+      });
+      el("h-name").focus();
+      return;
+    }
+    if (kind === "join") {
+      c.innerHTML = '<h2 id="home-title">加入這一團</h2><p id="h-join-hint">輸入邀請你的人給的邀請碼。</p>' +
+        '<form class="home-card-form" id="h-join">' +
+        '<div class="fld"><label class="rm-label" for="h-code">邀請碼</label><input class="rm-input" type="text" id="h-code" maxlength="6" autocapitalize="none" autocomplete="off" spellcheck="false" required value="' + esc(INVITE) + '"></div>' +
+        '<div class="fld"><label class="rm-label" for="h-me">你在這團叫什麼</label><input class="rm-input" type="text" id="h-me" maxlength="20" placeholder="朋友平常怎麼叫你" required value="' + (lineUser && lineUser.name ? esc(lineUser.name) : "") + '"></div>' +
+        '<div class="err" id="home-err" hidden></div>' +
+        '<div class="ops"><button type="submit" class="btn btn-main" id="h-go">加入</button>' +
+        '<button type="button" class="btn btn-ghost btn-sm" id="h-back">回我的團</button></div></form>';
+      el("h-back").addEventListener("click", () => { location.href = location.pathname; });
+      /* 先看一眼:帶著邀請碼進來的話,先告訴他是哪一團、誰邀請的 */
+      const peek = async code => {
+        try {
+          const r = await api("?resource=join&t=" + encodeURIComponent(TRIP) + "&code=" + encodeURIComponent(code));
+          if (r.joined) { location.href = "?t=" + encodeURIComponent(TRIP); return; }
+          el("home-title").textContent = "加入「" + r.trip.name + "」";
+          el("h-join-hint").textContent = r.host + " 邀請你加入。填一下你在這團叫什麼就好。";
+        } catch (e) { homeErr(e.message); }
+      };
+      if (INVITE) peek(INVITE);
+      el("h-join").addEventListener("submit", async ev => {
+        ev.preventDefault();
+        homeErr("");
+        const btn = el("h-go");
+        btn.disabled = true; btn.textContent = "加入中…";
+        try {
+          await api("?resource=join", { method: "POST", body: JSON.stringify({
+            trip: TRIP, invite: el("h-code").value.trim().toLowerCase(), name: el("h-me").value.trim(),
+          }) });
+          location.href = "?t=" + encodeURIComponent(TRIP) + "&joined=1";
+        } catch (e) {
+          homeErr(e.message);
+          btn.disabled = false; btn.textContent = "加入";
+        }
+      });
+      return;
+    }
+    if (kind === "notrip") {
+      c.innerHTML = '<h2 id="home-title">找不到這一團</h2><p>可能網址少了幾個字,或這一團已經被刪掉了。</p>' +
+        '<div class="ops"><a class="btn btn-main" href="' + location.pathname + '">回我的團</a></div>';
+      return;
+    }
+    if (kind === "offline") {
+      c.innerHTML = '<h2 id="home-title">連不上</h2><p>' + esc(o.msg || "現在連不上伺服器,這台裝置上也沒有這一團的副本。") + "</p>" +
+        '<div class="ops"><button type="button" class="btn btn-main" id="h-retry">再試一次</button></div>';
+      el("h-retry").addEventListener("click", () => location.reload());
+    }
   }
 
-  el("si-line").addEventListener("click", goLine);
-  el("si-read").addEventListener("click", () => { el("signin-overlay").hidden = true; });
-  el("si-admin").addEventListener("click", () => showAdminBox(true));
-  el("si-back").addEventListener("click", () => { showSigninError(""); showAdminBox(false); });
-  el("signin-form").addEventListener("submit", async ev => {
-    ev.preventDefault();
-    if (el("si-adminbox").hidden) return;
-    const key = el("si-key").value;
-    if (!key) { showSigninError("請輸入通行碼。"); return; }
-    const btn = el("si-submit");
-    btn.disabled = true; btn.textContent = "驗證中…";
-    showSigninError("");
+  /* 登出:清掉這台裝置上所有團的副本,再請伺服器清掉登入的票。
+     **副本不清的話**,借別人手機登入過一次,登出之後他打開同一個網址、斷網,
+     還是看得到你們的行程和帳。 */
+  function logout() {
     try {
-      await tryKey(key);
-      el("si-key").value = "";
-      el("signin-overlay").hidden = true;
-      flash("管理員模式 —— 可以編輯了");
+      Object.keys(localStorage).forEach(k => { if (/^(trippps-|tokyo5-)/.test(k)) localStorage.removeItem(k); });
+    } catch (_) {}
+    location.href = AUTH + "?go=logout";
+  }
+
+  /* ---------- 狀態列 ---------- */
+  function renderCloudBar() {
+    const bar = el("cloudbar");
+    bar.hidden = false;
+    bar.className = "cloudbar " + (online ? "on" : "off");
+    const who = myMember ? nameOf(myMember.id) + (myMember.role === "團主" ? " · 團主" : "") : "";
+    /* 離線要講出時間:他看到的是真的行程,只是舊的。不說多舊,他會拿三天前的版本去趕車。 */
+    el("cloud-msg").textContent = online
+      ? (who || "已連上")
+      : "離線 · 這是 " + snapWhen(snapAt) + " 讀到的資料 · 不能編輯";
+    el("cloud-ops").innerHTML = online
+      ? '<button type="button" class="btn btn-sm btn-ghost" id="cloud-sync">重新整理</button>' +
+        '<button type="button" class="btn btn-sm" id="cloud-invite">邀請朋友</button>' +
+        '<button type="button" class="btn btn-sm btn-ghost" id="cloud-set">團的設定</button>' +
+        '<a class="btn btn-sm btn-ghost" id="cloud-home" href="' + location.pathname + '">我的團</a>' +
+        '<button type="button" class="btn btn-sm btn-ghost" id="cloud-out">登出</button>'
+      : '<button type="button" class="btn btn-sm" id="cloud-in">再連一次</button>';
+    const sync = el("cloud-sync");
+    if (sync) sync.addEventListener("click", () => withSpinner(sync, async () => {
+      /* **團也要重抓。** 團主改了團名、日期、打開了一個開關,重新整理就該看得到。
+         順序跟開機時一樣:人先換,再拉資料。 */
+      await refreshTeam();
+      await Promise.all([pull(), refreshWeather()]);
+      renderEditAbility();
+      renderCloudBar();
+      render();
+      flash("已更新");
+    }));
+    if (el("cloud-invite")) el("cloud-invite").addEventListener("click", openInvite);
+    if (el("cloud-set")) el("cloud-set").addEventListener("click", openSettings);
+    if (el("cloud-out")) el("cloud-out").addEventListener("click", logout);
+    if (el("cloud-in")) el("cloud-in").addEventListener("click", () => location.reload());
+  }
+
+  /* ---------- 邀請朋友 ---------- */
+  const inviteUrl = () => location.origin + location.pathname + "?t=" + encodeURIComponent(TRIP) +
+    "&i=" + encodeURIComponent((myMember && myMember.invite) || "");
+  function fillInvite() {
+    const url = inviteUrl();
+    const code = (myMember && myMember.invite) || "";
+    el("inv-url").textContent = url;
+    el("inv-code").textContent = code;
+    const msg = "一起來排「" + (trip ? trip.name : "") + "」的行程!\n" + url + "\n邀請碼:" + code;
+    el("inv-line").href = "https://line.me/R/share?text=" + encodeURIComponent(msg);
+  }
+  function openInvite() {
+    fillInvite();
+    el("invite-overlay").hidden = false;
+  }
+  async function copyText(txt, what) {
+    try { await navigator.clipboard.writeText(txt); flash("已複製" + what); }
+    catch (_) { flash("複製不了,請長按選取"); }
+  }
+  el("inv-copy-url").addEventListener("click", () => copyText(inviteUrl(), "網址"));
+  el("inv-copy-code").addEventListener("click", () => copyText((myMember && myMember.invite) || "", "邀請碼"));
+  el("inv-close").addEventListener("click", () => { el("invite-overlay").hidden = true; });
+  el("invite-overlay").addEventListener("click", ev => { if (ev.target === el("invite-overlay")) el("invite-overlay").hidden = true; });
+  el("inv-renew").addEventListener("click", async () => {
+    if (!confirm("換掉之後,舊的邀請碼就不能用了(已經加入的人不受影響)。確定嗎?")) return;
+    try {
+      const r = await api("?resource=me", { method: "PATCH", body: JSON.stringify({ invite: "renew" }) });
+      myMember = Object.assign({}, myMember, r.me);
+      fillInvite();
+      flash("換好了,記得把新的傳給朋友");
+    } catch (e) { flash(e.message); }
+  });
+
+  /* ---------- 團的設定 ---------- */
+  function showSetErr(msg) { const b = el("st-err"); b.textContent = msg || ""; b.hidden = !msg; }
+  function openSettings() {
+    if (!trip || !myMember) return;
+    const owner = myMember.role === "團主";
+    el("set-trip").hidden = !owner;
+    el("set-trip-ro").hidden = owner;
+    el("st-name").value = trip.name || "";
+    el("st-country").value = trip.country || "日本";
+    el("st-city").value = trip.city || "";
+    el("st-start").value = trip.start || "";
+    el("st-end").value = trip.end || "";
+    el("st-rate").value = trip.rate || "";
+    el("st-rate-fld").hidden = trip.currency === "TWD";
+    el("st-kitty").value = trip.kitty || 0;
+    el("st-can-plan").checked = !!(trip.can && trip.can.plan);
+    el("st-can-cost").checked = !!(trip.can && trip.can.cost);
+    el("st-can-seat").checked = !!(trip.can && trip.can.seat);
+    el("st-myname").value = nameOf(myMember.id);
+    el("st-mycolor").value = (MEMBERS.find(m => m.id === myMember.id) || {}).color || "#888888";
+    showSetErr("");
+    el("settings-overlay").hidden = false;
+  }
+  el("st-country").addEventListener("change", () => { el("st-rate-fld").hidden = el("st-country").value === "台灣"; });
+  el("st-cancel").addEventListener("click", () => { el("settings-overlay").hidden = true; });
+  el("settings-overlay").addEventListener("click", ev => { if (ev.target === el("settings-overlay")) el("settings-overlay").hidden = true; });
+  el("settings-form").addEventListener("submit", async ev => {
+    ev.preventDefault();
+    showSetErr("");
+    const btn = el("st-save");
+    btn.disabled = true;
+    try {
+      if (myMember.role === "團主") {
+        const body = {
+          name: el("st-name").value.trim(), country: el("st-country").value, city: el("st-city").value.trim(),
+          start: el("st-start").value, end: el("st-end").value, kitty: Number(el("st-kitty").value) || 0,
+          can: { plan: el("st-can-plan").checked, cost: el("st-can-cost").checked, seat: el("st-can-seat").checked },
+        };
+        if (!el("st-rate-fld").hidden) body.rate = Number(el("st-rate").value) || 0;
+        await api("?resource=team", { method: "PATCH", body: JSON.stringify(body) });
+      }
+      const mine = MEMBERS.find(m => m.id === myMember.id) || {};
+      const name = el("st-myname").value.trim(), color = el("st-mycolor").value;
+      if (name !== nameOf(myMember.id) || color.toLowerCase() !== String(mine.color || "").toLowerCase()) {
+        await api("?resource=me", { method: "PATCH", body: JSON.stringify({ name, color }) });
+      }
+      await refreshTeam();
+      el("settings-overlay").hidden = true;
+      fillPeopleControls();
+      renderEditAbility();
+      renderCloudBar();
+      render();
+      loadWeather();
+      flash("存好了");
     } catch (e) {
-      showSigninError(e.message === "通行碼不對" ? "通行碼不對,再試一次。" : e.message);
+      showSetErr(e.message);
     }
-    btn.disabled = false; btn.textContent = "登入";
+    btn.disabled = false;
   });
 
   /* ================= 啟動 ================= */
@@ -6009,8 +6365,12 @@
          在用的,從來沒有對應的 CSS。
          它一直是這樣,只是**以前地圖不會自己打開**,所以沒有人看過這條警告 ——
          寬桌機改成預設三塊之後,一進站就有行程的點,它就叫了。
-         這一條的用途是抓「改了 markup 沒重編 CSS」,一個刻意不要樣式的標記不在裡面。 */
-    const IGNORE = ["brand", "panel", "plan"];
+         這一條的用途是抓「改了 markup 沒重編 CSS」,一個刻意不要樣式的標記不在裡面。
+       - `can-edit`:body 上「現在能不能編輯」的狀態標記。它的樣式在 9cfe5e4 拿掉了
+         (天數那一列改成大家都看得到),標記留著給探針讀。以前沒叫是時間的關係:
+         開機要等 fetch 失敗才退回本機模式,這一條檢查跑的時候它還沒掛上去;
+         第 2 期的假後端回得快,它就叫了 —— 一直都是孤兒,只是這次才被看到。 */
+    const IGNORE = ["brand", "panel", "plan", "can-edit"];
     const dev = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname) || location.protocol === "file:";
     setTimeout(() => {
       const known = {};
@@ -6063,7 +6423,10 @@
     navigator.serviceWorker.register("sw.js").catch(() => {});
   }
 
-  state.day = initialDay();
+  /* **這裡以前有一行 `state.day = initialDay();`。** 第 2 期起開機那一刻還不知道是哪一團,
+     DAYS 是空的 —— 那一行沒有炸,純粹是運氣:OVERNIGHT 是空字串,「今天 > OVERNIGHT」
+     永遠成立,所以在讀 DAYS[0] 之前就回了 LAST_DAY(也是空的)。量過(反向對照)。
+     靠字串比較的巧合活著的東西不能留,改成團載入之後(applyTrip)才決定。 */
   /* 機票那張卡永遠攤開。`<details>` 的開關還在(它是那個元素本來的行為),
      所以點了就再開回去 —— 跟許願那條標頭同一個做法。 */
   (function () {
@@ -6094,42 +6457,38 @@
     });
   }
 
-  loadWeather();   /* 跟 Notion 無關,離線模式也照抓 */
+  /* 天氣等知道是哪一團(哪個城市)之後才抓 —— 見 goOnline / goLocal */
 
   (async () => {
-    /* 讀不需要通行碼,所以先把資料撈進來;能不能編輯是下一步的事。 */
+    /* **先問「你是誰」,再決定畫哪一張卡。** 第 2 期起沒有公開的資料可以先撈 ——
+       沒登入的人連這一團叫什麼都不該知道。 */
+    await askWhoAmI();
+    showLoginResult();
+    if (!lineUser && whoUnknown) {
+      if (TRIP && goLocal()) { flash("連不上,先顯示上次讀到的資料"); return; }
+      openHome("offline");
+      return;
+    }
+    if (!lineUser) { openHome("signin"); return; }
+    if (!TRIP) { openHome("trips"); return; }
     try {
       await goOnline();
     } catch (e) {
-      goLocal();
-      flash("連不上 Notion:" + e.message);
+      if (e.why === "login") { openHome("signin"); return; }
+      if (e.why === "not_member") { openHome("join"); return; }
+      if (e.why === "no_trip") { openHome("notrip"); return; }
+      /* 連不上:有這一團的副本就顯示副本(唯讀),沒有就講清楚 */
+      if (!goLocal()) openHome("offline", { msg: "連不上伺服器:" + e.message });
+      else flash("連不上,先顯示上次讀到的資料:" + e.message);
       return;
     }
-
-    /* 先問伺服器「現在是誰」,再決定要不要擋一張登入畫面。
-       順序不能反:反過來的話,已經登入的人每次重新整理都會再被問一次。 */
-    await askWhoAmI();
-    renderCloudBar();
-    showLoginResult();
-
-    /* 登入了但還沒有位子 → 問他是哪一位。**只問登入過的人** ——
-       沒登入的人照舊在表單裡自己選,那條路是給離線和沒有後端的那份用的。 */
-    if (lineUser && !myMember) openClaim();
-
-    /* 上次登入過就直接回到管理員模式,不用再問一次 */
-    let saved = "";
-    try { saved = localStorage.getItem(KEYLS) || ""; } catch (_) {}
-    if (saved) {
-      try {
-        await tryKey(saved);
-        return;
-      } catch (_) {
-        try { localStorage.removeItem(KEYLS); } catch (__) {}
-      }
+    /* 剛開好的團 / 剛加入:講一句,然後把網址上的標記擦掉(重新整理時不要再講一次) */
+    const fresh = /[?&]new=1/.test(location.search), joined = /[?&]joined=1/.test(location.search);
+    if (fresh || joined || INVITE) {
+      history.replaceState(null, "", location.pathname + "?t=" + encodeURIComponent(TRIP));
     }
-    /* 已經用 LINE 登入的人不用再看一次登入畫面 */
-    if (lineUser) return;
-    openSignin(false);
+    if (fresh) { flash("開好了!你是團主。按「邀請朋友」把邀請碼傳給大家"); }
+    else if (joined) { flash("加入了「" + trip.name + "」"); }
   })();
 })();
 </script>
