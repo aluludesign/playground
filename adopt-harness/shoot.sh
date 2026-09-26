@@ -175,10 +175,10 @@ sleep 1
 # 差異式檢查(跟基準比)對「兩邊都是空的」完全無感 —— 工具自己壞掉的時候,
 # 每一頁都一致地空白,比對照樣全綠。所以每張圖另外附一條正向斷言:
 # 「這一頁至少要有這些東西」。絕對式的,不依賴任何基準。
-shot () {  # shot <檔名> <寬> <高> <進站後要跑的 JS> <斷言 "選擇器:最少幾個,...">
+shot () {  # shot <檔名> <寬> <高> <進站後要跑的 JS> <斷言 "選擇器:最少幾個,..."> [網址,預設 /index.html]
   cat > "$H/.work/_f.html" <<HTML
 <!doctype html><meta charset="utf-8"><body style="margin:0">
-<iframe id="f" src="/index.html" style="width:${2}px;height:${3}px;border:0;display:block"></iframe>
+<iframe id="f" src="${6:-/index.html}" style="width:${2}px;height:${3}px;border:0;display:block"></iframe>
 <script>
 document.getElementById('f').onload = function(){
   var d = this.contentDocument, w = this.contentWindow;
@@ -208,7 +208,7 @@ HTML
   if [ -n "$5" ]; then
     cat > "$H/.work/_a.html" <<AHTML
 <!doctype html><meta charset="utf-8"><body style="margin:0">
-<iframe id="f" src="/index.html" style="width:${2}px;height:${3}px;border:0"></iframe>
+<iframe id="f" src="${6:-/index.html}" style="width:${2}px;height:${3}px;border:0"></iframe>
 <pre id="r"></pre>
 <script>
 document.getElementById('f').onload = function(){
@@ -439,6 +439,11 @@ shot 20-signin-gate    1440  900 "d.getElementById('home-card').innerHTML='<h2 i
 # 上面那一排日期在(每個人都有,不分管理員)、以及底部沒有那條浮著的 bar。
 shot 21-wish-narrow    1100  900 "d.getElementById('tab-wish').click();" \
                                   "#wishbox .wish:2+,#days .day:3+"
+
+# 22 / 23:介紹頁。沒登入、直接打開首頁的人看到的第一個畫面(fake=visitor 不帶團代號)。
+# 第 6 個參數換掉 iframe 的網址 —— 其他每一張都是「已經登入的團主」,這一張不是。
+shot 22-landing-mobile    390 1700 "" ".landing:not([hidden]) .landing-feats li:4+,#landing-go:1+" "/index.html?fake=visitor"
+shot 23-landing-desktop  1280  900 "" ".landing:not([hidden]) .landing-feats li:4+,#landing-go:1+" "/index.html?fake=visitor"
 
 kill $SRV 2>/dev/null || true
 rm -rf "$H/.work"
