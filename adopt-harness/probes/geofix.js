@@ -877,8 +877,12 @@ function pinsOf(k) { return pins()[k]; }
       !!mineRow.querySelector("[data-edit-wish]"), mineRow.innerHTML.slice(0, 300));
     ok("唯讀 → 別人那一筆沒有「改」",
       !wishRow(/泡溫泉/).querySelector("[data-edit-wish]"), null);
-    ok("唯讀 → 「刪掉」不在(那一顆本來就是管理員的)",
-      !mineRow.querySelector("[data-del-wish]"), null);
+    /* 第 2 期之後改了:**許願的人刪得掉自己那一筆**(伺服器一直是這條規則,畫面跟上)。
+       別人那一筆還是刪不掉 —— 那要管得了行程。 */
+    ok("唯讀 → 自己那一筆有「刪掉」(跟伺服器同一條:許願的人刪得掉自己的)",
+      !!mineRow.querySelector("[data-del-wish]"), null);
+    ok("唯讀 → 別人那一筆沒有「刪掉」",
+      !wishRow(/泡溫泉/).querySelector("[data-del-wish]"), null);
 
     /* ---- 「編輯／刪除」要左滑才露出來 ----
        **它們以前跟「誰許的」「+1 了誰」擠在同一行小字裡**,而那一行是用讀的、

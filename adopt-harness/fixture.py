@@ -143,6 +143,9 @@ FAKE_JS = r"""(function(){
   window.__calls = []; try { window.__calls = JSON.parse(sessionStorage.getItem("fake-calls") || "[]"); } catch (e) {}
   if (mode === "member") { MEMBERS.forEach(function(m){ m.role = m.id === ME_ID ? "成員" : m.role; });
                            MEMBERS[1].role = "團主"; }
+  /* member 配 can=plan,cost…:團主只開了其中幾個開關(第 2 期以前三個全開才算數,現在一塊一塊看) */
+  var canQ = (/[?&]can=([a-z,]*)/.exec(q) || [])[1];
+  if (canQ !== undefined) canQ.split(",").forEach(function(k){ if (k in TRIP.can) TRIP.can[k] = true; });
   var me = (mode === "anon" || mode === "app") ? null : { id: "U-fake-0001", name: "測試的人", avatar: "" };
   var joined = mode !== "join" && mode !== "new";
   function reply(body, status){ status = status || 200; return Promise.resolve({ ok: status < 400, status: status,

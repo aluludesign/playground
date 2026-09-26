@@ -42,7 +42,10 @@ var home = q("#home-overlay");
 ok("沒登入 → 門是開著的", !!home && home.hidden === false, home && home.hidden);
 var line = q("#h-line");
 var btns = [].map.call(d.querySelectorAll("#home-card .btn"), function (b) { return b.textContent.trim(); });
-ok("門上只有一條路:用 LINE 登入(沒有「先看看」,沒有通行碼)", btns.length === 1 && !!line, btns);
+/* 「我有登入碼」和它的「登入」是 LINE 那條路的後半段(主畫面 App 在瀏覽器登入完回來貼碼),
+   不是另一條進門的路。這裡擋的是「先看看」和通行碼回來。 */
+var other = btns.filter(function (t) { return !/LINE|登入碼|^登入$/.test(t); });
+ok("門上只有 LINE 那條路(沒有「先看看」,沒有通行碼)", !!line && other.length === 0, btns);
 ok("而且說的是人話", !!line && /LINE/.test(line.textContent), line && line.textContent);
 
 /* 「看得到但按不到」比「看不到」更糟 —— 所以問的是那個點上真的是誰。 */

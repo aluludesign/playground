@@ -10,9 +10,10 @@
 // 需要的環境變數:
 //   GEMINI_KEY   Google AI Studio 的 API 金鑰(免費方案即可)
 //
-// **這支不要通行碼**:沒有通行碼的人也能用它許願(Lulu 定的規則)。
-// 代價是知道網址的人可以用掉免費額度 —— 最壞的情況是那天 AI 按鈕不能用,
-// 不會多花錢(免費方案沒有綁卡,額度用完就是 429)。
+// **要登入才能用**(第 2 期起)。以前不擋,是因為沒有通行碼的人也要能用它許願;
+// 現在每個人都是登入的,不擋就是把免費額度開給知道網址的任何人。
+
+const S = require("./_session.js");
 
 const ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/";
 
@@ -166,6 +167,10 @@ module.exports = async (req, res) => {
     return res.status(405).json({ error: "不支援的方法" });
   }
   if (!process.env.GEMINI_KEY) return res.status(503).json({ error: "伺服器還沒設定 GEMINI_KEY" });
+  /* **第 2 期起要登入。** 以前不擋,理由是「沒通行碼的人也要能許願」;現在每個用網站的人
+     都是登入的,不擋等於把額度開給知道網址的任何人。只看「有沒有登入」,不看在哪一團 ——
+     這一支只負責讀懂,存進哪一團、能不能存,是 api/notion.js 的事。 */
+  if (!S.whoIs(req)) return res.status(401).json({ error: "請先用 LINE 登入", why: "login" });
 
   const b = (typeof req.body === "string" ? JSON.parse(req.body || "{}") : req.body) || {};
   const text = typeof b.text === "string" ? b.text.trim().slice(0, MAX_TEXT) : "";

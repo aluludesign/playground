@@ -24,7 +24,13 @@ function mkres() {
 }
 
 /* stub(次數) → 這一次要怎麼回應。回 "hang" 代表永遠不回(模擬卡住)。 */
-async function call(body, stub) {
+/* 第 2 期起這一支要登入。預設帶一張登入的票;`anon` 為 true 就不帶。 */
+const SESS = require("../tokyo-trip/api/_session.js");
+function ticket() {
+  process.env.LINE_CHANNEL_SECRET = "test-channel-secret";
+  return "trip_u=" + encodeURIComponent(SESS.sign({ sub: "U1", name: "誰", pic: "", exp: Date.now() + 864e5 }, SESS.hmacKey()));
+}
+async function call(body, stub, anon) {
   process.env.GEMINI_KEY = "test-key";
   delete require.cache[require.resolve(path)];
   const handler = require(path);
@@ -44,7 +50,7 @@ async function call(body, stub) {
     return Promise.resolve(r);
   };
   const res = mkres();
-  await handler({ method: "POST", body: JSON.stringify(body) }, res);
+  await handler({ method: "POST", body: JSON.stringify(body), headers: { cookie: anon ? "" : ticket() } }, res);
   return { res, seen };
 }
 
@@ -116,6 +122,10 @@ function ok(name, cond, extra) {
   ok("模型回超出範圍的值 → 在這裡被擋掉,不會進到確認卡",
     g.title.length <= 60 && g.day === "" && g.time === "" && g.seats.length === 0, g);
 
+  /* ---- 第 2 期:要登入 ---- */
+  r = await call({ text: "想去築地市場" }, () => okJson(GOOD), true);
+  ok("沒登入 → 401,**而且一次都沒打 Gemini**(額度不會被路人用掉)",
+    r.res.code === 401 && r.seen.length === 0, { code: r.res.code, seen: r.seen.length });
   console.log(fails ? "\n✗ " + fails + " 項沒過" : "\n全部通過");
   process.exit(fails ? 1 : 0);
 })();
