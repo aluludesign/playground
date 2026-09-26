@@ -71,7 +71,7 @@ async function drag(dy) {
 
     // ---- 分頁:五個,而且「許願」在行程旁邊 ----
     var tabs = [].map.call(d.querySelectorAll(".tab"), function (b) { return b.dataset.tab; });
-    ok("五個分頁,順序是 行程／許願／搭機／花費／分帳",
+    ok("五個分頁,順序是 行程／許願／交通／花費／分帳",
       tabs.join(",") === "plan,wish,fly,cost,split", tabs);
 
     // ---- 疊法:地圖在底,清單在上 ----

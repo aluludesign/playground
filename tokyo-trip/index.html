@@ -1118,7 +1118,7 @@
   <nav class="tabs" role="tablist" aria-label="頁面切換">
     <button class="tab" role="tab" id="tab-plan" data-tab="plan" aria-selected="true" aria-controls="panel-plan"><svg class="i" aria-hidden="true"><use href="#i-route"></use></svg>行程</button>
     <button class="tab" role="tab" id="tab-wish" data-tab="wish" aria-selected="false" aria-controls="panel-plan"><svg class="i" aria-hidden="true"><use href="#i-star"></use></svg>許願</button>
-    <button class="tab" role="tab" id="tab-fly" data-tab="fly" aria-selected="false" aria-controls="panel-fly"><svg class="i" aria-hidden="true"><use href="#i-plane"></use></svg>搭機</button>
+    <button class="tab" role="tab" id="tab-fly" data-tab="fly" aria-selected="false" aria-controls="panel-fly"><svg class="i" aria-hidden="true"><use href="#i-plane"></use></svg>交通</button>
     <button class="tab" role="tab" id="tab-cost" data-tab="cost" aria-selected="false" aria-controls="panel-cost"><svg class="i" aria-hidden="true"><use href="#i-receipt"></use></svg>花費</button>
     <button class="tab" role="tab" id="tab-split" data-tab="split" aria-selected="false" aria-controls="panel-split"><svg class="i" aria-hidden="true"><use href="#i-scale-balanced"></use></svg>分帳</button>
   </nav>
@@ -1415,7 +1415,7 @@
       <select class="rm-input" id="ai-kind">
         <option value="wish">許願</option>
         <option value="stop">行程</option>
-        <option value="seats">搭機座位</option>
+        <option value="seats">航班座位</option>
       </select></div>
     <div class="fld" id="ai-f-day"><label class="rm-label" for="ai-day">哪一天</label><select class="rm-input" id="ai-day"></select></div>
     <div class="fld" id="ai-f-time"><label class="rm-label" for="ai-time">時間</label><input class="rm-input" type="time" id="ai-time"></div>
@@ -5209,7 +5209,7 @@
     el("ai-flight").value = f ? f.no : (fls[0] ? fls[0].no : "");
     aiFillSeats(el("ai-flight").value, r.seats);
     if (r.intent === "seats" && !fls.length)
-      el("ai-say").textContent = "這一團還沒有航班。先到「搭機」分頁加航班,再來填座位。";
+      el("ai-say").textContent = "這一團還沒有航班。先到「交通」分頁加航班,再來填座位。";
     else if (r.intent === "seats" && r.flight && !f)
       el("ai-say").textContent = "圖上的航班是 " + r.flight + ",不是這一團的航班。請選要改哪一班。";
     el("ai-form").hidden = true; el("ai-confirm").hidden = false;
@@ -5221,7 +5221,7 @@
 
   async function saveSeats(flightNo) {
     const f = (state.flights || []).find(x => x.no === flightNo);
-    if (!f) throw new Error("先到「搭機」分頁加這一班航班");
+    if (!f) throw new Error("先到「交通」分頁加這一班航班");
     const want = MEMBERS.map(m => ({ m, seat: el("ai-seat-" + m.id).value.trim().toUpperCase() }))
       .filter(x => x.seat);
     if (!want.length) throw new Error("沒有要改的座位");
