@@ -5668,7 +5668,8 @@
         (TRIP && INVITE
           ? "<p>朋友邀請你加入一團。先用 LINE 登入,回來就能加入。</p>"
           : "<p>跟朋友一起排行程、許願、分帳。用 LINE 登入就能開始。</p>") +
-        (IN_APP ? "<p>在主畫面的 App 裡:按下去會開瀏覽器登入,登入完那邊會給你一組登入碼,回來貼在下面。</p>" : "") +
+        (IN_APP ? "<p>在主畫面的 App 裡登入要兩步:按下去會開瀏覽器登入 LINE,那邊會給你一組登入碼,複製後回到這裡貼在下面。" +
+          "如果回來看到一頁空白,把它關掉(或往下滑關閉),就會看到這張卡。</p>" : "") +
         '<div class="ops"><button type="button" class="btn btn-line" id="h-line">用 LINE 登入</button>' +
         (IN_APP ? "" : '<button type="button" class="btn btn-ghost btn-sm" id="h-has-code">我有登入碼(主畫面 App 用)</button>') + "</div>" +
         '<form class="home-card-form" id="h-code-form"' + (IN_APP ? "" : " hidden") + ">" +
@@ -5676,12 +5677,33 @@
         '<input class="rm-input" type="text" id="h-login-code" maxlength="9" autocapitalize="characters" autocomplete="one-time-code" spellcheck="false" placeholder="XXXX-XXXX" required></div>' +
         '<div class="err" id="home-err" hidden></div>' +
         '<div class="ops"><button type="submit" class="btn btn-main" id="h-code-go">登入</button></div></form>';
-      el("h-line").addEventListener("click", () => {
+      el("h-line").addEventListener("click", async () => {
         if (!IN_APP) { goLine(); return; }
-        /* App 裡另開一頁:在 App 自己裡面導覽出去的話,回不來 */
-        window.open(AUTH + "?go=login&app=1&back=" + encodeURIComponent(location.pathname + location.search), "_blank");
-        el("h-login-code").focus();
+        /* **不要另開視窗。** 以前是 window.open:那個新視窗一要去 LINE,iPhone 就把 LINE 交給瀏覽器,
+           新視窗本身變成一頁空白 —— 回到 App 看到的就是它,登入卡被蓋在後面(Lulu 回報)。
+           現在先跟伺服器拿 LINE 的網址,直接往那裡走:iPhone 把它交給瀏覽器,App 停在這張卡上。 */
+        homeErr("");
+        try {
+          const r = await fetch(AUTH + "?go=login&app=1&json=1&back=" + encodeURIComponent(location.pathname + location.search),
+            { credentials: "same-origin" });
+          const b = await r.json();
+          if (!b.url) throw new Error("拿不到登入網址");
+          try { sessionStorage.setItem("trippps-wait-code", "1"); } catch (_) {}
+          location.href = b.url;
+        } catch (e) {
+          homeErr("開不了 LINE 登入:" + e.message);
+        }
       });
+      /* 從瀏覽器回來(App 又被切到前景)就把游標放進登入碼欄,並提醒一句 */
+      const backHint = () => {
+        let waiting = false;
+        try { waiting = sessionStorage.getItem("trippps-wait-code") === "1"; } catch (_) {}
+        if (!waiting || document.hidden || !el("h-login-code")) return;
+        el("h-code-form").hidden = false;
+        el("h-login-code").focus();
+      };
+      document.addEventListener("visibilitychange", backHint);
+      window.addEventListener("pageshow", backHint);
       if (el("h-has-code")) el("h-has-code").addEventListener("click", () => {
         el("h-code-form").hidden = false;
         el("h-login-code").focus();
@@ -5696,6 +5718,7 @@
             headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code: el("h-login-code").value }) });
           const b = await res.json().catch(() => ({}));
           if (!res.ok) throw new Error(b.error || "登入沒有成功");
+          try { sessionStorage.removeItem("trippps-wait-code"); } catch (_) {}
           location.reload();
         } catch (e) {
           homeErr(e.message);

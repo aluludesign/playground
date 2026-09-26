@@ -332,6 +332,12 @@ const S1 = stateFor("s1");
     if (m) { const row = pdb.find(r => r.id === m[1]); Object.assign(row.properties, b.properties || {}); return ok200(row); }
     return ok200({ id: "new" });
   };
+  r = await call({ go: "login", app: "1", json: "1" }, {});
+  const jurl = (r.res.body || {}).url || "";
+  const jstate = SESS.unsign(new URL(jurl || "https://x/").searchParams.get("state") || "", SESS.hmacKey()) || {};
+  ok("App 用 json=1 問 LINE 的網址 → 回 JSON 不轉址(App 自己往那裡走,iPhone 交給瀏覽器,不留一頁空白)",
+    r.res.code === 200 && jurl.indexOf("https://access.line.me/oauth2/v2.1/authorize") === 0 && jstate.app === 1,
+    { code: r.res.code, url: jurl.slice(0, 60), st: jstate });
   r = await call({ go: "login", app: "1" }, {});
   const appState = SESS.unsign(new URL(r.res.getHeader("location")).searchParams.get("state"), SESS.hmacKey()) || {};
   ok("App 出發 → state 記著 app", appState.app === 1, appState);
