@@ -1013,6 +1013,13 @@
       padding:8px 10px; border:1px solid var(--line); border-radius:8px; background:var(--paper);}
     .inv-row code.inv-code{font-size:18px; letter-spacing:.2em; text-align:center;}
     #invite-overlay .btn-line{text-align:center; text-decoration:none;}
+    .dev-badge{position:fixed; top:8px; left:50%; transform:translateX(-50%); z-index:70; display:flex; align-items:center; gap:8px;
+      padding:6px 8px 6px 14px; border-radius:999px; background:#8A5A00; color:#fff; font-size:12.5px; box-shadow:var(--shadow);}
+    .dev-badge .btn{padding:3px 10px;}
+    /* 手機上頂列擠滿了(團名、倒數、AI、選單),蓋上去會擋住它們 —— 改掛在底下分頁列的正上方 */
+    @media (max-width:640px){
+      .dev-badge{top:auto; bottom:calc(env(safe-area-inset-bottom, 0px) + 70px); white-space:nowrap;}
+    }
     .seatform{display:grid; grid-template-columns:auto 1fr; gap:6px 10px; align-items:center;}
     /* 看板是深底,設計系統的淺色按鈕放上去像貼了一張便條紙 —— 改成看板自己的線和字色 */
     .board .pen, .board .board-add{background:transparent; border:1px solid var(--board-line); color:var(--board-muted); box-shadow:none;}
@@ -1079,6 +1086,9 @@
   <symbol id="i-plus" viewBox="0 0 448 512"><path d="M256 80c0-17.7-14.3-32-32-32s-32 14.3-32 32l0 144L48 224c-17.7 0-32 14.3-32 32s14.3 32 32 32l144 0 0 144c0 17.7 14.3 32 32 32s32-14.3 32-32l0-144 144 0c17.7 0 32-14.3 32-32s-14.3-32-32-32l-144 0 0-144z"/></symbol>
 </svg>
 
+<!-- 測試環境切成「成員身分」時一直掛在上面:忘了自己在用成員身分看,會以為權限壞了。
+     **放在選單外面** —— 第一版放在狀態列旁邊,而狀態列住在漢堡選單裡,選單收著它就跟著藏起來。 -->
+<div class="dev-badge" id="dev-badge" hidden>測試中:用成員身分看 <button type="button" class="btn btn-sm" id="dev-badge-back">切回團主</button></div>
 <div class="wrap">
   <header class="topbar">
     <!-- 航班那一行搬去「搭機」分頁了,這裡不再重複;倒數那一行也不要標籤,
@@ -1700,6 +1710,13 @@
      讀不到就都是 null —— 那時候走的是下面那份內建的五個人。 */
   let trip = null;
   let myMember = null;
+  /* 測試環境(preview)才有的:團主可以切成「用成員身分看」。伺服器說了才算,正式站 dev 永遠是 false。 */
+  let devEnv = false;
+  let viewAs = "";
+  const setViewAs = v => {
+    document.cookie = "trip_as=" + (v ? "member" : "") + "; Path=/; SameSite=Lax; Secure" + (v ? "" : "; Max-Age=0");
+    location.reload();
+  };
   let storageOK = true;
   let online = false;
   /* 離線時手上這份副本是什麼時候抓的(ISO 字串);沒有副本就是空字串。 */
@@ -1744,6 +1761,8 @@
     const body = await api("?resource=team&t=" + encodeURIComponent(TRIP));
     trip = body.trip;
     myMember = body.me || null;
+    devEnv = !!body.dev;
+    viewAs = body.viewAs || "";
     /* **能不能編輯,是從身分算出來的,而且一塊一塊算**:團主永遠可以;成員要看團主開了哪些開關。 */
     const c = (trip && trip.can) || {};
     const owner = !!myMember && myMember.role === "團主";
@@ -1770,6 +1789,7 @@
       box.value = twdOnly ? "TWD" : (box.value || "JPY");
     });
     document.title = trip.name + " · Trippps";
+    el("dev-badge").hidden = !(devEnv && viewAs === "member");
     el("trip-name").textContent = trip.name;
     const nights = Math.max(0, DAYS.length - 1);
     el("trip-foot").textContent = (trip.start || "").replace(/-/g, ".") + " – " + (trip.end || "").slice(5).replace("-", ".") +
@@ -5868,6 +5888,10 @@
         '<button type="button" class="btn btn-sm" id="cloud-invite">邀請朋友</button>' +
         '<button type="button" class="btn btn-sm btn-ghost" id="cloud-set">團的設定</button>' +
         '<a class="btn btn-sm btn-ghost" id="cloud-home" href="' + location.pathname + '">我的團</a>' +
+        /* 只在測試環境、而且你真正是團主的時候才畫 —— 正式站 devEnv 永遠是 false */
+        (devEnv && myMember && myMember.realRole === "團主"
+          ? '<button type="button" class="btn btn-sm btn-ghost" id="cloud-viewas">' + (viewAs ? "切回團主(測試)" : "用成員身分看(測試)") + "</button>"
+          : "") +
         '<button type="button" class="btn btn-sm btn-ghost" id="cloud-out">登出</button>'
       : '<button type="button" class="btn btn-sm" id="cloud-in">再連一次</button>';
     const sync = el("cloud-sync");
@@ -5882,6 +5906,7 @@
       flash("已更新");
     }));
     if (el("cloud-invite")) el("cloud-invite").addEventListener("click", openInvite);
+    if (el("cloud-viewas")) el("cloud-viewas").addEventListener("click", () => setViewAs(!viewAs));
     if (el("cloud-set")) el("cloud-set").addEventListener("click", openSettings);
     if (el("cloud-out")) el("cloud-out").addEventListener("click", logout);
     if (el("cloud-in")) el("cloud-in").addEventListener("click", () => location.reload());
@@ -5906,6 +5931,7 @@
     try { await navigator.clipboard.writeText(txt); flash("已複製" + what); }
     catch (_) { flash("複製不了,請長按選取"); }
   }
+  el("dev-badge-back").addEventListener("click", () => setViewAs(false));
   el("inv-copy-url").addEventListener("click", () => copyText(inviteUrl(), "網址"));
   el("inv-copy-code").addEventListener("click", () => copyText((myMember && myMember.invite) || "", "邀請碼"));
   el("inv-close").addEventListener("click", () => { el("invite-overlay").hidden = true; });

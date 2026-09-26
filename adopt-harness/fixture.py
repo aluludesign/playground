@@ -188,7 +188,11 @@ FAKE_JS = r"""(function(){
       if (method === "PATCH") { Object.keys(body).forEach(function(k){ if (k !== "can") TRIP[k] = body[k]; });
         if (body.can) Object.keys(body.can).forEach(function(k){ TRIP.can[k] = body.can[k]; });
         return reply({ trip: TRIP }); }
-      return reply({ trip: TRIP, members: MEMBERS, me: { id: mine.id, name: mine.name, color: mine.color, role: mine.role, invite: "q4wn8t" } });
+      /* 測試環境的「用成員身分看」:跟伺服器同一條規則(只有團主能降級;prod=1 模擬正式站,整個不理) */
+      var dev = !/[?&]prod=1/.test(q);
+      var asM = dev && mine.role === "團主" && /(?:^|;\s*)trip_as=member/.test(document.cookie);
+      return reply({ trip: TRIP, members: MEMBERS, dev: dev, viewAs: asM ? "member" : "",
+        me: { id: mine.id, name: mine.name, color: mine.color, role: asM ? "成員" : mine.role, realRole: mine.role, invite: "q4wn8t" } });
     }
     if (r === "me") {
       if (body.name) mine.name = body.name;
