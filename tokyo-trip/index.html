@@ -1705,13 +1705,18 @@
   /* 離線時手上這份副本是什麼時候抓的(ISO 字串);沒有副本就是空字串。 */
   let snapAt = "";
   /* 連著 Notion 時能不能改,看你在這團是誰(團主,或團主開了開關的成員)。 */
-  let canEdit = false;
+  /* 這一團我動得了哪幾塊。團主三塊都可以;成員看團主開了哪些開關。
+     **第 2 期以前是一個真假值,三個全開才算數** —— 只開一個的話伺服器放行、畫面唯讀。
+     現在拆成三塊,每個入口問的是它自己那一塊。 */
+  let can = { plan: false, cost: false, seat: false };
   /* 離線分兩種,能不能編輯不一樣:
        有副本  顯示的是五個人共用的那份紀錄 → **唯讀**。
                改了也傳不回 Notion,而畫面上看起來像改成功了,
                下次連上網重新拉一次就整個不見 —— 而且沒有任何地方會說一句。
        沒副本  從沒連上過後端(GitHub Pages 那份),動的是自己的瀏覽器 → 照樣能改。 */
-  const editable = () => (online ? canEdit : !snapAt);
+  /* 不帶參數 = 「三塊裡至少有一塊能動」(全站層級的東西在用,例如 body.can-edit);
+     帶 "plan" / "cost" / "seat" = 那一塊能不能動。離線看的是副本,一律唯讀。 */
+  const editable = b => (online ? (b ? !!can[b] : (can.plan || can.cost || can.seat)) : !snapAt);
   /* **`editable()` 同時回答兩個問題**,而它們不是同一件事:
        「你沒有通行碼」   ← online 那一邊的 canEdit
        「你在看一份副本」 ← 離線那一邊的 snapAt
@@ -1739,11 +1744,10 @@
     const body = await api("?resource=team&t=" + encodeURIComponent(TRIP));
     trip = body.trip;
     myMember = body.me || null;
-    /* **能不能編輯,是從身分算出來的。** 團主永遠可以;成員要看團主開了哪些開關。
-       **三個全開才等於「成員可共編」** —— 只開其中一項的話伺服器會放行,
-       但介面維持唯讀。逐項的介面還沒做,而**讓人按了才被拒絕,比讓他看不到更糟**。 */
+    /* **能不能編輯,是從身分算出來的,而且一塊一塊算**:團主永遠可以;成員要看團主開了哪些開關。 */
     const c = (trip && trip.can) || {};
-    canEdit = !!myMember && (myMember.role === "團主" || !!(c.plan && c.cost && c.seat));
+    const owner = !!myMember && myMember.role === "團主";
+    can = { plan: owner || (!!myMember && !!c.plan), cost: owner || (!!myMember && !!c.cost), seat: owner || (!!myMember && !!c.seat) };
     setMembers(body.members.map(m => ({
       id: m.id, def: m.name || m.id, key: m.id, full: m.name || m.id,
       color: m.color || "#7E8796", role: m.role || "成員",
@@ -1912,9 +1916,9 @@
 
   /* --- 寫入:兩種模式共用的入口 --- */
   /* 唯讀時按鈕本來就藏起來了,這層是防手動戳 DOM 或 console */
-  function mayEdit() {
-    if (editable()) return true;
-    flash("唯讀模式 —— 要編輯請先用通行碼登入");
+  function mayEdit(b) {
+    if (editable(b)) return true;
+    flash(onSnapshot() ? "這是離線副本,連上網才能改" : "這一塊團主還沒開放給成員(團主可以在「團的設定」打開)");
     return false;
   }
   /* 「改我的願望」那條路的寫入閘門。**形狀跟 mayEdit() 一樣**:能寫回 true,
@@ -1928,7 +1932,7 @@
     return false;
   }
   async function addExpense(e) {
-    if (!mayEdit()) return;
+    if (!mayEdit("cost")) return;
     state.expenses.push(e); sortExpenses(); saveLocal(); render();
     if (!online) return;
     try {
@@ -1939,7 +1943,7 @@
     } catch (err) { failed(e, err); }
   }
   async function removeExpense(id) {
-    if (!mayEdit()) return;
+    if (!mayEdit("cost")) return;
     const k = state.expenses.findIndex(x => x.id === id);
     const gone = k > -1 ? state.expenses.splice(k, 1)[0] : null;
     saveLocal(); render();
@@ -1948,7 +1952,7 @@
     catch (err) { state.expenses.push(gone); sortExpenses(); render(); flash("刪不掉:" + err.message); }
   }
   async function addStop(o) {
-    if (!mayEdit()) return;
+    if (!mayEdit("plan")) return;
     state.stops.push(o); saveLocal(); render();
     if (!online) return;
     try {
@@ -1959,7 +1963,7 @@
     } catch (err) { failStop(o, err); }
   }
   async function removeStop(id) {
-    if (!mayEdit()) return;
+    if (!mayEdit("plan")) return;
     const k = state.stops.findIndex(x => x.id === id);
     const gone = k > -1 ? state.stops.splice(k, 1)[0] : null;
     saveLocal(); render();
@@ -1968,7 +1972,7 @@
     catch (err) { state.stops.push(gone); render(); flash("刪不掉:" + err.message); }
   }
   async function updateExpense(id, patch) {
-    if (!mayEdit()) return;
+    if (!mayEdit("cost")) return;
     const k = state.expenses.findIndex(x => x.id === id);
     if (k < 0) return;
     const before = Object.assign({}, state.expenses[k]);
@@ -1992,7 +1996,7 @@
   }
 
   async function updateStop(id, patch) {
-    if (!mayEdit()) return;
+    if (!mayEdit("plan")) return;
     const k = state.stops.findIndex(x => x.id === id);
     if (k < 0) return;
     const before = Object.assign({}, state.stops[k]);
@@ -2085,7 +2089,7 @@
     if (!w) return;
     /* **跟畫按鈕那裡同一個判準。** 只放寬其中一邊的話,管理員點得開表單、
        填得完、按下存起來才被這一行擋掉 —— 而那時候他已經把字打完了。 */
-    if (!mineWish(w) && !editable()) { flash("只改得動自己許的願望"); return; }
+    if (!mineWish(w) && !editable("plan")) { flash("只改得動自己許的願望"); return; }
     /* **副本是凍結的。** 少了這一行,下面的 Object.assign + renderWishes() 會讓
        畫面看起來改成功,而 saveLocal() 開頭 `if (online || snapAt) return;`
        什麼都沒寫 —— 重新整理就沒了,而且沒有任何地方會說一句。 */
@@ -2109,7 +2113,9 @@
     }
   }
   async function removeWish(id) {
-    if (!mayEdit()) return;
+    /* 伺服器的規則:許願的人自己、或管得了行程的人 */
+    const tw = state.wishes.find(x => x.id === id);
+    if (!(tw && mineWish(tw) && online) && !mayEdit("plan")) return;
     const k = state.wishes.findIndex(x => x.id === id);
     const gone = k > -1 ? state.wishes.splice(k, 1)[0] : null;
     renderWishes();
@@ -2119,7 +2125,7 @@
   }
   /* 許願排進行程 = 幫那一列補上日期和時間,它就從願望清單消失、出現在時間軸上 */
   async function promoteWish(id, day, time) {
-    if (!mayEdit()) return;
+    if (!mayEdit("plan")) return;
     const k = state.wishes.findIndex(x => x.id === id);
     if (k < 0) return;
     const w = state.wishes.splice(k, 1)[0];
@@ -2206,10 +2212,9 @@
   /* 唯讀時把所有會改資料的入口收起來 */
   function renderEditAbility() {
     const on = editable();
-    ["add-stop-btn", "add-exp-btn"].forEach(id => {
-      const b = el(id);
-      if (b) b.hidden = !on;
-    });
+    const bs = el("add-stop-btn"), be = el("add-exp-btn");
+    if (bs) bs.hidden = !editable("plan");
+    if (be) be.hidden = !editable("cost");
     /* 這段字本來寫死「紀錄存在這台裝置的瀏覽器裡」。三種模式只有一種成立,
        而另外兩種它照樣印 —— 連著 Notion 的人讀到的是一句假話。
        而且「匯入備份」在唯讀時是藏起來的,說明卻還在教人按它。 */
@@ -2236,10 +2241,12 @@
          對話框那條路只動外層。所以這一下是**永久的** —— 只要曾經有一刻不可編輯
          (連上 Notion 但還沒驗通行碼就是這種),那張卡就再也不出現。
          **驗收環境永遠是離線可編輯,所以這一行從來沒跑到,四次都重現不出來。** */
-      closeStopAdd();
-      closeWishAdd();
-      const ef = el("exp-form"); if (ef) ef.hidden = true;
     }
+    /* 一塊一塊收:行程那塊不能動就收加行程,分帳不能動就收記帳。
+       許願每個成員都能許,只有看副本(離線)時才收。 */
+    if (!editable("plan")) closeStopAdd();
+    if (onSnapshot()) closeWishAdd();
+    if (!editable("cost")) { const ef = el("exp-form"); if (ef) ef.hidden = true; }
     /* 「改」的判準不是 `editable()`,所以它不能掛在上面那個 `if (!on)` 裡:
        線上唯讀(有連線、沒通行碼)時那張表**該**留著,那正是這條路存在的理由。
        只有切進快照模式才要收。
@@ -2257,7 +2264,7 @@
      現在每一團都要登入才讀得到,一份不屬於任何一團的本機紀錄沒有意義。 */
   function goLocal() {
     online = false;
-    canEdit = false;
+    can = { plan: false, cost: false, seat: false };
     const snap = loadSnap();
     if (!snap) return false;
     snapAt = snap.at;
@@ -2444,7 +2451,7 @@
   }
   /* 座位照排、再照字母排。走道畫在 C 和 D 之間(A320 是 3-3) */
   const seatKey = x => { const m = /^(\d+)([A-Z])$/.exec(x) || [0, 0, ""]; return [+m[1], m[2]]; };
-  const mayFly = () => editable() && (online ? !!(myMember && (myMember.role === "團主" || (trip && trip.can && trip.can.seat))) : false);
+  const mayFly = () => online && editable("seat");
 
   function renderSeats() {
     const box = el("board-wrap");
@@ -2990,7 +2997,7 @@
      「我許的,或者我拿得出通行碼」—— 跟隔壁「刪掉」用的是同一個 `editable()`,
      不長第二套。**而「刪掉」沒有跟著放寬**:改得動別人的願望和刪得掉別人的願望
      不是同一件事,前者留得下痕跡(改完還是他許的),後者不留。 */
-  const mayEditWish = w => (mineWish(w) || editable()) && !onSnapshot();
+  const mayEditWish = w => (mineWish(w) || editable("plan")) && !onSnapshot();
 
   async function loadSheetMap(force, keep) {
     if (el("map-sheet").hidden || !sheetMode) { sheetKey = null; return; }
@@ -4150,7 +4157,7 @@
          給他一顆按不動的按鈕比不給更糟。 */
       route.innerHTML = '<div class="empty empty-cta">' +
         "<p>這天還沒有行程。</p>" +
-        (editable()
+        (editable("plan")
           ? '<button type="button" class="btn btn-main" id="empty-add-stop">＋ 加第一筆行程</button>'
           : "<p class=\"sub\">等有人排進來,這裡就會有東西。</p>") +
         "</div>";
@@ -4158,8 +4165,8 @@
       if (ea) ea.addEventListener("click", openStopAdd);
       return;
     }
-    const movable = s => !s.anchor && editable();
-    route.classList.toggle("can-sort", editable());
+    const movable = s => !s.anchor && editable("plan");
+    route.classList.toggle("can-sort", editable("plan"));
     route.innerHTML = list.map((s, i) =>
       '<div class="stop' + (s.anchor ? " anchor" : "") + '" data-stop="' + esc(s.id || "") + '"' +
       ' data-n="' + (i + 1) + '"' +
@@ -4197,7 +4204,7 @@
 
     el("wish-n").textContent = list.length ? list.length + " 個" : "";
     /* 只有三欄版面拖得動 —— 那裡時間軸和願望並排看得到,滑鼠也拖得準。 */
-    el("wish-list").classList.toggle("can-sort", editable() && wideCols() && list.length > 0);
+    el("wish-list").classList.toggle("can-sort", editable("plan") && wideCols() && list.length > 0);
     el("add-wish-btn").hidden = false;
 
     if (!list.length) {
@@ -4205,7 +4212,7 @@
       return;
     }
     el("wish-list").innerHTML =
-      (editable() ? '<div class="wish-hint">按「加入」就排進你現在看的那一天,會先問你幾點。</div>' : "") +
+      (editable("plan") ? '<div class="wish-hint">按「加入」就排進你現在看的那一天,會先問你幾點。</div>' : "") +
       list.map(w => {
         const votes = w.votes || [];
         const voted = me && votes.indexOf(me) > -1;
@@ -4233,15 +4240,16 @@
              它們以前跟「誰許的」「+1 了誰」擠在同一行小字裡,而那一行是**用讀的**,
              不是用按的 —— 手指掃過去就誤觸,而「刪掉」誤觸沒有回頭路。
              現在要先左滑才露出來,是一個**刻意的動作**,不會順手發生。 */
-          ((mayEditWish(w) || editable()) ? '<div class="wswipe">' +
+          (mayEditWish(w) ? '<div class="wswipe">' +
             (mayEditWish(w) ? '<button type="button" class="wsw" data-edit-wish="' + esc(w.id || "") + '">編輯</button>' : "") +
-            (editable() ? '<button type="button" class="wsw wsw-del" data-del-wish="' + esc(w.id || "") + '">刪除</button>' : "") +
+            /* 刪得掉:許願的人自己、或管得了行程的人(跟伺服器同一條) */
+            ((mineWish(w) || editable("plan")) && !onSnapshot() ? '<button type="button" class="wsw wsw-del" data-del-wish="' + esc(w.id || "") + '">刪除</button>' : "") +
             "</div>" : "") +
           '<div class="wops">' +
           '<button type="button" class="rm-chip rm-chip--selectable vote" aria-pressed="' +
           (voted ? "true" : "false") + '" data-vote="' + esc(w.id || "") + '">' +
           '<svg class="i" aria-hidden="true"><use href="#i-thumbs-up"></use></svg>' + votes.length + "</button>" +
-          (editable() ? '<button type="button" class="wadd" data-add-wish="' + esc(w.id || "") + '">加入</button>' : "") +
+          (editable("plan") ? '<button type="button" class="wadd" data-add-wish="' + esc(w.id || "") + '">加入</button>' : "") +
           "</div></div>";
       }).join("");
   }
@@ -4295,7 +4303,7 @@
       '<div class="mt"><span>' + payer + "</span><span>·</span><span>" + esc(whoShared) + "</span>" +
       (ps.length ? '<span>·</span><span class="num">每人 ' + twd(v / ps.length) + "</span>" : "") +
       (e.note ? "<span>·</span><span>" + linkify(e.note) + "</span>" : "") + "</div>" +
-      (editable() ? '<div class="ops">' +
+      (editable("cost") ? '<div class="ops">' +
         '<button type="button" class="btn btn-ghost btn-sm" data-edit-exp="' + e.id + '">' +
         '<svg class="i" aria-hidden="true"><use href="#i-pen"></use></svg>改</button>' +
         '<button type="button" class="btn btn-ghost btn-sm" data-del-exp="' + e.id + '">刪除</button></div>' : "") + "</div>";
@@ -4357,7 +4365,7 @@
       ? t.map(x => '<div class="pay"><span class="dot" style="background:' + colorOf(x.from) + '"></span><span class="who1">' + esc(nameOf(x.from)) +
           '</span><span class="arr">→</span><span class="dot" style="background:' + colorOf(x.to) + '"></span><span class="who2">' + esc(nameOf(x.to)) +
           '</span><span class="v">' + twd(x.v) + "</span></div>").join("")
-      : '<div class="empty">' + (state.expenses.length ? "目前所有人都打平了,不用轉帳。" : (editable() ? "還沒有花費紀錄,先去記一筆。" : "還沒有花費紀錄。")) + "</div>";
+      : '<div class="empty">' + (state.expenses.length ? "目前所有人都打平了,不用轉帳。" : (editable("cost") ? "還沒有花費紀錄,先去記一筆。" : "還沒有花費紀錄。")) + "</div>";
   }
 
   function renderSync() {
@@ -4839,7 +4847,7 @@
     }
 
     route.addEventListener("pointerdown", ev => {
-      if (!editable() || row) return;
+      if (!editable("plan") || row) return;
       if (ev.target.closest("button")) return;      /* 鉛筆和刪除鈕要留給點擊 */
       const r = ev.target.closest(".stop");
       if (!r || r.classList.contains("anchor") || !r.dataset.stop) return;
@@ -4907,7 +4915,7 @@
     const HOLD = 380, SLOP = 10;
     let armed = null, row = null, from = null, line = null;
 
-    const on = () => editable() && wideCols();
+    const on = () => editable("plan") && wideCols();
     function disarm() { if (armed) { clearTimeout(armed.timer); armed = null; } }
     function lift() {
       if (!armed) return;
@@ -5119,7 +5127,8 @@
     /* **沒有通行碼的人只能做一件事:許願。** 所以問法也只問那一件 ——
        「想做什麼」配上三種例子,是問給管理員聽的;對其他四個人來說,
        那是三個選項裡有兩個他按不下去。 */
-    const wishOnly = !editable();
+    /* AI 能建的三種:許願(誰都行)、行程(要 plan)、座位(要 seat)。後兩種都不行才只問許願 */
+    const wishOnly = !editable("plan") && !editable("seat");
     el("ai-ask-label").textContent = wishOnly ? "想去哪裡?" : "想做什麼";
     el("ai-text").placeholder = wishOnly
       ? "例:這家拉麵店想去／照片裡這個地方"
@@ -5148,8 +5157,8 @@
     });
     /* 行程和座位跟手動加一樣要通行碼。**擋在按鈕上,不是等存的時候才說** ——
        讓人填完才告訴他不能存,是浪費他的時間。 */
-    const need = k !== "wish" && !editable();
-    aiErr("ai-cerr", need ? "加行程和座位要先用通行碼登入(選單 → 我是管理員)。許願不用。" : "");
+    const need = (k === "stop" && !editable("plan")) || (k === "seats" && !editable("seat"));
+    aiErr("ai-cerr", need ? (k === "stop" ? "加行程" : "改座位") + "這一塊團主還沒開放給成員(團主可以在「團的設定」打開)。許願不用。" : "");
     el("ai-ok").disabled = need;
   }
 
@@ -5171,7 +5180,7 @@
        所以直接把讀出來的東西倒進既有的「＋許願」對話框:同一個表單、
        同一條送出的路、同一份驗證,這裡不長第二套。
        AI 講的那句話跟著進去,不然他不知道為什麼欄位是這樣填的。 */
-    if (!editable()) {
+    if (!editable("plan") && !editable("seat")) {
       closeAI();
       openWishAdd();
       el("wf-title").value = r.title || "";
@@ -5605,7 +5614,7 @@
   /* 「加入」→ 排進現在看的那一天。不綁在某兩筆行程中間,所以不設時間上下限,
      幾點都收 —— 時間軸本來就照時間排,晚了早了都會自己歸位。 */
   function addWishToDay(id) {
-    if (!mayEdit()) return;
+    if (!mayEdit("plan")) return;
     const w = state.wishes.find(x => x.id === id);
     if (!w) return;
     const d = DAYS.find(x => x.date === state.day);
