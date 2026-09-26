@@ -87,7 +87,7 @@ var missingFromShell = sameOrigin.filter(function (u) {
 
 /* --- 現在這一頁處在哪個狀態 --- */
 var snapRaw = null;
-try { snapRaw = w.localStorage.getItem("tokyo5-snap"); } catch (e) {}
+try { snapRaw = w.localStorage.getItem("trippps-snap:fixture1"); } catch (e) {}
 var hidden = function (id) { var b = d.getElementById(id); return b ? b.hidden : "沒有這顆按鈕"; };
 var state = {
   有離線副本: !!snapRaw,
@@ -158,7 +158,8 @@ if (swGuard.有沒有被_serviceWorker_接管) bad.push("探針這一頁被 serv
 if (!swGuard.index裡的https判斷還在) bad.push("index.html 的 https 判斷不見了,harness 會被 service worker 汙染");
 if (snapRaw) {
   if (state.加行程鈕_藏起來 !== true) bad.push("有離線副本卻還能加行程 —— 改了會無聲消失");
-  if (state.匯入鈕_藏起來 !== true) bad.push("有離線副本卻還能匯入,會蓋掉副本");
+  /* 第 2 期起匯入整顆拿掉了(本機模式不存在,沒有東西可以匯進去)—— 不存在比藏起來更擋得住 */
+  if (state.匯入鈕_藏起來 !== true && state.匯入鈕_藏起來 !== "沒有這顆按鈕") bad.push("有離線副本卻還能匯入,會蓋掉副本");
   if (!state.副本專屬那筆在畫面上) bad.push("副本沒被讀到 —— 畫面上是 LS 的資料,這正是要修的那個 bug");
   if (!/離線 · 這是 \d\d\/\d\d \d\d:\d\d 讀到的資料/.test(state.狀態列 || ""))
     bad.push("狀態列沒說出這份資料是什麼時候讀的:" + state.狀態列);

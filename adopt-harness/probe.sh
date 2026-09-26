@@ -87,7 +87,13 @@ spec = importlib.util.spec_from_file_location("fixture", h + "/fixture.py")
 fx = importlib.util.module_from_spec(spec); spec.loader.exec_module(fx)
 p = h + "/.work/index.html"
 s = open(p, encoding="utf-8").read()
-s = s.replace('    return DAYS[0].date;\n  }', '    return "2026-10-05";\n  }', 1)
+# REALDAY=1:不換開場那一天。**這個替換會換掉真的網站會跑的那一行**,所以那一行壞了
+# 工具看不到。第 2 期開機時 DAYS 是空的,我一度以為它會在 DAYS[0].date 炸掉而工具替它擋了 ——
+# 量過之後沒有(前面的分支先回傳了),但那一次沒辦法不改程式就量,所以留這個開關。
+# 截圖要固定的日子所以預設照換;要量「真的網站開機會怎樣」就開 REALDAY=1。
+import os
+if not os.environ.get("REALDAY"):
+    s = s.replace('    return DAYS[0].date;\n  }', '    return "2026-10-05";\n  }', 1)
 i = s.rindex("<script>")
 open(p, "w", encoding="utf-8").write(s[:i] + fx.seed() + s[i:])
 PY
@@ -129,7 +135,10 @@ PAGE=${PAGE:-/index.html}
   echo '    try { out = (function(){'
   cat "$JS"
   echo '    })(); } catch(e) { out = {error: String(e && e.stack || e)}; }'
-  echo '    document.getElementById("r").textContent = JSON.stringify(out, null, 2);'
+  # 探針可以回一個 Promise(要按了按鈕、等假後端回來才量得到的那種)。
+  # 以前只收同步的值 —— JSON.stringify(Promise) 是 {},看起來像「什麼都沒量到」。
+  echo '    Promise.resolve(out).catch(function(e){ return {error: String(e && e.stack || e)}; }).then(function(v){'
+  echo '      document.getElementById("r").textContent = JSON.stringify(v, null, 2); });'
   echo '  }, 1800);'
   echo '};</script>'
 } > "$H/.work/_p.html"
