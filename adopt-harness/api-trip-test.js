@@ -106,10 +106,12 @@ function cookieFor(sub) {
   const v = S.sign({ sub, name: "誰", pic: "", exp: Date.now() + 864e5 }, S.hmacKey());
   return "trip_u=" + encodeURIComponent(v);
 }
+let extraCookie = "", envProd = false;
 async function call(who, method, query, body) {
   process.env.NOTION_TOKEN = "ntn_test";
   process.env.LINE_CHANNEL_SECRET = SECRET;
   delete process.env.TRIP_KEY;
+  if (envProd) process.env.VERCEL_ENV = "production"; else delete process.env.VERCEL_ENV;
   ["NOTION_DB_EXPENSES", "NOTION_DB_ITINERARY", "NOTION_DB_SEATS", "NOTION_DB_FLIGHTS", "NOTION_DB_TRIPS", "NOTION_DB_MEMBERS"]
     .forEach(k => delete process.env[k]);
   delete require.cache[require.resolve(SRC)];
@@ -117,7 +119,7 @@ async function call(who, method, query, body) {
   global.fetch = fakeFetch;
   const res = mkres();
   await handler({ method, query, body: body === undefined ? undefined : JSON.stringify(body),
-                  headers: { cookie: who ? cookieFor(who) : "" } }, res);
+                  headers: { cookie: (who ? cookieFor(who) : "") + extraCookie } }, res);
   return res;
 }
 
@@ -339,6 +341,30 @@ const memberRow = (code, sub) => rowsIn(DB.members).find(p => plain(p.properties
   ok("**換掉之後,舊的碼就不能用了**(斷掉那一條擴散線)", r.code === 403 && r.body.why === "bad_invite", r.body);
   r = await call(LINE_C, "GET", { resource: "join", t: T1, code: inviteA });
   ok("別人的碼不受影響", r.code === 200 && r.body.host === "佳瑜", r.body);
+
+  /* ================= 測試環境:團主「用成員身分看」 ================= */
+  await call(LINE_A, "PATCH", { resource: "team", t: T1 }, { can: { plan: false, cost: false, seat: false } });
+  r = await call(LINE_A, "GET", { resource: "team", t: T1 });
+  ok("測試環境會說自己是測試環境(dev),畫面才畫得出切換鈕", r.body.dev === true && r.body.me.realRole === "團主", r.body);
+  extraCookie = "; trip_as=member";
+  r = await call(LINE_A, "GET", { resource: "team", t: T1 });
+  ok("團主帶著 trip_as=member → 伺服器算他是成員,但記得他真正是團主",
+    r.body.me.role === "成員" && r.body.me.realRole === "團主" && r.body.viewAs === "member", r.body.me);
+  r = await call(LINE_A, "POST", { resource: "itinerary", t: T1 }, { title: "成員身分加的", day: "2026-10-04" });
+  ok("**切成成員之後是真的擋**:三個開關都關著,加行程 → 403(不是只有畫面藏按鈕)", r.code === 403, r.body);
+  r = await call(LINE_A, "PATCH", { resource: "team", t: T1 }, { name: "成員改的" });
+  ok("切成成員之後也改不了團的設定", r.code === 403, r.body);
+  r = await call(LINE_A, "POST", { resource: "wishes", t: T1 }, { title: "成員也能許願" });
+  ok("許願照樣可以(成員本來就可以)", r.code === 200, r.body);
+  r = await call(LINE_D, "PATCH", { resource: "team", t: T1 }, { name: "想升級" });
+  ok("**只能降級**:成員帶同一張 cookie 什麼都不會變,改團的設定照樣 403", r.code === 403, r.body);
+  envProd = true;
+  r = await call(LINE_A, "GET", { resource: "team", t: T1 });
+  ok("**正式站整個不理這張 cookie**:團主還是團主,而且不說自己是測試環境",
+    r.body.me.role === "團主" && r.body.dev === false && !r.body.viewAs, r.body);
+  r = await call(LINE_A, "POST", { resource: "itinerary", t: T1 }, { title: "正式站團主加的", day: "2026-10-04" });
+  ok("正式站:帶著那張 cookie 的團主照樣加得了行程", r.code === 200, r.body);
+  envProd = false; extraCookie = "";
 
   /* ================= 拿掉的東西、出事的時候 ================= */
   for (const res of ["claim", "auth"]) {

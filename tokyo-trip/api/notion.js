@@ -326,6 +326,9 @@ const PALETTE = ["#E60012", "#F39700", "#009944", "#00A7DB", "#9B7CB6",
 /* 一團最多幾個人、一個人最多開幾團。**不是產品規格,是擋濫用的閘** ——
    三十人試用的名額在 _people.js 管,這兩條是防一個人把表灌爆。 */
 const MEMBERS_PER_TRIP = 30;
+/* 測試環境:Vercel 的 preview、本機、驗收工具。**正式站 VERCEL_ENV 一定是 production。** */
+const DEV = process.env.VERCEL_ENV !== "production";
+const VIEW_AS_COOKIE = "trip_as";
 const TRIPS_PER_PERSON = 10;
 
 /* 猜不到的代號。**團代號會出現在網址上,邀請碼會貼到 LINE 群組** ——
@@ -488,8 +491,16 @@ module.exports = async (req, res) => {
     const members = await membersOf(code);
     const mine = members.find(m => m.line && m.line === me.sub);
     if (!mine) return { stop: { status: 403, why: "not_member", error: "你還不是這一團的人 —— 要有邀請碼才能加入" } };
-    const owner = mine.role === "團主";
-    return { code, trip, members, mine, owner, can: b => owner || !!trip.can[b] };
+    /* **測試環境的「用成員身分看」。** 開發時要看一般成員看到什麼、動得了什麼,
+       團主在 preview 帶著 trip_as=member 這張 cookie,伺服器就把他當成成員(照三個開關算)。
+       兩道保險:
+         - **只能降級**:團主可以變成員,成員帶這張 cookie 什麼都不會變 —— 就算有人知道這個機制,
+           也拿不到比原本更多的權限。
+         - **正式站整個不理它**:Vercel 在正式部署設 VERCEL_ENV=production。 */
+    const asMember = DEV && mine.role === "團主" && S.readCookies(req)[VIEW_AS_COOKIE] === "member";
+    const role = asMember ? "成員" : mine.role;
+    const owner = role === "團主";
+    return { code, trip, members, mine, role, asMember, owner, can: b => owner || !!trip.can[b] };
   }
   const stop = s => res.status(s.status).json({ error: s.error, why: s.why });
 
@@ -567,7 +578,11 @@ module.exports = async (req, res) => {
         return res.status(200).json({
           trip,
           members: c.members.map(memberPublic),
-          me: { ...memberPublic(c.mine), invite: c.mine.invite },
+          /* role 是「現在算你是什麼」(測試環境切成成員的話是成員);realRole 是你在團裡真正的角色,
+             畫面靠它決定要不要畫「切回團主」。dev 為真時才畫那顆切換鈕 —— 正式站不會有。 */
+          me: { ...memberPublic(c.mine), role: c.role, realRole: c.mine.role, invite: c.mine.invite },
+          dev: DEV,
+          viewAs: c.asMember ? "member" : "",
         });
       }
 
