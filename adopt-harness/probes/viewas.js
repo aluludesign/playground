@@ -14,6 +14,6 @@ var log = JSON.parse(w.sessionStorage.getItem("va-log") || "[]");
 log.push(state());
 w.sessionStorage.setItem("va-log", JSON.stringify(log));
 if (step === 0) { w.sessionStorage.setItem("va-step", "1"); q("#cloud-viewas").click(); return { 說明: "切成成員中…" }; }
-if (step === 1) { w.sessionStorage.setItem("va-step", "2"); q("#dev-badge-back").click(); return { 說明: "切回團主中…" }; }
+if (step === 1) { w.sessionStorage.setItem("va-step", "2"); q("#dev-badge").click(); return { 說明: "切回團主中…" }; }
 w.sessionStorage.removeItem("va-step"); w.sessionStorage.removeItem("va-log");
 return { 一開始是團主: log[0], 切成成員之後: log[1], 按提示條切回來: log[2], errors: w.__errors || [] };

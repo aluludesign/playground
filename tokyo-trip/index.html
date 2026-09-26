@@ -1013,12 +1013,13 @@
       padding:8px 10px; border:1px solid var(--line); border-radius:8px; background:var(--paper);}
     .inv-row code.inv-code{font-size:18px; letter-spacing:.2em; text-align:center;}
     #invite-overlay .btn-line{text-align:center; text-decoration:none;}
-    .dev-badge{position:fixed; top:8px; left:50%; transform:translateX(-50%); z-index:70; display:flex; align-items:center; gap:8px;
-      padding:6px 8px 6px 14px; border-radius:999px; background:#8A5A00; color:#fff; font-size:12.5px; box-shadow:var(--shadow);}
-    .dev-badge .btn{padding:3px 10px;}
-    /* 手機上頂列擠滿了(團名、倒數、AI、選單),蓋上去會擋住它們 —— 改掛在底下分頁列的正上方 */
+    .dev-badge{display:inline-flex; align-items:center; flex:0 0 auto; height:32px; padding:0 12px; border:0; border-radius:999px;
+      background:#8A5A00; color:#fff; font:inherit; font-size:12.5px; white-space:nowrap; cursor:pointer;}
+    /* 不用另外寫 .dev-badge[hidden] —— 全站已經有 [hidden]{display:none!important}(量過:拿掉也不會露出來) */
+    /* 手機上頂列擠滿了(團名、倒數、AI、選單),排進去會把它們擠歪 —— 改掛在底下分頁列的正上方 */
     @media (max-width:640px){
-      .dev-badge{top:auto; bottom:calc(env(safe-area-inset-bottom, 0px) + 70px); white-space:nowrap;}
+      .dev-badge{position:fixed; left:50%; transform:translateX(-50%); bottom:calc(env(safe-area-inset-bottom, 0px) + 70px);
+        z-index:40; box-shadow:var(--shadow);}
     }
     .seatform{display:grid; grid-template-columns:auto 1fr; gap:6px 10px; align-items:center;}
     /* 看板是深底,設計系統的淺色按鈕放上去像貼了一張便條紙 —— 改成看板自己的線和字色 */
@@ -1086,9 +1087,6 @@
   <symbol id="i-plus" viewBox="0 0 448 512"><path d="M256 80c0-17.7-14.3-32-32-32s-32 14.3-32 32l0 144L48 224c-17.7 0-32 14.3-32 32s14.3 32 32 32l144 0 0 144c0 17.7 14.3 32 32 32s32-14.3 32-32l0-144 144 0c17.7 0 32-14.3 32-32s-14.3-32-32-32l-144 0 0-144z"/></symbol>
 </svg>
 
-<!-- 測試環境切成「成員身分」時一直掛在上面:忘了自己在用成員身分看,會以為權限壞了。
-     **放在選單外面** —— 第一版放在狀態列旁邊,而狀態列住在漢堡選單裡,選單收著它就跟著藏起來。 -->
-<div class="dev-badge" id="dev-badge" hidden>測試中:用成員身分看 <button type="button" class="btn btn-sm" id="dev-badge-back">切回團主</button></div>
 <div class="wrap">
   <header class="topbar">
     <!-- 航班那一行搬去「搭機」分頁了,這裡不再重複;倒數那一行也不要標籤,
@@ -1112,6 +1110,10 @@
       <span class="white-sweep-flare" aria-hidden="true"></span>
       <span class="steel-content-layer">✨ AI</span>
     </button>
+    <!-- 測試環境切成「成員身分」時一直掛著:忘了自己在用成員身分看,會以為權限壞了。按它就切回團主。
+         **排在頂列裡、漢堡選單左邊,不浮在畫面上** —— 浮著的版本在某些寬度蓋住了漢堡(Lulu 回報);
+         更早一版放在選單裡,選單收著它就跟著藏起來。手機上頂列擠滿了,改掛在分頁列正上方。 -->
+    <button type="button" class="dev-badge" id="dev-badge" hidden>測試:成員 · 切回團主</button>
     <button type="button" class="hamb" id="menu-btn" aria-label="選單" aria-expanded="false"
       aria-controls="menu-pop"><span></span><span></span><span></span></button>
   </header>
@@ -5931,7 +5933,7 @@
     try { await navigator.clipboard.writeText(txt); flash("已複製" + what); }
     catch (_) { flash("複製不了,請長按選取"); }
   }
-  el("dev-badge-back").addEventListener("click", () => setViewAs(false));
+  el("dev-badge").addEventListener("click", () => setViewAs(false));
   el("inv-copy-url").addEventListener("click", () => copyText(inviteUrl(), "網址"));
   el("inv-copy-code").addEventListener("click", () => copyText((myMember && myMember.invite) || "", "邀請碼"));
   el("inv-close").addEventListener("click", () => { el("invite-overlay").hidden = true; });
