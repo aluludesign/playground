@@ -71,6 +71,7 @@ CLOCK = """<script>(function(){
 #   new         登入了、一團都沒有  → 開團卡
 #   member      一般成員、團主一個開關都沒開 → 唯讀
 #   join        登入了、不是這一團的人 → 加入卡(帶 i= 的話先看一眼)
+#   visitor     沒登入、直接打開首頁(沒帶團代號)→ 介紹頁
 # SNAP=1:後端整個連不上,這台裝置上有這一團的副本 → 離線唯讀。
 TRIP_CODE = "fixture1"
 ME_ID = "hsieh_chinhui"   # 以前 fixture 設的「我是誰」(tokyo5-me)也是他
@@ -134,7 +135,8 @@ FAKE_JS = r"""(function(){
   var OFFLINE = %(offline)s;
   /* 沒帶團代號就補上 —— 截圖和大部分探針要的是「打開這一團」那個畫面。
      new(一團都沒有)要的是首頁,不補。 */
-  if (mode !== "new" && !/[?&]t=/.test(q)) {
+  /* visitor:沒登入、直接打開首頁(沒帶團代號)的人 —— 介紹頁就是給他看的 */
+  if (mode !== "new" && mode !== "visitor" && !/[?&]t=/.test(q)) {
     history.replaceState(null, "", location.pathname + (q ? q + "&" : "?") + "t=" + CODE);
   }
   var real = window.fetch.bind(window), seq = 0;
@@ -146,7 +148,7 @@ FAKE_JS = r"""(function(){
   /* member 配 can=plan,cost…:團主只開了其中幾個開關(第 2 期以前三個全開才算數,現在一塊一塊看) */
   var canQ = (/[?&]can=([a-z,]*)/.exec(q) || [])[1];
   if (canQ !== undefined) canQ.split(",").forEach(function(k){ if (k in TRIP.can) TRIP.can[k] = true; });
-  var me = (mode === "anon" || mode === "app") ? null : { id: "U-fake-0001", name: "測試的人", avatar: "" };
+  var me = (mode === "anon" || mode === "app" || mode === "visitor") ? null : { id: "U-fake-0001", name: "測試的人", avatar: "" };
   var joined = mode !== "join" && mode !== "new";
   function reply(body, status){ status = status || 200; return Promise.resolve({ ok: status < 400, status: status,
     json: function(){ return Promise.resolve(JSON.parse(JSON.stringify(body))); } }); }

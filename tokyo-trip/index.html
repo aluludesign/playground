@@ -1013,6 +1013,30 @@
       padding:8px 10px; border:1px solid var(--line); border-radius:8px; background:var(--paper);}
     .inv-row code.inv-code{font-size:18px; letter-spacing:.2em; text-align:center;}
     #invite-overlay .btn-line{text-align:center; text-decoration:none;}
+    /* ---- 介紹頁 ---- */
+    .landing{position:fixed; inset:0; z-index:85; overflow-y:auto; background:var(--paper); padding:48px 20px 40px;}
+    .landing-in{max-width:560px; margin:0 auto; display:grid; gap:18px;}
+    .landing-brand{margin:0; font-family:var(--font-mono); font-size:13px; letter-spacing:.2em; text-transform:uppercase; color:var(--accent);}
+    .landing h1{margin:0; font-size:30px; line-height:1.3; letter-spacing:.01em;}
+    .landing-lead{margin:0; font-size:16px; line-height:1.7; color:var(--ink-2);}
+    .landing-go{justify-self:start; font-size:16px; padding:13px 22px;}
+    .landing-note{margin:-8px 0 0; font-size:12.5px; color:var(--muted);}
+    .landing-feats{list-style:none; margin:16px 0 0; padding:0; display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+    .landing-feats li{display:grid; gap:4px; padding:16px; background:var(--surface); border:1px solid var(--line); border-radius:12px;}
+    .landing-feats .i{width:20px; height:20px; color:var(--accent);}
+    .landing-feats b{font-size:15px;}
+    .landing-feats span{font-size:13px; line-height:1.6; color:var(--muted);}
+    .landing-steps{margin:8px 0 0; padding:0; list-style:none; counter-reset:st; display:grid; grid-template-columns:repeat(3,1fr); gap:12px;}
+    .landing-steps li{counter-increment:st; display:grid; align-content:start; gap:2px; font-size:13px; color:var(--muted);}
+    .landing-steps li::before{content:counter(st); font-family:var(--font-mono); font-size:12px; font-weight:600; color:var(--accent);}
+    .landing-steps b{font-size:14px; color:var(--ink);}
+    @media (max-width:640px){
+      .landing{padding-top:32px;}
+      .landing h1{font-size:25px;}
+      .landing-go{justify-self:stretch;}
+      .landing-feats{grid-template-columns:1fr;}
+      .landing-steps{grid-template-columns:1fr;}
+    }
     .dev-badge{display:inline-flex; align-items:center; flex:0 0 auto; height:32px; padding:0 12px; border:0; border-radius:999px;
       background:#8A5A00; color:#fff; font:inherit; font-size:12.5px; white-space:nowrap; cursor:pointer;}
     /* 不用另外寫 .dev-badge[hidden] —— 全站已經有 [hidden]{display:none!important}(量過:拿掉也不會露出來) */
@@ -1247,6 +1271,29 @@
 <!-- 第 2 期:進到一團之前的每一張卡都在這裡 —— 登入、我的團、開團、加入、
      沒有這一團。它們共用一張卡(#home-card),內容由 openHome() 換。
      分成好幾個 overlay 的話,同時開兩張的那種狀態就可能出現,而那種狀態沒有人設計過。 -->
+<!-- 介紹頁:還沒登入、直接打開首頁的人看到的第一個畫面。一個主按鈕:用 LINE 登入,登入完直接開團。
+     帶著邀請連結進來的朋友不會看到這一頁(他要的是加入,不是開團);主畫面 App 也不會(它要貼登入碼)。 -->
+<section class="landing" id="landing" hidden aria-labelledby="landing-title">
+  <div class="landing-in">
+    <p class="landing-brand">Trippps</p>
+    <h1 id="landing-title">跟朋友出去玩,<br>行程、許願、分帳放在同一個地方</h1>
+    <p class="landing-lead">開一團、把連結丟到 LINE 群組,大家就能一起排行程、投票想去哪、記下誰付了什麼 —— 最後誰該給誰多少,它幫你算好。</p>
+    <button type="button" class="btn btn-line landing-go" id="landing-go">用 LINE 登入,開始開團</button>
+    <p class="landing-note">免費。只用 LINE 登入,不用另外註冊。</p>
+    <ul class="landing-feats">
+      <li><svg class="i" aria-hidden="true"><use href="#i-route"></use></svg><b>一起排行程</b><span>一天一天排,地圖上看得到路線,每天的天氣也在旁邊。</span></li>
+      <li><svg class="i" aria-hidden="true"><use href="#i-star"></use></svg><b>許願、投票</b><span>想去的地方先丟進來,大家按 +1,票多的再排進行程。</span></li>
+      <li><svg class="i" aria-hidden="true"><use href="#i-scale-balanced"></use></svg><b>記帳、分帳</b><span>誰付的、誰要分都記下來,回國前算好誰該轉給誰。</span></li>
+      <li><svg class="i" aria-hidden="true"><use href="#i-plane"></use></svg><b>航班和座位</b><span>去程回程、起降時間、每個人坐哪裡,一眼看完。</span></li>
+    </ul>
+    <ol class="landing-steps">
+      <li><b>開團</b><span>填去哪裡、日期、團名,你就是團主</span></li>
+      <li><b>邀請朋友</b><span>一鍵用 LINE 傳連結和邀請碼</span></li>
+      <li><b>一起編輯</b><span>團主決定大家能改哪幾塊</span></li>
+    </ol>
+  </div>
+</section>
+
 <div class="overlay" id="home-overlay" hidden>
   <div class="signin" id="home-card" role="dialog" aria-modal="true" aria-labelledby="home-title"></div>
 </div>
@@ -2329,8 +2376,9 @@
      代價是「我是誰」每次都得問伺服器一趟,不能存在這邊。 */
 
   /* 帶著現在這一頁出發:邀請連結(/?t=…&i=…)登入完要回到這裡,不是首頁 */
-  function goLine() {
-    location.href = AUTH + "?go=login&back=" + encodeURIComponent(location.pathname + location.search.replace(/[?&]login=[a-z]+/, ""));
+  function goLine(back) {
+    const to = typeof back === "string" ? back : location.pathname + location.search.replace(/[?&]login=[a-z]+/, "");
+    location.href = AUTH + "?go=login&back=" + encodeURIComponent(to);
   }
 
   /* 問伺服器現在是誰。**失敗一律當成沒登入** —— 網路斷了、函式還沒部署、
@@ -5676,11 +5724,19 @@
   const homeErr = msg => { const b = el("home-err"); if (b) { b.textContent = msg || ""; b.hidden = !msg; } };
   const fmtRange = (a, b) => (a ? a.replace(/-/g, "/") : "?") + " – " + (b ? b.slice(5).replace("-", "/") : "?");
   function closeHome() { el("home-overlay").hidden = true; }
+  el("landing-go").addEventListener("click", () => goLine(location.pathname + "?start=create"));
 
   async function openHome(kind, opt) {
     const o = opt || {};
     el("home-overlay").hidden = false;
     const c = card();
+    /* 直接打開首頁、還沒登入:介紹頁。按鈕登入完回到 /?start=create,直接打開開團表單。 */
+    if (kind === "signin" && !TRIP && !IN_APP) {
+      el("home-overlay").hidden = true;
+      el("landing").hidden = false;
+      return;
+    }
+    el("landing").hidden = true;
     if (kind === "signin") {
       /* **iPhone 主畫面 App 登不了 LINE**:它有自己的 cookie 倉庫,而且一導覽到站外就被踢到瀏覽器,
          登入在瀏覽器裡成功、App 裡還是沒登入。所以 App 裡的登入是兩步:在瀏覽器登入完,
@@ -6568,6 +6624,14 @@
       return;
     }
     if (!lineUser) { openHome("signin"); return; }
+    /* 從介紹頁的「開始開團」登入回來:直接開團(已經有團的人,表單上也有「回我的團」) */
+    if (!TRIP && /[?&]start=create/.test(location.search)) {
+      history.replaceState(null, "", location.pathname);
+      let has = false;
+      try { has = ((await api("?resource=trips")).trips || []).length > 0; } catch (_) {}
+      openHome("create", { first: !has });
+      return;
+    }
     if (!TRIP) { openHome("trips"); return; }
     try {
       await goOnline();
