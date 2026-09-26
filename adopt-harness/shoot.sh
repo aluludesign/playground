@@ -415,7 +415,7 @@ shot 17-plan-three-cols 1440  900 ""                                            
 shot 18-wish-add        390 1000 "d.getElementById('wishbox').open=true; d.getElementById('add-wish-btn').click();" \
                                   "#wish-add-overlay:not([hidden]) .rm-input:3+"
 
-# 19:手機上的「搭機」分頁。
+# 19:手機上的「交通」分頁(以前叫「搭機」)。
 # **這一頁一張都沒拍過** —— 它是這一輪才從行程頁分出去的,
 # 而它剛改成「進來就是攤開的」。那件事只有眼睛看得出來:
 # 斷言問得到 open 和高度,問不到「人進來第一眼看到的是航班還是一條標題」。

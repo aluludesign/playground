@@ -1053,7 +1053,7 @@ function pinsOf(k) { return pins()[k]; }
     await sleep(120);
     ok("按「取消」才關得掉", q("#ai-overlay").hidden === true, q("#ai-overlay").hidden);
 
-    // 15 ---- 「搭機」那張卡是攤開的,而且攤開不是預設值,是唯一的狀態 ----
+    // 15 ---- 「交通」那張卡是攤開的,而且攤開不是預設值,是唯一的狀態 ----
     /* 那一頁只有這一張卡。要點一下才看得到內容,等於叫人多按一次才看得到
        他點進來就是要看的東西。`open` 一個屬性擋不住這件事 —— `<details>`
        點了就會收起來,所以這裡問的是**點下去之後**還開不開,不是初始值。 */
@@ -1061,7 +1061,7 @@ function pinsOf(k) { return pins()[k]; }
     await sleep(300);
     var bd = q("#board");
     var legH = function () { var e = bd.querySelector(".leg"); return e ? Math.round(e.getBoundingClientRect().height) : 0; };
-    ok("一進「搭機」就看得到航班內容,不必先點開", bd.open && legH() > 40, { open: bd.open, 高: legH() });
+    ok("一進「交通」就看得到航班內容,不必先點開", bd.open && legH() > 40, { open: bd.open, 高: legH() });
     ok("箭頭收起來了(沒有開關,就不要畫一個開關的樣子)",
       w.getComputedStyle(bd.querySelector(".bh-caret")).display === "none",
       w.getComputedStyle(bd.querySelector(".bh-caret")).display);
