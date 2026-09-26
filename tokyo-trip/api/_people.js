@@ -96,4 +96,48 @@ async function seeUser(user) {
   }
 }
 
-module.exports = { seeUser, LIMIT };
+/* ---------- iPhone 主畫面 App 的登入碼 ----------
+   主畫面 App 有自己的 cookie 倉庫,而且一導覽到站外(LINE)就被踢到瀏覽器 ——
+   登入在瀏覽器裡成功,App 裡還是沒登入。所以在瀏覽器登入完給一組一次性的碼,
+   回 App 貼上,由 App 自己跟伺服器換一張票。
+
+   碼存在這個人那一列上(一個人同時只有一組,新的蓋掉舊的)。
+   **跟 seeUser 不一樣,這裡出事要講出來** —— 讀不到表就換不到票,
+   靜悄悄放行的話 App 那邊會拿著一組「成功」的碼卻一直是沒登入。 */
+const CODE_MS = 10 * 60 * 1000;
+const plain = p => ((p && (p.title || p.rich_text)) || []).map(t => t.plain_text).join("");
+
+async function putCode(user, code) {
+  const found = await notion("/databases/" + DB + "/query", {
+    method: "POST",
+    body: JSON.stringify({ page_size: 1, filter: { property: "LINE ID", title: { equals: user.sub } } }),
+  });
+  if (!found.results.length) throw new Error("「人」那張表裡找不到你");
+  await notion("/pages/" + found.results[0].id, {
+    method: "PATCH",
+    body: JSON.stringify({ properties: {
+      "登入碼": { rich_text: rt(code) },
+      "登入碼到期": { date: { start: new Date(Date.now() + CODE_MS).toISOString() } },
+    } }),
+  });
+}
+
+/* 換票。**用過就清掉**,過期的當成沒有。回 { sub, name, pic } 或 null。 */
+async function takeCode(code) {
+  const found = await notion("/databases/" + DB + "/query", {
+    method: "POST",
+    body: JSON.stringify({ page_size: 1, filter: { property: "登入碼", rich_text: { equals: code } } }),
+  });
+  const row = found.results[0];
+  if (!row) return null;
+  const p = row.properties;
+  await notion("/pages/" + row.id, {
+    method: "PATCH",
+    body: JSON.stringify({ properties: { "登入碼": { rich_text: [] }, "登入碼到期": { date: null } } }),
+  });
+  const until = p["登入碼到期"] && p["登入碼到期"].date && Date.parse(p["登入碼到期"].date.start);
+  if (!until || Date.now() > until) return null;
+  return { sub: plain(p["LINE ID"]), name: plain(p["名字"]), pic: (p["頭像"] && p["頭像"].url) || "" };
+}
+
+module.exports = { seeUser, putCode, takeCode, LIMIT, CODE_MS };
