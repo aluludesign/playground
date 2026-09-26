@@ -159,6 +159,8 @@ FAKE_JS = r"""(function(){
     try { sessionStorage.setItem("fake-calls", JSON.stringify(window.__calls)); } catch (e) {}
     if (OFFLINE) return Promise.reject(new TypeError("Failed to fetch"));
     if (s.indexOf("/api/auth?go=me") >= 0) return reply({ user: me, ready: true });
+    /* App 先問 LINE 的網址再自己走過去。回一個站內的空錨點,探針不必真的離開這一頁 */
+    if (s.indexOf("/api/auth?go=login") >= 0 && s.indexOf("json=1") >= 0) return reply({ url: "#line-login" });
     if (s.indexOf("/api/auth?go=code") >= 0) {
       var c = String(body.code || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
       return c === "ABCD2345" ? reply({ ok: true, user: { id: "U-fake-0001", name: "測試的人" } })

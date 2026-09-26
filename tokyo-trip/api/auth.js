@@ -81,7 +81,7 @@ function page(res, status, title, body, extra) {
 }
 function codePage(res, code) {
   const shown = code.slice(0, 4) + "-" + code.slice(4);
-  page(res, 200, "回到 Trippps App", "打開主畫面上的 Trippps,在登入卡貼上這組碼。10 分鐘內有效,只能用一次。",
+  page(res, 200, "回到 Trippps App", "按「複製」,然後回到主畫面上的 Trippps,在登入卡貼上這組碼。10 分鐘內有效,只能用一次。這一頁複製完就可以關掉。",
     '<p style="font:600 32px/1.2 ui-monospace,Menlo,monospace;letter-spacing:.12em;margin:24px 0 16px">' + shown + "</p>" +
     /* code 只有大寫英數(randomCode 產的),放進屬性裡不用再跳脫 */
     '<button onclick="navigator.clipboard.writeText(\'' + code + '\').then(function(){this.textContent=\'已複製\'}.bind(this))" ' +
@@ -174,6 +174,10 @@ module.exports = async (req, res) => {
       state,
       scope: "profile openid",
     });
+    /* json=1:主畫面 App 用。它不能在 App 裡導覽到這裡再被轉去 LINE —— 那樣 iPhone 會把
+       LINE 交給瀏覽器,而 App 裡留下一頁空白(另開視窗的話,留下的是一整個空白視窗)。
+       所以 App 先問到 LINE 的網址,自己直接往那裡走:iPhone 把它交給瀏覽器,App 停在原地。 */
+    if (q.json === "1") return res.status(200).json({ url: String(url) });
     res.statusCode = 302;
     res.setHeader("Location", url);
     return res.end();

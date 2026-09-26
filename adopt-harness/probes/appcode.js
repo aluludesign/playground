@@ -11,7 +11,15 @@ return (async function () {
   out.登入碼欄一開始看得到 = !q("#h-code-form").hidden;
   out.有我有登入碼 = !!q("#h-has-code");
   if (q("#h-has-code")) { q("#h-has-code").click(); await wait(30); out.按了之後看得到 = !q("#h-code-form").hidden; }
-  if (out.角色 === "app") { q("#h-line").click(); await wait(30); out.按LINE開了什麼 = opened.map(x => x[0].replace(/^.*\/api\//, "") + " " + x[1]); out.網址沒動 = /fake=app/.test(w.location.search); }
+  if (out.角色 === "app") {
+    q("#h-line").click(); await wait(120);
+    /* 以前是 window.open 另開一個視窗 —— iPhone 把 LINE 交給瀏覽器之後,那個視窗留在 App 裡一頁空白。
+       現在要的是:**沒有另開任何視窗**,先問到 LINE 的網址,這一頁自己往那裡走。 */
+    out.另開了視窗 = opened.length;
+    out.先問了網址 = (w.__calls || []).some(c => /go=login/.test(c.url) && /json=1/.test(c.url) && /app=1/.test(c.url));
+    out.往LINE走了 = w.location.hash === "#line-login";
+    out.卡還在 = !q("#home-overlay").hidden && !!q("#h-login-code");
+  }
   q("#h-login-code").value = "zzzz-zzzz"; q("#h-code-form").requestSubmit(); await wait(200);
   out.貼錯 = txt("#home-err");
   var calls = (w.__calls || []).filter(c => /go=code/.test(c.url)).map(c => JSON.stringify(c.body));
