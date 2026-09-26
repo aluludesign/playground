@@ -128,6 +128,8 @@ FAKE_JS = r"""(function(){
   window.addEventListener("error", function(e){ window.__errors.push(String(e.message || e)); });
   window.addEventListener("unhandledrejection", function(e){ window.__errors.push("promise: " + String(e.reason && e.reason.message || e.reason)); });
   var q = location.search, mode = (/[?&]fake=([a-z]+)/.exec(q) || [])[1] || "owner";
+  /* app:從主畫面打開的 App、還沒登入。iOS 用 navigator.standalone 講這件事 */
+  if (mode === "app") { try { Object.defineProperty(navigator, "standalone", { value: true, configurable: true }); } catch (e) {} }
   var CODE = %(code)s, TRIP = %(trip)s, MEMBERS = %(members)s, ROWS = %(rows)s, ME_ID = %(me)s;
   var OFFLINE = %(offline)s;
   /* 沒帶團代號就補上 —— 截圖和大部分探針要的是「打開這一團」那個畫面。
@@ -141,7 +143,7 @@ FAKE_JS = r"""(function(){
   window.__calls = []; try { window.__calls = JSON.parse(sessionStorage.getItem("fake-calls") || "[]"); } catch (e) {}
   if (mode === "member") { MEMBERS.forEach(function(m){ m.role = m.id === ME_ID ? "成員" : m.role; });
                            MEMBERS[1].role = "團主"; }
-  var me = mode === "anon" ? null : { id: "U-fake-0001", name: "測試的人", avatar: "" };
+  var me = (mode === "anon" || mode === "app") ? null : { id: "U-fake-0001", name: "測試的人", avatar: "" };
   var joined = mode !== "join" && mode !== "new";
   function reply(body, status){ status = status || 200; return Promise.resolve({ ok: status < 400, status: status,
     json: function(){ return Promise.resolve(JSON.parse(JSON.stringify(body))); } }); }
@@ -154,6 +156,11 @@ FAKE_JS = r"""(function(){
     try { sessionStorage.setItem("fake-calls", JSON.stringify(window.__calls)); } catch (e) {}
     if (OFFLINE) return Promise.reject(new TypeError("Failed to fetch"));
     if (s.indexOf("/api/auth?go=me") >= 0) return reply({ user: me, ready: true });
+    if (s.indexOf("/api/auth?go=code") >= 0) {
+      var c = String(body.code || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+      return c === "ABCD2345" ? reply({ ok: true, user: { id: "U-fake-0001", name: "測試的人" } })
+        : reply({ error: "這組登入碼不對,或已經過期(10 分鐘)—— 回瀏覽器重新登入一次" }, 403);
+    }
     if (s.indexOf("/api/notion") < 0) return real(u, init);
     var r = param(s, "resource");
     if (!me) return reply({ error: "請先用 LINE 登入", why: "login" }, 401);

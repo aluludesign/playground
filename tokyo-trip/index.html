@@ -5639,6 +5639,8 @@
        notrip     沒有這一團      → 回我的團
        offline    連不上、也沒有這一團的副本 */
   const COUNTRY_CITY = { "日本": "東京", "台灣": "台北" };
+  /* 從 iPhone(或 Android)主畫面打開的 App。iOS 舊的寫法是 navigator.standalone */
+  const IN_APP = (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) || navigator.standalone === true;
   const card = () => el("home-card");
   const homeErr = msg => { const b = el("home-err"); if (b) { b.textContent = msg || ""; b.hidden = !msg; } };
   const fmtRange = (a, b) => (a ? a.replace(/-/g, "/") : "?") + " – " + (b ? b.slice(5).replace("-", "/") : "?");
@@ -5649,12 +5651,48 @@
     el("home-overlay").hidden = false;
     const c = card();
     if (kind === "signin") {
+      /* **iPhone 主畫面 App 登不了 LINE**:它有自己的 cookie 倉庫,而且一導覽到站外就被踢到瀏覽器,
+         登入在瀏覽器裡成功、App 裡還是沒登入。所以 App 裡的登入是兩步:在瀏覽器登入完,
+         那邊會印一組 8 碼的登入碼,回來這裡貼上。偵測不到是 App 的時候(有些裝置不給),
+         下面那顆小字的「我有登入碼」還是走得到同一條路。 */
       c.innerHTML = '<h2 id="home-title">Trippps</h2>' +
         (TRIP && INVITE
           ? "<p>朋友邀請你加入一團。先用 LINE 登入,回來就能加入。</p>"
           : "<p>跟朋友一起排行程、許願、分帳。用 LINE 登入就能開始。</p>") +
-        '<div class="ops"><button type="button" class="btn btn-line" id="h-line">用 LINE 登入</button></div>';
-      el("h-line").addEventListener("click", goLine);
+        (IN_APP ? "<p>在主畫面的 App 裡:按下去會開瀏覽器登入,登入完那邊會給你一組登入碼,回來貼在下面。</p>" : "") +
+        '<div class="ops"><button type="button" class="btn btn-line" id="h-line">用 LINE 登入</button>' +
+        (IN_APP ? "" : '<button type="button" class="btn btn-ghost btn-sm" id="h-has-code">我有登入碼(主畫面 App 用)</button>') + "</div>" +
+        '<form class="home-card-form" id="h-code-form"' + (IN_APP ? "" : " hidden") + ">" +
+        '<div class="fld"><label class="rm-label" for="h-login-code">登入碼</label>' +
+        '<input class="rm-input" type="text" id="h-login-code" maxlength="9" autocapitalize="characters" autocomplete="one-time-code" spellcheck="false" placeholder="XXXX-XXXX" required></div>' +
+        '<div class="err" id="home-err" hidden></div>' +
+        '<div class="ops"><button type="submit" class="btn btn-main" id="h-code-go">登入</button></div></form>';
+      el("h-line").addEventListener("click", () => {
+        if (!IN_APP) { goLine(); return; }
+        /* App 裡另開一頁:在 App 自己裡面導覽出去的話,回不來 */
+        window.open(AUTH + "?go=login&app=1&back=" + encodeURIComponent(location.pathname + location.search), "_blank");
+        el("h-login-code").focus();
+      });
+      if (el("h-has-code")) el("h-has-code").addEventListener("click", () => {
+        el("h-code-form").hidden = false;
+        el("h-login-code").focus();
+      });
+      el("h-code-form").addEventListener("submit", async ev => {
+        ev.preventDefault();
+        homeErr("");
+        const btn = el("h-code-go");
+        btn.disabled = true;
+        try {
+          const res = await fetch(AUTH + "?go=code", { method: "POST", credentials: "same-origin",
+            headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code: el("h-login-code").value }) });
+          const b = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(b.error || "登入沒有成功");
+          location.reload();
+        } catch (e) {
+          homeErr(e.message);
+          btn.disabled = false;
+        }
+      });
       return;
     }
     if (kind === "trips") {
