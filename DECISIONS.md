@@ -53,7 +53,7 @@ commit 之後回來把 hash 補上。還沒 commit 的先寫 `未進版控`。
 
 ## 2026-09-27
 
-### 顏色改走 Figma 的 Material 3 角色,Retro 模式 · `未進版控`
+### 顏色改走 Figma 的 Material 3 角色,Retro 模式 · `7f23f82`
 
 - **決定**:`index.html` 的 `:root` 新增 18 個 `--ds-sys-color-*`,值抄自 Figma 檔 Variables → Style →
   `ds/sys/color/*` 的 **Retro** 模式;網站原本的 `--paper`、`--ink`、`--accent`… 改成指到這些角色。
