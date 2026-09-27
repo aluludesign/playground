@@ -53,7 +53,7 @@ commit 之後回來把 hash 補上。還沒 commit 的先寫 `未進版控`。
 
 ## 2026-09-28
 
-### 按鈕、輸入框、chips 改成 Figma 畫好的元件 · `未進版控`
+### 按鈕、輸入框、chips 改成 Figma 畫好的元件 · `1952dcf`
 
 - **決定**：照 Figma DS 頁的 main component（Button、Text field / Text area / Dropdown、Chips）重寫
   `.btn*`、`.rm-input`、`.rm-chip` 的樣式，放在 `index.html` components 層最後一段；數值只讀 `:root` 裡
