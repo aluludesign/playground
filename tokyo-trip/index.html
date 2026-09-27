@@ -14,7 +14,7 @@
      圖示不能再用內嵌的 emoji SVG —— 那個在分頁上很好用,但 iOS 加到主畫面時
      會拿它去縮,縮出來是一顆歪掉的小鐵塔配一大圈白邊。 -->
 <link rel="manifest" href="manifest.webmanifest">
-<meta name="theme-color" content="#F1F2F6">
+<meta name="theme-color" content="#FFF7ED">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -39,13 +39,61 @@
 <link rel="stylesheet" href="retro-modern.built.css">
 <style>
   :root{
-    --paper:#F1F2F6; --surface:#FFFFFF; --surface-2:#F7F8FB;
-    --ink:#15171D; --ink-2:#3C414E; --muted:#6C7385;
-    --line:#DDE1EA; --line-soft:#E9ECF3;
-    --accent:#24457E; --accent-ink:#FFFFFF; --accent-soft:#E6ECF8;
-    --pos:#0B6B53; --neg:#A93446; --warn:#8A5A00; --warn-soft:#FBF0DA;
+    /* **顏色角色照 Figma 的 Style collection 走(Material 3 的角色架構)。**(Lulu 的決定,2026-09-27)
+       來源:Trippps 的 Figma 檔 → Variables → Style → `ds/sys/color/*`,**Retro 模式**。
+       變數名把 Figma 的路徑換成 `-`:`ds/sys/color/on surface var` → `--ds-sys-color-on-surface-var`。
+       每一行後面註明它在 Figma 裡連到哪一格底色,改 Figma 時對得回來。
+
+       **這裡是抄過來的值,不會自己跟 Figma 同步。** Figma 改了,這裡要跟著改。
+
+       **只接網站用得到的角色。** Fixed 系列、Secondary、Tertiary、Scrim 網站沒有地方用,
+       留在 Figma 當參考,不寫進來。
+
+       已知、而且是刻意接受的(Lulu 選「照 Figma 現在的值接」):
+       primary 上的白字、以及 primary 當文字色放在 surface 上,對比都只有約 3.0,
+       低於內文要的 4.5。要改就改 Figma 的 primary,再同步這裡。 */
+    --ds-sys-color-surface:#FFF7ED;                 /* share/orange/50 */
+    --ds-sys-color-surf-container-lowest:#FAFAFA;   /* share/black/zinc/50 */
+    --ds-sys-color-surf-container-low:#F1F5F9;      /* share/black/slate/100 */
+    --ds-sys-color-surf-container-high:#E5E7EB;     /* share/black/gray/200 */
+    --ds-sys-color-on-surface:#652D15;              /* retro/red-orange/800 */
+    --ds-sys-color-on-surface-var:#823A1C;          /* retro/red-orange/700 */
+    --ds-sys-color-outline:#BD5528;                 /* retro/red-orange/500 */
+    --ds-sys-color-outline-variant:#CB7551;         /* retro/red-orange/400 */
+    --ds-sys-color-primary:#D97706;                 /* share/amber/600 */
+    --ds-sys-color-on-primary:#FFFBEB;              /* share/amber/50 */
+    --ds-sys-color-primary-container:#F59E0B;       /* share/amber/500 */
+    --ds-sys-color-error:#A02222;                   /* retro/red/600 */
+    --ds-sys-color-inverse-surface:#27272A;         /* share/black/zinc/800 */
+    --ds-sys-color-inverse-on-surface:#F3F4F6;      /* share/black/gray/100 */
+    --ds-sys-color-custom-1:#FBBF24;                /* share/amber/400 */
+    --ds-sys-color-custom-container-1:#FDE68A;      /* share/amber/200 */
+    --ds-sys-color-on-custom-container-1:#92400E;   /* share/amber/800 */
+    --ds-sys-color-on-custom-container-4:#166534;   /* share/green/800 */
+
+    /* 網站自己的名字,一律指到上面的角色 —— 畫面程式碼用的還是這些名字,一個字都不用動。 */
+    --paper:var(--ds-sys-color-surface);
+    --surface:var(--ds-sys-color-surf-container-lowest);
+    --surface-2:var(--ds-sys-color-surf-container-low);
+    --ink:var(--ds-sys-color-on-surface);
+    --ink-2:var(--ds-sys-color-on-surface-var);
+    --muted:var(--ds-sys-color-outline);
+    --line:var(--ds-sys-color-outline-variant);
+    --line-soft:var(--ds-sys-color-surf-container-high);
+    --accent:var(--ds-sys-color-primary);
+    --accent-ink:var(--ds-sys-color-on-primary);
+    --accent-soft:var(--ds-sys-color-primary-container);
+    --neg:var(--ds-sys-color-error);
+    --warn:var(--ds-sys-color-on-custom-container-1);
+    --warn-soft:var(--ds-sys-color-custom-container-1);
+    --pos:var(--ds-sys-color-on-custom-container-4);
     --shadow:0 1px 2px rgba(20,26,45,.05), 0 8px 24px -14px rgba(20,26,45,.22);
-    --board-bg:#12141A; --board-ink:#F3F4F7; --board-muted:#878FA3; --board-line:#282C36; --board-amber:#F0B429;
+    /* 航班板是「淺色畫面裡的深色元件」,對到 inverse surface 那一組。
+       muted 和 line 在 Figma 沒有對應的角色,先維持原值。 */
+    --board-bg:var(--ds-sys-color-inverse-surface);
+    --board-ink:var(--ds-sys-color-inverse-on-surface);
+    --board-muted:#878FA3; --board-line:#282C36;
+    --board-amber:var(--ds-sys-color-custom-1);
     /* **字體全部交給設計系統。**(Lulu 的決定,2026-09-24)
        這裡以前自己宣告三種:body(Noto Sans TC)、sign(Zen Kaku Gothic New)、
        mono(IBM Plex Mono)。而**自己宣告 `--font-mono` 會把設計系統的值擋掉** ——

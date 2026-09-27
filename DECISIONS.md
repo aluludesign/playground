@@ -51,6 +51,25 @@ commit 之後回來把 hash 補上。還沒 commit 的先寫 `未進版控`。
 
 # tokyo-trip
 
+## 2026-09-27
+
+### 顏色改走 Figma 的 Material 3 角色,Retro 模式 · `未進版控`
+
+- **決定**:`index.html` 的 `:root` 新增 18 個 `--ds-sys-color-*`,值抄自 Figma 檔 Variables → Style →
+  `ds/sys/color/*` 的 **Retro** 模式;網站原本的 `--paper`、`--ink`、`--accent`… 改成指到這些角色。
+  畫面程式碼一行都沒動。`theme-color` 和 manifest 的底色跟著 `--paper` 換成 `#FFF7ED`。
+- **為什麼**:只借 Material 3 的**色彩角色架構**,不借它的元件和外觀 —— 元件換掉會蓋掉 Retro Modern
+  的個性,而且等於重做整個畫面。角色架構則幾乎是現成的:網站本來就有一套角色式的變數,
+  大多能一對一對到 Material 3 的角色。
+  只接網站用得到的 18 個;Fixed 系列、Secondary、Tertiary、Scrim 沒有地方用,留在 Figma。
+- **推翻了**:網站原本自己的一套冷色(灰藍底 `#F1F2F6`、深藍主色 `#24457E`)。整站因此變成暖色。
+- **代價**:
+  - **primary 的對比不夠,Lulu 選了照 Figma 現在的值接**:主按鈕上的白字 3.07、primary 當文字色放在底色上 3.00,
+    都低於內文要的 4.5(原本是 9.43 和 8.43)。要改就改 Figma 的 primary,再同步這裡。
+  - **值是抄過來的,不會自己同步**。Figma 改了這裡要跟著改;每一行後面註明了它在 Figma 連到哪一格。
+  - `--board-muted`、`--board-line`、`--shadow` 在 Figma 沒有對應的角色,維持原值。
+    倒數數字用的 `--color-accent` 是設計系統的,不是網站的,這次沒有碰。
+
 ## 2026-09-24
 
 ### 一顆 AI 按鈕,確認後才存 · `263eff4`
