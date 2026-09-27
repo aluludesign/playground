@@ -4644,10 +4644,17 @@
     renderDays(); renderRoute();
   });
 
+  /* **日期、時間的欄位不自動放游標。** 手機上游標一進去,系統的選擇器就自己跳出來 ——
+     每次打開表單都先跳一個日曆,要先關掉它才能填別的(Lulu 回報:要手動點才展開)。
+     所以打開表單時跳過這幾種,放在第一個打字的欄位。 */
+  const opensPicker = e => /^(date|time|datetime-local|month|week)$/.test(e.type || "");
   function toggleForm(id, on) {
     const f = el(id);
     f.hidden = on === undefined ? !f.hidden : !on;
-    if (!f.hidden) { const first = f.querySelector("input,select"); if (first) first.focus(); }
+    if (!f.hidden) {
+      const first = [].find.call(f.querySelectorAll("input,select,textarea"), e => !opensPicker(e) && e.type !== "hidden" && e.type !== "checkbox");
+      if (first) first.focus();
+    }
   }
 
   /* --- 行程 --- */
@@ -4663,7 +4670,8 @@
        而「藏了沒人設回來」的代價是一個無聲的空遮罩。開的時候自己確認一次,便宜。 */
     el("stop-form").hidden = false;
     el("stop-add-overlay").hidden = false;
-    el("sf-time").focus();
+    /* 以前是 sf-time —— 游標一進時間欄,手機就先跳出選時間的轉盤。改放在「要去哪」 */
+    el("sf-title").focus();
   }
   function closeStopAdd() {
     el("stop-add-overlay").hidden = true;
@@ -4860,7 +4868,7 @@
     el("tf-time").value = s == null ? (item.time || "12:00") : toHHMM(((s % 1440) + 1440) % 1440);
     showTimeError("");
     el("time-overlay").hidden = false;
-    el("tf-time").focus();
+    /* 這張只有一格時間 —— 不自動放游標,不然一打開就先跳轉盤。預設值已經填好了,不改就按確定 */
   }
   function showTimeError(msg) {
     const box = el("tf-err");
