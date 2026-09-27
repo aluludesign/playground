@@ -51,6 +51,25 @@ commit 之後回來把 hash 補上。還沒 commit 的先寫 `未進版控`。
 
 # tokyo-trip
 
+## 2026-09-28
+
+### 按鈕、輸入框、chips 改成 Figma 畫好的元件 · `未進版控`
+
+- **決定**：照 Figma DS 頁的 main component（Button、Text field / Text area / Dropdown、Chips）重寫
+  `.btn*`、`.rm-input`、`.rm-chip` 的樣式，放在 `index.html` components 層最後一段；數值只讀 `:root` 裡
+  跟 Figma **同名**的 `--ds-*` 變數（這次整批重抄 Style / Comps 的 Retro 值，57 個）。
+  輸入框標題改成 Material 3 的浮動標題，用 `.fld:has()` 判斷，**63 個欄位的 markup 一個都沒動**。
+- **為什麼**：不用 Material Web —— 它要重寫所有 markup、引外部套件，而且只維護不開發；
+  chip、圖層開關、航班板那些它本來就沒有。照規格寫 CSS，網站跟 Figma 的對應只剩「同名變數」一條線。
+- **推翻了**：`--muted` 原本對到 outline。Figma 把 outline 改淺之後當文字只剩 1.72，
+  改對到 on surface var（M3 的文字只用 on surface / on surface var）—— 次要文字和說明字因此變成同一色。
+- **代價**：
+  - outline 當輸入框的框只有 1.72:1（M3 要 3:1）、primary 上的字 3.24:1 —— 照 Figma 的值接，要改就改 Figma。
+  - 花費分類 `.cat` 只換形狀和字，顏色維持程式裡的六色（那是資料，也用在比例長條圖），沒換成 Custom 1–15。
+  - 地圖圖層開關選取時不加 ✓，那顆代表當天顏色的圓點就是它的 icon。
+  - 手機上 chip 的 32px 高度低於建議的觸控高度；按鈕在手機上保留原本的 42 / 38px 最小高度。
+  - hover / pressed 截圖看不到，只能實際操作驗收。
+
 ## 2026-09-27
 
 ### 顏色改走 Figma 的 Material 3 角色,Retro 模式 · `7f23f82`
