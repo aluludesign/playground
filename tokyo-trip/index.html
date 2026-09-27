@@ -4891,9 +4891,9 @@
   }
   el("add-stop-btn").addEventListener("click", openStopAdd);
   el("sf-cancel").addEventListener("click", closeStopAdd);
-  el("stop-add-overlay").addEventListener("click", ev => {
-    if (ev.target === el("stop-add-overlay")) closeStopAdd();
-  });
+  /* **只有「取消」關得掉。**(Lulu 的決定,2026-09-28,跟 AI 那張同一個理由)
+     點背景和 Esc 都拿掉了 —— 表單打到一半、搜尋挑好了地點,手滑點到旁邊就全沒了。
+     Esc 的那一半在下面的 keydown:這張開著時 Esc 什麼都不做,也不穿過去關別的層。 */
   el("stop-form").addEventListener("submit", ev => {
     ev.preventDefault();
     const title = el("sf-title").value.trim();
@@ -5726,10 +5726,8 @@
     openWishAdd();
   });
   el("wf-cancel").addEventListener("click", closeWishAdd);
-  /* 點灰色底、按 Esc 都關得掉 —— 跟「改我的願望」那張同一套手勢。 */
-  el("wish-add-overlay").addEventListener("click", ev => {
-    if (ev.target === el("wish-add-overlay")) closeWishAdd();
-  });
+  /* **只有「取消」關得掉。**(Lulu 的決定,2026-09-28)跟「加一筆行程」、AI 那兩張一樣:
+     點背景和 Esc 都不關。以前寫的是「跟改我的願望同一套手勢」—— 那張沒有改,只有新增這張改了。 */
   el("wish-form").addEventListener("submit", ev => {
     ev.preventDefault();
     const title = el("wf-title").value.trim();
@@ -6716,10 +6714,9 @@
     /* **AI 那一層不在這個名單裡**,它只有「取消」關得掉 —— 見 openAI 旁邊那段。
        而且它也不讓 Esc 穿過去關掉底下那些:它開著的時候,Esc 什麼都不做。
        (不擋的話,按 Esc 會關掉它背後的地圖,而使用者以為自己關掉的是對話框。) */
-    if (!el("ai-overlay").hidden) return;
+    /* 「加一筆行程」「許願」兩張也一樣(2026-09-28):只有取消關得掉,Esc 也不穿過去。 */
+    if (!el("ai-overlay").hidden || !el("wish-add-overlay").hidden || !el("stop-add-overlay").hidden) return;
     if (!el("map-sheet").hidden) { closeMapSheet(); return; }
-    if (!el("wish-add-overlay").hidden) { closeWishAdd(); return; }
-    if (!el("stop-add-overlay").hidden) { closeStopAdd(); return; }
     const wb = el("wishbox");
     if (wb && wb.open && !wideCols()) { wb.open = false; return; }
   });
