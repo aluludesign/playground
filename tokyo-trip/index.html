@@ -4845,6 +4845,18 @@
        (Lulu 沒有特別講這一條,是推出來的:不讓位的話,切日子地圖不會動 ——
        那正是之前被抓到的「許願頁切日子沒反應」。) */
     const left = leaveAllDays();
+    /* **在「許願」點某一天 = 回去看那一天的行程**(Lulu 的決定)。
+       三欄的寬桌機沒有「許願」分頁,行程本來就在旁邊,不必切。
+       點的是已經選著的那一天也一樣切回去 —— 那時她要的是行程,不是退出地圖聚焦。 */
+    if (state.tab === "wish" && !wideCols()) {
+      if (b.dataset.day !== state.day) {
+        state.day = b.dataset.day;
+        clearHere();
+        renderDays(); renderRoute();
+      }
+      switchTab("plan");
+      return;
+    }
     /* **再點一次已經選著的那一天 = 退出聚焦**,回到那天的整體視野(Lulu 的決定)。
        跟再點一次那一列是同一件事,走同一條 unfocusMap。 */
     if (b.dataset.day === state.day) {
