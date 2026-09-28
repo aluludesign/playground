@@ -3423,19 +3423,31 @@
     ? "https://www.google.com/maps/search/" + encodeURIComponent(p) +
       "/@" + at.la.toFixed(5) + "," + at.lo.toFixed(5) + ",14z"
     : "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(p);
-  /* **主畫面 App 裡,往站外的連結不要另開視窗。** iPhone 一看到 Google 地圖、LINE 這種網址,
-     就把它交給別的 App(或瀏覽器),另開的那個視窗自己留成一頁空白 —— 回到 App 看到的
-     就是它,大家以為壞掉了(Lulu 回報,地圖上的點)。登入那顆鈕是同一件事,在那裡修過。
-     App 裡直接往那裡走:iPhone 把它交出去,App 停在原來的畫面。瀏覽器裡照舊開新分頁。 */
+  /* **會被 iPhone 交給別的 App 的連結,不要另開視窗。** 點了地圖上的點,先開一個新視窗(或新分頁),
+     iPhone 一看到 Google 地圖、LINE 的網址就交給那個 App,那個新視窗/分頁就留成一頁空白 ——
+     回來看到的就是它,大家以為壞掉了(Lulu 回報,主畫面 App 和手機瀏覽器都會)。
+     登入那顆鈕是同一件事,在那裡修過。
+     - 主畫面 App:往站外的連結一律這一頁直接走(App 停在原畫面)。
+     - 手機瀏覽器:只有 Google 地圖和 LINE 這一頁直接走;其他網站照舊開新分頁 ——
+       那些不會被交出去,開新分頁才不會把行程頁換掉。
+     - 電腦:照舊開新分頁。 */
   const standalone = () => (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) || navigator.standalone === true;
+  const touch = () => !!(window.matchMedia && window.matchMedia("(pointer: coarse)").matches);
+  const handedOff = href => {
+    try {
+      const u = new URL(href, location.href);
+      return /(^|\.)line\.me$/.test(u.hostname) || (/(^|\.)google\.[a-z.]+$/.test(u.hostname) && u.pathname.indexOf("/maps") === 0);
+    } catch (_) { return false; }
+  };
+  const inPlace = href => standalone() || (touch() && handedOff(href));
   function openOut(href) {
-    if (standalone()) location.href = href;
+    if (inPlace(href)) location.href = href;
     else window.open(href, "_blank", "noopener");
   }
   document.addEventListener("click", ev => {
     const a = ev.target.closest && ev.target.closest('a[target="_blank"][href]');
-    if (!a || !standalone() || ev.defaultPrevented) return;
-    if (new URL(a.href, location.href).origin === location.origin) return;
+    if (!a || ev.defaultPrevented) return;
+    if (new URL(a.href, location.href).origin === location.origin || !inPlace(a.href)) return;
     ev.preventDefault();
     location.href = a.href;
   });
