@@ -40,8 +40,8 @@
 <style>
   :root{
     /* **顏色角色照 Figma 的 Style collection 走(Material 3 的角色架構)。**(Lulu 的決定,2026-09-27)
-       來源:Trippps 的 Figma 檔 → Variables → Style → `ds/sys/color/*`,**Retro 模式**。
-       變數名把 Figma 的路徑換成 `-`:`ds/sys/color/on surface var` → `--ds-sys-color-on-surface-var`。
+       來源:Trippps 的 Figma 檔 → Variables → Style → `ds/sys/shared/color/*`,**Retro 模式**。
+       變數名把 Figma 的路徑換成 `-`:`ds/sys/shared/color/on surface var` → `--ds-sys-shared-color-on-surface-var`。
        每一行後面註明它在 Figma 裡連到哪一格底色,改 Figma 時對得回來。
 
        **這裡是抄過來的值,不會自己跟 Figma 同步。** Figma 改了,這裡要跟著改。
@@ -55,50 +55,50 @@
        · primary 上的字、primary 當文字色放在卡片上，對比 3.24，低於內文要的 4.5。
        · outline（輸入框的框、Outlined 按鈕的框）對卡片底色只有 1.72，
          Material 3 要輸入框邊界至少 3:1。要改就改 Figma 的 outline，再同步這裡。 */
-    --ds-sys-color-primary:#CB7551;                     /* color/retro/red-orange/400 */
-    --ds-sys-color-on-primary:#FAFAF9;                  /* color/retro/red-orange/50 */
-    --ds-sys-color-primary-container:#D7BCB1;           /* color/retro/red-orange/200 */
-    --ds-sys-color-on-primary-container:#652D15;        /* color/retro/red-orange/800 */
-    --ds-sys-color-secondary:#A5887C;                   /* color/retro/red-orange-muted/400 */
-    --ds-sys-color-on-secondary:#FAFAFA;                /* color/retro/red-orange-muted/50 */
-    --ds-sys-color-secondary-container:#C9C0BD;         /* color/retro/red-orange-muted/200 */
-    --ds-sys-color-on-secondary-container:#4D3B33;      /* color/retro/red-orange-muted/800 */
-    --ds-sys-color-tertiary:#2891BD;                    /* color/retro/cyan-blue/500 */
-    --ds-sys-color-on-tertiary:#FFFBEB;                 /* color/share/amber/50 */
-    --ds-sys-color-tertiary-container:#D8E2E6;          /* color/retro/cyan-blue/100 */
-    --ds-sys-color-on-tertiary-container:#0F3748;       /* color/retro/cyan-blue/900 */
-    --ds-sys-color-error:#BD2828;                       /* color/retro/red/500 */
-    --ds-sys-color-on-error:#FAF9F9;                    /* color/retro/red/50 */
-    --ds-sys-color-error-container:#E6D8D8;             /* color/retro/red/100 */
-    --ds-sys-color-on-error-container:#BD2828;          /* color/retro/red/500 */
-    --ds-sys-color-surface:#FFF7ED;                     /* color/share/orange/50 */
-    --ds-sys-color-surf-container-lowest:#FAFAFA;       /* color/share/black/zinc/50 */
-    --ds-sys-color-surf-container-low:#F1F5F9;          /* color/share/black/slate/100 */
-    --ds-sys-color-surf-container:#F3F4F6;              /* color/share/black/gray/100 */
-    --ds-sys-color-surf-container-high:#E5E7EB;         /* color/share/black/gray/200 */
-    --ds-sys-color-surf-container-highest:#E4E4E7;      /* color/share/black/zinc/200 */
-    --ds-sys-color-on-surface:#652D15;                  /* color/retro/red-orange/800 */
-    --ds-sys-color-on-surface-var:#823A1C;              /* color/retro/red-orange/700 */
-    --ds-sys-color-outline:#D7BCB1;                     /* color/retro/red-orange/200 */
-    --ds-sys-color-outline-variant:#CE9A84;             /* color/retro/red-orange/300 */
-    --ds-sys-color-inverse-surface:#27272A;             /* color/share/black/zinc/800 */
-    --ds-sys-color-inverse-on-surface:#F3F4F6;          /* color/share/black/gray/100 */
-    --ds-sys-color-shadow:#030712;                      /* color/share/black/gray/950 */
-    --ds-sys-color-on-ai-primary:#27272A;               /* color/share/black/zinc/800 */
-    --ds-sys-color-disable-container:#D4D4D4;           /* color/share/black/neutral/300 */
-    --ds-sys-color-on-disable-container:#A3A3A3;        /* color/share/black/neutral/400 */
-    --ds-sys-color-custom-1:#FCD34D;                    /* color/share/amber/300 */
-    --ds-sys-color-custom-container-1:#FEF3C7;          /* color/share/amber/100 */
-    --ds-sys-color-on-custom-container-1:#92400E;       /* color/share/amber/800 */
-    --ds-sys-color-on-custom-container-4:#166534;       /* color/share/green/800 */
-    --ds-sys-spacing-xs:4px;                            /* spacing/100 */
-    --ds-sys-spacing-sm:6px;                            /* spacing/150 */
-    --ds-sys-spacing-md:8px;                            /* spacing/200 */
-    --ds-sys-spacing-lg:10px;                          /* spacing/250 */
-    --ds-sys-spacing-xl:12px;                           /* spacing/300 */
-    --ds-sys-spacing-2xl:16px;                          /* spacing/400 */
-    --ds-sys-border-xs:1px;                             /* border/100 */
-    --ds-sys-border-md:2px;                             /* border/200 */
+    --ds-sys-shared-color-primary:#CB7551;                     /* color/retro/red-orange/400 */
+    --ds-sys-shared-color-on-primary:#FAFAF9;                  /* color/retro/red-orange/50 */
+    --ds-sys-shared-color-primary-container:#D7BCB1;           /* color/retro/red-orange/200 */
+    --ds-sys-shared-color-on-primary-container:#652D15;        /* color/retro/red-orange/800 */
+    --ds-sys-shared-color-secondary:#A5887C;                   /* color/retro/red-orange-muted/400 */
+    --ds-sys-shared-color-on-secondary:#FAFAFA;                /* color/retro/red-orange-muted/50 */
+    --ds-sys-shared-color-secondary-container:#C9C0BD;         /* color/retro/red-orange-muted/200 */
+    --ds-sys-shared-color-on-secondary-container:#4D3B33;      /* color/retro/red-orange-muted/800 */
+    --ds-sys-shared-color-tertiary:#2891BD;                    /* color/retro/cyan-blue/500 */
+    --ds-sys-shared-color-on-tertiary:#FFFBEB;                 /* color/share/amber/50 */
+    --ds-sys-shared-color-tertiary-container:#D8E2E6;          /* color/retro/cyan-blue/100 */
+    --ds-sys-shared-color-on-tertiary-container:#0F3748;       /* color/retro/cyan-blue/900 */
+    --ds-sys-shared-color-error:#BD2828;                       /* color/retro/red/500 */
+    --ds-sys-shared-color-on-error:#FAF9F9;                    /* color/retro/red/50 */
+    --ds-sys-shared-color-error-container:#E6D8D8;             /* color/retro/red/100 */
+    --ds-sys-shared-color-on-error-container:#BD2828;          /* color/retro/red/500 */
+    --ds-sys-shared-color-surface:#FFF7ED;                     /* color/share/orange/50 */
+    --ds-sys-shared-color-surf-container-lowest:#FAFAFA;       /* color/share/black/zinc/50 */
+    --ds-sys-shared-color-surf-container-low:#F1F5F9;          /* color/share/black/slate/100 */
+    --ds-sys-shared-color-surf-container:#F3F4F6;              /* color/share/black/gray/100 */
+    --ds-sys-shared-color-surf-container-high:#E5E7EB;         /* color/share/black/gray/200 */
+    --ds-sys-shared-color-surf-container-highest:#E4E4E7;      /* color/share/black/zinc/200 */
+    --ds-sys-shared-color-on-surface:#652D15;                  /* color/retro/red-orange/800 */
+    --ds-sys-shared-color-on-surface-var:#823A1C;              /* color/retro/red-orange/700 */
+    --ds-sys-shared-color-outline:#D7BCB1;                     /* color/retro/red-orange/200 */
+    --ds-sys-shared-color-outline-variant:#CE9A84;             /* color/retro/red-orange/300 */
+    --ds-sys-shared-color-inverse-surface:#27272A;             /* color/share/black/zinc/800 */
+    --ds-sys-shared-color-inverse-on-surface:#F3F4F6;          /* color/share/black/gray/100 */
+    --ds-sys-shared-color-shadow:#030712;                      /* color/share/black/gray/950 */
+    --ds-sys-shared-color-on-ai-primary:#27272A;               /* color/share/black/zinc/800 */
+    --ds-sys-shared-color-disable-container:#D4D4D4;           /* color/share/black/neutral/300 */
+    --ds-sys-shared-color-on-disable-container:#A3A3A3;        /* color/share/black/neutral/400 */
+    --ds-sys-shared-color-custom-1:#FCD34D;                    /* color/share/amber/300 */
+    --ds-sys-shared-color-custom-container-1:#FEF3C7;          /* color/share/amber/100 */
+    --ds-sys-shared-color-on-custom-container-1:#92400E;       /* color/share/amber/800 */
+    --ds-sys-shared-color-on-custom-container-4:#166534;       /* color/share/green/800 */
+    --ds-sys-shared-spacing-xs:4px;                            /* spacing/100 */
+    --ds-sys-shared-spacing-sm:6px;                            /* spacing/150 */
+    --ds-sys-shared-spacing-md:8px;                            /* spacing/200 */
+    --ds-sys-shared-spacing-lg:10px;                          /* spacing/250 */
+    --ds-sys-shared-spacing-xl:12px;                           /* spacing/300 */
+    --ds-sys-shared-spacing-2xl:16px;                          /* spacing/400 */
+    --ds-sys-shared-border-xs:1px;                             /* border/100 */
+    --ds-sys-shared-border-md:2px;                             /* border/200 */
     --ds-comp-btn-normal-md-radius:16px;                /* radius/400 */
     --ds-comp-btn-normal-sm-radius:12px;                /* radius/300 */
     --ds-comp-btn-normal-full-radius:9999px;            /* radius/full */
@@ -112,31 +112,31 @@
     --ds-comp-chip-radius:9999px;                       /* radius/full */
     --ds-comp-chip-height:32px;                         /* spacing/800 */
     --ds-comp-chip-icon:16px;                           /* icon/size/200 */
-    --ds-comp-focus-ring-color:var(--ds-sys-color-primary);/* ds/sys/color/primary */
+    --ds-comp-focus-ring-color:var(--ds-sys-shared-color-primary);/* ds/sys/shared/color/primary */
 
     /* 網站自己的名字,一律指到上面的角色 —— 畫面程式碼用的還是這些名字,一個字都不用動。 */
-    --paper:var(--ds-sys-color-surface);
-    --surface:var(--ds-sys-color-surf-container-lowest);
-    --surface-2:var(--ds-sys-color-surf-container-low);
-    --ink:var(--ds-sys-color-on-surface);
-    --ink-2:var(--ds-sys-color-on-surface-var);
-    --muted:var(--ds-sys-color-on-surface-var);   /* 原本對 outline；outline 改淺之後只剩 1.72，M3 的文字只用 on surface / on surface var */
-    --line:var(--ds-sys-color-outline-variant);
-    --line-soft:var(--ds-sys-color-surf-container-high);
-    --accent:var(--ds-sys-color-primary);
-    --accent-ink:var(--ds-sys-color-on-primary);
-    --accent-soft:var(--ds-sys-color-primary-container);
-    --neg:var(--ds-sys-color-error);
-    --warn:var(--ds-sys-color-on-custom-container-1);
-    --warn-soft:var(--ds-sys-color-custom-container-1);
-    --pos:var(--ds-sys-color-on-custom-container-4);
+    --paper:var(--ds-sys-shared-color-surface);
+    --surface:var(--ds-sys-shared-color-surf-container-lowest);
+    --surface-2:var(--ds-sys-shared-color-surf-container-low);
+    --ink:var(--ds-sys-shared-color-on-surface);
+    --ink-2:var(--ds-sys-shared-color-on-surface-var);
+    --muted:var(--ds-sys-shared-color-on-surface-var);   /* 原本對 outline；outline 改淺之後只剩 1.72，M3 的文字只用 on surface / on surface var */
+    --line:var(--ds-sys-shared-color-outline-variant);
+    --line-soft:var(--ds-sys-shared-color-surf-container-high);
+    --accent:var(--ds-sys-shared-color-primary);
+    --accent-ink:var(--ds-sys-shared-color-on-primary);
+    --accent-soft:var(--ds-sys-shared-color-primary-container);
+    --neg:var(--ds-sys-shared-color-error);
+    --warn:var(--ds-sys-shared-color-on-custom-container-1);
+    --warn-soft:var(--ds-sys-shared-color-custom-container-1);
+    --pos:var(--ds-sys-shared-color-on-custom-container-4);
     --shadow:0 1px 2px rgba(20,26,45,.05), 0 8px 24px -14px rgba(20,26,45,.22);
     /* 航班板是「淺色畫面裡的深色元件」,對到 inverse surface 那一組。
        muted 和 line 在 Figma 沒有對應的角色,先維持原值。 */
-    --board-bg:var(--ds-sys-color-inverse-surface);
-    --board-ink:var(--ds-sys-color-inverse-on-surface);
+    --board-bg:var(--ds-sys-shared-color-inverse-surface);
+    --board-ink:var(--ds-sys-shared-color-inverse-on-surface);
     --board-muted:#878FA3; --board-line:#282C36;
-    --board-amber:var(--ds-sys-color-custom-1);
+    --board-amber:var(--ds-sys-shared-color-custom-1);
     /* **字體全部交給設計系統。**(Lulu 的決定,2026-09-24)
        這裡以前自己宣告三種:body(Noto Sans TC)、sign(Zen Kaku Gothic New)、
        mono(IBM Plex Mono)。而**自己宣告 `--font-mono` 會把設計系統的值擋掉** ——
@@ -621,9 +621,9 @@
       background:var(--line); border:1px solid var(--line);}
     /* 選取時整顆是陶土色,那顆點要換成淺色才看得見 —— 只有「全部已排」例外,
        它本來就是中性色,在陶土上照樣分得出來。 */
-    .lay[aria-pressed="true"]::before{background:var(--ds-sys-color-on-primary-container); border-color:var(--ds-sys-color-on-primary-container);}
-    #lay-plan[aria-pressed="true"]::before{background:var(--dc,var(--ink)); border-color:var(--ds-sys-color-surf-container-lowest);}
-    #lay-wish[aria-pressed="true"]::before{background:var(--accent); border-color:var(--ds-sys-color-surf-container-lowest);}
+    .lay[aria-pressed="true"]::before{background:var(--ds-sys-shared-color-on-primary-container); border-color:var(--ds-sys-shared-color-on-primary-container);}
+    #lay-plan[aria-pressed="true"]::before{background:var(--dc,var(--ink)); border-color:var(--ds-sys-shared-color-surf-container-lowest);}
+    #lay-wish[aria-pressed="true"]::before{background:var(--accent); border-color:var(--ds-sys-shared-color-surf-container-lowest);}
     /* 這一頁的主角那層鎖著開(行程頁鎖行程、許願頁鎖願望),按了不會有反應 ——
        游標和 hover 就不該假裝它按得動。 */
     .lay:disabled{cursor:default;}
@@ -1190,83 +1190,83 @@
 
     /* ---- Button ---- */
     .btn{--btn-r:var(--ds-comp-btn-normal-md-radius); --btn-icon:var(--ds-comp-btn-normal-md-icon);
-      position:relative; isolation:isolate; display:inline-flex; align-items:center; justify-content:center; gap:var(--ds-sys-spacing-xs);
-      padding:var(--ds-sys-spacing-md) var(--ds-sys-spacing-xl);
-      border:var(--ds-sys-border-xs) solid var(--ds-sys-color-outline); border-radius:var(--btn-r);
-      background:transparent; color:var(--ds-sys-color-primary);
+      position:relative; isolation:isolate; display:inline-flex; align-items:center; justify-content:center; gap:var(--ds-sys-shared-spacing-xs);
+      padding:var(--ds-sys-shared-spacing-md) var(--ds-sys-shared-spacing-xl);
+      border:var(--ds-sys-shared-border-xs) solid var(--ds-sys-shared-color-outline); border-radius:var(--btn-r);
+      background:transparent; color:var(--ds-sys-shared-color-primary);
       font-size:14px; font-weight:700; line-height:1.4; text-align:center; text-decoration:none; transition:box-shadow .15s;}
     .btn::after{content:""; position:absolute; inset:0; z-index:-1; border-radius:inherit; background:currentColor; opacity:0; pointer-events:none; transition:opacity .15s;}
-    .btn:hover{background:transparent; border-color:var(--ds-sys-color-outline);}
+    .btn:hover{background:transparent; border-color:var(--ds-sys-shared-color-outline);}
     .btn:hover::after{opacity:.08;}
     .btn:focus-visible{outline:3px solid var(--ds-comp-focus-ring-color); outline-offset:2px; border-radius:var(--btn-r);}
     .btn:focus-visible::after,.btn:active::after{opacity:.10;}
     .btn .i{margin-right:0; width:var(--btn-icon); height:var(--btn-icon); font-size:inherit;}
     .btn-sm{--btn-r:var(--ds-comp-btn-normal-sm-radius); --btn-icon:var(--ds-comp-btn-normal-sm-icon);
-      padding:var(--ds-sys-spacing-sm) var(--ds-sys-spacing-lg); font-size:12px;}
+      padding:var(--ds-sys-shared-spacing-sm) var(--ds-sys-shared-spacing-lg); font-size:12px;}
     /* Filled */
-    .btn-main,.btn-main:hover{background:var(--ds-sys-color-primary); border-color:transparent; color:var(--ds-sys-color-on-primary); filter:none;}
-    .btn-main:hover{box-shadow:0 1px 3px 1px color-mix(in srgb, var(--ds-sys-color-shadow) 15%, transparent), 0 1px 2px color-mix(in srgb, var(--ds-sys-color-shadow) 30%, transparent);}
+    .btn-main,.btn-main:hover{background:var(--ds-sys-shared-color-primary); border-color:transparent; color:var(--ds-sys-shared-color-on-primary); filter:none;}
+    .btn-main:hover{box-shadow:0 1px 3px 1px color-mix(in srgb, var(--ds-sys-shared-color-shadow) 15%, transparent), 0 1px 2px color-mix(in srgb, var(--ds-sys-shared-color-shadow) 30%, transparent);}
     /* Text */
-    .btn-ghost,.btn-ghost:hover{border-color:transparent; background:transparent; color:var(--ds-sys-color-primary);}
+    .btn-ghost,.btn-ghost:hover{border-color:transparent; background:transparent; color:var(--ds-sys-shared-color-primary);}
     /* LINE：品牌色刻意寫死，不跟 Retro/Modern 走（Figma 的 Button/LINE 也是） */
     .btn-line,.btn-line:hover{background:#06C755; border-color:transparent; color:#fff; filter:none;}
     /* Disabled */
     .btn:disabled,.btn[aria-disabled="true"]{cursor:not-allowed; box-shadow:none;
-      color:color-mix(in srgb, var(--ds-sys-color-on-surface) 38%, transparent);
-      border-color:color-mix(in srgb, var(--ds-sys-color-on-surface) 12%, transparent);}
+      color:color-mix(in srgb, var(--ds-sys-shared-color-on-surface) 38%, transparent);
+      border-color:color-mix(in srgb, var(--ds-sys-shared-color-on-surface) 12%, transparent);}
     .btn:disabled::after,.btn[aria-disabled="true"]::after{opacity:0;}
-    .btn-main:disabled,.btn-line:disabled,.btn-main[aria-disabled="true"]{background:color-mix(in srgb, var(--ds-sys-color-on-surface) 12%, transparent); border-color:transparent;}
+    .btn-main:disabled,.btn-line:disabled,.btn-main[aria-disabled="true"]{background:color-mix(in srgb, var(--ds-sys-shared-color-on-surface) 12%, transparent); border-color:transparent;}
     .btn-ghost:disabled{border-color:transparent;}
 
     /* ---- Button / AI（#ai-btn）----
        底色是 Figma 的 Color style「Steel/Ai/Ai Primary」（漸層不能做成變數，所以色點寫在這裡）；
        hover 時 design-system 那層虹光照舊淡入，對到 Figma 的「Ai Overlay」。 */
     #ai-btn{background:linear-gradient(135deg, #F6F8FB 0%, #E0E5F0 16%, #B8CBD8 36%, #B2B6C6 52%, #D8CDC2 70%, #C3CBD2 84%, #88919A 100%);
-      border:var(--ds-sys-border-md) solid var(--ds-sys-color-on-ai-primary); border-radius:var(--ds-comp-btn-normal-full-radius);
-      color:var(--ds-sys-color-on-ai-primary);}
+      border:var(--ds-sys-shared-border-md) solid var(--ds-sys-shared-color-on-ai-primary); border-radius:var(--ds-comp-btn-normal-full-radius);
+      color:var(--ds-sys-shared-color-on-ai-primary);}
     #ai-btn:focus-visible{outline:3px solid var(--ds-comp-focus-ring-color); outline-offset:2px; border-radius:var(--ds-comp-btn-normal-full-radius);}
 
     /* ---- Text field / Text area / Dropdown（.rm-input）---- */
-    .rm-input{min-height:var(--ds-comp-field-height); padding:var(--ds-sys-spacing-2xl);
-      border:var(--ds-sys-border-xs) solid var(--ds-sys-color-outline); border-radius:var(--ds-comp-field-radius);
-      background:var(--ds-sys-color-surf-container-lowest); color:var(--ds-sys-color-on-surface);
+    .rm-input{min-height:var(--ds-comp-field-height); padding:var(--ds-sys-shared-spacing-2xl);
+      border:var(--ds-sys-shared-border-xs) solid var(--ds-sys-shared-color-outline); border-radius:var(--ds-comp-field-radius);
+      background:var(--ds-sys-shared-color-surf-container-lowest); color:var(--ds-sys-shared-color-on-surface);
       font-family:inherit; font-size:16px; line-height:1.5; transition:border-color .15s, box-shadow .15s;}
-    .rm-input::placeholder{color:var(--ds-sys-color-on-surface-var); opacity:1;}
-    .rm-input:hover{border-color:var(--ds-sys-color-on-surface);}
+    .rm-input::placeholder{color:var(--ds-sys-shared-color-on-surface-var); opacity:1;}
+    .rm-input:hover{border-color:var(--ds-sys-shared-color-on-surface);}
     /* focus 框 3px：外框 1px + 內陰影 2px，版面不會因為框變粗而跳動 */
-    .rm-input:focus,.rm-input:focus-visible{outline:none; border-color:var(--ds-sys-color-primary); border-radius:var(--ds-comp-field-radius);
-      box-shadow:inset 0 0 0 calc(var(--ds-comp-field-focus-outline-width) - var(--ds-sys-border-xs)) var(--ds-sys-color-primary);}
-    .rm-input[aria-invalid="true"]{border-color:var(--ds-sys-color-error);}
-    .rm-input[aria-invalid="true"]:hover{border-color:var(--ds-sys-color-on-error-container);}
-    .rm-input[aria-invalid="true"]:focus{border-color:var(--ds-sys-color-error); box-shadow:inset 0 0 0 calc(var(--ds-comp-field-focus-outline-width) - var(--ds-sys-border-xs)) var(--ds-sys-color-error);}
-    .rm-input:disabled{cursor:not-allowed; color:color-mix(in srgb, var(--ds-sys-color-on-surface) 38%, transparent);
-      border-color:color-mix(in srgb, var(--ds-sys-color-on-surface) 12%, transparent);}
+    .rm-input:focus,.rm-input:focus-visible{outline:none; border-color:var(--ds-sys-shared-color-primary); border-radius:var(--ds-comp-field-radius);
+      box-shadow:inset 0 0 0 calc(var(--ds-comp-field-focus-outline-width) - var(--ds-sys-shared-border-xs)) var(--ds-sys-shared-color-primary);}
+    .rm-input[aria-invalid="true"]{border-color:var(--ds-sys-shared-color-error);}
+    .rm-input[aria-invalid="true"]:hover{border-color:var(--ds-sys-shared-color-on-error-container);}
+    .rm-input[aria-invalid="true"]:focus{border-color:var(--ds-sys-shared-color-error); box-shadow:inset 0 0 0 calc(var(--ds-comp-field-focus-outline-width) - var(--ds-sys-shared-border-xs)) var(--ds-sys-shared-color-error);}
+    .rm-input:disabled{cursor:not-allowed; color:color-mix(in srgb, var(--ds-sys-shared-color-on-surface) 38%, transparent);
+      border-color:color-mix(in srgb, var(--ds-sys-shared-color-on-surface) 12%, transparent);}
     textarea.rm-input{min-height:var(--ds-comp-field-area-height); resize:vertical;}
 
     /* 浮動標題：標題在框線上（有值、對焦、或沒有 placeholder 可判斷時），空的時候躺在框裡。
        用 :has() 從 .fld 判斷，所以「標題＋欄位」和「標題＋.seek（欄位＋搜尋鈕）」兩種 markup 都不用改。
        框線上的那一段被標題的底色（= 欄位底色）遮掉，就是 Figma 的 Notch。 */
     .fld:has(> .rm-label):has(.rm-input){position:relative;}
-    .fld:has(.rm-input) > .rm-label{position:absolute; z-index:1; top:0; left:calc(var(--ds-sys-spacing-xl) + var(--ds-sys-border-xs));
-      transform:translateY(-50%); max-width:calc(100% - 2 * var(--ds-sys-spacing-2xl)); margin:0;
-      padding:0 var(--ds-sys-spacing-xs); --notch:var(--ds-sys-color-surf-container-lowest);
+    .fld:has(.rm-input) > .rm-label{position:absolute; z-index:1; top:0; left:calc(var(--ds-sys-shared-spacing-xl) + var(--ds-sys-shared-border-xs));
+      transform:translateY(-50%); max-width:calc(100% - 2 * var(--ds-sys-shared-spacing-2xl)); margin:0;
+      padding:0 var(--ds-sys-shared-spacing-xs); --notch:var(--ds-sys-shared-color-surf-container-lowest);
       background:linear-gradient(transparent 50%, var(--notch) 50%);
-      font-size:12px; font-weight:400; line-height:1.4; color:var(--ds-sys-color-on-surface-var);
+      font-size:12px; font-weight:400; line-height:1.4; color:var(--ds-sys-shared-color-on-surface-var);
       white-space:nowrap; overflow:hidden; text-overflow:ellipsis; pointer-events:none;
       transition:top .15s, font-size .15s, transform .15s, color .15s;}
-    .fld:has(.rm-input:placeholder-shown:not(:focus)) > .rm-label{top:calc(var(--ds-sys-spacing-2xl) + var(--ds-sys-border-xs)); transform:none;
+    .fld:has(.rm-input:placeholder-shown:not(:focus)) > .rm-label{top:calc(var(--ds-sys-shared-spacing-2xl) + var(--ds-sys-shared-border-xs)); transform:none;
       font-size:16px; line-height:1.5; background:transparent;}
     .fld .rm-input:placeholder-shown:not(:focus)::placeholder{color:transparent;}
     /* 上膛的欄位底色不是欄位色（見上面 .seek-armed），標題遮框線的那一半要跟著它 */
     .fld:has(.rm-input.seek-armed) > .rm-label{--notch:color-mix(in srgb, var(--color-accent) 35%, var(--color-foundation-muslin));}
-    .fld:has(.rm-input:focus) > .rm-label{color:var(--ds-sys-color-primary);}
-    .fld:has(.rm-input[aria-invalid="true"]) > .rm-label{color:var(--ds-sys-color-error);}
-    .fld:has(.rm-input:disabled) > .rm-label{color:color-mix(in srgb, var(--ds-sys-color-on-surface) 38%, transparent);}
+    .fld:has(.rm-input:focus) > .rm-label{color:var(--ds-sys-shared-color-primary);}
+    .fld:has(.rm-input[aria-invalid="true"]) > .rm-label{color:var(--ds-sys-shared-color-error);}
+    .fld:has(.rm-input:disabled) > .rm-label{color:color-mix(in srgb, var(--ds-sys-shared-color-on-surface) 38%, transparent);}
     /* Dropdown：原生箭頭換成 Figma 的 arrow_drop_down（形狀用 mask，顏色吃變數）；對焦＝選單打開，箭頭朝上 */
-    .fld select.rm-input{appearance:none; -webkit-appearance:none; padding-right:calc(var(--ds-sys-spacing-2xl) * 2 + var(--ds-comp-field-icon));}
-    .fld:has(> select.rm-input)::after,.fld:has(> .seek select.rm-input)::after{content:""; position:absolute; right:var(--ds-sys-spacing-2xl); top:calc(var(--ds-comp-field-height) / 2);
+    .fld select.rm-input{appearance:none; -webkit-appearance:none; padding-right:calc(var(--ds-sys-shared-spacing-2xl) * 2 + var(--ds-comp-field-icon));}
+    .fld:has(> select.rm-input)::after,.fld:has(> .seek select.rm-input)::after{content:""; position:absolute; right:var(--ds-sys-shared-spacing-2xl); top:calc(var(--ds-comp-field-height) / 2);
       width:var(--ds-comp-field-icon); height:var(--ds-comp-field-icon); transform:translateY(-50%); pointer-events:none;
-      background:var(--ds-sys-color-on-surface-var);
+      background:var(--ds-sys-shared-color-on-surface-var);
       -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E") center/contain no-repeat;
               mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E") center/contain no-repeat;}
     .fld:has(select.rm-input:focus)::after{transform:translateY(-50%) rotate(180deg);}
@@ -1275,23 +1275,23 @@
     /* ---- Chips（.rm-chip）----
        可切換的（誰分攤、成員權限、投票、地圖圖層）＝ Filter chip；花費分類 .cat ＝ Chip / Label。
        Color 用 Primary：未選取＝primary 字＋outline variant 框；選取＝primary-container 底。 */
-    .rm-chip{position:relative; isolation:isolate; display:inline-flex; align-items:center; gap:var(--ds-sys-spacing-md);
-      min-height:var(--ds-comp-chip-height); padding:0 var(--ds-sys-spacing-xl);
-      border:var(--ds-sys-border-xs) solid var(--ds-sys-color-outline-variant); border-radius:var(--ds-comp-chip-radius);
-      background:transparent; color:var(--ds-sys-color-primary); box-shadow:none;
+    .rm-chip{position:relative; isolation:isolate; display:inline-flex; align-items:center; gap:var(--ds-sys-shared-spacing-md);
+      min-height:var(--ds-comp-chip-height); padding:0 var(--ds-sys-shared-spacing-xl);
+      border:var(--ds-sys-shared-border-xs) solid var(--ds-sys-shared-color-outline-variant); border-radius:var(--ds-comp-chip-radius);
+      background:transparent; color:var(--ds-sys-shared-color-primary); box-shadow:none;
       font-family:inherit; font-size:14px; font-weight:400; line-height:1.4;}
     .rm-chip .i{width:var(--ds-comp-chip-icon); height:var(--ds-comp-chip-icon);}
     .rm-chip.rm-chip--selectable::after,.who .rm-chip::after{content:""; position:absolute; inset:0; z-index:-1; border-radius:inherit;
       background:currentColor; opacity:0; pointer-events:none; transition:opacity .15s;}
-    .rm-chip.rm-chip--selectable:hover,.who .rm-chip:hover{background:transparent; border-color:var(--ds-sys-color-outline-variant);}
+    .rm-chip.rm-chip--selectable:hover,.who .rm-chip:hover{background:transparent; border-color:var(--ds-sys-shared-color-outline-variant);}
     .rm-chip.rm-chip--selectable:hover::after,.who .rm-chip:hover::after{opacity:.08;}
     .rm-chip.rm-chip--selectable:active::after,.who .rm-chip:active::after{opacity:.10;}
     .rm-chip.rm-chip--selectable:focus-visible,.who .rm-chip:has(> input:focus-visible){outline:3px solid var(--ds-comp-focus-ring-color); outline-offset:2px; border-radius:var(--ds-comp-chip-radius);}
     .rm-chip.rm-chip--selectable[aria-pressed="true"],.rm-chip.rm-chip--selectable[aria-pressed="true"]:hover,
     .rm-chip:has(> input:checked),.rm-chip:has(> input:checked):hover{
-      background:var(--ds-sys-color-primary-container); border-color:transparent; color:var(--ds-sys-color-on-primary-container); box-shadow:none;}
-    .rm-chip.rm-chip--selectable:disabled{color:color-mix(in srgb, var(--ds-sys-color-on-surface) 38%, transparent);
-      border-color:color-mix(in srgb, var(--ds-sys-color-on-surface) 12%, transparent);}
+      background:var(--ds-sys-shared-color-primary-container); border-color:transparent; color:var(--ds-sys-shared-color-on-primary-container); box-shadow:none;}
+    .rm-chip.rm-chip--selectable:disabled{color:color-mix(in srgb, var(--ds-sys-shared-color-on-surface) 38%, transparent);
+      border-color:color-mix(in srgb, var(--ds-sys-shared-color-on-surface) 12%, transparent);}
     .rm-chip.rm-chip--selectable:disabled::after{opacity:0;}
     /* 勾選型的膠囊：原生核取方塊收起來（仍可鍵盤操作），選取時照 Figma 在前面出現 check */
     .who .rm-chip > input{position:absolute; opacity:0; width:1px; height:1px; margin:0; pointer-events:none;}
@@ -1299,9 +1299,9 @@
       -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z'/%3E%3C/svg%3E") center/contain no-repeat;
               mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z'/%3E%3C/svg%3E") center/contain no-repeat;}
     /* 地圖的「全部已排 / Day n」那一段：一個開關的兩半，框畫在外層 .laygroup 上，選取那一半才有底色 */
-    .laygroup{border:var(--ds-sys-border-xs) solid var(--ds-sys-color-outline-variant); border-radius:var(--ds-comp-chip-radius);}
+    .laygroup{border:var(--ds-sys-shared-border-xs) solid var(--ds-sys-shared-color-outline-variant); border-radius:var(--ds-comp-chip-radius);}
     .laygroup .lay.rm-chip{border:0; border-radius:0;}
-    .laygroup .lay + .lay{border-left:var(--ds-sys-border-xs) solid var(--ds-sys-color-outline-variant);}
+    .laygroup .lay + .lay{border-left:var(--ds-sys-shared-border-xs) solid var(--ds-sys-shared-color-outline-variant);}
     /* 花費分類 ＝ Chip / Label：不能點，沒有狀態；底色是各分類自己的顏色（行內 style），所以字維持白色 */
     .rm-chip.cat{border-color:transparent; color:#fff;}
   }
