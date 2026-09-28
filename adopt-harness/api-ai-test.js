@@ -159,6 +159,7 @@ function ok(name, cond, extra) {
   ok("讀到一段火車:種類、班次、時間、訂位代號、方向都留著", r.res.body.result.intent === "transport" && tr.kind === "火車" && tr.no === "高鐵 615" &&
     tr.depart === "2026-11-01T08:30" && tr.arrive === "2026-11-01T10:15" && tr.code === "07123456" && tr.dir === "去程", tr);
   ok("火車座位照票上寫的留著;不是這一團的人丟掉", JSON.stringify(tr.seats) === JSON.stringify([{ member: "m-aaa", seat: "6車 12A" }]), tr.seats);
+  ok("票上有、團裡還沒有的乘客:不記座位,只回個數", tr.others === 1, tr.others);
   ok("模型說 none,但班次 + 日期對得上已經有的那一段 → 自己認出來(不要多加一筆)", tr.match === "leg-1", tr.match);
   r = await call({ text: "x", context: CTX }, () => okJson(JSON.stringify({
     intent: "transport", kind: "飛機", no: "BR 198", depart: "2026-11-01 8點", match: "leg-不存在", dir: "unknown",

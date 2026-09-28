@@ -396,10 +396,14 @@ function memberOut(page) {
     role: sel(p["角色"]) || "成員",
     line: txt(p["人"]),
     invite: txt(p["邀請碼"]),
+    /* 什麼時候加入:用 Notion 自己的建立時間(「加入時間」那欄只有日期,同一天加入的人分不出先後) */
+    joinedAt: page.created_time || "",
+    /* 團主最後一次看過「有新成員加入」的通知是什麼時候(2026-09-29)。只有本人拿得到 */
+    seenAt: p["通知已讀"] && p["通知已讀"].date ? p["通知已讀"].date.start : "",
   };
 }
 /* 給瀏覽器看的樣子:沒有 LINE ID、沒有 Notion 的頁面編號、沒有別人的邀請碼。 */
-const memberPublic = m => ({ id: m.id, name: m.name, color: m.color, role: m.role });
+const memberPublic = m => ({ id: m.id, name: m.name, color: m.color, role: m.role, joinedAt: m.joinedAt || "" });
 
 async function findTrip(code) {
   const page = await notion("/databases/" + DB.trips + "/query", {
@@ -595,7 +599,7 @@ module.exports = async (req, res) => {
           members: c.members.map(memberPublic),
           /* role 是「現在算你是什麼」(測試環境切成成員的話是成員);realRole 是你在團裡真正的角色,
              畫面靠它決定要不要畫「切回團主」。dev 為真時才畫那顆切換鈕 —— 正式站不會有。 */
-          me: { ...memberPublic(c.mine), role: c.role, realRole: c.mine.role, invite: c.mine.invite },
+          me: { ...memberPublic(c.mine), role: c.role, realRole: c.mine.role, invite: c.mine.invite, seenAt: c.mine.seenAt || "" },
           dev: DEV,
           viewAs: c.asMember ? "member" : "",
         });
@@ -702,10 +706,12 @@ module.exports = async (req, res) => {
         props["顏色"] = { rich_text: richText(body.color) };
       }
       if (body.invite === "renew") props["邀請碼"] = { rich_text: richText(randomCode(6)) };
+      /* 「有新成員加入」的通知看過了:時間由伺服器蓋,不收前端給的 */
+      if (body.seen === true) props["通知已讀"] = { date: { start: new Date().toISOString() } };
       if (!Object.keys(props).length) return res.status(400).json({ error: "沒有要改的東西" });
       await notion("/pages/" + c.mine.page, { method: "PATCH", body: JSON.stringify({ properties: props }) });
       const fresh = (await membersOf(c.code)).find(m => m.id === c.mine.id);
-      return res.status(200).json({ me: { ...memberPublic(fresh), invite: fresh.invite } });
+      return res.status(200).json({ me: { ...memberPublic(fresh), invite: fresh.invite, seenAt: fresh.seenAt || "" } });
     } catch (e) { return fail(e); }
   }
 

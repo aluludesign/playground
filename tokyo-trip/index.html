@@ -1170,6 +1170,39 @@
     .tl-foot{margin-block:4px 16px;}
     .kinds .rm-chip:has(> input:checked)::before{display:none;}
     .tl{display:block;}
+    /* 通知的小鈴鐺:長得跟漢堡選單那顆一樣,有新的就在右上角一個紅點 */
+    .bell{position:relative; align-items:center; padding:0;}
+    .bell .i{font-size:16px; color:var(--ink);}
+    .bell-dot{position:absolute; top:5px; right:6px; width:9px; height:9px; border-radius:50%;
+      background:var(--ds-sys-shared-color-error); box-shadow:0 0 0 2px var(--ds-sys-shared-color-surface);}
+    .bell-pop{min-width:240px; max-width:min(340px, calc(100vw - 32px));}
+    .bell-pop ul{list-style:none; margin:0; padding:0; display:grid; gap:10px;}
+    .bell-pop li{display:grid; gap:6px; font-size:14px; color:var(--ink);}
+    .bell-pop li small{color:var(--muted); font-size:12px;}
+    .bell-pop li .btn{justify-self:start;}
+    .bell-pop .empty{margin:0; font-size:14px; color:var(--muted);}
+    /* **多了鈴鐺之後手機的頂列要縮一點**(2026-09-29 量的):390 寬時團名只剩 51px,
+       「東京五人行」被擠成三行。間距 16→8、倒數的字小一號、團名一行放不下就「…」,
+       390 以上一般的團名放得下。 */
+    @media (max-width:480px){
+      .topbar{gap:8px;}
+      .topbar .hamb{margin-left:0;}
+      .topbar .brand{flex:1 1 auto; min-width:0;}
+      .topbar h1{font-size:18px; letter-spacing:.02em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+      .countdown b{font-size:15px;}
+      .countdown .cd-n{font-size:18px;}
+    }
+    /* 375(iPhone SE / mini)也要放得下「東京五人行」這種長度 */
+    @media (max-width:400px){
+      .topbar{gap:6px;}
+      .topbar .hamb{width:34px; height:34px; padding:0 8px;}
+      .topbar .bell{padding:0;}
+      .countdown b{font-size:13px;}
+      .countdown .cd-n{font-size:17px;}
+      /* 這個寬度以前團名就會斷成兩行(量過:沒有鈴鐺時 375、360 都是兩行)。照舊讓它斷兩行、字看得完整,
+         不要用「…」藏掉;真的長到兩行都放不下才「…」 */
+      .topbar h1{white-space:normal; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; line-height:1.25;}
+    }
     /* 座位那一區不是一個欄位,是一疊欄位。**不能用 .fld**:.fld 裡只要有 .rm-input,標題就會浮到框線上 ——
        在這裡浮上去的是整疊的標題,正好蓋在第一格上(2026-09-28 看到的)。 */
     .seatfld{display:flex; flex-direction:column; gap:8px; min-width:0;}
@@ -1350,6 +1383,7 @@
   <symbol id="i-thumbs-up" viewBox="0 0 512 512"><path d="M313.4 32.9c26 5.2 42.9 30.5 37.7 56.5l-2.3 11.4c-5.3 26.7-15.1 52.1-28.8 75.2l144 0c26.5 0 48 21.5 48 48c0 18.5-10.5 34.6-25.9 42.6C497 275.4 504 288.9 504 304c0 23.4-16.8 42.9-38.9 47.1c4.4 7.3 6.9 15.8 6.9 24.9c0 21.3-13.9 39.4-33.1 45.6c.7 3.3 1.1 6.8 1.1 10.4c0 26.5-21.5 48-48 48l-97.5 0c-19 0-37.5-5.6-53.3-16.1l-38.5-25.7C176 420.4 160 390.4 160 358.3l0-38.3 0-48 0-24.9c0-29.2 13.3-56.7 36-75l7.4-5.9c26.5-21.2 44.6-51 51.2-84.2l2.3-11.4c5.2-26 30.5-42.9 56.5-37.7zM32 192l64 0c17.7 0 32 14.3 32 32l0 224c0 17.7-14.3 32-32 32l-64 0c-17.7 0-32-14.3-32-32L0 224c0-17.7 14.3-32 32-32z"/></symbol>
   <symbol id="i-spinner" viewBox="0 0 512 512"><path d="M304 48a48 48 0 1 0 -96 0 48 48 0 1 0 96 0zm0 416a48 48 0 1 0 -96 0 48 48 0 1 0 96 0zM48 304a48 48 0 1 0 0-96 48 48 0 1 0 0 96zm464-48a48 48 0 1 0 -96 0 48 48 0 1 0 96 0zM142.9 437A48 48 0 1 0 75 369.1 48 48 0 1 0 142.9 437zm0-294.2A48 48 0 1 0 75 75a48 48 0 1 0 67.9 67.9zM369.1 437A48 48 0 1 0 437 369.1 48 48 0 1 0 369.1 437z"/></symbol>
   <symbol id="i-plane" viewBox="0 0 576 512"><path d="M482.3 192c34.2 0 93.7 29 93.7 64c0 36-59.5 64-93.7 64l-116.6 0L265.2 495.9c-5.7 10-16.3 16.1-27.8 16.1l-56.2 0c-10.6 0-18.3-10.2-15.4-20.4l49-171.6L112 320 68.8 377.6c-3 4-7.8 6.4-12.8 6.4l-42 0c-7.8 0-14-6.3-14-14c0-1.3 .2-2.6 .5-3.9L32 256 .5 145.9c-.4-1.3-.5-2.6-.5-3.9c0-7.8 6.3-14 14-14l42 0c5 0 9.8 2.4 12.8 6.4L112 192l102.9 0-49-171.6C162.9 10.2 170.6 0 181.2 0l56.2 0c11.5 0 22.1 6.2 27.8 16.1L365.7 192l116.6 0z"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 448 512"><path d="M224 0c-17.7 0-32 14.3-32 32V51.2C119 66 64 130.6 64 208v18.8c0 47-17.3 92.4-48.5 127.6l-7.4 8.3c-8.4 9.4-10.4 22.9-5.3 34.4S19.4 416 32 416H416c12.6 0 24-7.4 29.2-18.9s3.1-25-5.3-34.4l-7.4-8.3C401.3 319.2 384 273.9 384 226.8V208c0-77.4-55-142-128-156.8V32c0-17.7-14.3-32-32-32zm45.3 493.3c12-12 18.7-28.3 18.7-45.3H224 160c0 17 6.7 33.3 18.7 45.3s28.3 18.7 45.3 18.7s33.3-6.7 45.3-18.7z"/></symbol>
   <symbol id="i-train" viewBox="0 0 448 512"><path d="M96 0C43 0 0 43 0 96V352c0 48 35.2 87.7 81.1 94.9l-46 46C28.1 499.9 33.1 512 43 512H82.7c8.5 0 16.6-3.4 22.6-9.4L160 448H288l54.6 54.6c6 6 14.1 9.4 22.6 9.4H405c10 0 15-12.1 7.9-19.1l-46-46c46-7.1 81.1-46.9 81.1-94.9V96c0-53-43-96-96-96H96zM64 128c0-17.7 14.3-32 32-32h80c17.7 0 32 14.3 32 32v96c0 17.7-14.3 32-32 32H96c-17.7 0-32-14.3-32-32V128zM272 96h80c17.7 0 32 14.3 32 32v96c0 17.7-14.3 32-32 32H272c-17.7 0-32-14.3-32-32V128c0-17.7 14.3-32 32-32zM64 352a32 32 0 1 1 64 0 32 32 0 1 1 -64 0zm288-32a32 32 0 1 1 0 64 32 32 0 1 1 0-64z"/></symbol>
   <symbol id="i-bus" viewBox="0 0 576 512"><path d="M288 0C422.4 0 512 35.2 512 80V96l0 32c17.7 0 32 14.3 32 32v64c0 17.7-14.3 32-32 32l0 160c0 17.7-14.3 32-32 32v32c0 17.7-14.3 32-32 32H416c-17.7 0-32-14.3-32-32V448H192v32c0 17.7-14.3 32-32 32H128c-17.7 0-32-14.3-32-32l0-32c-17.7 0-32-14.3-32-32l0-160c-17.7 0-32-14.3-32-32V160c0-17.7 14.3-32 32-32h0V96h0V80C64 35.2 153.6 0 288 0zM128 160v96c0 17.7 14.3 32 32 32H272V128H160c-17.7 0-32 14.3-32 32zM304 288H416c17.7 0 32-14.3 32-32V160c0-17.7-14.3-32-32-32H304V288zM144 400a32 32 0 1 0 0-64 32 32 0 1 0 0 64zm288 0a32 32 0 1 0 0-64 32 32 0 1 0 0 64zM384 80c0-8.8-7.2-16-16-16H208c-8.8 0-16 7.2-16 16s7.2 16 16 16H368c8.8 0 16-7.2 16-16z"/></symbol>
   <symbol id="i-ship" viewBox="0 0 576 512"><path d="M192 32c0-17.7 14.3-32 32-32H352c17.7 0 32 14.3 32 32V64h48c26.5 0 48 21.5 48 48V240l44.4 14.8c23.1 7.7 29.5 37.5 11.5 53.9l-101 92.6c-16.2 9.4-34.7 15.1-50.9 15.1c-19.6 0-40.8-7.7-59.2-20.3c-22.1-15.5-51.6-15.5-73.7 0c-17.1 11.8-38 20.3-59.2 20.3c-16.2 0-34.7-5.7-50.9-15.1l-101-92.6c-18-16.5-11.6-46.2 11.5-53.9L96 240V112c0-26.5 21.5-48 48-48h48V32zM160 218.7l107.8-35.9c13.1-4.4 27.3-4.4 40.5 0L416 218.7V128H160v90.7zM306.5 421.9C329 437.4 356.5 448 384 448c26.9 0 55.4-10.8 77.4-26.1l0 0c11.9-8.5 28.1-7.8 39.2 1.7c14.4 11.9 32.5 21 50.6 25.2c17.2 4 27.9 21.2 23.9 38.4s-21.2 27.9-38.4 23.9c-24.5-5.7-44.9-16.5-58.2-25C449.5 501.7 417 512 384 512c-31.9 0-60.6-9.9-80.4-18.9c-5.8-2.7-11.1-5.3-15.6-7.7c-4.5 2.4-9.7 5.1-15.6 7.7c-19.8 9-48.5 18.9-80.4 18.9c-33 0-65.5-10.3-94.5-25.8c-13.4 8.4-33.7 19.3-58.2 25c-17.2 4-34.4-6.7-38.4-23.9s6.7-34.4 23.9-38.4c18.1-4.2 36.2-13.3 50.6-25.2c11.1-9.4 27.3-10.1 39.2-1.7l0 0C136.7 437.2 165.1 448 192 448c27.5 0 55-10.6 77.5-26.1c11.1-7.9 25.9-7.9 37 0z"/></symbol>
@@ -1384,10 +1418,14 @@
     <!-- 測試環境切成「成員身分」時一直掛著:忘了自己在用成員身分看,會以為權限壞了。按它就切回團主。
          **排在頂列裡、漢堡選單左邊,不浮在畫面上** —— 浮著的版本在某些寬度蓋住了漢堡(Lulu 回報);
          更早一版放在選單裡,選單收著它就跟著藏起來。手機上頂列擠滿了,改掛在分頁列正上方。 -->
+    <!-- 通知(2026-09-29,Lulu:小鈴鐺,在 AI 和漢堡選單中間)。現在只有團主有:有新成員加入 -->
+    <button type="button" class="hamb bell" id="bell-btn" aria-label="通知" aria-expanded="false" aria-controls="bell-pop" hidden>
+      <svg class="i" aria-hidden="true"><use href="#i-bell"></use></svg><span class="bell-dot" id="bell-dot" hidden></span></button>
     <button type="button" class="dev-badge" id="dev-badge" hidden>測試:成員 · 切回團主</button>
     <button type="button" class="hamb" id="menu-btn" aria-label="選單" aria-expanded="false"
       aria-controls="menu-pop"><span></span><span></span><span></span></button>
   </header>
+  <div class="menu-pop bell-pop" id="bell-pop" role="dialog" aria-label="通知" hidden><div id="bell-list"></div></div>
   <div class="menu-pop" id="menu-pop" hidden>
 
 
@@ -2070,7 +2108,7 @@
     can = { plan: owner || (!!myMember && !!c.plan), cost: owner || (!!myMember && !!c.cost), seat: owner || (!!myMember && !!c.seat) };
     setMembers(body.members.map(m => ({
       id: m.id, def: m.name || m.id, key: m.id, full: m.name || m.id,
-      color: m.color || "#7E8796", role: m.role || "成員",
+      color: m.color || "#7E8796", role: m.role || "成員", joinedAt: m.joinedAt || "",
     })));
     applyTrip();
   }
@@ -2612,9 +2650,75 @@
     render();
     renderEditAbility();
     renderCloudBar();
+    checkNewcomers();
     loadWeather();
     window.addEventListener("focus", schedulePull);
   }
+
+  /* ================= 通知:有新成員加入(2026-09-29,Lulu) =================
+     團主要知道有人加入了 —— 交通的座位是照成員列的,有人加入就多一格,但不說的話沒人會去填。
+     **右上角一個小鈴鐺**(AI 和漢堡選單中間),有新的就一個紅點;點開列出誰加入了:
+       - 這一團已經有交通:多一句「座位多了他的空格」和「去填座位」
+       - 還沒有交通:只說誰加入了
+     「看過了」記在伺服器(成員表的「通知已讀」),換手機不會再通知一次。
+     只給團主(測試環境「用成員身分看」時也不會有)。 */
+  let newcomers = [], newcomersSeen = false;
+  function checkNewcomers() {
+    newcomers = []; newcomersSeen = false;
+    const owner = online && !!myMember && myMember.role === "團主";
+    el("bell-btn").hidden = !owner;
+    if (owner) {
+      const since = myMember.seenAt || myMember.joinedAt || "";
+      newcomers = MEMBERS.filter(m => m.id !== myMember.id && m.joinedAt && m.joinedAt > since);
+    }
+    paintBell();
+  }
+  function paintBell() {
+    const on = newcomers.length > 0 && !newcomersSeen;
+    el("bell-dot").hidden = !on;
+    el("bell-btn").setAttribute("aria-label", on ? "通知(" + newcomers.length + " 則新的)" : "通知");
+  }
+  function renderBell() {
+    const legs = (state.flights || []).some(f => !KIND[kindOf(f)].noSeats);
+    el("bell-list").innerHTML = newcomers.length
+      ? "<ul>" + newcomers.map(m => "<li><span><b>" + esc(nameOf(m.id)) + "</b> 加入了這一團</span>" +
+          (legs ? "<small>交通的座位多了" + esc(nameOf(m.id)) + "的空格</small>" +
+            '<button type="button" class="btn btn-sm" data-bell-fly>去填座位</button>' : "") + "</li>").join("") + "</ul>"
+      : '<p class="empty">目前沒有新通知。</p>';
+  }
+  async function markNewcomersSeen() {
+    newcomersSeen = true;
+    paintBell();
+    try {
+      const r = await api("?resource=me&t=" + encodeURIComponent(TRIP), { method: "PATCH", body: JSON.stringify({ seen: true }) });
+      if (r && r.me) myMember = Object.assign({}, myMember, { seenAt: r.me.seenAt });
+    } catch (_) { /* 記不下來就下次再通知一次 —— 多講一次比漏講好 */ }
+  }
+  (function () {
+    const btn = el("bell-btn"), pop = el("bell-pop");
+    function open(on) {
+      pop.hidden = !on;
+      btn.setAttribute("aria-expanded", String(on));
+      if (!on) return;
+      renderBell();
+      /* 貼在頂列下面,靠右對齊這顆鈴鐺(跟漢堡選單同一個算法) */
+      const r = btn.getBoundingClientRect();
+      pop.style.top = Math.round(r.bottom + window.scrollY + 6) + "px";
+      pop.style.right = Math.max(16, Math.round(window.innerWidth - r.right)) + "px";
+      /* 打開 = 看到了:紅點收掉,清單這一次還留著 */
+      if (newcomers.length && !newcomersSeen) markNewcomersSeen();
+    }
+    btn.addEventListener("click", ev => { ev.stopPropagation(); open(pop.hidden); });
+    pop.addEventListener("click", ev => {
+      if (!ev.target.closest("[data-bell-fly]")) return;
+      open(false);
+      switchTab("fly");
+    });
+    document.addEventListener("click", ev => {
+      if (!pop.hidden && !ev.target.closest("#bell-pop") && !ev.target.closest("#bell-btn")) open(false);
+    });
+    document.addEventListener("keydown", ev => { if (ev.key === "Escape" && !pop.hidden) open(false); });
+  })();
 
   /* ================= LINE 登入 =================
 
@@ -2896,6 +3000,7 @@
     }
     const firstSeat = {};   /* 每個人第一班飛機的座位 —— 之後換了位子的標成琥珀色,免得照去程的記憶亂坐 */
     let html = "", day = null;
+
     fl.forEach(f => {
       const d = dayOf(f.depart);
       if (d !== day) { html += (day === null ? "" : "</div>") + '<div class="tl-group"><div class="tl-day">' + esc(dayLabel(d)) + "</div>"; day = d; }
@@ -5724,6 +5829,7 @@
     const which = total > 1 ? "AI 讀到 " + total + " 段,這是第 " + pos + " 段。" : "";
     el("fl-ai").textContent = which + (!total ? "AI 看得出是交通,但讀不到細節,請自己填。" :
       (f ? "這一段已經有了,AI 讀到的改進來了" : "AI 讀到的都填好了") + (n ? "(含 " + n + " 個座位)" : "") + ",看一下再存。") +
+      (r.others ? " 票上還有 " + r.others + " 位乘客還沒加入這一團,他們加入之後再來填。" : "") +
       (aiSay && pos <= 1 ? " " + aiSay : "");
     el("fl-ai").hidden = false;
     el("fl-skip").hidden = !(total > 1);
