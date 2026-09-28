@@ -1181,6 +1181,12 @@
     .bell-pop li small{color:var(--muted); font-size:12px;}
     .bell-pop li .btn{justify-self:start;}
     .bell-pop .empty{margin:0; font-size:14px; color:var(--muted);}
+    /* 對話框改過卻點了外面:晃一下,底下講一句要按哪裡 */
+    @keyframes ov-nudge{0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)}}
+    .nudge{animation:ov-nudge .28s ease-in-out;}
+    .ov-hint{position:fixed; left:50%; transform:translateX(-50%); bottom:calc(env(safe-area-inset-bottom, 0px) + 24px); z-index:100;
+      max-width:calc(100vw - 32px); padding:10px 14px; border-radius:10px; font-size:14px;
+      background:var(--ds-sys-shared-color-inverse-surface, #333); color:var(--ds-sys-shared-color-inverse-on-surface, #fff); box-shadow:var(--shadow);}
     /* **多了鈴鐺之後手機的頂列要縮一點**(2026-09-29 量的):390 寬時團名只剩 51px,
        「東京五人行」被擠成三行。間距 16→8、倒數的字小一號、團名一行放不下就「…」,
        390 以上一般的團名放得下。 */
@@ -3064,7 +3070,7 @@
     el("flight-overlay").hidden = false;
     if (kind === "租車") el("fl-airline").focus(); else el("fl-no").focus();
   }
-  function closeFlight() { el("flight-overlay").hidden = true; flightEditing = null; }
+  function closeFlight() { el("flight-overlay").hidden = true; flightEditing = null; delete el("flight-overlay").dataset.keep; }
   el("fl-kinds").addEventListener("change", () => applyKind(flKind()));
 
   /* 把某一段的座位寫回去。**空白代表「這個人這段沒有座位」**:原本有就刪掉 ——
@@ -3162,7 +3168,6 @@
   /* 取消 = 這一整列 AI 讀到的都不要了;跳過 = 只跳這一段 */
   el("fl-cancel").addEventListener("click", () => { aiQueue = []; closeFlight(); });
   el("fl-skip").addEventListener("click", () => { if (!openNextAI()) closeFlight(); });
-  el("flight-overlay").addEventListener("click", ev => { if (ev.target === el("flight-overlay")) { aiQueue = []; closeFlight(); } });
   el("panel-fly").addEventListener("click", ev => {
     const add = ev.target.closest("[data-flight-add]");
     const edit = ev.target.closest("[data-flight-edit]");
@@ -5181,9 +5186,8 @@
   }
   el("add-stop-btn").addEventListener("click", openStopAdd);
   el("sf-cancel").addEventListener("click", closeStopAdd);
-  /* **只有「取消」關得掉。**(Lulu 的決定,2026-09-28,跟 AI 那張同一個理由)
-     點背景和 Esc 都拿掉了 —— 表單打到一半、搜尋挑好了地點,手滑點到旁邊就全沒了。
-     Esc 的那一半在下面的 keydown:這張開著時 Esc 什麼都不做,也不穿過去關別的層。 */
+  /* 怎麼關:見「對話框怎麼關」那一段(2026-09-29 起全部一致 —— 改過才只有取消關得掉)。
+     以前這張是一律只有取消(2026-09-28),理由是填到一半手滑就全沒了;新規則照樣擋住那一種。 */
   el("stop-form").addEventListener("submit", ev => {
     ev.preventDefault();
     const title = el("sf-title").value.trim();
@@ -5758,6 +5762,7 @@
     if (!editable("plan") && !editable("seat")) {
       closeAI();
       openWishAdd();
+      el("wish-add-overlay").dataset.keep = "1";   /* AI 填的也算「改過」 */
       el("wf-title").value = r.title || "";
       el("wf-note").value = r.note || "";
       sayHere("wish-msg", r.message || "");
@@ -5833,6 +5838,7 @@
       (aiSay && pos <= 1 ? " " + aiSay : "");
     el("fl-ai").hidden = false;
     el("fl-skip").hidden = !(total > 1);
+    el("flight-overlay").dataset.keep = "1";   /* AI 填的也算「改過」:點外面不會把它丟掉 */
   }
 
 
@@ -5874,15 +5880,13 @@
   el("ai-btn").addEventListener("click", openAI);
   el("ai-cancel").addEventListener("click", closeAI);
   el("ai-cancel2").addEventListener("click", closeAI);
-  /* **這一個對話框只有「取消」關得掉。**(Lulu 的決定)
-     點背景和 Esc 都拿掉了 —— 別的對話框留著那兩條,這一個不留,因為它裡面
-     裝著**拿不回來的東西**:你上傳的那張照片,和 AI 花了幾秒讀出來的結果。
-     手滑點到旁邊就全沒了,而那不是一個「再按一次就好」的損失。
-     代價是多按一下取消。那一下是刻意的,而刻意正是這裡要的。 */
+  /* 怎麼關:見「對話框怎麼關」那一段(2026-09-29 起全部一致)。這一張裝著**拿不回來的東西** ——
+     你上傳的照片、AI 讀出來的結果 —— 所以選了照片就算改過(檔案欄選完會清空,光比欄位看不出來)。 */
   el("ai-pick").addEventListener("click", () => el("ai-file").click());
   el("ai-file").addEventListener("change", async ev => {
     const file = ev.target.files && ev.target.files[0];
     ev.target.value = "";
+    if (file) el("ai-overlay").dataset.picked = "1";
     if (!file) return;
     el("ai-img-name").textContent = "處理圖片中…";
     try { aiImage = await shrinkImage(file); el("ai-img-name").textContent = "已加入:" + file.name; }
@@ -6035,8 +6039,7 @@
     openWishAdd();
   });
   el("wf-cancel").addEventListener("click", closeWishAdd);
-  /* **只有「取消」關得掉。**(Lulu 的決定,2026-09-28)跟「加一筆行程」、AI 那兩張一樣:
-     點背景和 Esc 都不關。以前寫的是「跟改我的願望同一套手勢」—— 那張沒有改,只有新增這張改了。 */
+  /* 怎麼關:見「對話框怎麼關」那一段(2026-09-29 起全部一致 —— 改過才只有取消關得掉)。 */
   el("wish-form").addEventListener("submit", ev => {
     ev.preventDefault();
     const title = el("wf-title").value.trim();
@@ -6520,7 +6523,6 @@
   el("inv-copy-url").addEventListener("click", () => copyText(inviteUrl(), "網址"));
   el("inv-copy-code").addEventListener("click", () => copyText((myMember && myMember.invite) || "", "邀請碼"));
   el("inv-close").addEventListener("click", () => { el("invite-overlay").hidden = true; });
-  el("invite-overlay").addEventListener("click", ev => { if (ev.target === el("invite-overlay")) el("invite-overlay").hidden = true; });
   el("inv-renew").addEventListener("click", async () => {
     if (!confirm("換掉之後,舊的邀請碼就不能用了(已經加入的人不受影響)。確定嗎?")) return;
     try {
@@ -6556,7 +6558,6 @@
   }
   el("st-country").addEventListener("change", () => { el("st-rate-fld").hidden = el("st-country").value === "台灣"; });
   el("st-cancel").addEventListener("click", () => { el("settings-overlay").hidden = true; });
-  el("settings-overlay").addEventListener("click", ev => { if (ev.target === el("settings-overlay")) el("settings-overlay").hidden = true; });
   el("settings-form").addEventListener("submit", async ev => {
     ev.preventDefault();
     showSetErr("");
@@ -7014,17 +7015,69 @@
     window.addEventListener("blur", stop);
   })();
   el("map-sheet-x").addEventListener("click", closeMapSheet);
+
+  /* ================= 對話框怎麼關(2026-09-29,Lulu:全部一致) =================
+     **沒改過任何欄位**:點對話框外面、按 Esc 就關。
+     **改過任何欄位**:只有按取消、存起來這些按鈕才關 —— 點外面不會把填到一半的東西丟掉,
+     而是晃一下、講一句要按哪裡。AI 填進去的也算改過(那是還沒存的內容)。
+     「改過」是跟打開那一刻比:打開時把每一格的值記下來,關之前再比一次;
+     在搜尋結果裡挑了一個地點也算。
+     關的時候一律去按那張表自己的「取消」—— 各張表取消時要收拾的東西不一樣
+     (「改成幾點」取消要把行程放回原位、交通取消要丟掉 AI 還沒開的那幾段),這裡不重寫一份。
+     開團/登入那張卡(home-overlay)不在這裡:它是要走完的一步,不是可以關掉的對話框。 */
+  const DIALOG_CANCEL = {
+    "settings-overlay": ["st-cancel"], "invite-overlay": ["inv-close"], "flight-overlay": ["fl-cancel"],
+    "exp-edit-overlay": ["xe-cancel"], "edit-overlay": ["se-cancel"], "stop-add-overlay": ["sf-cancel"],
+    "ai-overlay": ["ai-cancel", "ai-cancel2"], "wish-add-overlay": ["wf-cancel"], "wish-edit-overlay": ["we-cancel"],
+    "time-overlay": ["tf-cancel"],
+  };
+  const fieldsOf = ov => [].map.call(ov.querySelectorAll("input,select,textarea"),
+    f => f.type === "checkbox" || f.type === "radio" ? (f.checked ? "1" : "0") : f.type === "file" ? String(f.files && f.files.length) : f.value).join("\u0001");
+  const snapOf = new Map();
+  Object.keys(DIALOG_CANCEL).forEach(id => {
+    const ov = el(id);
+    /* 打開的那一刻(hidden 被拿掉)記下每一格的值。打開的程式先把值填好才拿掉 hidden,
+       而這個回呼在那之後才跑,所以記到的是「打開時看到的樣子」 */
+    new MutationObserver(() => {
+      if (ov.hidden) { snapOf.delete(ov); delete ov.dataset.picked; return; }
+      if (!snapOf.has(ov)) snapOf.set(ov, fieldsOf(ov));
+    }).observe(ov, { attributes: true, attributeFilter: ["hidden"] });
+    /* 在搜尋結果裡挑了一個地點:欄位的字可能沒變,但存下去的地點變了 */
+    ov.addEventListener("click", ev => { if (ev.target.closest && ev.target.closest("[data-hit]")) ov.dataset.picked = "1"; }, true);
+    ov.addEventListener("click", ev => { if (ev.target === ov) tryCloseDialog(ov); });
+  });
+  const dialogDirty = ov => !!ov.dataset.keep || !!ov.dataset.picked || (snapOf.has(ov) && snapOf.get(ov) !== fieldsOf(ov));
+  function tryCloseDialog(ov) {
+    if (dialogDirty(ov)) {
+      const card = ov.querySelector("form:not([hidden]), .signin:not([hidden])") || ov.firstElementChild;
+      card.classList.remove("nudge"); void card.offsetWidth; card.classList.add("nudge");
+      let hint = ov.querySelector(".ov-hint");
+      if (!hint) { hint = document.createElement("div"); hint.className = "ov-hint"; hint.setAttribute("role", "status"); ov.appendChild(hint); }
+      hint.textContent = "有改過的內容 —— 按「取消」或「存起來」才會關";
+      hint.hidden = false;
+      clearTimeout(hint._t); hint._t = setTimeout(() => { hint.hidden = true; }, 2400);
+      return false;
+    }
+    const btn = DIALOG_CANCEL[ov.id].map(el).find(b => b && !b.closest("[hidden]"));
+    if (btn) btn.click(); else ov.hidden = true;
+    return true;
+  }
+  /* Esc = 點外面,只作用在最上面那一張。對話框開著的時候 Esc 不穿過去(不然會關掉它背後的地圖) */
+  document.addEventListener("keydown", ev => {
+    if (ev.key !== "Escape") return;
+    const open = Object.keys(DIALOG_CANCEL).map(el).filter(o => o && !o.hidden);
+    if (!open.length) return;
+    ev.stopImmediatePropagation();
+    const top = open.sort((a, b) => (+getComputedStyle(b).zIndex || 0) - (+getComputedStyle(a).zIndex || 0))[0];
+    tryCloseDialog(top);
+  }, true);
   /* 沒有背景那層可以點了(背景要留給使用者操作),所以收起來只剩 ✕ 和 Esc */
   document.addEventListener("keydown", ev => {
     if (ev.key !== "Escape") return;
     /* **由上往下關,一次只關一層。** 地圖(70)蓋在對話框(60)上面,對話框蓋在
        許願 sheet(55)上面 —— Esc 關掉的應該是**他現在看得到的最上面那一層**,
        不是一次全收。三層一起關的話,他按一下 Esc 就回到空無一物的行程頁。 */
-    /* **AI 那一層不在這個名單裡**,它只有「取消」關得掉 —— 見 openAI 旁邊那段。
-       而且它也不讓 Esc 穿過去關掉底下那些:它開著的時候,Esc 什麼都不做。
-       (不擋的話,按 Esc 會關掉它背後的地圖,而使用者以為自己關掉的是對話框。) */
-    /* 「加一筆行程」「許願」兩張也一樣(2026-09-28):只有取消關得掉,Esc 也不穿過去。 */
-    if (!el("ai-overlay").hidden || !el("wish-add-overlay").hidden || !el("stop-add-overlay").hidden) return;
+    /* 對話框開著的時候,Esc 由下面「對話框怎麼關」那一段處理,不會穿到這裡來 */
     if (!el("map-sheet").hidden) { closeMapSheet(); return; }
     const wb = el("wishbox");
     if (wb && wb.open && !wideCols()) { wb.open = false; return; }

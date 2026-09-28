@@ -1039,13 +1039,16 @@ function pinsOf(k) { return pins()[k]; }
        在哪一張卡上都該成立。
        **Esc 那一條還要問第二件事**:它不可以穿過去關掉底下的地圖 ——
        不然使用者以為自己關掉的是對話框,實際上關掉的是背後那一層。 */
+    /* **2026-09-29 起規則改了**(全部對話框一致):沒改過點外面就關、改過才只有取消關得掉。
+       所以這裡先打一段字(= 改過),再問同樣三件事。沒改過的那一半,probes/dialogs.js 在問。 */
+    q("#ai-text").value = "探針打的字"; q("#ai-text").dispatchEvent(new w.Event("input", { bubbles: true }));
     q("#ai-overlay").dispatchEvent(new w.MouseEvent("click", { bubbles: true }));
     await sleep(120);
-    ok("點對話框外面的背景 → 不關", q("#ai-overlay").hidden === false, q("#ai-overlay").hidden);
+    ok("改過之後點對話框外面的背景 → 不關", q("#ai-overlay").hidden === false, q("#ai-overlay").hidden);
     var mapWasOpen = !q("#map-sheet").hidden;
     d.dispatchEvent(new w.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
     await sleep(120);
-    ok("按 Esc → 不關", q("#ai-overlay").hidden === false, q("#ai-overlay").hidden);
+    ok("改過之後按 Esc → 不關", q("#ai-overlay").hidden === false, q("#ai-overlay").hidden);
     ok("**而且 Esc 沒有穿過去關掉底下那一層**",
       (!q("#map-sheet").hidden) === mapWasOpen,
       { 之前: mapWasOpen, 之後: !q("#map-sheet").hidden });
