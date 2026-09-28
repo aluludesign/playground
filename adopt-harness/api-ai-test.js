@@ -30,6 +30,8 @@ function ticket() {
   process.env.LINE_CHANNEL_SECRET = "test-channel-secret";
   return "trip_u=" + encodeURIComponent(SESS.sign({ sub: "U1", name: "誰", pic: "", exp: Date.now() + 864e5 }, SESS.hmacKey()));
 }
+/* 預設扮正式站:使用者看到的只有中文。預覽會多接 Google 的原話,單獨測 */
+process.env.VERCEL_ENV = "production";
 async function call(body, stub, anon) {
   process.env.GEMINI_KEY = "test-key";
   delete require.cache[require.resolve(path)];
@@ -107,6 +109,10 @@ function ok(name, cond, extra) {
     !/high demand|model/i.test((r.res.body || {}).error || ""), r.res.body);
   ok("**而且沒有兩層「失敗」**(前端還會再包一層,這裡不能先包)",
     !/沒回應成功|沒成功:/.test((r.res.body || {}).error || ""), r.res.body);
+  process.env.VERCEL_ENV = "preview";
+  r = await call({ text: "x" }, () => ({ ok: false, status: 500, json: async () => ({ error: { message: "Internal error encountered." } }) }));
+  process.env.VERCEL_ENV = "production";
+  ok("預覽環境才把 Google 的原話接在後面(除錯用)", /測試環境才看得到:500 Internal error/.test((r.res.body || {}).error || ""), r.res.body);
 
   /* ---- 額度用完 ---- */
   r = await call({ text: "想去築地市場" }, () => ({ ok: false, status: 429,
@@ -136,8 +142,8 @@ function ok(name, cond, extra) {
     /台南吃吃吃/.test(q1) && /第 2 天 = 2026-11-02/.test(q1) && /m-aaa\(小陳\)/.test(q1) && /leg-1/.test(q1) &&
     !/hsieh_chinhui|MM626|2026-10-03/.test(q1), q1.slice(0, 400));
   ok("第幾天換算成這一團的日期", r.res.body.result.day === "2026-11-02" && r.res.body.result.time === "19:00", r.res.body.result);
-  ok("座位的 member 只能是這一團的成員", JSON.stringify(sent(r.seen).generationConfig.responseSchema.properties.seats.items.properties.member.enum) ===
-    JSON.stringify(["m-aaa", "m-bbb", "unknown"]), sent(r.seen).generationConfig.responseSchema.properties.seats.items.properties.member.enum);
+  ok("成員代號跟著這一團走(寫在問句裡,不做成選項清單)", /旅客:m-aaa\(小陳\)、m-bbb\(阿美\)/.test(q1) &&
+    !sent(r.seen).generationConfig.responseSchema.properties.seats.items.properties.member.enum, q1.slice(0, 200));
 
   /* ---- 交通 ---- */
   r = await call({ text: "這張車票", context: CTX }, () => okJson(JSON.stringify({

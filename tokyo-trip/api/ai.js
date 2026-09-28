@@ -76,12 +76,12 @@ function schema(ctx) {
       to:      { type: "STRING", description: "transport:到哪裡(寫法同 from)" },
       code:    { type: "STRING", description: "transport:訂位代號、訂單編號;沒有就空字串" },
       dir:     { type: "STRING", enum: DIRS.concat(["unknown"]), description: "transport:去程=從家出發往目的地的第一段,回程=回家的那一段,其他=路上的一段;不確定就 unknown" },
-      /* 選項清單裡不放空字串(Gemini 的 enum 不保證收),「沒有」一律用明確的代號,clean() 再換回空的 */
-      match:   { type: "STRING", enum: ctx.legs.map(l => l.id).concat(["none"]),
-                 description: "transport:如果這一段已經在「已經有的交通」裡(同一班、同一天),填它的 id;否則 none" },
+      /* **代號不做成選項清單**(成員、已經有的交通都是):2026-09-28 在預覽上三個模型連續回 5xx,
+         懷疑是一長串 UUID 當 enum 讓 Gemini 撐不住。改成一般字串,clean() 只收名單上有的。 */
+      match:   { type: "STRING", description: "transport:如果這一段已經在「已經有的交通」裡(同一班、同一天),填它的 id;否則 none" },
       seats:   { type: "ARRAY", description: "transport:每個人的座位(看得到才填)",
                  items: { type: "OBJECT", properties: {
-                   member: { type: "STRING", enum: ctx.members.map(m => m.id).concat(["unknown"]) },
+                   member: { type: "STRING", description: "旅客代號(照「旅客」那一行);對不上就 unknown" },
                    seat:   { type: "STRING", description: "座位,照票上寫的,例如 27A、7車 12A" },
                  }, required: ["member", "seat"] } },
       message: { type: "STRING", description: "給使用者的一句話:判斷的理由,或還缺什麼資訊。繁體中文,40 字以內" },
@@ -250,9 +250,13 @@ module.exports = async (req, res) => {
      以前這裡會把 Google 的英文原話接在「AI 沒回應成功:」後面,前端再加一個
      「沒成功:」—— 使用者看到的是兩層「失敗」加一句他看不懂的英文,
      而那句英文講的其實是「過幾分鐘再試」。 */
-  const msg = quota ? "今天的免費 AI 額度用完了,明天再試,或先手動加"
+  /* 預覽(不是正式站)把 Google 回的原話接在後面 —— 在預覽上除錯看不到 Vercel 的紀錄,
+     只看得到這一句。正式站照舊只講中文。 */
+  const why = process.env.VERCEL_ENV !== "production" && last && last.message && !last.soft
+    ? "(測試環境才看得到:" + String(last.status || "") + " " + String(last.message).slice(0, 160) + ")" : "";
+  const msg = (quota ? "今天的免費 AI 額度用完了,明天再試,或先手動加"
     : busy ? "AI 現在太忙(Google 那邊),過幾分鐘再試一次"
     : last && last.soft ? last.message
-    : "AI 這次沒成功,再試一次";
+    : "AI 這次沒成功,再試一次") + why;
   return res.status(quota ? 429 : 502).json({ error: msg });
 };
