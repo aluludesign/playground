@@ -32,6 +32,9 @@ const MAX_B64 = 3_000_000;   /* 前端送來的是縮過的 JPEG,正常 1MB 以�
 const CALL_MS = 10_000;
 const TOTAL_MS = 22_000;
 const MAX_TEXT = 1000;
+/* Google 說太忙的時候,等這麼久再問同一個模型一次(再加一點隨機,免得大家同一刻一起重試) */
+const BUSY_WAIT_MS = 1500;
+const nap = ms => new Promise(r => setTimeout(r, ms));
 
 /* **這一團的事實由前端帶來**(日期、成員、已經有的交通)。以前這裡寫死東京五人行的
    六天、五個人、兩班樂桃 —— 第 2 期一團一個網址之後,別團用 AI 時「第 3 天」和座位上的人
@@ -252,20 +255,30 @@ module.exports = async (req, res) => {
 
   let last;
   const until = Date.now() + TOTAL_MS;
-  for (const model of MODELS) {
-    const msLeft = until - Date.now();
-    if (msLeft < 1500) break;            /* 剩下的時間不夠再問一次,就別問了 */
-    try {
-      return res.status(200).json({ result: clean(await ask(model, parts, msLeft, SCHEMA), ctx), model });
-    } catch (e) {
-      last = e;
-      /* **「太忙」也要換一個再試。** Google 回 503「This model is currently
-         experiencing high demand」的時候,換一個模型通常就過了 —— 而原本只有
-         額度用完(429)和模型不存在(404)會換,忙碌直接放棄,
-         使用者拿到的是一句英文,而他什麼都沒做錯。 */
-      if (e.retry || e.status === 429 || e.status === 404 || e.status >= 500) continue;
-      break;
+  /* **Google 說「太忙」(5xx)時,先等一下再問同一個模型一次**,再換下一個(Lulu,2026-09-29:
+     正式站一直「AI 太忙」)。Google 自己建議的就是退一下再試;以前是馬上換,
+     三個模型在同一秒全部問完,尖峰時三個一起被拒。等的時間夠不夠,看總時限剩多少。 */
+  const codes = [];
+  models: for (const model of MODELS) {
+    for (let n = 0; n < 2; n++) {
+      if (until - Date.now() < 1500) break models;   /* 剩下的時間不夠再問一次,就別問了 */
+      try {
+        return res.status(200).json({ result: clean(await ask(model, parts, until - Date.now(), SCHEMA), ctx), model });
+      } catch (e) {
+        last = e;
+        if (e.status) codes.push(e.status);
+        if (n === 0 && e.status >= 500 && until - Date.now() > BUSY_WAIT_MS + 4000) {
+          await nap(BUSY_WAIT_MS + Math.floor(Math.random() * 500));
+          continue;
+        }
+        break;
+      }
     }
+    /* **「太忙」也要換一個再試。** Google 回 503「This model is currently
+       experiencing high demand」的時候,換一個模型通常就過了 —— 而原本只有
+       額度用完(429)和模型不存在(404)會換,忙碌直接放棄,
+       使用者拿到的是一句英文,而他什麼都沒做錯。 */
+    if (!(last.retry || last.status === 429 || last.status === 404 || last.status >= 500)) break;
   }
   const quota = last && last.status === 429;
   const busy = last && last.status >= 500;
@@ -277,8 +290,10 @@ module.exports = async (req, res) => {
      只看得到這一句。正式站照舊只講中文。 */
   const why = process.env.VERCEL_ENV !== "production" && last && last.message && !last.soft
     ? "(測試環境才看得到:" + String(last.status || "") + " " + String(last.message).slice(0, 160) + ")" : "";
-  const msg = (quota ? "今天的免費 AI 額度用完了,明天再試,或先手動加"
-    : busy ? "AI 現在太忙(Google 那邊),過幾分鐘再試一次"
+  /* 失敗的時候附上 Google 回的代碼(只有數字,不是英文原話):之後再有人回報,看得出是哪一種 */
+  const tag = codes.length ? "(Google " + Array.from(new Set(codes)).join("/") + ")" : "";
+  const msg = (quota ? "今天的免費 AI 額度用完了,明天再試,或先手動加" + tag
+    : busy ? "AI 現在太忙(Google 那邊),過幾分鐘再試一次" + tag
     : last && last.soft ? last.message
     : "AI 這次沒成功,再試一次") + why;
   return res.status(quota ? 429 : 502).json({ error: msg });

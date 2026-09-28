@@ -114,6 +114,19 @@ function ok(name, cond, extra) {
   process.env.VERCEL_ENV = "production";
   ok("預覽環境才把 Google 的原話接在後面(除錯用)", /測試環境才看得到:500 Internal error/.test((r.res.body || {}).error || ""), r.res.body);
 
+  /* ---- 2026-09-29:忙就先等一下再問同一個模型,再換下一個 ---- */
+  const BUSY = { ok: false, status: 503, json: async () => ({ error: { message: "This model is currently experiencing high demand." } }) };
+  let t1 = Date.now();
+  r = await call({ text: "x" }, n => (n === 1 ? BUSY : okJson(GOOD)));
+  ok("第一次忙 → 等一下,**同一個模型**再問一次就成功(不必換模型)",
+    r.res.code === 200 && r.seen.length === 2 && r.seen[0].url === r.seen[1].url && Date.now() - t1 >= 1400,
+    { code: r.res.code, 次數: r.seen.length, 同一個: r.seen[0] && r.seen[1] && r.seen[0].url === r.seen[1].url, 等了: Date.now() - t1 });
+  t1 = Date.now();
+  r = await call({ text: "x" }, () => BUSY);
+  const took2 = Date.now() - t1;
+  ok("全部都忙:每個模型各問兩次,而且總時間在函式的 30 秒上限之內", r.seen.length === 6 && took2 < 25000, { 次數: r.seen.length, 花了: took2 });
+  ok("失敗的訊息附上 Google 的代碼(數字,不是英文原話)", /\(Google 503\)/.test(r.res.body.error) && !/high demand/.test(r.res.body.error), r.res.body.error);
+
   /* ---- 額度用完 ---- */
   r = await call({ text: "想去築地市場" }, () => ({ ok: false, status: 429,
     json: async () => ({ error: { message: "quota" } }) }));
