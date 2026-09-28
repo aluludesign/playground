@@ -241,13 +241,22 @@ function seatIn(b) {
    時間存「當地時間、不帶時區」的字串(2026-10-03T10:50):畫面上要的就是登機證上那個數字,
    換算成某個時區反而會在跨日的深夜班機上錯一天。 */
 const DIRS = ["去程", "回程", "其他"];
+/* **交通不是只有飛機**(Lulu,2026-09-28)。同一張表、同一套欄位,多一欄「種類」:
+   航班號 = 班次/車次、航空公司 = 哪一家、起飛/抵達 = 出發/抵達(租車是取車/還車)、
+   起飛機場/抵達機場 = 從哪裡/到哪裡。舊的列沒有種類,一律當飛機 —— 不用重填。 */
+const KINDS = ["飛機", "火車", "巴士", "船", "租車"];
+const kindOf = v => (KINDS.indexOf(v) >= 0 ? v : "飛機");
+/* 飛機的航班號照舊收成 MM626;其他種類的班次是人話(のぞみ 21號),只去頭尾空白 */
+const legNo = (v, kind) => (kind === "飛機" ? String(v || "").toUpperCase().replace(/\s+/g, "") : String(v || "").trim());
 const localTime = v => (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(String(v || "")) ? v : null);
 function flightOut(page) {
   const p = page.properties;
   const t = x => (x && x.date && x.date.start ? String(x.date.start).slice(0, 16) : null);
+  const kind = kindOf(p["種類"] ? sel(p["種類"]) : "");
   return {
     id: page.id,
-    no: ttl(p["航班號"]).toUpperCase().replace(/\s+/g, ""),
+    kind,
+    no: legNo(ttl(p["航班號"]), kind),
     dir: sel(p["方向"]) || "其他",
     airline: txt(p["航空公司"]),
     depart: t(p["起飛"]),
@@ -255,11 +264,17 @@ function flightOut(page) {
     arrive: t(p["抵達"]),
     to: txt(p["抵達機場"]),
     note: txt(p["備註"]),
+    code: p["訂位代號"] ? txt(p["訂位代號"]) : "",
+    drivers: p["駕駛"] ? ids(txt(p["駕駛"]).split(",")) : [],
   };
 }
 function flightIn(b) {
   const props = {};
-  if (b.no !== undefined) props["航班號"] = { title: richText(String(b.no || "").toUpperCase().replace(/\s+/g, "")) };
+  const kind = kindOf(b.kind);
+  if (b.kind !== undefined) props["種類"] = { select: { name: kind } };
+  if (b.no !== undefined) props["航班號"] = { title: richText(legNo(b.no, kind)) };
+  if (b.code !== undefined) props["訂位代號"] = { rich_text: richText(b.code) };
+  if (b.drivers !== undefined) props["駕駛"] = { rich_text: richText(ids(b.drivers).join(",")) };
   if (b.dir !== undefined) props["方向"] = { select: { name: DIRS.indexOf(b.dir) >= 0 ? b.dir : "其他" } };
   if (b.airline !== undefined) props["航空公司"] = { rich_text: richText(b.airline) };
   if (b.from !== undefined) props["起飛機場"] = { rich_text: richText(b.from) };

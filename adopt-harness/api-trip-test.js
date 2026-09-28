@@ -297,6 +297,18 @@ const memberRow = (code, sub) => rowsIn(DB.members).find(p => plain(p.properties
   ok("團主打開機位開關之後,成員加得了航班", r.code === 200, r.body);
   r = await call(LINE_C, "GET", { resource: "flights", t: T2 });
   ok("別團讀不到這一團的航班", r.code === 200 && r.body.rows.length === 0, r.body);
+  /* 交通不是只有飛機(2026-09-28):同一張表多一欄種類。舊的列沒有種類 = 飛機 */
+  ok("沒寫種類的舊航班讀出來是飛機", (await call(LINE_A, "GET", { resource: "flights", t: T1 })).body.rows.every(x => x.kind === "飛機"));
+  r = await call(LINE_A, "POST", { resource: "flights", t: T1 },
+    { kind: "火車", no: " のぞみ 21號 ", airline: "JR 東海", depart: "2026-10-05T09:00", from: "東京", to: "京都", code: "E12345" });
+  ok("火車:車次是人話,只去頭尾空白、不轉大寫;訂位代號存得下",
+    r.code === 200 && r.body.row.kind === "火車" && r.body.row.no === "のぞみ 21號" && r.body.row.code === "E12345", r.body);
+  r = await call(LINE_A, "POST", { resource: "flights", t: T1 },
+    { kind: "租車", no: "", airline: "TOYOTA 租車", depart: "2026-10-06T09:00", drivers: [B_ID, D_ID, B_ID] });
+  ok("租車:駕駛存成去重的成員代號", r.code === 200 && r.body.row.kind === "租車" &&
+    JSON.stringify(r.body.row.drivers) === JSON.stringify([B_ID, D_ID]), r.body);
+  r = await call(LINE_A, "POST", { resource: "flights", t: T1 }, { kind: "火箭", no: "x1", depart: "2026-10-06T09:00" });
+  ok("不認得的種類當飛機", r.code === 200 && r.body.row.kind === "飛機" && r.body.row.no === "X1", r.body);
 
   /* ================= 許願 ================= */
   await call(LINE_A, "PATCH", { resource: "team", t: T1 }, { can: { plan: false } });

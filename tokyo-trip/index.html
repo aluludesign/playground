@@ -1143,6 +1143,38 @@
     .board .pen{margin-left:6px; vertical-align:middle;}
     .board-add{justify-self:start;}
     .board-empty .seats{color:var(--board-ink);}
+    /* ---- 交通(2026-09-28 起不只飛機):照天分組,飛機是深色的登機證卡,其他是淺色卡 ---- */
+    .tl-group{margin-block:16px;}
+    .tl-day{font-family:var(--font-mono); font-size:12px; font-weight:600; letter-spacing:.08em; color:var(--muted); margin:0 2px 8px;}
+    .tl-group .board{margin-block:0 10px;}
+    .leg-tag .i{font-size:11px; vertical-align:-1px;}
+    .leg-co{font-size:11px; color:var(--board-muted);}
+    .tleg{display:grid; gap:10px; padding:14px 16px; margin-bottom:10px; border:1px solid var(--line); border-radius:10px; background:var(--surface); box-shadow:var(--shadow);}
+    .tl-hd{display:flex; align-items:center; gap:10px;}
+    .tl-kind{display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:600; color:var(--ink);}
+    .tl-kind .i{font-size:15px; color:var(--ds-sys-shared-color-primary);}
+    .tl-no{flex:1; min-width:0; font-size:13px; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+    .tleg .pen{margin-left:auto;}
+    .tl-route{display:grid; grid-template-columns:1fr auto 1fr; align-items:end; gap:10px;}
+    .tl-pt{display:flex; flex-direction:column; gap:1px; min-width:0;}
+    .tl-pt small{font-size:11px; color:var(--muted);}
+    .tl-pt b{font-family:var(--font-mono); font-size:20px; font-weight:600; color:var(--ink); line-height:1.15;}
+    .tl-pt span{font-size:13px; color:var(--ink); overflow-wrap:anywhere;}
+    .tl-arrow{color:var(--muted); padding-bottom:22px;}
+    .tl-who{display:flex; flex-wrap:wrap; align-items:center; gap:6px;}
+    .tl-who small{font-size:11px; color:var(--muted); margin-right:2px;}
+    .tl-seat{display:inline-flex; align-items:baseline; gap:4px; padding:2px 8px; border-radius:6px; font-size:12px; color:var(--ink);
+      border:1px solid color-mix(in srgb, var(--sc, var(--line)) 55%, transparent); background:color-mix(in srgb, var(--sc, var(--line)) 10%, transparent);}
+    .tl-seat b{font-family:var(--font-mono); font-weight:600;}
+    .tl-bits{font-size:12px; color:var(--muted);}
+    .tl-empty p{margin:0; color:var(--ink);}
+    .tl-add{justify-self:start;}
+    .tl-foot{margin-block:4px 16px;}
+    .kinds .rm-chip:has(> input:checked)::before{display:none;}
+    .tl{display:block;}
+    /* 座位那一區不是一個欄位,是一疊欄位。**不能用 .fld**:.fld 裡只要有 .rm-input,標題就會浮到框線上 ——
+       在這裡浮上去的是整疊的標題,正好蓋在第一格上(2026-09-28 看到的)。 */
+    .seatfld{display:flex; flex-direction:column; gap:8px; min-width:0;}
     /* 花費那張表欄位多,要寬一點,而且手機上高度會爆,所以讓它自己捲 */
     .signin.wide{max-width:440px; max-height:calc(100vh - 40px); overflow-y:auto; gap:12px;}
 
@@ -1320,6 +1352,10 @@
   <symbol id="i-thumbs-up" viewBox="0 0 512 512"><path d="M313.4 32.9c26 5.2 42.9 30.5 37.7 56.5l-2.3 11.4c-5.3 26.7-15.1 52.1-28.8 75.2l144 0c26.5 0 48 21.5 48 48c0 18.5-10.5 34.6-25.9 42.6C497 275.4 504 288.9 504 304c0 23.4-16.8 42.9-38.9 47.1c4.4 7.3 6.9 15.8 6.9 24.9c0 21.3-13.9 39.4-33.1 45.6c.7 3.3 1.1 6.8 1.1 10.4c0 26.5-21.5 48-48 48l-97.5 0c-19 0-37.5-5.6-53.3-16.1l-38.5-25.7C176 420.4 160 390.4 160 358.3l0-38.3 0-48 0-24.9c0-29.2 13.3-56.7 36-75l7.4-5.9c26.5-21.2 44.6-51 51.2-84.2l2.3-11.4c5.2-26 30.5-42.9 56.5-37.7zM32 192l64 0c17.7 0 32 14.3 32 32l0 224c0 17.7-14.3 32-32 32l-64 0c-17.7 0-32-14.3-32-32L0 224c0-17.7 14.3-32 32-32z"/></symbol>
   <symbol id="i-spinner" viewBox="0 0 512 512"><path d="M304 48a48 48 0 1 0 -96 0 48 48 0 1 0 96 0zm0 416a48 48 0 1 0 -96 0 48 48 0 1 0 96 0zM48 304a48 48 0 1 0 0-96 48 48 0 1 0 0 96zm464-48a48 48 0 1 0 -96 0 48 48 0 1 0 96 0zM142.9 437A48 48 0 1 0 75 369.1 48 48 0 1 0 142.9 437zm0-294.2A48 48 0 1 0 75 75a48 48 0 1 0 67.9 67.9zM369.1 437A48 48 0 1 0 437 369.1 48 48 0 1 0 369.1 437z"/></symbol>
   <symbol id="i-plane" viewBox="0 0 576 512"><path d="M482.3 192c34.2 0 93.7 29 93.7 64c0 36-59.5 64-93.7 64l-116.6 0L265.2 495.9c-5.7 10-16.3 16.1-27.8 16.1l-56.2 0c-10.6 0-18.3-10.2-15.4-20.4l49-171.6L112 320 68.8 377.6c-3 4-7.8 6.4-12.8 6.4l-42 0c-7.8 0-14-6.3-14-14c0-1.3 .2-2.6 .5-3.9L32 256 .5 145.9c-.4-1.3-.5-2.6-.5-3.9c0-7.8 6.3-14 14-14l42 0c5 0 9.8 2.4 12.8 6.4L112 192l102.9 0-49-171.6C162.9 10.2 170.6 0 181.2 0l56.2 0c11.5 0 22.1 6.2 27.8 16.1L365.7 192l116.6 0z"/></symbol>
+  <symbol id="i-train" viewBox="0 0 448 512"><path d="M96 0C43 0 0 43 0 96V352c0 48 35.2 87.7 81.1 94.9l-46 46C28.1 499.9 33.1 512 43 512H82.7c8.5 0 16.6-3.4 22.6-9.4L160 448H288l54.6 54.6c6 6 14.1 9.4 22.6 9.4H405c10 0 15-12.1 7.9-19.1l-46-46c46-7.1 81.1-46.9 81.1-94.9V96c0-53-43-96-96-96H96zM64 128c0-17.7 14.3-32 32-32h80c17.7 0 32 14.3 32 32v96c0 17.7-14.3 32-32 32H96c-17.7 0-32-14.3-32-32V128zM272 96h80c17.7 0 32 14.3 32 32v96c0 17.7-14.3 32-32 32H272c-17.7 0-32-14.3-32-32V128c0-17.7 14.3-32 32-32zM64 352a32 32 0 1 1 64 0 32 32 0 1 1 -64 0zm288-32a32 32 0 1 1 0 64 32 32 0 1 1 0-64z"/></symbol>
+  <symbol id="i-bus" viewBox="0 0 576 512"><path d="M288 0C422.4 0 512 35.2 512 80V96l0 32c17.7 0 32 14.3 32 32v64c0 17.7-14.3 32-32 32l0 160c0 17.7-14.3 32-32 32v32c0 17.7-14.3 32-32 32H416c-17.7 0-32-14.3-32-32V448H192v32c0 17.7-14.3 32-32 32H128c-17.7 0-32-14.3-32-32l0-32c-17.7 0-32-14.3-32-32l0-160c-17.7 0-32-14.3-32-32V160c0-17.7 14.3-32 32-32h0V96h0V80C64 35.2 153.6 0 288 0zM128 160v96c0 17.7 14.3 32 32 32H272V128H160c-17.7 0-32 14.3-32 32zM304 288H416c17.7 0 32-14.3 32-32V160c0-17.7-14.3-32-32-32H304V288zM144 400a32 32 0 1 0 0-64 32 32 0 1 0 0 64zm288 0a32 32 0 1 0 0-64 32 32 0 1 0 0 64zM384 80c0-8.8-7.2-16-16-16H208c-8.8 0-16 7.2-16 16s7.2 16 16 16H368c8.8 0 16-7.2 16-16z"/></symbol>
+  <symbol id="i-ship" viewBox="0 0 576 512"><path d="M192 32c0-17.7 14.3-32 32-32H352c17.7 0 32 14.3 32 32V64h48c26.5 0 48 21.5 48 48V240l44.4 14.8c23.1 7.7 29.5 37.5 11.5 53.9l-101 92.6c-16.2 9.4-34.7 15.1-50.9 15.1c-19.6 0-40.8-7.7-59.2-20.3c-22.1-15.5-51.6-15.5-73.7 0c-17.1 11.8-38 20.3-59.2 20.3c-16.2 0-34.7-5.7-50.9-15.1l-101-92.6c-18-16.5-11.6-46.2 11.5-53.9L96 240V112c0-26.5 21.5-48 48-48h48V32zM160 218.7l107.8-35.9c13.1-4.4 27.3-4.4 40.5 0L416 218.7V128H160v90.7zM306.5 421.9C329 437.4 356.5 448 384 448c26.9 0 55.4-10.8 77.4-26.1l0 0c11.9-8.5 28.1-7.8 39.2 1.7c14.4 11.9 32.5 21 50.6 25.2c17.2 4 27.9 21.2 23.9 38.4s-21.2 27.9-38.4 23.9c-24.5-5.7-44.9-16.5-58.2-25C449.5 501.7 417 512 384 512c-31.9 0-60.6-9.9-80.4-18.9c-5.8-2.7-11.1-5.3-15.6-7.7c-4.5 2.4-9.7 5.1-15.6 7.7c-19.8 9-48.5 18.9-80.4 18.9c-33 0-65.5-10.3-94.5-25.8c-13.4 8.4-33.7 19.3-58.2 25c-17.2 4-34.4-6.7-38.4-23.9s6.7-34.4 23.9-38.4c18.1-4.2 36.2-13.3 50.6-25.2c11.1-9.4 27.3-10.1 39.2-1.7l0 0C136.7 437.2 165.1 448 192 448c27.5 0 55-10.6 77.5-26.1c11.1-7.9 25.9-7.9 37 0z"/></symbol>
+  <symbol id="i-car" viewBox="0 0 640 512"><path d="M171.3 96H224v96H111.3l30.4-75.9C146.5 104 158.2 96 171.3 96zM272 192V96h81.2c9.7 0 18.9 4.4 25 12l67.2 84H272zm256.2 1L428.2 68c-18.2-22.8-45.8-36-75-36H171.3c-39.3 0-74.6 23.9-89.1 60.3L40.6 196.4C16.8 205.8 0 228.9 0 256V368c0 17.7 14.3 32 32 32H65.3c7.6 45.4 47.1 80 94.7 80s87.1-34.6 94.7-80H385.3c7.6 45.4 47.1 80 94.7 80s87.1-34.6 94.7-80H608c17.7 0 32-14.3 32-32V320c0-65.2-48.8-119-111.8-127zM434.7 368a48 48 0 1 1 90.5 32 48 48 0 1 1 -90.5-32zM160 336a48 48 0 1 1 0 96 48 48 0 1 1 0-96z"/></symbol>
   <symbol id="i-chevron-down" viewBox="0 0 512 512"><path d="M233.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L256 338.7 86.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z"/></symbol>
   <symbol id="i-plus" viewBox="0 0 448 512"><path d="M256 80c0-17.7-14.3-32-32-32s-32 14.3-32 32l0 144L48 224c-17.7 0-32 14.3-32 32s14.3 32 32 32l144 0 0 144c0 17.7 14.3 32 32 32s32-14.3 32-32l0-144 144 0c17.7 0 32-14.3 32-32s-14.3-32-32-32l-144 0 0-144z"/></symbol>
 </svg>
@@ -1497,7 +1533,7 @@
       <li><svg class="i" aria-hidden="true"><use href="#i-route"></use></svg><b>一起排行程</b><span>一天一天排,地圖上看得到路線,每天的天氣也在旁邊。</span></li>
       <li><svg class="i" aria-hidden="true"><use href="#i-star"></use></svg><b>許願、投票</b><span>想去的地方先丟進來,大家按 +1,票多的再排進行程。</span></li>
       <li><svg class="i" aria-hidden="true"><use href="#i-scale-balanced"></use></svg><b>記帳、分帳</b><span>誰付的、誰要分都記下來,回國前算好誰該轉給誰。</span></li>
-      <li><svg class="i" aria-hidden="true"><use href="#i-plane"></use></svg><b>航班和座位</b><span>去程回程、起降時間、每個人坐哪裡,一眼看完。</span></li>
+      <li><svg class="i" aria-hidden="true"><use href="#i-plane"></use></svg><b>交通和座位</b><span>飛機、火車、巴士、船、租車,幾點、在哪、誰坐哪裡,一眼看完。</span></li>
     </ul>
     <ol class="landing-steps">
       <li><b>開團</b><span>填去哪裡、日期、團名,你就是團主</span></li>
@@ -1534,7 +1570,7 @@
         <div class="who">
           <label class="rm-chip"><input type="checkbox" id="st-can-plan">行程</label>
           <label class="rm-chip"><input type="checkbox" id="st-can-cost">分帳</label>
-          <label class="rm-chip"><input type="checkbox" id="st-can-seat">航班和座位</label>
+          <label class="rm-chip"><input type="checkbox" id="st-can-seat">交通和座位</label>
         </div>
       </div>
     </div>
@@ -1567,29 +1603,33 @@
   </div>
 </div>
 
-<!-- 加航班 / 改航班(第 2 期)。座位也在這裡填 —— 以前只能靠 AI 按鈕改座位。 -->
+<!-- 加一段交通 / 改這一段。**交通不是只有飛機**(Lulu,2026-09-28):先選種類,下面的欄位跟著換字、
+     租車沒有座位、改問誰開車。座位也在這裡填 —— 以前只能靠 AI 按鈕改座位。 -->
 <div class="overlay" id="flight-overlay" hidden>
   <form class="signin wide" id="flight-form">
-    <h2 id="fl-title">加航班</h2>
+    <h2 id="fl-title">加一段交通</h2>
+    <div class="fld"><span class="rm-label">種類</span><div class="who kinds" id="fl-kinds" role="radiogroup" aria-label="種類"></div></div>
     <div class="grid2">
-      <div class="fld"><label class="rm-label" for="fl-dir">哪一段</label><select class="rm-input" id="fl-dir"><option value="去程">去程</option><option value="回程">回程</option><option value="其他">其他(轉機、國內線)</option></select></div>
-      <div class="fld"><label class="rm-label" for="fl-no">航班號</label><input class="rm-input" type="text" id="fl-no" maxlength="8" placeholder="MM626" autocapitalize="characters" required></div>
+      <div class="fld" id="fl-f-dir"><label class="rm-label" for="fl-dir">哪一段</label><select class="rm-input" id="fl-dir"><option value="去程">去程</option><option value="回程">回程</option><option value="其他">其他(路上的一段)</option></select></div>
+      <div class="fld" id="fl-f-no"><label class="rm-label" for="fl-no" id="fl-no-l">航班號</label><input class="rm-input" type="text" id="fl-no" maxlength="20"></div>
     </div>
-    <div class="fld"><label class="rm-label" for="fl-airline">航空公司</label><input class="rm-input" type="text" id="fl-airline" maxlength="40" placeholder="樂桃航空"></div>
+    <div class="fld"><label class="rm-label" for="fl-airline" id="fl-airline-l">航空公司</label><input class="rm-input" type="text" id="fl-airline" maxlength="40"></div>
     <div class="grid2">
-      <div class="fld"><label class="rm-label" for="fl-depart">起飛(當地時間)</label><input class="rm-input" type="datetime-local" id="fl-depart" required></div>
-      <div class="fld"><label class="rm-label" for="fl-from">從哪裡</label><input class="rm-input" type="text" id="fl-from" maxlength="40" placeholder="TPE 桃園 T1"></div>
+      <div class="fld"><label class="rm-label" for="fl-depart" id="fl-depart-l">起飛(當地時間)</label><input class="rm-input" type="datetime-local" id="fl-depart" required></div>
+      <div class="fld"><label class="rm-label" for="fl-from" id="fl-from-l">從哪裡</label><input class="rm-input" type="text" id="fl-from" maxlength="40"></div>
     </div>
     <div class="grid2">
-      <div class="fld"><label class="rm-label" for="fl-arrive">抵達(當地時間)</label><input class="rm-input" type="datetime-local" id="fl-arrive"></div>
-      <div class="fld"><label class="rm-label" for="fl-to">到哪裡</label><input class="rm-input" type="text" id="fl-to" maxlength="40" placeholder="NRT 成田 T1"></div>
+      <div class="fld"><label class="rm-label" for="fl-arrive" id="fl-arrive-l">抵達(當地時間)</label><input class="rm-input" type="datetime-local" id="fl-arrive"></div>
+      <div class="fld"><label class="rm-label" for="fl-to" id="fl-to-l">到哪裡</label><input class="rm-input" type="text" id="fl-to" maxlength="40"></div>
     </div>
-    <div class="fld"><label class="rm-label" for="fl-note">備註</label><input class="rm-input" type="text" id="fl-note" maxlength="120" placeholder="例如 託運 1 件/人 · 手提 7kg"></div>
-    <div class="fld"><span class="rm-label">座位(不知道就空著)</span><div class="seatform" id="fl-seats"></div></div>
+    <div class="fld"><label class="rm-label" for="fl-code">訂位代號</label><input class="rm-input" type="text" id="fl-code" maxlength="30" autocapitalize="characters" placeholder="可留白"></div>
+    <div class="fld"><label class="rm-label" for="fl-note">備註</label><input class="rm-input" type="text" id="fl-note" maxlength="120"></div>
+    <div class="seatfld" id="fl-f-seats"><span class="rm-label">座位(不知道就空著)</span><div class="seatform" id="fl-seats"></div></div>
+    <div class="fld" id="fl-f-drivers" hidden><span class="rm-label">誰開車</span><div class="who" id="fl-drivers"></div></div>
     <div class="err" id="fl-err" hidden></div>
     <div class="ops">
       <button type="submit" class="btn btn-main" id="fl-save">存起來</button>
-      <button type="button" class="btn btn-ghost btn-sm" id="fl-del" hidden>刪掉這一班</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="fl-del" hidden>刪掉這一段</button>
       <button type="button" class="btn btn-ghost btn-sm" id="fl-cancel">取消</button>
     </div>
   </form>
@@ -1698,7 +1738,7 @@
     <div class="fld" id="ai-f-note"><label class="rm-label" for="ai-note">備註</label><input class="rm-input" type="text" id="ai-note" placeholder="可留白"></div>
     <div class="fld" id="ai-f-by"><label class="rm-label" for="ai-by">你是誰</label><select class="rm-input" id="ai-by"></select></div>
     <div class="fld" id="ai-f-flight"><label class="rm-label" for="ai-flight">哪一班</label><select class="rm-input" id="ai-flight"></select></div>
-    <div class="fld" id="ai-f-seats"><span class="rm-label">座位(留白 = 不改)</span><div id="ai-seat-list"></div></div>
+    <div class="seatfld" id="ai-f-seats"><span class="rm-label">座位(留白 = 不改)</span><div id="ai-seat-list"></div></div>
     <div class="err" id="ai-cerr" hidden></div>
     <div class="ops">
       <button type="submit" class="btn btn-main" id="ai-ok">確定</button>
@@ -2687,13 +2727,39 @@
       Math.ceil((go - now) / 86400000) + "</span> 天</b>";
   }
 
-  /* ================= 航班 =================
+  /* ================= 交通 =================
      第 2 期以前這一塊整個寫死:樂桃 MM626/MM631、起降時間、機場、五個人的座位。
-     現在從「航班」和「座位」兩張表長出來:
-       - 看板一班一段,照起飛時間排
-       - 行程上的「報到/起飛/抵達」是從航班推出來的固定節點(不能拖、不能刪,改航班才會變)
-       - 倒數算到第一班去程起飛
-     一班都沒有的時候,看板講「還沒有航班」,有權限的人看得到「加航班」。 */
+     現在從「航班」和「座位」兩張表長出來。**2026-09-28 起不只飛機**(Lulu:交通不是只有飛機):
+     一段 = 飛機/火車/巴士/船/租車其中一種,同一張表多一欄「種類」,舊的列一律當飛機。
+       - 清單照時間排、按天分組。飛機保留登機證那張深色卡,其他種類是淺色的卡
+       - 行程上的固定節點從這裡推出來(不能拖、不能刪,改這一段才會變):
+         飛機是報到/起飛/抵達,火車巴士是發車/抵達,船是開船/抵達,租車是取車/還車
+       - 倒數算到第一段「去程」出發 —— 不管是哪一種
+     一段都沒有的時候,講「還沒有交通」,有權限的人看得到「加一段交通」。 */
+  const KIND = {
+    "飛機": { icon: "i-plane", no: "航班號", noPh: "MM626", co: "航空公司", coPh: "樂桃航空",
+             t0: "起飛", t1: "抵達", p0: "從哪裡", p0Ph: "TPE 桃園 T1", p1: "到哪裡", p1Ph: "NRT 成田 T1",
+             seatPh: "例如 27A", seatMax: 4, notePh: "例如 託運 1 件/人 · 手提 7kg" },
+    "火車": { icon: "i-train", no: "車次", noPh: "のぞみ 21號", co: "哪一家", coPh: "JR 東海",
+             t0: "發車", t1: "抵達", p0: "上車站", p0Ph: "東京", p1: "下車站", p1Ph: "京都",
+             seatPh: "例如 7車 12A", seatMax: 12, notePh: "例如 指定席 · 要先換票" },
+    "巴士": { icon: "i-bus", no: "班次", noPh: "可留白", co: "客運公司", coPh: "WILLER",
+             t0: "發車", t1: "抵達", p0: "上車地點", p0Ph: "新宿高速巴士總站", p1: "下車地點", p1Ph: "河口湖站",
+             seatPh: "例如 3A", seatMax: 8, notePh: "例如 大件行李放車底" },
+    "船": { icon: "i-ship", no: "班次", noPh: "可留白", co: "船公司", coPh: "東海汽船",
+             t0: "開船", t1: "抵達", p0: "上船碼頭", p0Ph: "竹芝碼頭", p1: "下船碼頭", p1Ph: "大島 岡田港",
+             seatPh: "例如 2等 B12", seatMax: 12, notePh: "例如 開船前 30 分鐘報到" },
+    "租車": { icon: "i-car", co: "租車公司", coPh: "TOYOTA 租車",
+             t0: "取車", t1: "還車", p0: "取車地點", p0Ph: "新千歲機場店", p1: "還車地點", p1Ph: "札幌站前店",
+             notePh: "例如 含 ETC 卡 · 還車前加滿油", noSeats: true },
+  };
+  const KINDS = Object.keys(KIND);
+  const kindOf = f => (f && KIND[f.kind] ? f.kind : "飛機");
+  const kicon = k => '<svg class="i" aria-hidden="true"><use href="#' + KIND[k].icon + '"></use></svg>';
+  /* 座位表的「航班」欄對的是這一段的名字。沒有班次的(巴士、船常常沒有)用這一列自己的代號 ——
+     跟伺服器收座位時一樣去空白、轉大寫,兩邊才對得上。 */
+  const legKey = f => String((f.no || f.id) || "").toUpperCase().replace(/\s+/g, "");
+  const legName = f => f.no || f.airline || kindOf(f);
   const flightsSorted = () => (state.flights || []).slice()
     .sort((a, b) => String(a.depart || "9").localeCompare(String(b.depart || "9")));
   const DIR_TAG = { "去程": "去程 OUT", "回程": "回程 IN", "其他": "航班" };
@@ -2705,26 +2771,33 @@
   const EN_W = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
   const enWeek = d => (d ? EN_W[new Date(d + "T00:00:00Z").getUTCDay()] : "");
 
-  /* 行程上的固定節點。報到抓起飛前 2.5 小時(國際線的慣例),只有去程和回程才加 ——
-     「其他」多半是國內線或轉機,報到時間差很多,寧可不寫也不要寫錯。 */
+  /* 行程上的固定節點。報到只有飛機的去程和回程才加,抓起飛前 2.5 小時(國際線的慣例) ——
+     「其他」多半是國內線或轉機,報到時間差很多,寧可不寫也不要寫錯。
+     火車、巴士、船不寫報到:各家差很多,而且多半到了就上。 */
   function anchorsOn(day) {
     const out = [];
     flightsSorted().forEach(f => {
+      const k = kindOf(f), K = KIND[k];
       const d0 = dayOf(f.depart), d1 = dayOf(f.arrive);
-      if (d0 === day && f.dir !== "其他") {
+      if (k === "飛機" && d0 === day && f.dir !== "其他") {
         const t = toMin(hhmm(f.depart));
         if (t != null && t >= 150) out.push({ time: toHHMM(t - 150), title: port(f.from).sub + " 報到",
           place: (f.airline ? f.airline + " " : "") + f.no + " · 建議起飛前 2.5 小時", note: f.note || "" });
       }
-      if (d0 === day) out.push({ time: hhmm(f.depart), title: f.no + " 起飛", place: f.from });
+      const go = k === "飛機" ? f.no + " 起飛"
+        : k === "租車" ? "取車" + (f.airline ? " · " + f.airline : "")
+        : legName(f) + " " + K.t0;
+      const end = k === "租車" ? "還車" + (f.airline ? " · " + f.airline : "")
+        : "抵達 " + (k === "飛機" ? (port(f.to).sub || f.to) : f.to);
+      if (d0 === day) out.push({ time: hhmm(f.depart), title: go, place: f.from });
       /* 半夜落地(OVERNIGHT)的那一筆併在最後一天顯示,跟 stopsOn 同一條規則 */
       if (d1 === day || (day === LAST_DAY && d1 === OVERNIGHT && d0 !== d1))
-        out.push({ day: d1, time: hhmm(f.arrive), title: "抵達 " + (port(f.to).sub || f.to), place: f.to });
+        out.push({ day: d1, time: hhmm(f.arrive), title: end, place: f.to });
     });
     return out.filter(a => a.time).map(a => Object.assign({ anchor: true }, a));
   }
 
-  /* 誰坐哪裡:航班號 → { 成員代號: 座位 } */
+  /* 誰坐哪裡:這一段的名字(legKey) → { 成員代號: 座位 } */
   function seatsNow() {
     const S = {};
     (state.seats || []).forEach(r => {
@@ -2733,9 +2806,82 @@
     });
     return S;
   }
-  /* 座位照排、再照字母排。走道畫在 C 和 D 之間(A320 是 3-3) */
+  /* 座位照排、再照字母排。走道畫在 C 和 D 之間(A320 是 3-3) —— 只有飛機這樣畫 */
   const seatKey = x => { const m = /^(\d+)([A-Z])$/.exec(x) || [0, 0, ""]; return [+m[1], m[2]]; };
   const mayFly = () => online && editable("seat");
+
+  function dayLabel(d) {
+    if (!d) return "還沒排時間";
+    const x = DAYS.find(y => y.date === d);
+    return (x ? "DAY " + x.n + " · " : "") + mmdd(d) + " " + enWeek(d);
+  }
+  /* 飛機:登機證那張深色卡(第 2 期的樣子,一段一張) */
+  function planeCard(f, S, can, firstSeat) {
+    const seats = S[legKey(f)] || {};
+    const list = MEMBERS.filter(m => seats[m.id]).map(m => ({ m, seat: seats[m.id] }))
+      .sort((a, b) => { const x = seatKey(a.seat), y = seatKey(b.seat); return x[0] - y[0] || x[1].localeCompare(y[1]); });
+    let prev = "";
+    const chips = list.map(({ m, seat }) => {
+      const letter = seatKey(seat)[1];
+      const moved = firstSeat[m.id] && firstSeat[m.id] !== seat;
+      const aisle = prev && prev < "D" && letter >= "D";
+      prev = letter;
+      return (aisle ? '<span class="aisle">走道</span>' : "") +
+        '<span class="seat' + (moved ? " moved" : "") + '" style="--sc:' + m.color + '"><b>' + esc(seat) + "</b><span>" + esc(nameOf(m.id)) + "</span></span>";
+    }).join("");
+    /* 最下面那一行:半夜落地講出是哪一天,換了位子講出是誰 */
+    const movedNames = list.filter(({ m, seat }) => firstSeat[m.id] && firstSeat[m.id] !== seat).map(({ m }) => nameOf(m.id));
+    list.forEach(({ m, seat }) => { if (!firstSeat[m.id]) firstSeat[m.id] = seat; });
+    const a = port(f.from), b = port(f.to);
+    const d0 = dayOf(f.depart), d1 = dayOf(f.arrive);
+    const plus = d0 && d1 && d1 > d0 ? ' <span class="next">+1</span>' : "";
+    const bits = [];
+    if (f.code) bits.push("訂位 " + esc(f.code));
+    if (f.note) bits.push(esc(f.note));
+    if (plus) bits.push(esc(mmdd(d1) + " " + enWeek(d1)) + " " + (+hhmm(f.arrive).slice(0, 2) < 6 ? "凌晨" : "") + "抵達");
+    if (movedNames.length) bits.push(esc(movedNames.join("、")) + " 這一班換位子");
+    return '<div class="board"><div class="leg">' +
+      '<span class="leg-tag">' + kicon("飛機") + " " + esc(DIR_TAG[f.dir] || "航班") + '</span><span class="leg-co">' + esc(f.airline || "") + "</span>" +
+      '<span class="leg-no">' + esc(f.no) + (d0 ? " · " + mmdd(d0) + " " + enWeek(d0) : "") +
+      (can ? ' <button type="button" class="pen" data-flight-edit="' + esc(f.id) + '" aria-label="改這一段"><svg class="i" aria-hidden="true"><use href="#i-pen"></use></svg></button>' : "") + "</span>" +
+      '<div class="leg-route">' +
+      '<div class="port"><span class="code">' + esc(a.code || "—") + '</span><span class="sub">' + esc(a.sub) + '</span><span class="time">' + esc(hhmm(f.depart)) + "</span></div>" +
+      '<div class="dash"><svg class="i" aria-hidden="true"><use href="#i-plane"></use></svg></div>' +
+      '<div class="port"><span class="code">' + esc(b.code || "—") + '</span><span class="sub">' + esc(b.sub) + '</span><span class="time">' + esc(hhmm(f.arrive)) + plus + "</span></div>" +
+      "</div>" +
+      '<div class="seatmap">' + chips + "</div>" +
+      (bits.length ? '<div class="seats">' + bits.join(" · ") + "</div>" : "") + "</div></div>";
+  }
+  /* 火車、巴士、船、租車:淺色的卡。一眼要看得到幾點、從哪到哪、坐哪(租車是誰開) */
+  function legCard(f, S, can) {
+    const k = kindOf(f), K = KIND[k];
+    const d0 = dayOf(f.depart), d1 = dayOf(f.arrive);
+    const later = d0 && d1 && d1 > d0 ? mmdd(d1) + " " : "";
+    const pt = (lab, time, place) => '<div class="tl-pt"><small>' + esc(lab) + "</small><b>" + esc(time || "—") + "</b><span>" + esc(place || "") + "</span></div>";
+    let who = "";
+    if (K.noSeats) {
+      const ds = (f.drivers || []).filter(id => MEMBERS.some(m => m.id === id));
+      if (ds.length) who = '<div class="tl-who"><small>開車</small>' + ds.map(id => {
+        const m = MEMBERS.find(x => x.id === id);
+        return '<span class="tl-seat" style="--sc:' + m.color + '">' + esc(nameOf(id)) + "</span>";
+      }).join("") + "</div>";
+    } else {
+      const seats = S[legKey(f)] || {};
+      const list = MEMBERS.filter(m => seats[m.id]);
+      if (list.length) who = '<div class="tl-who">' + list.map(m =>
+        '<span class="tl-seat" style="--sc:' + m.color + '"><b>' + esc(seats[m.id]) + "</b>" + esc(nameOf(m.id)) + "</span>").join("") + "</div>";
+    }
+    const bits = [];
+    if (f.code) bits.push("訂位 " + esc(f.code));
+    if (f.note) bits.push(linkify(f.note));
+    return '<div class="tleg" data-kind="' + esc(k) + '">' +
+      '<div class="tl-hd"><span class="tl-kind">' + kicon(k) + esc(k) + (f.dir && f.dir !== "其他" ? " · " + esc(f.dir) : "") + "</span>" +
+      '<span class="tl-no">' + esc([f.no, f.airline].filter(Boolean).join(" · ")) + "</span>" +
+      (can ? '<button type="button" class="pen" data-flight-edit="' + esc(f.id) + '" aria-label="改這一段"><svg class="i" aria-hidden="true"><use href="#i-pen"></use></svg></button>' : "") + "</div>" +
+      '<div class="tl-route">' + pt(K.t0, hhmm(f.depart), f.from) + '<span class="tl-arrow" aria-hidden="true">→</span>' +
+      pt(K.t1, later + hhmm(f.arrive), f.to) + "</div>" +
+      who + (bits.length ? '<div class="tl-bits">' + bits.join(" · ") + "</div>" : "") + "</div>";
+  }
 
   function renderSeats() {
     const box = el("board-wrap");
@@ -2743,93 +2889,80 @@
     const fl = flightsSorted();
     const S = seatsNow();
     const can = mayFly();
-    const addBtn = can ? '<button type="button" class="btn btn-sm board-add" data-flight-add>加航班</button>' : "";
+    const addBtn = can ? '<button type="button" class="btn btn-sm tl-add" data-flight-add><svg class="i" aria-hidden="true"><use href="#i-plus"></use></svg>加一段交通</button>' : "";
     if (!fl.length) {
-      box.innerHTML = '<div class="board board-empty"><div class="board-head"><span class="bh-name">航班</span></div>' +
-        '<div class="leg"><span class="seats">還沒有航班。' + (can ? "加上去程和回程,看板、倒數和行程上的報到/起飛/抵達就會出現。" : "團主加了之後會出現在這裡。") +
-        "</span>" + (addBtn ? '<div class="seats">' + addBtn + "</div>" : "") + "</div></div>";
+      box.innerHTML = '<div class="tleg tl-empty"><p>還沒有交通。' +
+        (can ? "加上去程、回程,或路上的火車、巴士、船、租車 —— 倒數和行程上的出發/抵達就會跟著出現。" : "團主加了之後會出現在這裡。") +
+        "</p>" + addBtn + "</div>";
       return;
     }
-    const airlines = Array.from(new Set(fl.map(f => f.airline).filter(Boolean)));
-    const pax = new Set(); Object.values(S).forEach(m => Object.keys(m).forEach(k => pax.add(k)));
-    const firstSeat = {};   /* 每個人第一班的座位 —— 之後換了位子的標成琥珀色,免得照去程的記憶亂坐 */
-    const legs = fl.map(f => {
-      const seats = S[f.no] || {};
-      const list = MEMBERS.filter(m => seats[m.id]).map(m => ({ m, seat: seats[m.id] }))
-        .sort((a, b) => { const x = seatKey(a.seat), y = seatKey(b.seat); return x[0] - y[0] || x[1].localeCompare(y[1]); });
-      let prev = "";
-      const chips = list.map(({ m, seat }) => {
-        const letter = seatKey(seat)[1];
-        const moved = firstSeat[m.id] && firstSeat[m.id] !== seat;
-        const aisle = prev && prev < "D" && letter >= "D";
-        prev = letter;
-        return (aisle ? '<span class="aisle">走道</span>' : "") +
-          '<span class="seat' + (moved ? " moved" : "") + '" style="--sc:' + m.color + '"><b>' + esc(seat) + "</b><span>" + esc(nameOf(m.id)) + "</span></span>";
-      }).join("");
-      /* 最下面那一行:半夜落地講出是哪一天,換了位子講出是誰(以前寫死「10/09 FRI 凌晨抵台 · 志偉、雅倫、媽 回程換位子」) */
-      const movedNames = list.filter(({ m, seat }) => firstSeat[m.id] && firstSeat[m.id] !== seat).map(({ m }) => nameOf(m.id));
-      list.forEach(({ m, seat }) => { if (!firstSeat[m.id]) firstSeat[m.id] = seat; });
-      const a = port(f.from), b = port(f.to);
-      const d0 = dayOf(f.depart), d1 = dayOf(f.arrive);
-      const plus = d0 && d1 && d1 > d0 ? ' <span class="next">+1</span>' : "";
-      return '<div class="leg">' +
-        '<span class="leg-tag">' + esc(DIR_TAG[f.dir] || "航班") + "</span><span></span>" +
-        '<span class="leg-no">' + esc(f.no) + (d0 ? " · " + mmdd(d0) + " " + enWeek(d0) : "") +
-        (can ? ' <button type="button" class="pen" data-flight-edit="' + esc(f.id) + '" aria-label="改這一班"><svg class="i" aria-hidden="true"><use href="#i-pen"></use></svg></button>' : "") + "</span>" +
-        '<div class="leg-route">' +
-        '<div class="port"><span class="code">' + esc(a.code || "—") + '</span><span class="sub">' + esc(a.sub) + '</span><span class="time">' + esc(hhmm(f.depart)) + "</span></div>" +
-        '<div class="dash"><svg class="i" aria-hidden="true"><use href="#i-plane"></use></svg></div>' +
-        '<div class="port"><span class="code">' + esc(b.code || "—") + '</span><span class="sub">' + esc(b.sub) + '</span><span class="time">' + esc(hhmm(f.arrive)) + plus + "</span></div>" +
-        "</div>" +
-        '<div class="seatmap">' + chips + "</div>" +
-        (function () {
-          const bits = [];
-          if (f.note) bits.push(esc(f.note));
-          if (plus) bits.push(esc(mmdd(d1) + " " + enWeek(d1)) + " " + (+hhmm(f.arrive).slice(0, 2) < 6 ? "凌晨" : "") + "抵達");
-          if (movedNames.length) bits.push(esc(movedNames.join("、")) + " 這一班換位子");
-          return bits.length ? '<div class="seats">' + bits.join(" · ") + "</div>" : "";
-        })() + "</div>";
-    }).join("");
-    box.innerHTML = '<details class="board" id="board" open><summary class="board-head">' +
-      '<span class="bh-name">' + esc(airlines.join(" · ") || "航班") + "</span>" +
-      '<span class="bh-brief">' + esc(fl.map(f => f.no + " " + mmdd(dayOf(f.depart))).join(" → ")) + "</span>" +
-      '<span class="live">' + (pax.size || MEMBERS.length) + " PAX</span>" +
-      '<svg class="i bh-caret" aria-hidden="true"><use href="#i-chevron-down"></use></svg></summary>' +
-      legs + (addBtn ? '<div class="leg"><div class="seats">' + addBtn + "</div></div>" : "") + "</details>";
-    /* 機票那張卡永遠攤開(卡是每次重畫出來的,所以每次都要重新掛) */
-    const bd = el("board");
-    if (bd) bd.addEventListener("toggle", () => { if (!bd.open) bd.open = true; });
+    const firstSeat = {};   /* 每個人第一班飛機的座位 —— 之後換了位子的標成琥珀色,免得照去程的記憶亂坐 */
+    let html = "", day = null;
+    fl.forEach(f => {
+      const d = dayOf(f.depart);
+      if (d !== day) { html += (day === null ? "" : "</div>") + '<div class="tl-group"><div class="tl-day">' + esc(dayLabel(d)) + "</div>"; day = d; }
+      html += kindOf(f) === "飛機" ? planeCard(f, S, can, firstSeat) : legCard(f, S, can);
+    });
+    box.innerHTML = '<div class="tl">' + html + "</div></div>" + (addBtn ? '<div class="tl-foot">' + addBtn + "</div>" : "");
   }
 
-  /* ---------- 加航班 / 改航班 ---------- */
+  /* ---------- 加一段交通 / 改這一段 ---------- */
   let flightEditing = null;
   function showFlightErr(msg) { const b = el("fl-err"); b.textContent = msg || ""; b.hidden = !msg; }
+  const flKind = () => { const c = el("fl-kinds").querySelector("input:checked"); return c ? c.value : "飛機"; };
+  /* 換種類:欄位的名字、提示字、座位還是駕駛,全部跟著換。**填過的字不清掉** —— 選錯了切回來還在 */
+  function applyKind(k) {
+    const K = KIND[k];
+    el("fl-f-no").hidden = !K.no;
+    if (K.no) { el("fl-no-l").textContent = K.no; el("fl-no").placeholder = K.noPh; }
+    el("fl-no").autocapitalize = k === "飛機" ? "characters" : "off";
+    el("fl-f-dir").hidden = k === "租車";
+    el("fl-airline-l").textContent = K.co; el("fl-airline").placeholder = K.coPh;
+    el("fl-depart-l").textContent = K.t0 + "(當地時間)";
+    el("fl-arrive-l").textContent = K.t1 + "(當地時間)";
+    el("fl-from-l").textContent = K.p0; el("fl-from").placeholder = K.p0Ph;
+    el("fl-to-l").textContent = K.p1; el("fl-to").placeholder = K.p1Ph;
+    el("fl-note").placeholder = K.notePh;
+    el("fl-f-seats").hidden = !!K.noSeats;
+    el("fl-f-drivers").hidden = !K.noSeats;
+    el("fl-seats").querySelectorAll("input").forEach(i => { i.placeholder = K.seatPh || ""; i.maxLength = K.seatMax || 4; });
+    if (!flightEditing) el("fl-title").textContent = "加一段交通";
+  }
   function openFlight(id) {
     if (!mayFly()) return;
     const f = id ? (state.flights || []).find(x => x.id === id) : null;
     flightEditing = f;
-    el("fl-title").textContent = f ? "改這一班" : "加航班";
+    el("fl-title").textContent = f ? "改這一段" : "加一段交通";
+    const kind = f ? kindOf(f) : "飛機";
+    el("fl-kinds").innerHTML = KINDS.map(k =>
+      '<label class="rm-chip"><input type="radio" name="fl-kind" value="' + k + '"' + (k === kind ? " checked" : "") + ">" + kicon(k) + k + "</label>").join("");
     const fl = state.flights || [];
-    el("fl-dir").value = f ? f.dir : (fl.some(x => x.dir === "去程") ? "回程" : "去程");
+    el("fl-dir").value = f ? f.dir : (!fl.some(x => x.dir === "去程") ? "去程" : !fl.some(x => x.dir === "回程") ? "回程" : "其他");
     el("fl-airline").value = f ? f.airline : "";
     el("fl-no").value = f ? f.no : "";
     el("fl-depart").value = f && f.depart ? f.depart : (DAYS.length ? (el("fl-dir").value === "回程" ? LAST_DAY : DAYS[0].date) + "T10:00" : "");
     el("fl-from").value = f ? f.from : "";
     el("fl-arrive").value = f && f.arrive ? f.arrive : "";
     el("fl-to").value = f ? f.to : "";
+    el("fl-code").value = f ? (f.code || "") : "";
     el("fl-note").value = f ? f.note : "";
-    const S = f ? (seatsNow()[f.no] || {}) : {};
+    const S = f ? (seatsNow()[legKey(f)] || {}) : {};
     el("fl-seats").innerHTML = MEMBERS.map(m =>
       '<label class="rm-label" for="fl-seat-' + m.id + '">' + esc(nameOf(m.id)) + "</label>" +
-      '<input class="rm-input" type="text" id="fl-seat-' + m.id + '" maxlength="4" placeholder="例如 27A" value="' + esc(S[m.id] || "") + '">').join("");
+      '<input class="rm-input" type="text" id="fl-seat-' + m.id + '" value="' + esc(S[m.id] || "") + '">').join("");
+    const drv = f ? (f.drivers || []) : [];
+    el("fl-drivers").innerHTML = MEMBERS.map(m =>
+      '<label class="rm-chip"><input type="checkbox" value="' + m.id + '"' + (drv.indexOf(m.id) >= 0 ? " checked" : "") + ">" + esc(nameOf(m.id)) + "</label>").join("");
+    applyKind(kind);
     el("fl-del").hidden = !f;
     showFlightErr("");
     el("flight-overlay").hidden = false;
-    el("fl-no").focus();
+    if (kind === "租車") el("fl-airline").focus(); else el("fl-no").focus();
   }
   function closeFlight() { el("flight-overlay").hidden = true; flightEditing = null; }
+  el("fl-kinds").addEventListener("change", () => applyKind(flKind()));
 
-  /* 把某一班的座位寫回去。**空白代表「這個人這班沒有座位」**:原本有就刪掉 ——
+  /* 把某一段的座位寫回去。**空白代表「這個人這段沒有座位」**:原本有就刪掉 ——
      不然清空之後存起來,舊的座位還躺在表裡,看板照樣畫它。 */
   async function writeSeats(no, date, wanted) {
     for (const m of MEMBERS) {
@@ -2854,20 +2987,26 @@
   el("flight-form").addEventListener("submit", async ev => {
     ev.preventDefault();
     showFlightErr("");
-    const no = el("fl-no").value.trim().toUpperCase().replace(/\s+/g, "");
-    if (!/^[A-Z0-9]{2,8}$/.test(no)) { showFlightErr("航班號要像 MM626、BR198"); return; }
+    const kind = flKind(), K = KIND[kind];
+    let no = K.no ? el("fl-no").value.trim() : "";
+    if (kind === "飛機") {
+      no = no.toUpperCase().replace(/\s+/g, "");
+      if (!/^[A-Z0-9]{2,8}$/.test(no)) { showFlightErr("航班號要像 MM626、BR198"); return; }
+    }
     const depart = el("fl-depart").value, arrive = el("fl-arrive").value;
-    if (!depart) { showFlightErr("起飛時間要填"); return; }
-    if (arrive && arrive < depart) { showFlightErr("抵達時間比起飛早,是不是日期填錯了?"); return; }
+    if (!depart) { showFlightErr(K.t0 + "時間要填"); return; }
+    if (arrive && arrive < depart) { showFlightErr(K.t1 + "時間比" + K.t0 + "早,是不是日期填錯了?"); return; }
     const seats = {};
-    for (const m of MEMBERS) {
+    if (!K.noSeats) for (const m of MEMBERS) {
       const v = el("fl-seat-" + m.id).value.trim().toUpperCase();
-      if (v && !/^\d{1,3}[A-K]$/.test(v)) { showFlightErr(nameOf(m.id) + " 的座位「" + v + "」看起來不對,要像 27A"); return; }
+      if (kind === "飛機" && v && !/^\d{1,3}[A-K]$/.test(v)) { showFlightErr(nameOf(m.id) + " 的座位「" + v + "」看起來不對,要像 27A"); return; }
       seats[m.id] = v;
     }
+    const drivers = K.noSeats ? [].map.call(el("fl-drivers").querySelectorAll("input:checked"), i => i.value) : [];
     const body = {
-      no, dir: el("fl-dir").value, airline: el("fl-airline").value.trim(),
-      depart, from: el("fl-from").value.trim(), arrive, to: el("fl-to").value.trim(), note: el("fl-note").value.trim(),
+      kind, no, dir: kind === "租車" ? "其他" : el("fl-dir").value, airline: el("fl-airline").value.trim(),
+      depart, from: el("fl-from").value.trim(), arrive, to: el("fl-to").value.trim(),
+      code: el("fl-code").value.trim(), note: el("fl-note").value.trim(), drivers,
     };
     const btn = el("fl-save");
     btn.disabled = true;
@@ -2877,20 +3016,21 @@
         ? await api("?resource=flights&id=" + encodeURIComponent(was.id), { method: "PATCH", body: JSON.stringify(body) })
         : await api("?resource=flights", { method: "POST", body: JSON.stringify(body) });
       state.flights = (state.flights || []).filter(f => f.id !== row.id).concat([row]);
-      /* 改了航班號:舊號底下的座位跟著搬過去,不然它們會變成對不到任何一班的孤兒 */
-      if (was && was.no !== row.no) {
-        for (const r of (state.seats || []).filter(x => x.flight === was.no)) {
+      /* 改了班次:舊名字底下的座位跟著搬過去,不然它們會變成對不到任何一段的孤兒 */
+      if (was && legKey(was) !== legKey(row)) {
+        for (const r of (state.seats || []).filter(x => x.flight === legKey(was))) {
           const { row: moved } = await api("?resource=seats&id=" + encodeURIComponent(r.id),
-            { method: "PATCH", body: JSON.stringify({ flight: row.no }) });
+            { method: "PATCH", body: JSON.stringify({ flight: legKey(row) }) });
           Object.assign(r, moved);
         }
       }
-      await writeSeats(row.no, dayOf(row.depart), seats);
+      /* 租車沒有座位:換成租車的那一段,原本的座位一起清掉(seats 是空的,writeSeats 會刪) */
+      await writeSeats(legKey(row), dayOf(row.depart), seats);
       saveSnap();
       closeFlight();
       render();
       renderCountdown();
-      flash(was ? "改好了" : "加好了:" + row.no);
+      flash(was ? "改好了" : "加好了:" + legName(row));
     } catch (e) {
       showFlightErr(e.message);
     }
@@ -2898,13 +3038,13 @@
   });
   el("fl-del").addEventListener("click", async () => {
     const f = flightEditing;
-    if (!f || !confirm("刪掉 " + f.no + "?這一班的座位也會一起刪掉。")) return;
+    if (!f || !confirm("刪掉「" + legName(f) + "」?" + (KIND[kindOf(f)].noSeats ? "" : "這一段的座位也會一起刪掉。"))) return;
     try {
-      for (const r of (state.seats || []).filter(x => x.flight === f.no)) {
+      for (const r of (state.seats || []).filter(x => x.flight === legKey(f))) {
         await api("?resource=seats&id=" + encodeURIComponent(r.id), { method: "DELETE" });
       }
       await api("?resource=flights&id=" + encodeURIComponent(f.id), { method: "DELETE" });
-      state.seats = (state.seats || []).filter(x => x.flight !== f.no);
+      state.seats = (state.seats || []).filter(x => x.flight !== legKey(f));
       state.flights = (state.flights || []).filter(x => x.id !== f.id);
       saveSnap();
       closeFlight();
@@ -5535,7 +5675,7 @@
     el("ai-by").innerHTML = '<option value="">— 選一下 —</option>' + MEMBERS.map(m =>
       '<option value="' + m.id + '"' + (m.id === me ? " selected" : "") + ">" + esc(nameOf(m.id)) + "</option>").join("");
     lockWho(el("ai-by"));
-    const fls = flightsSorted();
+    const fls = flightsSorted().filter(f => kindOf(f) === "飛機");   /* AI 讀的是登機證、選位畫面 —— 只有飛機 */
     el("ai-flight").innerHTML = fls.map(f => '<option value="' + esc(f.no) + '">' + esc((f.dir === "其他" ? "" : f.dir + " ") + f.no + " · " + mmdd(dayOf(f.depart))) + "</option>").join("");
     const f = fls.find(x => x.no === r.flight);
     el("ai-flight").value = f ? f.no : (fls[0] ? fls[0].no : "");
@@ -5552,7 +5692,7 @@
   }
 
   async function saveSeats(flightNo) {
-    const f = (state.flights || []).find(x => x.no === flightNo);
+    const f = (state.flights || []).find(x => x.no === flightNo && kindOf(x) === "飛機");
     if (!f) throw new Error("先到「交通」分頁加這一班航班");
     const want = MEMBERS.map(m => ({ m, seat: el("ai-seat-" + m.id).value.trim().toUpperCase() }))
       .filter(x => x.seat);
