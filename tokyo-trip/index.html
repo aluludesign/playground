@@ -1628,6 +1628,7 @@
     <div class="err" id="fl-err" hidden></div>
     <div class="ops">
       <button type="submit" class="btn btn-main" id="fl-save">存起來</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="fl-skip" hidden>跳過這一段</button>
       <button type="button" class="btn btn-ghost btn-sm" id="fl-del" hidden>刪掉這一段</button>
       <button type="button" class="btn btn-ghost btn-sm" id="fl-cancel">取消</button>
     </div>
@@ -2953,6 +2954,7 @@
     applyKind(kind);
     el("fl-del").hidden = !f;
     el("fl-ai").hidden = true;
+    el("fl-skip").hidden = true;
     showFlightErr("");
     el("flight-overlay").hidden = false;
     if (kind === "租車") el("fl-airline").focus(); else el("fl-no").focus();
@@ -3029,6 +3031,7 @@
       render();
       renderCountdown();
       flash(was ? "改好了" : "加好了:" + legName(row));
+      openNextAI();   /* AI 一次讀到好幾段:存完這一段,接著開下一段 */
     } catch (e) {
       showFlightErr(e.message);
     }
@@ -3051,8 +3054,10 @@
       flash("刪掉了");
     } catch (e) { showFlightErr(e.message); }
   });
-  el("fl-cancel").addEventListener("click", closeFlight);
-  el("flight-overlay").addEventListener("click", ev => { if (ev.target === el("flight-overlay")) closeFlight(); });
+  /* 取消 = 這一整列 AI 讀到的都不要了;跳過 = 只跳這一段 */
+  el("fl-cancel").addEventListener("click", () => { aiQueue = []; closeFlight(); });
+  el("fl-skip").addEventListener("click", () => { if (!openNextAI()) closeFlight(); });
+  el("flight-overlay").addEventListener("click", ev => { if (ev.target === el("flight-overlay")) { aiQueue = []; closeFlight(); } });
   el("panel-fly").addEventListener("click", ev => {
     const add = ev.target.closest("[data-flight-add]");
     const edit = ev.target.closest("[data-flight-edit]");
@@ -5641,7 +5646,8 @@
        AI 講的那句話跟著進去,不然他不知道為什麼欄位是這樣填的。 */
     /* 讀到的是交通,但這個人不能加交通:**不要把車票倒進許願表**,留在這裡講清楚 */
     if (r.intent === "transport" && !mayFly()) {
-      aiErr("ai-err", "這看起來是一段交通" + (r.kind ? "(" + r.kind + ")" : "") + "。加交通這一塊團主還沒開放給成員 —— 請團主加,或請團主在「團的設定」打開。");
+      const ks = Array.from(new Set((r.legs || []).map(l => l.kind).filter(Boolean)));
+      aiErr("ai-err", "這看起來是交通" + (ks.length ? "(" + ks.join("、") + ")" : "") + "。加交通這一塊團主還沒開放給成員 —— 請團主加,或請團主在「團的設定」打開。");
       return;
     }
     if (!editable("plan") && !editable("seat")) {
@@ -5656,7 +5662,7 @@
     }
     aiLast = r;
     /* 交通:直接打開「加一段交通」,讀到的都填進去 —— 同一張表、同一份驗證,這裡不長第二套 */
-    if (r.intent === "transport" && mayFly()) { closeAI(); openFlightFromAI(r); return; }
+    if (r.intent === "transport" && mayFly()) { closeAI(); startAIQueue(r); return; }
     el("ai-say").textContent = r.message || "";
     el("ai-kind").value = r.intent === "unknown" ? "wish" : r.intent;
     el("ai-day").innerHTML = DAYS.map(d => '<option value="' + d.date + '">Day ' + d.n + " · " +
@@ -5680,7 +5686,21 @@
   /* AI 讀到一段交通 → 打開交通表單。**已經有的那一段就改它**(AI 說的 id,或種類 + 班次 + 日期對得上),
      不要多加一筆重複的。讀到的欄位才蓋上去,讀不到的保留原本的。 */
   let aiLast = null;
-  function openFlightFromAI(r) {
+  /* **一次可能讀到好幾段**(Lulu:文字寫去程、圖是回程)。排成一列,交通表單一張一張開:
+     存了就開下一張,「跳過這一段」直接下一張,「取消」整列不要了。
+     不做成「一次全部存進去」:每一段都要有人看過 —— AI 看錯的時候,攔住它的是按存的那個人。 */
+  let aiQueue = [], aiTotal = 0, aiSay = "";
+  function startAIQueue(r) {
+    aiQueue = (r.legs || []).slice(); aiTotal = aiQueue.length; aiSay = r.message || "";
+    if (!aiQueue.length) { openFlightFromAI({}, 0, 0); return; }
+    openNextAI();
+  }
+  function openNextAI() {
+    if (!aiQueue.length) return false;
+    openFlightFromAI(aiQueue.shift(), aiTotal - aiQueue.length, aiTotal);
+    return true;
+  }
+  function openFlightFromAI(r, pos, total) {
     const fl = state.flights || [];
     const norm = v => String(v || "").toUpperCase().replace(/\s+/g, "");
     const day = dayOf(r.depart);
@@ -5701,9 +5721,12 @@
     if (r.dir && flKind() !== "租車") el("fl-dir").value = r.dir;
     (r.seats || []).forEach(x => { const i = el("fl-seat-" + x.member); if (i && x.seat) i.value = x.seat; });
     const n = (r.seats || []).filter(x => el("fl-seat-" + x.member)).length;
-    el("fl-ai").textContent = (f ? "這一段已經有了,AI 讀到的改進來了" : "AI 讀到的都填好了") +
-      (n ? "(含 " + n + " 個座位)" : "") + ",看一下再存。" + (r.message ? " " + r.message : "");
+    const which = total > 1 ? "AI 讀到 " + total + " 段,這是第 " + pos + " 段。" : "";
+    el("fl-ai").textContent = which + (!total ? "AI 看得出是交通,但讀不到細節,請自己填。" :
+      (f ? "這一段已經有了,AI 讀到的改進來了" : "AI 讀到的都填好了") + (n ? "(含 " + n + " 個座位)" : "") + ",看一下再存。") +
+      (aiSay && pos <= 1 ? " " + aiSay : "");
     el("fl-ai").hidden = false;
+    el("fl-skip").hidden = !(total > 1);
   }
 
 
@@ -5836,7 +5859,7 @@
     }
     /* 交通:換到這一類再按確定 —— 打開交通表單,把 AI 讀到的填進去(沒讀到交通就是一張空表) */
     closeAI();
-    openFlightFromAI(aiLast || {});
+    startAIQueue(aiLast || {});
   });
 
   /* **許願的人就是你自己,選不了別人。** 伺服器也照這個認(送什麼都會被換成你)。 */

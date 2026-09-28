@@ -57,36 +57,46 @@ function tripCtx(c) {
     today: typeof c.today === "string" ? c.today.slice(0, 10) : "", dayN: days.indexOf(c.day) + 1 };
 }
 
+/* 一段交通長這樣。**一次可以讀好幾段**(Lulu,2026-09-28:文字寫去程、圖是回程,
+   以前只能回一段,另一段就不見了)。 */
+const LEG = {
+  type: "OBJECT",
+  properties: {
+    kind:    { type: "STRING", enum: KINDS.concat(["unknown"]), description: "哪一種交通;看不出來就 unknown" },
+    no:      { type: "STRING", description: "航班號/車次/班次,照票上寫的(例如 MM626、のぞみ 21號);租車或看不到就空字串" },
+    company: { type: "STRING", description: "航空公司、鐵路公司、客運、船公司或租車公司" },
+    depart:  { type: "STRING", description: "出發(租車是取車)的當地日期時間 YYYY-MM-DDTHH:MM;日期或時間看不到就空字串" },
+    from:    { type: "STRING", description: "從哪裡(機場寫成「TPE 桃園 T1」這種三碼開頭的寫法;車站、碼頭、取車店名)" },
+    arrive:  { type: "STRING", description: "抵達(租車是還車)的當地日期時間 YYYY-MM-DDTHH:MM;看不到就空字串" },
+    to:      { type: "STRING", description: "到哪裡(寫法同 from)" },
+    code:    { type: "STRING", description: "訂位代號、訂單編號;沒有就空字串" },
+    dir:     { type: "STRING", enum: DIRS.concat(["unknown"]), description: "去程=從家出發往目的地的第一段,回程=回家的那一段,其他=路上的一段;不確定就 unknown" },
+    /* **代號不做成選項清單**(成員、已經有的交通都是):一長串 UUID 當 enum 有讓 Gemini 撐不住的疑慮,
+       改成一般字串,clean() 只收名單上有的。 */
+    match:   { type: "STRING", description: "如果這一段已經在「已經有的交通」裡(同一班、同一天),填它的 id;否則 none" },
+    note:    { type: "STRING", description: "這一段值得記下的細節(行李額度、要先換票等),100 字以內;沒有就空字串" },
+    seats:   { type: "ARRAY", description: "每個人的座位(看得到才填)",
+               items: { type: "OBJECT", properties: {
+                 member: { type: "STRING", description: "旅客代號(照「旅客」那一行);對不上就 unknown" },
+                 seat:   { type: "STRING", description: "座位,照票上寫的,例如 27A、7車 12A" },
+               }, required: ["member", "seat"] } },
+  },
+  required: ["kind", "no", "company", "depart", "from", "arrive", "to", "code", "dir", "match", "note", "seats"],
+};
 function schema(ctx) {
   return {
     type: "OBJECT",
     properties: {
       intent:  { type: "STRING", enum: ["wish", "stop", "transport", "unknown"],
-                 description: "wish=想去的地方加進許願;stop=排進某一天的行程;transport=一段交通(機票、車票、船票、租車、座位);unknown=看不出來" },
+                 description: "wish=想去的地方加進許願;stop=排進某一天的行程;transport=交通(機票、車票、船票、租車、座位);unknown=看不出來" },
       title:   { type: "STRING", description: "wish/stop:地點或活動名稱,用可以拿去地圖搜尋的寫法(店名、景點名、車站名),30 字以內;其他情況空字串" },
       day:     { type: "INTEGER", description: "stop:第幾天(1–" + (ctx.days.length || 1) + ");沒說就 0" },
       time:    { type: "STRING", description: "stop:開始時間 HH:MM(24 小時制);看不到就空字串" },
-      note:    { type: "STRING", description: "wish/stop/transport:值得記下的細節(營業時間、要預約、行李額度、要先換票等),100 字以內;沒有就空字串" },
-      kind:    { type: "STRING", enum: KINDS.concat(["unknown"]), description: "transport:哪一種交通;看不出來或不是交通就 unknown" },
-      no:      { type: "STRING", description: "transport:航班號/車次/班次,照票上寫的(例如 MM626、のぞみ 21號);租車或看不到就空字串" },
-      company: { type: "STRING", description: "transport:航空公司、鐵路公司、客運、船公司或租車公司" },
-      depart:  { type: "STRING", description: "transport:出發(租車是取車)的當地日期時間 YYYY-MM-DDTHH:MM;日期或時間看不到就空字串" },
-      from:    { type: "STRING", description: "transport:從哪裡(機場寫成「TPE 桃園 T1」這種三碼開頭的寫法;車站、碼頭、取車店名)" },
-      arrive:  { type: "STRING", description: "transport:抵達(租車是還車)的當地日期時間 YYYY-MM-DDTHH:MM;看不到就空字串" },
-      to:      { type: "STRING", description: "transport:到哪裡(寫法同 from)" },
-      code:    { type: "STRING", description: "transport:訂位代號、訂單編號;沒有就空字串" },
-      dir:     { type: "STRING", enum: DIRS.concat(["unknown"]), description: "transport:去程=從家出發往目的地的第一段,回程=回家的那一段,其他=路上的一段;不確定就 unknown" },
-      /* **代號不做成選項清單**(成員、已經有的交通都是):2026-09-28 在預覽上三個模型連續回 5xx,
-         懷疑是一長串 UUID 當 enum 讓 Gemini 撐不住。改成一般字串,clean() 只收名單上有的。 */
-      match:   { type: "STRING", description: "transport:如果這一段已經在「已經有的交通」裡(同一班、同一天),填它的 id;否則 none" },
-      seats:   { type: "ARRAY", description: "transport:每個人的座位(看得到才填)",
-                 items: { type: "OBJECT", properties: {
-                   member: { type: "STRING", description: "旅客代號(照「旅客」那一行);對不上就 unknown" },
-                   seat:   { type: "STRING", description: "座位,照票上寫的,例如 27A、7車 12A" },
-                 }, required: ["member", "seat"] } },
+      note:    { type: "STRING", description: "wish/stop:值得記下的細節(營業時間、要預約等),100 字以內;沒有就空字串" },
+      legs:    { type: "ARRAY", description: "transport:讀到的每一段交通,照時間先後;文字和圖片講的是不同段就各列一段。不是交通就空陣列", items: LEG },
       message: { type: "STRING", description: "給使用者的一句話:判斷的理由,或還缺什麼資訊。繁體中文,40 字以內" },
     },
-    required: ["intent", "title", "day", "time", "note", "kind", "no", "company", "depart", "from", "arrive", "to", "code", "dir", "match", "seats", "message"],
+    required: ["intent", "title", "day", "time", "note", "legs", "message"],
   };
 }
 
@@ -106,6 +116,7 @@ function prompt(text, ctx) {
     "- 機票、登機證、車票(新幹線、JR、高鐵、台鐵)、巴士票、船票、租車確認、座位表、選位畫面 → transport。",
     "  kind:航班 → 飛機;新幹線、JR、鐵路、高鐵、台鐵、地鐵特急 → 火車;高速巴士、客運 → 巴士;渡輪、船 → 船;租車 → 租車。",
     "  時間一律寫票上的當地時間,不要換時區。票上只有時間、看不出日期,就把 depart/arrive 留空。",
+    "  **一次可能有好幾段**(去程和回程、轉乘的每一段、文字講一段圖片又是另一段):每一段在 legs 各列一筆。",
     "- 使用者的話優先於圖片的樣子。都看不出來 → unknown,並在 message 說還需要什麼。",
     "- 看不清楚的欄位留空,不要猜。",
     "",
@@ -165,12 +176,9 @@ async function ask(model, parts, msLeft, SCHEMA) {
 
 /* 模型回什麼都不直接信:型別、格式、範圍在這裡再過一次,
    前端拿到的一定是確認卡、交通表單填得進去的值。 */
-function clean(f, ctx) {
+function cleanLeg(f, ctx) {
   const s = str;
-  /* 以前的 seats(只改飛機座位)併進 transport:模型照舊回 seats 也接得住 */
-  const intent = f.intent === "seats" ? "transport" : ["wish", "stop", "transport"].includes(f.intent) ? f.intent : "unknown";
-  const day = Number.isInteger(f.day) && f.day >= 1 && f.day <= ctx.days.length ? f.day : 0;
-  const t = s(f.time, 5);
+  f = f && typeof f === "object" ? f : {};
   const kind = KINDS.indexOf(f.kind) >= 0 ? f.kind : "";
   const ids = ctx.members.map(m => m.id);
   const seats = (Array.isArray(f.seats) ? f.seats : [])
@@ -186,19 +194,34 @@ function clean(f, ctx) {
     if (hit) match = hit.id;
   }
   return {
-    intent,
-    title: s(f.title, 60),
-    day: day ? ctx.days[day - 1] : "",
-    time: /^([01]\d|2[0-3]):[0-5]\d$/.test(t) ? t : "",
-    note: s(f.note, 300),
     kind, no, company: s(f.company, 40), depart,
     from: s(f.from, 40),
     arrive: ISO_MIN.test(s(f.arrive, 16)) ? s(f.arrive, 16) : "",
     to: s(f.to, 40),
     code: s(f.code, 30),
     dir: DIRS.indexOf(f.dir) >= 0 ? f.dir : "",
-    match,
-    seats,
+    match, note: s(f.note, 300), seats,
+  };
+}
+/* 模型回什麼都不直接信:型別、格式、範圍在這裡再過一次,
+   前端拿到的一定是確認卡、交通表單填得進去的值。 */
+function clean(f, ctx) {
+  const s = str;
+  /* 以前的 seats(只改座位)併進 transport:模型照舊回 seats 也接得住 */
+  const intent = f.intent === "seats" ? "transport" : ["wish", "stop", "transport"].includes(f.intent) ? f.intent : "unknown";
+  const day = Number.isInteger(f.day) && f.day >= 1 && f.day <= ctx.days.length ? f.day : 0;
+  const t = s(f.time, 5);
+  /* 模型偶爾把一段交通攤在最外層(舊的形狀),也接得住 */
+  const raw = Array.isArray(f.legs) && f.legs.length ? f.legs : (f.kind || f.no || f.depart ? [f] : []);
+  const legs = intent === "transport" ? raw.slice(0, 6).map(x => cleanLeg(x, ctx))
+    .filter(l => l.kind || l.no || l.depart || l.from || l.to || l.seats.length) : [];
+  return {
+    intent,
+    title: s(f.title, 60),
+    day: day ? ctx.days[day - 1] : "",
+    time: /^([01]\d|2[0-3]):[0-5]\d$/.test(t) ? t : "",
+    note: s(f.note, 300),
+    legs,
     message: s(f.message, 120),
   };
 }

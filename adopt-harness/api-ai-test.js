@@ -126,7 +126,7 @@ function ok(name, cond, extra) {
     note: "", flight: "", seats: [{ member: "不存在的人", seat: "ZZZ" }], message: "" })));
   const g = r.res.body.result;
   ok("模型回超出範圍的值 → 在這裡被擋掉,不會進到確認卡",
-    g.title.length <= 60 && g.day === "" && g.time === "" && g.seats.length === 0, g);
+    g.title.length <= 60 && g.day === "" && g.time === "" && g.legs.length === 0, g);
 
   /* ---- 這一團的事實由前端帶來(2026-09-28 以前寫死東京五人行) ---- */
   const CTX = { today: "2026-11-01", day: "2026-11-02", days: ["2026-11-01", "2026-11-02", "2026-11-03"],
@@ -143,22 +143,28 @@ function ok(name, cond, extra) {
     !/hsieh_chinhui|MM626|2026-10-03/.test(q1), q1.slice(0, 400));
   ok("第幾天換算成這一團的日期", r.res.body.result.day === "2026-11-02" && r.res.body.result.time === "19:00", r.res.body.result);
   ok("成員代號跟著這一團走(寫在問句裡,不做成選項清單)", /旅客:m-aaa\(小陳\)、m-bbb\(阿美\)/.test(q1) &&
-    !sent(r.seen).generationConfig.responseSchema.properties.seats.items.properties.member.enum, q1.slice(0, 200));
+    !sent(r.seen).generationConfig.responseSchema.properties.legs.items.properties.seats.items.properties.member.enum, q1.slice(0, 200));
 
   /* ---- 交通 ---- */
   r = await call({ text: "這張車票", context: CTX }, () => okJson(JSON.stringify({
-    intent: "transport", kind: "火車", no: "高鐵 615", company: "台灣高鐵", depart: "2026-11-01T08:30", from: "台北",
-    arrive: "2026-11-01T10:15", to: "台南", code: "07123456", dir: "去程", match: "none",
-    seats: [{ member: "m-aaa", seat: "6車 12A" }, { member: "路人", seat: "6車 12B" }], message: "高鐵車票" })));
-  const tr = r.res.body.result;
-  ok("讀到一段火車:種類、班次、時間、訂位代號、方向都留著", tr.intent === "transport" && tr.kind === "火車" && tr.no === "高鐵 615" &&
+    intent: "transport", message: "高鐵來回", legs: [
+      { kind: "火車", no: "高鐵 615", company: "台灣高鐵", depart: "2026-11-01T08:30", from: "台北",
+        arrive: "2026-11-01T10:15", to: "台南", code: "07123456", dir: "去程", match: "none", note: "",
+        seats: [{ member: "m-aaa", seat: "6車 12A" }, { member: "路人", seat: "6車 12B" }] },
+      { kind: "火車", no: "高鐵 668", company: "台灣高鐵", depart: "2026-11-03T18:00", from: "台南",
+        arrive: "2026-11-03T19:45", to: "台北", code: "07123456", dir: "回程", match: "none", note: "", seats: [] }] })));
+  ok("一次讀到兩段(去程 + 回程)→ 兩段都回來", (r.res.body.result.legs || []).length === 2 &&
+    r.res.body.result.legs[1].no === "高鐵 668" && r.res.body.result.legs[1].dir === "回程", r.res.body.result);
+  const tr = r.res.body.result.legs[0];
+  ok("讀到一段火車:種類、班次、時間、訂位代號、方向都留著", r.res.body.result.intent === "transport" && tr.kind === "火車" && tr.no === "高鐵 615" &&
     tr.depart === "2026-11-01T08:30" && tr.arrive === "2026-11-01T10:15" && tr.code === "07123456" && tr.dir === "去程", tr);
   ok("火車座位照票上寫的留著;不是這一團的人丟掉", JSON.stringify(tr.seats) === JSON.stringify([{ member: "m-aaa", seat: "6車 12A" }]), tr.seats);
   ok("模型說 none,但班次 + 日期對得上已經有的那一段 → 自己認出來(不要多加一筆)", tr.match === "leg-1", tr.match);
   r = await call({ text: "x", context: CTX }, () => okJson(JSON.stringify({
     intent: "transport", kind: "飛機", no: "BR 198", depart: "2026-11-01 8點", match: "leg-不存在", dir: "unknown",
     seats: [{ member: "m-aaa", seat: "27A" }, { member: "m-bbb", seat: "隨便" }], message: "" })));
-  const pl = r.res.body.result;
+  const pl = (r.res.body.result.legs || [])[0] || {};
+  ok("模型把一段攤在最外層(舊的形狀)也接得住", r.res.body.result.legs.length === 1, r.res.body.result);
   ok("飛機座位要像 27A;時間格式不對就清掉;不存在的 id 不認;unknown 方向變空的",
     JSON.stringify(pl.seats) === JSON.stringify([{ member: "m-aaa", seat: "27A" }]) && pl.depart === "" && pl.match === "" && pl.dir === "", pl);
   r = await call({ text: "x", context: CTX }, () => okJson(JSON.stringify({ intent: "seats", seats: [], message: "" })));
