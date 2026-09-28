@@ -260,7 +260,8 @@ async function drag(dy) {
       return !!h && (h === e || e.contains(h));
     }
     ok("捲到底之後,送出鈕按得到", reach(d.getElementById("wf-submit")), "wf-submit");
-    ok("捲到底之後,「你是誰」也選得到", reach(d.getElementById("wf-by")), "wf-by");
+    /* 「你是誰」那一欄拿掉了(LINE 登入就知道是誰),改問它真的不在畫面上 */
+    ok("「你是誰」不再出現", d.getElementById("wf-f-by").hidden, "wf-f-by");
     /* 候選清單自己也要有上限 —— 不然「要挑的」和「要按的」會互相擠掉。
        **捲的那一層在 2026-09-24 換了**:以前是整個 `.seek-out`,現在是它裡面的
        `.hits`(候選最多露四則半),因為那句「沒找到?」的提示移到候選後面,
