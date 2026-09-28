@@ -91,11 +91,19 @@ FAKE_FLIGHTS = [
    "arrive": "2026-10-03T15:20", "to": "NRT 成田 T1", "note": "託運 1 件／人 · 手提 2 件 7kg"},
   {"id": "f2", "no": "MM631", "dir": "回程", "airline": "樂桃航空", "depart": "2026-10-08T21:50", "from": "NRT 成田 T1",
    "arrive": "2026-10-09T00:40", "to": "TPE 桃園 T1", "note": ""},
+  # 交通不是只有飛機(2026-09-28):一段火車(有座位,車次是人話)、一段租車(沒有座位,有駕駛)
+  {"id": "f3", "kind": "火車", "no": "成田特快 N'EX 41", "dir": "其他", "airline": "JR 東日本", "depart": "2026-10-03T16:19",
+   "from": "成田機場", "arrive": "2026-10-03T17:20", "to": "東京", "note": "", "code": ""},
+  {"id": "f4", "kind": "租車", "no": "", "dir": "其他", "airline": "TOYOTA 租車", "depart": "2026-10-06T09:00",
+   "from": "河口湖站前店", "arrive": "2026-10-07T18:00", "to": "河口湖站前店", "note": "", "code": "TY-88231",
+   "drivers": ["hsieh_chinhui", "chang_chihwei"]},
 ]
 _OUT = {"chang_chiayu": "27A", "hsieh_chinhui": "27B", "chang_yalun": "27D", "chen_suchih": "27E", "chang_chihwei": "27F"}
 _BACK = {"chang_chiayu": "27A", "hsieh_chinhui": "27B", "chang_chihwei": "27D", "chang_yalun": "27E", "chen_suchih": "27F"}
 FAKE_SEATS = ([{"id": "so" + k, "flight": "MM626", "date": "2026-10-03", "passenger": k, "seat": v} for k, v in _OUT.items()] +
-              [{"id": "sb" + k, "flight": "MM631", "date": "2026-10-08", "passenger": k, "seat": v} for k, v in _BACK.items()])
+              [{"id": "sb" + k, "flight": "MM631", "date": "2026-10-08", "passenger": k, "seat": v} for k, v in _BACK.items()] +
+              [{"id": "st" + k, "flight": "成田特快N'EX41", "date": "2026-10-03", "passenger": k, "seat": v}
+               for k, v in {"chang_chiayu": "9車 3A", "hsieh_chinhui": "9車 3B"}.items()])
 def _exp_row(e):
     return {"id": e["id"], "date": e["date"], "title": e["title"], "category": CAT_ZH[e["category"]],
             "amount": e["amount"], "currency": e["currency"], "payer": e["payerId"],

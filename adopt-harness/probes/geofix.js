@@ -1057,22 +1057,14 @@ function pinsOf(k) { return pins()[k]; }
     /* 那一頁只有這一張卡。要點一下才看得到內容,等於叫人多按一次才看得到
        他點進來就是要看的東西。`open` 一個屬性擋不住這件事 —— `<details>`
        點了就會收起來,所以這裡問的是**點下去之後**還開不開,不是初始值。 */
+    /* **2026-09-28 起交通不只飛機,那張 `<details>` 看板拆成一段一張卡** —— 沒有東西可以收了。
+       這一條守的事不變(點進來就看得到內容),問法跟著換:每一段都有高度,而且頁上沒有任何 summary。 */
     q("#tab-fly").click();
     await sleep(300);
-    var bd = q("#board");
-    var legH = function () { var e = bd.querySelector(".leg"); return e ? Math.round(e.getBoundingClientRect().height) : 0; };
-    ok("一進「交通」就看得到航班內容,不必先點開", bd.open && legH() > 40, { open: bd.open, 高: legH() });
-    ok("箭頭收起來了(沒有開關,就不要畫一個開關的樣子)",
-      w.getComputedStyle(bd.querySelector(".bh-caret")).display === "none",
-      w.getComputedStyle(bd.querySelector(".bh-caret")).display);
-    var sum = bd.querySelector("summary");
-    ok("標題也不裝成可以點的樣子", w.getComputedStyle(sum).cursor === "default", w.getComputedStyle(sum).cursor);
-    sum.click();
-    await sleep(250);
-    ok("**點下去也收不起來**(這才是這一條在守的事)", bd.open && legH() > 40, { open: bd.open, 高: legH() });
-    sum.click();
-    await sleep(250);
-    ok("再點一次還是開著的", bd.open && legH() > 40, { open: bd.open, 高: legH() });
+    var cards = [].slice.call(d.querySelectorAll("#board-wrap .board .leg, #board-wrap .tleg"));
+    var shortest = cards.reduce(function (m, e) { return Math.min(m, Math.round(e.getBoundingClientRect().height)); }, 999);
+    ok("一進「交通」就看得到每一段的內容,不必先點開", cards.length >= 2 && shortest > 40, { 段數: cards.length, 最矮: shortest });
+    ok("沒有可以收起來的東西(沒有 summary)", !q("#board-wrap summary"), !!q("#board-wrap summary"));
 
     /* ======================================================================
        14z ---- 這一團有誰,是伺服器說了算,不是程式裡寫死的
