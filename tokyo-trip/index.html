@@ -5787,13 +5787,17 @@
           trip: trip ? { name: trip.name, country: trip.country, city: trip.city } : {},
         } }),
       });
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(body.error || ("HTTP " + res.status));
-      aiConfirm(body.result || {});
+      const body = await res.json().catch(() => null);
+      /* **三種壞法分開講**(2026-09-28:預覽上一律顯示「連不上 AI」,但網路其實是好的 ——
+         以前只要訊息是英文開頭就當成斷線,伺服器當掉、回的不是 JSON、畫面自己出錯全部混在一起)。 */
+      if (!res.ok) throw Object.assign(new Error(body && body.error ? body.error : "AI 那邊出錯了(HTTP " + res.status + "),再試一次;一直這樣就截圖給團主"), { said: true });
+      if (!body) throw Object.assign(new Error("AI 回來的東西讀不懂(HTTP " + res.status + "),再試一次"), { said: true });
+      try { aiConfirm(body.result || {}); }
+      catch (e) { throw Object.assign(new Error("AI 讀到了,但打開表單時出錯:" + e.message), { said: true }); }
     } catch (e) {
       /* 伺服器回的已經是一句完整的中文,再加「沒成功:」會變成兩層失敗。
-         只有連不上(fetch 自己丟的)才需要補一句。 */
-      aiErr("ai-err", /^[A-Za-z]/.test(e.message) ? "連不上 AI,檢查一下網路" : e.message);
+         只有 fetch 自己丟的(真的連不上)才換成這一句。 */
+      aiErr("ai-err", e.said ? e.message : "連不上 AI,檢查一下網路");
     } finally {
       go.disabled = false; go.textContent = "交給 AI";
     }
