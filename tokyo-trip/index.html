@@ -3423,6 +3423,22 @@
     ? "https://www.google.com/maps/search/" + encodeURIComponent(p) +
       "/@" + at.la.toFixed(5) + "," + at.lo.toFixed(5) + ",14z"
     : "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(p);
+  /* **主畫面 App 裡,往站外的連結不要另開視窗。** iPhone 一看到 Google 地圖、LINE 這種網址,
+     就把它交給別的 App(或瀏覽器),另開的那個視窗自己留成一頁空白 —— 回到 App 看到的
+     就是它,大家以為壞掉了(Lulu 回報,地圖上的點)。登入那顆鈕是同一件事,在那裡修過。
+     App 裡直接往那裡走:iPhone 把它交出去,App 停在原來的畫面。瀏覽器裡照舊開新分頁。 */
+  const standalone = () => (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) || navigator.standalone === true;
+  function openOut(href) {
+    if (standalone()) location.href = href;
+    else window.open(href, "_blank", "noopener");
+  }
+  document.addEventListener("click", ev => {
+    const a = ev.target.closest && ev.target.closest('a[target="_blank"][href]');
+    if (!a || !standalone() || ev.defaultPrevented) return;
+    if (new URL(a.href, location.href).origin === location.origin) return;
+    ev.preventDefault();
+    location.href = a.href;
+  });
   const projX = (lo, z) => (lo + 180) / 360 * Math.pow(2, z);
   const projY = (la, z) => {
     const r = la * Math.PI / 180;
@@ -4273,7 +4289,7 @@
           /* 點在標記上 —— 開 Google 地圖,不要當成要放大 */
           const href = downPin.getAttribute("href");
           lastTap = 0;
-          if (href) window.open(href, "_blank", "noopener");
+          if (href) openOut(href);
         } else if (moved < 6) {
           /* 幾乎沒動 = 點空白處。連點兩下就放大。 */
           const now = Date.now();
