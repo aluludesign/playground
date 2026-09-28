@@ -1715,7 +1715,8 @@
       <div class="seek"><input class="rm-input" type="text" id="wf-title" placeholder="地名/車站/建築物/活動名等" required>
       <button type="button" class="btn btn-sm" data-seek="wf-title">搜尋</button></div>
       <div class="seek-out" id="wf-title-out" hidden></div></div>
-    <div class="fld"><label class="rm-label" for="wf-by">你是誰</label><select class="rm-input" id="wf-by"></select></div>
+    <!-- 「你是誰」不用問:LINE 登入就知道了(Lulu 的決定)。欄位留著、藏起來,值由 lockWho() 填成自己。 -->
+    <div class="fld" id="wf-f-by" hidden><label class="rm-label" for="wf-by">你是誰</label><select class="rm-input" id="wf-by"></select></div>
     <div class="fld"><label class="rm-label" for="wf-note">想說的</label><input class="rm-input" type="text" id="wf-note" placeholder="可留白"></div>
     <div class="err" id="wf-err" hidden></div>
     <div class="ops">
@@ -5477,7 +5478,7 @@
 
   /* 哪一種資料要哪幾欄。類型選單可以改 —— AI 看錯了,人換一下就好,不必重來。 */
   const AI_FIELDS = {
-    wish:  ["title", "note", "by"],
+    wish:  ["title", "note"],   /* 不問「你是誰」:LINE 登入就知道了 */
     stop:  ["day", "time", "title", "note"],
     seats: ["flight", "seats"],
   };
@@ -5663,7 +5664,7 @@
     if (k === "wish") {
       if (!title) { aiErr("ai-cerr", "總要寫個地方。"); return; }
       const by = el("ai-by").value;
-      if (!by) { aiErr("ai-cerr", "選一下你是誰,不然沒人知道這是誰許的。"); return; }
+      if (!by) { aiErr("ai-cerr", "還認不出你是誰 —— 重新整理一下再許一次。"); return; }
       addWish({ id: uid(), title, place, note, by, votes: [by], createdAt: new Date().toISOString() });
       closeAI();
       switchTab("wish");
@@ -5774,7 +5775,7 @@
     const title = el("wf-title").value.trim();
     if (!title) { showWishError("總要寫個地方。"); return; }
     const by = el("wf-by").value;
-    if (!by) { showWishError("選一下你是誰,不然沒人知道這是誰許的。"); return; }
+    if (!by) { showWishError("還認不出你是誰 —— 重新整理一下再許一次。"); return; }
     const place = locatedAt(title) ? title : "";
     addWish({
       id: uid(), title: title, place: place,
