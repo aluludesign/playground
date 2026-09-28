@@ -184,9 +184,12 @@ function cleanLeg(f, ctx) {
   f = f && typeof f === "object" ? f : {};
   const kind = KINDS.indexOf(f.kind) >= 0 ? f.kind : "";
   const ids = ctx.members.map(m => m.id);
-  const seats = (Array.isArray(f.seats) ? f.seats : [])
+  const all = (Array.isArray(f.seats) ? f.seats : [])
     .map(x => ({ member: ids.includes(x && x.member) ? x.member : "", seat: s(x && x.seat, 12).toUpperCase() }))
-    .filter(x => x.member && x.seat && (kind !== "飛機" || /^\d{1,3}[A-K]$/.test(x.seat)));
+    .filter(x => x.seat && (kind !== "飛機" || /^\d{1,3}[A-K]$/.test(x.seat)));
+  const seats = all.filter(x => x.member);
+  /* 票上有、團裡還沒有的乘客(Lulu:不記,等他加入後團主自己填)—— 只回個數,讓畫面講一聲 */
+  const others = all.length - seats.length;
   const depart = ISO_MIN.test(s(f.depart, 16)) ? s(f.depart, 16) : "";
   const no = s(f.no, 30);
   /* 「這一段已經有了」:模型說的 id 要真的在名單上;模型沒說,就用種類 + 班次 + 日期自己對一次 */
@@ -203,7 +206,7 @@ function cleanLeg(f, ctx) {
     to: s(f.to, 40),
     code: s(f.code, 30),
     dir: DIRS.indexOf(f.dir) >= 0 ? f.dir : "",
-    match, note: s(f.note, 300), seats,
+    match, note: s(f.note, 300), seats, others,
   };
 }
 /* 模型回什麼都不直接信:型別、格式、範圍在這裡再過一次,

@@ -353,6 +353,15 @@ const memberRow = (code, sub) => rowsIn(DB.members).find(p => plain(p.properties
   ok("**換掉之後,舊的碼就不能用了**(斷掉那一條擴散線)", r.code === 403 && r.body.why === "bad_invite", r.body);
   r = await call(LINE_C, "GET", { resource: "join", t: T1, code: inviteA });
   ok("別人的碼不受影響", r.code === 200 && r.body.host === "佳瑜", r.body);
+  /* 2026-09-29:團主看得到「有新成員加入」—— 靠每個人的加入時間,和團主自己的「通知已讀」 */
+  r = await call(LINE_A, "GET", { resource: "team", t: T1 });
+  ok("成員名單帶著加入時間;me 帶著通知已讀(還沒看過 = 空的)",
+    r.body.members.every(m => /^\d{4}-\d{2}-\d{2}T/.test(m.joinedAt)) && r.body.me.seenAt === "", r.body);
+  ok("別人的通知已讀不會出現在成員名單裡", r.body.members.every(m => !("seenAt" in m)), r.body.members);
+  r = await call(LINE_A, "PATCH", { resource: "me", t: T1 }, { seen: true });
+  ok("看過了 → 記下時間(伺服器蓋的)", r.code === 200 && /^\d{4}-\d{2}-\d{2}T/.test(r.body.me.seenAt), r.body);
+  r = await call(LINE_A, "GET", { resource: "team", t: T1 });
+  ok("重新讀一次還在", /^\d{4}-\d{2}-\d{2}T/.test(r.body.me.seenAt), r.body.me);
 
   /* ================= 測試環境:團主「用成員身分看」 ================= */
   await call(LINE_A, "PATCH", { resource: "team", t: T1 }, { can: { plan: false, cost: false, seat: false } });

@@ -86,6 +86,10 @@ FAKE_MEMBERS = [
   {"id": "chang_yalun",   "name": "雅倫", "color": "#00A7DB", "role": "成員"},
   {"id": "chen_suchih",   "name": "媽",   "color": "#9B7CB6", "role": "成員"},
 ]
+# 加入時間(2026-09-29 起有「新成員加入」的通知):五個人都在團主上次看過通知之前就加入了
+for _i, _m in enumerate(FAKE_MEMBERS):
+    _m["joinedAt"] = "2026-09-0%dT08:00:00.000Z" % (_i + 1)
+OWNER_SEEN = "2026-09-10T00:00:00.000Z"
 FAKE_FLIGHTS = [
   {"id": "f1", "no": "MM626", "dir": "去程", "airline": "樂桃航空", "depart": "2026-10-03T10:50", "from": "TPE 桃園 T1",
    "arrive": "2026-10-03T15:20", "to": "NRT 成田 T1", "note": "託運 1 件／人 · 手提 2 件 7kg"},
@@ -154,6 +158,10 @@ FAKE_JS = r"""(function(){
   if (mode === "member") { MEMBERS.forEach(function(m){ m.role = m.id === ME_ID ? "成員" : m.role; });
                            MEMBERS[1].role = "團主"; }
   /* member 配 can=plan,cost…:團主只開了其中幾個開關(第 2 期以前三個全開才算數,現在一塊一塊看) */
+  /* newbie=1:團主上次看過通知之後,又有一個人(小美)加入了。noflights=1:這一團還沒有交通 */
+  if (/[?&]newbie=1/.test(q)) MEMBERS.push({ id: "new_friend", name: "小美", color: "#E4007F", role: "成員", joinedAt: "2026-09-18T09:00:00.000Z" });
+  if (/[?&]noflights=1/.test(q)) { ROWS.flights = []; ROWS.seats = []; }
+  var SEEN = { at: %(seen)s };
   var canQ = (/[?&]can=([a-z,]*)/.exec(q) || [])[1];
   if (canQ !== undefined) canQ.split(",").forEach(function(k){ if (k in TRIP.can) TRIP.can[k] = true; });
   var me = (mode === "anon" || mode === "app" || mode === "visitor") ? null : { id: "U-fake-0001", name: "測試的人", avatar: "" };
@@ -202,12 +210,14 @@ FAKE_JS = r"""(function(){
       var dev = !/[?&]prod=1/.test(q);
       var asM = dev && mine.role === "團主" && /(?:^|;\s*)trip_as=member/.test(document.cookie);
       return reply({ trip: TRIP, members: MEMBERS, dev: dev, viewAs: asM ? "member" : "",
-        me: { id: mine.id, name: mine.name, color: mine.color, role: asM ? "成員" : mine.role, realRole: mine.role, invite: "q4wn8t" } });
+        me: { id: mine.id, name: mine.name, color: mine.color, role: asM ? "成員" : mine.role, realRole: mine.role, invite: "q4wn8t",
+              joinedAt: mine.joinedAt, seenAt: mine.role === "團主" ? SEEN.at : "" } });
     }
     if (r === "me") {
       if (body.name) mine.name = body.name;
       if (body.color) mine.color = body.color;
-      return reply({ me: { id: mine.id, name: mine.name, color: mine.color, role: mine.role, invite: body.invite ? "z9z9z9" : "q4wn8t" } });
+      if (body.seen === true) SEEN.at = new Date().toISOString();
+      return reply({ me: { id: mine.id, name: mine.name, color: mine.color, role: mine.role, invite: body.invite ? "z9z9z9" : "q4wn8t", seenAt: SEEN.at } });
     }
     var rows = ROWS[r];
     if (!rows) return reply({ error: "不認識的資料表:" + r }, 400);
@@ -228,7 +238,7 @@ def seed():
     extra = ("localStorage.setItem('trippps-snap:" + TRIP_CODE + "'," + j(snap()) + ");" if offline else "")
     d = lambda o: json.dumps(o, ensure_ascii=False)
     fake = FAKE_JS % {"code": d(TRIP_CODE), "trip": d(FAKE_TRIP), "members": d(FAKE_MEMBERS),
-                      "rows": d(FAKE_ROWS), "me": d(ME_ID), "offline": "true" if offline else "false"}
+                      "rows": d(FAKE_ROWS), "me": d(ME_ID), "offline": "true" if offline else "false", "seen": d(OWNER_SEEN)}
     return CLOCK + ("<script>try{"
       "localStorage.setItem('trippps-wx',"+j(WX)+");"
       "localStorage.setItem('tokyo5-pin3',"+j(PINS)+");"
