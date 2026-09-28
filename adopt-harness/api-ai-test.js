@@ -36,7 +36,7 @@ async function call(body, stub, anon) {
   const handler = require(path);
   const seen = [];
   global.fetch = (u, init) => {
-    seen.push({ url: String(u), headers: (init && init.headers) || {} });
+    seen.push({ url: String(u), headers: (init && init.headers) || {}, body: (init && init.body) || "" });
     const r = stub(seen.length, init);
     if (r === "hang") {
       /* 真的不回應,只聽 abort —— 沒有 timeout 的話這一支會一直掛在這裡。 */
@@ -121,6 +121,44 @@ function ok(name, cond, extra) {
   const g = r.res.body.result;
   ok("模型回超出範圍的值 → 在這裡被擋掉,不會進到確認卡",
     g.title.length <= 60 && g.day === "" && g.time === "" && g.seats.length === 0, g);
+
+  /* ---- 這一團的事實由前端帶來(2026-09-28 以前寫死東京五人行) ---- */
+  const CTX = { today: "2026-11-01", day: "2026-11-02", days: ["2026-11-01", "2026-11-02", "2026-11-03"],
+    members: [{ id: "m-aaa", name: "小陳" }, { id: "m-bbb", name: "阿美" }],
+    legs: [{ id: "leg-1", kind: "火車", no: "高鐵 615", date: "2026-11-01", from: "台北", to: "台南" }],
+    trip: { name: "台南吃吃吃", country: "台灣", city: "台南" } };
+  const sent = seen => { try { return JSON.parse(seen[0].body); } catch (_) { return {}; } };
+  const askText = seen => ((((sent(seen).contents || [])[0] || {}).parts || []).map(p => p.text || "").join(""));
+  r = await call({ text: "排到第 2 天晚上 7 點 鼎泰豐", context: CTX }, () => okJson(JSON.stringify({
+    intent: "stop", title: "鼎泰豐", day: 2, time: "19:00", note: "", seats: [], message: "" })));
+  const q1 = askText(r.seen);
+  ok("問 AI 的時候講的是這一團的日期、成員、交通,不是寫死的東京五人行",
+    /台南吃吃吃/.test(q1) && /第 2 天 = 2026-11-02/.test(q1) && /m-aaa\(小陳\)/.test(q1) && /leg-1/.test(q1) &&
+    !/hsieh_chinhui|MM626|2026-10-03/.test(q1), q1.slice(0, 400));
+  ok("第幾天換算成這一團的日期", r.res.body.result.day === "2026-11-02" && r.res.body.result.time === "19:00", r.res.body.result);
+  ok("座位的 member 只能是這一團的成員", JSON.stringify(sent(r.seen).generationConfig.responseSchema.properties.seats.items.properties.member.enum) ===
+    JSON.stringify(["m-aaa", "m-bbb", "unknown"]), sent(r.seen).generationConfig.responseSchema.properties.seats.items.properties.member.enum);
+
+  /* ---- 交通 ---- */
+  r = await call({ text: "這張車票", context: CTX }, () => okJson(JSON.stringify({
+    intent: "transport", kind: "火車", no: "高鐵 615", company: "台灣高鐵", depart: "2026-11-01T08:30", from: "台北",
+    arrive: "2026-11-01T10:15", to: "台南", code: "07123456", dir: "去程", match: "none",
+    seats: [{ member: "m-aaa", seat: "6車 12A" }, { member: "路人", seat: "6車 12B" }], message: "高鐵車票" })));
+  const tr = r.res.body.result;
+  ok("讀到一段火車:種類、班次、時間、訂位代號、方向都留著", tr.intent === "transport" && tr.kind === "火車" && tr.no === "高鐵 615" &&
+    tr.depart === "2026-11-01T08:30" && tr.arrive === "2026-11-01T10:15" && tr.code === "07123456" && tr.dir === "去程", tr);
+  ok("火車座位照票上寫的留著;不是這一團的人丟掉", JSON.stringify(tr.seats) === JSON.stringify([{ member: "m-aaa", seat: "6車 12A" }]), tr.seats);
+  ok("模型說 none,但班次 + 日期對得上已經有的那一段 → 自己認出來(不要多加一筆)", tr.match === "leg-1", tr.match);
+  r = await call({ text: "x", context: CTX }, () => okJson(JSON.stringify({
+    intent: "transport", kind: "飛機", no: "BR 198", depart: "2026-11-01 8點", match: "leg-不存在", dir: "unknown",
+    seats: [{ member: "m-aaa", seat: "27A" }, { member: "m-bbb", seat: "隨便" }], message: "" })));
+  const pl = r.res.body.result;
+  ok("飛機座位要像 27A;時間格式不對就清掉;不存在的 id 不認;unknown 方向變空的",
+    JSON.stringify(pl.seats) === JSON.stringify([{ member: "m-aaa", seat: "27A" }]) && pl.depart === "" && pl.match === "" && pl.dir === "", pl);
+  r = await call({ text: "x", context: CTX }, () => okJson(JSON.stringify({ intent: "seats", seats: [], message: "" })));
+  ok("以前的 seats(只改座位)當成交通", r.res.body.result.intent === "transport", r.res.body.result);
+  r = await call({ text: "x", context: { days: ["亂寫"], members: "不是陣列", legs: [{ kind: "火箭" }] } }, () => okJson(GOOD));
+  ok("前端亂送的 context 不會讓它掛掉", r.res.code === 200, r.res.body);
 
   /* ---- 第 2 期:要登入 ---- */
   r = await call({ text: "想去築地市場" }, () => okJson(GOOD), true);
