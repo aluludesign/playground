@@ -36,6 +36,8 @@ let pages = [];
 let seq = 0;
 let lost = false;
 let writes = 0;
+/* 「花費」表有沒有「送出編號」那一欄(離線記帳重送不重複要靠它)。預設沒有 = 正式站現在的樣子 */
+let cidColumn = false;
 
 /* 寫進去的格式(`{ rich_text: [{ text: { content } }] }`)換成讀出來的格式
    (`{ rich_text: [{ plain_text }] }`)—— 真的 Notion 就是這樣,兩邊不對稱。 */
@@ -62,7 +64,11 @@ async function fakeFetch(u, init) {
   const method = (init && init.method) || "GET";
   const body = init && init.body ? JSON.parse(init.body) : {};
   if (lost) return reply(404, { message: "Could not find database with ID …", code: "object_not_found" });
-  let m = /\/databases\/([0-9a-f]+)\/query$/.exec(url);
+  let m = /\/databases\/([0-9a-f]+)$/.exec(url);
+  if (m && method === "GET") {
+    return reply(200, { id: dash(m[1]), properties: cidColumn && m[1] === DB.expenses ? { "送出編號": { type: "rich_text" } } : {} });
+  }
+  m = /\/databases\/([0-9a-f]+)\/query$/.exec(url);
   if (m) {
     const rows = pages.filter(p => !p.archived && p.parent.database_id.replace(/-/g, "") === m[1] && matches(p, body.filter));
     return reply(200, { results: clone(rows), has_more: false });
@@ -276,6 +282,28 @@ const memberRow = (code, sub) => rowsIn(DB.members).find(p => plain(p.properties
   ok("花費:付款人、分攤者記成員代號,重複的和格式不對的拿掉",
     r.code === 200 && r.body.row.payer === B_ID &&
     JSON.stringify(r.body.row.participants) === JSON.stringify([B_ID, D_ID]), r.body.row);
+
+  /* ================= 離線記帳:同一筆重送 ================= */
+  /* 在地鐵裡送到一半斷線,手機不知道收到沒有,會再送一次(帶著同一個 cid)。 */
+  const cidRows = () => rowsIn(DB.expenses).filter(p => plain(p.properties["項目"]) === "地鐵便利商店").length;
+  const OFF = { title: "地鐵便利商店", amount: 480, currency: "JPY", payer: B_ID, participants: [B_ID] };
+  r = await call(LINE_A, "POST", { resource: "expenses", t: T1 }, { ...OFF, cid: "mg1a2b3c4d" });
+  r = await call(LINE_A, "POST", { resource: "expenses", t: T1 }, { ...OFF, cid: "mg1a2b3c4d" });
+  ok("「花費」表還沒有「送出編號」那一欄 → 照舊直接建,**不會因為寫了不存在的欄位而整筆被拒**",
+    r.code === 200 && cidRows() === 2 && !("送出編號" in rowsIn(DB.expenses).slice(-1)[0].properties), { code: r.code, n: cidRows() });
+  cidColumn = true;
+  r = await call(LINE_A, "POST", { resource: "expenses", t: T1 }, { ...OFF, cid: "mg9z8y7x6w" });
+  const first = r.body.row && r.body.row.id;
+  const w0 = writes;
+  r = await call(LINE_A, "POST", { resource: "expenses", t: T1 }, { ...OFF, cid: "mg9z8y7x6w" });
+  ok("有那一欄之後:同一個送出編號再送一次 → 回原本那一筆,**不多記一筆**",
+    r.code === 200 && r.body.row.id === first && r.body.again === true && writes === w0 && cidRows() === 3, { body: r.body, n: cidRows() });
+  r = await call(LINE_C, "POST", { resource: "expenses", t: T2 }, { ...OFF, cid: "mg9z8y7x6w" });
+  ok("別團拿同一個編號送 → 不會拿到這一團那一筆(編號只在自己團裡比)",
+    r.code === 200 && r.body.row.id !== first, r.body);
+  r = await call(LINE_A, "POST", { resource: "expenses", t: T1 }, { ...OFF, cid: "壞 東西" });
+  ok("編號格式不對就當沒有:照樣建一筆", r.code === 200 && r.body.row.id && !r.body.again, r.body);
+  cidColumn = false;
 
   /* ================= 航班(第 2 期以前寫死在前端) ================= */
   r = await call(LINE_B, "POST", { resource: "flights", t: T1 }, { no: "mm626", dir: "去程" });

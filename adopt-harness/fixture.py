@@ -133,6 +133,10 @@ def snap():
          "members": [{"id": m["id"], "def": m["name"], "key": m["id"], "full": m["name"], "color": m["color"], "role": m["role"]}
                      for m in FAKE_MEMBERS],
          "me": {"id": ME_ID, "name": "阿輝", "color": "#E60012", "role": "團主", "invite": "q4wn8t"}}
+    # SNAPCAN=1:新版存的副本多帶「那一刻能不能記帳」(離線記帳看它)。
+    # 預設不帶 = 舊版存下來的副本 —— 更新之後、還沒連上網重存之前,手機上躺的就是這種,那時候還是唯讀
+    if os.environ.get("SNAPCAN"):
+        d["can"] = {"plan": True, "cost": True, "seat": True}
     return {"at": SNAP_AT, "data": d}
 
 FAKE_JS = r"""(function(){
