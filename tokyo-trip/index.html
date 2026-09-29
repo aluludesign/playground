@@ -1715,6 +1715,7 @@
     <div class="err" id="se-err" hidden></div>
     <div class="ops">
       <button type="submit" class="btn btn-main">存起來</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="se-unwish" hidden>退回願望區</button>
       <button type="button" class="btn btn-ghost btn-sm" id="se-cancel">取消</button>
     </div>
   </form>
@@ -2181,7 +2182,8 @@
     participants: (e.participants || []).map(nameById).filter(Boolean),
     note: e.note,
   });
-  const stopFromRow = r => ({ id: r.id, day: r.day, time: r.time || "", title: r.title, place: r.place || "", note: r.note || "" });
+  /* by:從願望排進來的那一筆記著是誰許的 —— 有它才退得回願望區 */
+  const stopFromRow = r => ({ id: r.id, day: r.day, time: r.time || "", title: r.title, place: r.place || "", note: r.note || "", by: r.by || "" });
   const stopToRow = s => ({ title: s.title, day: s.day, time: s.time, place: s.place, note: s.note, kind: "其他" });
 
   /* --- 本機 --- */
@@ -2327,6 +2329,38 @@
       render();
     } catch (err) { failStop(o, err); }
   }
+  /* **排進行程的願望,退得回願望區**(Lulu,2026-09-30)。同一列清掉日期和時間就是願望了 ——
+     許願人、票都還在那一列上,不用重新許一次、票也不會歸零。退回去之後重讀一次願望清單,
+     票數才對得上(行程那邊不帶票)。 */
+  async function demoteStop(id) {
+    if (!mayEdit("plan") || !online) return;
+    const k = state.stops.findIndex(x => x.id === id);
+    if (k < 0) return;
+    const s = state.stops.splice(k, 1)[0];
+    render();
+    try {
+      await api("?resource=itinerary&id=" + encodeURIComponent(id), {
+        method: "PATCH", body: JSON.stringify(Object.assign(stopToRow(s), { day: null, time: "" })),
+      });
+      const wi = await api("?resource=wishes");
+      state.wishes = wi.rows;
+      saveSnap();
+      renderWishes(); render();
+      flash("「" + s.title + "」退回願望區了");
+    } catch (err) {
+      state.stops.splice(k, 0, s);
+      render();
+      flash("退不回去:" + err.message);
+    }
+  }
+  el("se-unwish").addEventListener("click", () => {
+    const id = editing;
+    editing = null;
+    showEditError("");
+    el("edit-overlay").hidden = true;
+    if (id) demoteStop(id);
+  });
+
   async function removeStop(id) {
     if (!mayEdit("plan")) return;
     const k = state.stops.findIndex(x => x.id === id);
@@ -2494,7 +2528,7 @@
     const k = state.wishes.findIndex(x => x.id === id);
     if (k < 0) return;
     const w = state.wishes.splice(k, 1)[0];
-    const stop = { id: w.id, day: day, time: time, title: w.title, place: w.place || "", note: w.note || "" };
+    const stop = { id: w.id, day: day, time: time, title: w.title, place: w.place || "", note: w.note || "", by: w.by || "" };
     state.stops.push(stop);
     renderWishes(); render();
     if (!online) { saveLocal(); checkPlace(stop, "wish-msg"); return; }
@@ -5631,6 +5665,8 @@
     seekReset("se-title");
     seekShowExisting("se-title", s.place);
     showEditError("");
+    /* 從願望排進來的才退得回去(手動加的、AI 加的沒有「誰許的」,退回去會變成一個沒有主人的願望) */
+    el("se-unwish").hidden = !s.by || !online;
     tuckMapForDialog(false);
     el("edit-overlay").hidden = false;
     el("se-title").focus();

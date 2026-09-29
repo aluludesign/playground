@@ -171,6 +171,8 @@ function stopOut(page) {
     place: txt(p["地點"]),
     note: txt(p["備註"]),
     url: (p["連結"] && p["連結"].url) || "",
+    /* 從願望排進來的那一列,「許願人」還留著(stopIn 不碰它)—— 畫面靠這個知道它退得回願望區 */
+    by: p["許願人"] ? txt(p["許願人"]) : "",
   };
 }
 function stopIn(b) {
@@ -181,6 +183,8 @@ function stopIn(b) {
     "備註": { rich_text: richText(b.note) },
   };
   if (b.day) props["日期"] = { date: { start: b.day } };
+  /* **退回願望區 = 把日期清掉**(2026-09-30):沒有日期的那一列就是願望,許願人和票都還在 */
+  else if (b.day === null) props["日期"] = { date: null };
   if (b.url) props["連結"] = { url: b.url };
   return props;
 }
