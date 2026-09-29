@@ -334,6 +334,22 @@ const memberRow = (code, sub) => rowsIn(DB.members).find(p => plain(p.properties
     r.body.row.title === "築地市場" && r.body.row.by === B_ID, r.body);
   r = await call(LINE_A, "PATCH", { resource: "wishes", t: T1, id: wish.id }, { note: "團主補一句" });
   ok("團主改得了別人的願望", r.code === 200 && r.body.row.note === "團主補一句", r.body);
+  /* 2026-09-30:排進行程的願望,退得回願望區(清掉日期),許願人和票都還在 */
+  await call(LINE_D, "PATCH", { resource: "wishes", t: T1, id: wish.id }, { votes: [D_ID] });
+  r = await call(LINE_A, "PATCH", { resource: "itinerary", t: T1, id: wish.id },
+    { title: "築地市場", day: "2026-10-05", time: "09:00", place: "築地場外", note: "團主補一句" });
+  ok("團主把願望排進行程", r.code === 200 && r.body.row.day === "2026-10-05", r.body);
+  r = await call(LINE_A, "GET", { resource: "itinerary", t: T1 });
+  const promoted = r.body.rows.find(x => x.id === wish.id);
+  ok("排進去的那一筆帶著許願人(畫面靠這個知道退得回去)", promoted && promoted.by === B_ID, promoted);
+  ok("手動加的行程沒有許願人", r.body.rows.filter(x => x.id !== wish.id && x.day).every(x => !x.by), r.body.rows.map(x => x.by));
+  r = await call(LINE_A, "PATCH", { resource: "itinerary", t: T1, id: wish.id },
+    { title: "築地市場", day: null, time: "", place: "築地場外", note: "團主補一句" });
+  ok("退回願望區:日期清掉", r.code === 200 && !r.body.row.day, r.body);
+  r = await call(LINE_A, "GET", { resource: "wishes", t: T1 });
+  const back = r.body.rows.find(x => x.id === wish.id);
+  ok("它回到願望清單,許願人和兩票都還在", back && back.by === B_ID && back.votes.indexOf(B_ID) >= 0 && back.votes.indexOf(D_ID) >= 0, back);
+  await call(LINE_D, "PATCH", { resource: "wishes", t: T1, id: wish.id }, { votes: [] });
   r = await call(LINE_D, "DELETE", { resource: "wishes", t: T1, id: wish.id });
   ok("D 刪別人的願望 → 403", r.code === 403, r.body);
   r = await call(LINE_C, "PATCH", { resource: "wishes", t: T2, id: wish.id }, { votes: ["x"] });

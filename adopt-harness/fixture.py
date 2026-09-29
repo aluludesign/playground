@@ -4,7 +4,8 @@ import json, os
 STOPS = [
  {"id":"s1","day":"2026-10-05","time":"09:00","title":"淺草寺參拜","place":"淺草寺","note":"想看繪馬"},
  {"id":"s2","day":"2026-10-05","time":"11:30","title":"合羽橋道具街","place":"","note":""},
- {"id":"s3","day":"2026-10-05","time":"14:00","title":"築地市場吃海鮮","place":"築地市場","note":"官網 https://www.tsukiji.or.jp/ 有公休日"},
+ # s3 是從願望排進來的(2026-09-30:by 還留著,所以退得回願望區)
+ {"id":"s3","day":"2026-10-05","time":"14:00","title":"築地市場吃海鮮","place":"築地市場","note":"官網 https://www.tsukiji.or.jp/ 有公休日","by":"chang_chiayu","votes":["chang_chiayu","chen_suchih"]},
  {"id":"s4","day":"2026-10-06","time":"10:00","title":"明治神宮","place":"明治神宮","note":""},
 ]
 WISHES = [
@@ -226,7 +227,12 @@ FAKE_JS = r"""(function(){
     if (method === "POST") { var row = Object.assign({ id: "new" + (++seq) }, body); rows.push(row); return reply({ row: row }); }
     var hit = rows.filter(function(x){ return x.id === id; })[0];
     if (!hit) return reply({ error: "這一團沒有這一筆" }, 404);
-    if (method === "PATCH") { Object.assign(hit, body); return reply({ row: hit }); }
+    if (method === "PATCH") {
+      Object.assign(hit, body);
+      /* 行程清掉日期 = 退回願望區。真的後端是同一張表,這裡是兩個陣列,所以要搬過去 */
+      if (r === "itinerary" && body.day === null) { rows.splice(rows.indexOf(hit), 1); hit.votes = hit.votes || []; ROWS.wishes.push(hit); }
+      return reply({ row: hit });
+    }
     if (method === "DELETE") { rows.splice(rows.indexOf(hit), 1); return reply({ ok: true }); }
     return reply({ error: "不支援的方法" }, 405);
   };
