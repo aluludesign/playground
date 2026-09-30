@@ -3028,7 +3028,7 @@
   const KIND = {
     "飛機": { icon: "i-plane", no: "航班號", noPh: "MM626", co: "航空公司", coPh: "樂桃航空",
              t0: "起飛", t1: "抵達", p0: "從哪裡", p0Ph: "TPE 桃園 T1", p1: "到哪裡", p1Ph: "NRT 成田 T1",
-             seatPh: "例如 27A", seatMax: 4, notePh: "例如 託運 1 件/人 · 手提 7kg" },
+             seatPh: "例如 27A", seatMax: 12, notePh: "例如 託運 1 件/人 · 手提 7kg" },
     "火車": { icon: "i-train", no: "車次", noPh: "のぞみ 21號", co: "哪一家", coPh: "JR 東海",
              t0: "發車", t1: "抵達", p0: "上車站", p0Ph: "東京", p1: "下車站", p1Ph: "京都",
              seatPh: "例如 7車 12A", seatMax: 12, notePh: "例如 指定席 · 要先換票" },
@@ -3258,7 +3258,7 @@
      不然清空之後存起來,舊的座位還躺在表裡,看板照樣畫它。 */
   async function writeSeats(no, date, wanted) {
     for (const m of MEMBERS) {
-      const seat = (wanted[m.id] || "").trim().toUpperCase();
+      const seat = (wanted[m.id] || "").trim();
       const had = (state.seats || []).find(r => r.flight === no && r.passenger === m.id);
       if (!seat && !had) continue;
       if (!seat && had) {
@@ -3290,8 +3290,8 @@
     if (arrive && arrive < depart) { showFlightErr(K.t1 + "時間比" + K.t0 + "早,是不是日期填錯了?"); return; }
     const seats = {};
     if (!K.noSeats) for (const m of MEMBERS) {
-      const v = el("fl-seat-" + m.id).value.trim().toUpperCase();
-      if (kind === "飛機" && v && !/^\d{1,3}[A-K]$/.test(v)) { showFlightErr(nameOf(m.id) + " 的座位「" + v + "」看起來不對,要像 27A"); return; }
+      /* **座位不檢查格式**(Lulu,2026-09-30):以前飛機要像 27A,「A25」就被擋 —— 輸入什麼就存什麼,大小寫也照原樣 */
+      const v = el("fl-seat-" + m.id).value.trim();
       seats[m.id] = v;
     }
     const drivers = K.noSeats ? [].map.call(el("fl-drivers").querySelectorAll("input:checked"), i => i.value) : [];

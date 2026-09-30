@@ -179,8 +179,8 @@ function ok(name, cond, extra) {
     seats: [{ member: "m-aaa", seat: "27A" }, { member: "m-bbb", seat: "隨便" }], message: "" })));
   const pl = (r.res.body.result.legs || [])[0] || {};
   ok("模型把一段攤在最外層(舊的形狀)也接得住", r.res.body.result.legs.length === 1, r.res.body.result);
-  ok("飛機座位要像 27A;時間格式不對就清掉;不存在的 id 不認;unknown 方向變空的",
-    JSON.stringify(pl.seats) === JSON.stringify([{ member: "m-aaa", seat: "27A" }]) && pl.depart === "" && pl.match === "" && pl.dir === "", pl);
+  ok("座位不檢查格式(照票上寫的);時間格式不對就清掉;不存在的 id 不認;unknown 方向變空的",
+    JSON.stringify(pl.seats) === JSON.stringify([{ member: "m-aaa", seat: "27A" }, { member: "m-bbb", seat: "隨便" }]) && pl.depart === "" && pl.match === "" && pl.dir === "", pl);
   r = await call({ text: "x", context: CTX }, () => okJson(JSON.stringify({ intent: "seats", seats: [], message: "" })));
   ok("以前的 seats(只改座位)當成交通", r.res.body.result.intent === "transport", r.res.body.result);
   r = await call({ text: "x", context: { days: ["亂寫"], members: "不是陣列", legs: [{ kind: "火箭" }] } }, () => okJson(GOOD));
