@@ -55,6 +55,18 @@ async function notion(path, init) {
   return body;
 }
 
+/* 「花費」表有沒有「送出編號」這一欄。**有才用**:沒有這一欄就寫進去的話,Notion 會把整筆拒絕,
+   所有人都記不了帳。十分鐘問一次 —— 在 Notion 加了這一欄之後,不用重新部署就會開始用。 */
+let cidCol = { has: false, at: 0 };
+async function hasCidCol() {
+  if (Date.now() - cidCol.at < 10 * 60 * 1000) return cidCol.has;
+  try {
+    const d = await notion("/databases/" + DB.expenses);
+    cidCol = { has: !!(d.properties && d.properties["送出編號"]), at: Date.now() };
+  } catch (_) { cidCol = { has: false, at: Date.now() }; }
+  return cidCol.has;
+}
+
 /* ---------- 地名查詢的退路 ---------- */
 /* 網站平常用 Nominatim(免費、不用金鑰、對繁體地名夠好)。它的問題是
    **不確定的時候不會說**:同一份格式、同樣的欄位 ——
@@ -1000,8 +1012,21 @@ module.exports = async (req, res) => {
     if (!b || !c.can(b)) return res.status(403).json({ error: "這一塊目前只有團主動得了" });
 
     if (method === "POST") {
+      const props = withTrip(shape.in(body));
+      /* **手機離線時記的帳,連上網才送**(見 index.html「還沒送出的花費」)。在地鐵裡送到一半斷線,
+         手機不知道這裡收到沒有,會再送一次 —— 靠「送出編號」認出同一筆,不記成兩筆。
+         「花費」表還沒有這一欄的時候照舊直接建(重送的那一刻有機會重複,但不會壞)。 */
+      const cid = resource === "expenses" && /^[a-z0-9]{6,40}$/.test(String(body.cid || "")) ? String(body.cid) : "";
+      if (cid && await hasCidCol()) {
+        const hit = await notion("/databases/" + shape.db + "/query", { method: "POST", body: JSON.stringify({
+          page_size: 1,
+          filter: { and: [{ property: "團", rich_text: { equals: c.code } }, { property: "送出編號", rich_text: { equals: cid } }] },
+        }) });
+        if (hit.results[0]) return res.status(200).json({ row: shape.out(hit.results[0]), again: true });
+        props["送出編號"] = { rich_text: richText(cid) };
+      }
       const page = await notion("/pages", { method: "POST",
-        body: JSON.stringify({ parent: { database_id: shape.db }, properties: withTrip(shape.in(body)) }) });
+        body: JSON.stringify({ parent: { database_id: shape.db }, properties: props }) });
       return res.status(200).json({ row: shape.out(page) });
     }
     if (method === "PATCH") {

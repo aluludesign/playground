@@ -2041,6 +2041,11 @@
   /* **每一團各存一份。** 第 2 期以前只有一團,key 寫死;現在同一台手機可能進好幾團,
      共用一個 key 的話,打開乙團離線時看到的會是甲團的副本。 */
   const SNAPLS = "trippps-snap:" + ((/[?&]t=([a-z0-9_-]{1,40})/.exec(location.search) || [])[1] || "none");
+  /* **還沒送出去的花費**(2026-09-29,Lulu:在地鐵裡沒網路也要能記帳)。
+     跟 SNAPLS 分開存:副本是「上次讀到的共用紀錄」,這裡是「我記了、Notion 還沒有的」——
+     混在一起的話,下一次成功讀到 Notion 就會把還沒送的蓋掉,那一筆就無聲消失了。
+     一樣一團一份。 */
+  const OUTLS = "trippps-outbox:" + ((/[?&]t=([a-z0-9_-]{1,40})/.exec(location.search) || [])[1] || "none");
   const CFG = window.TRIP_CONFIG || {};
   const API = (CFG.apiBase || "").replace(/\/$/, "") + "/api/notion";
   const AUTH = (CFG.apiBase || "").replace(/\/$/, "") + "/api/auth";
@@ -2072,6 +2077,9 @@
      **第 2 期以前是一個真假值,三個全開才算數** —— 只開一個的話伺服器放行、畫面唯讀。
      現在拆成三塊,每個入口問的是它自己那一塊。 */
   let can = { plan: false, cost: false, seat: false };
+  /* 離線時,副本存下來的那一刻你能不能記帳。**只有記帳這一件事**離線也能做(先排著,連上網再送);
+     行程、座位、改和刪一樣要連上網 —— 那些會跟別人改的撞在一起,沒網路的時候沒辦法問你要用哪個。 */
+  let snapCan = { cost: false };
   /* 離線分兩種,能不能編輯不一樣:
        有副本  顯示的是五個人共用的那份紀錄 → **唯讀**。
                改了也傳不回 Notion,而畫面上看起來像改成功了,
@@ -2207,10 +2215,13 @@
   }
   function snapshot() {
     /* 第 2 期起副本也帶著團和成員:離線打開時,團名、日期、誰是誰都要從這裡來 */
-    return { version: 4, rate: state.rate, names: state.names, expenses: state.expenses, stops: state.stops,
+    /* 還沒送出的不進副本:它們住在 OUTLS,進了副本的話下次打開會出現兩次 */
+    return { version: 4, rate: state.rate, names: state.names, expenses: state.expenses.filter(x => !x.pending), stops: state.stops,
              wishes: state.wishes, seats: state.seats, flights: state.flights, trip, members: MEMBERS,
              /* 「我在這團是誰」也要帶著:離線時自己許的願才認得出是自己的(不然 .mine 全部消失) */
-             me: myMember };
+             me: myMember,
+             /* 離線時能不能先記帳,看的是這個(見 snapCan) */
+             can };
   }
   function saveLocal() {
     /* snapAt 有值 = 現在顯示的是共用紀錄的副本,不是這台裝置自己的紀錄。
@@ -2299,17 +2310,142 @@
     return false;
   }
   async function addExpense(e) {
-    if (!mayEdit("cost")) return;
+    if (!queueCost() && !mayEdit("cost")) return;
     state.expenses.push(e); sortExpenses(); saveLocal(); render();
-    if (!online) return;
+    /* 從沒連上過後端的那種本機模式(snapAt 也沒有):照舊只存在這台 */
+    if (!online && !snapAt) return;
+    if (!online) {
+      enqueue(e);
+      flash("沒網路,這筆先記在這台手機,連上網會自動送出");
+      return;
+    }
     try {
-      const { row } = await api("?resource=expenses", { method: "POST", body: JSON.stringify(expToRow(e)) });
+      const { row } = await postExpense(e);
       const k = state.expenses.indexOf(e);
       if (k > -1) state.expenses[k] = expFromRow(row);
       render();
-    } catch (err) { failed(e, err); }
+    } catch (err) {
+      /* **斷線不是失敗。** 以前這裡一律把那一筆拿掉、講一句「沒存進 Notion」——
+         在地鐵裡記的帳就這樣不見了。現在:連不上就排著,之後自己送;
+         伺服器明確說不行(沒有權限、欄位不對)才是真的失敗。 */
+      if (lostNet(err)) {
+        enqueue(e);
+        flash("沒網路,這筆先記在這台手機,連上網會自動送出");
+      } else failed(e, err);
+    }
   }
+
+  /* ================= 還沒送出的花費 =================
+     **只收「新增一筆花費」。** 新增不會跟別人撞:兩個人各記一筆就是兩筆。
+     改和刪會撞(你改了時間、他同時刪了),沒網路的時候沒辦法問你要哪個,所以那些照舊要連上網。
+
+     每一筆帶一個「送出編號」(就是這一筆在手機上的 id)。在地鐵裡送到一半斷線,
+     手機不知道 Notion 到底收到沒有 —— 再送一次時,伺服器靠這個編號認出「這筆已經有了」,
+     不會記成兩筆(見 api/notion.js 的 cid)。 */
+  let outbox = [];
+  let flushing = false, flushTimer = null;
+  const SEND_MS = 12000;   /* 地鐵裡的請求常常不是失敗,是一直不回來。等這麼久就當成沒網路,先排著 */
+  /* 沒有 status = fetch 自己丟的(連不上、逾時),不是伺服器回的錯 */
+  const lostNet = err => !err || !err.status || (typeof navigator !== "undefined" && navigator.onLine === false);
+  /* 能不能「先記著」:連線中看權限;離線看副本存下來那一刻的權限 */
+  const queueCost = () => (online ? !!can.cost : onSnapshot() && !!snapCan.cost);
+
+  function postExpense(e) {
+    const ctl = new AbortController();
+    const t = setTimeout(() => ctl.abort(), SEND_MS);
+    return api("?resource=expenses", { method: "POST", signal: ctl.signal,
+      body: JSON.stringify(Object.assign(expToRow(e), { cid: e.id })) })
+      .finally(() => clearTimeout(t));
+  }
+  function loadOutbox() {
+    let raw = null;
+    try { raw = localStorage.getItem(OUTLS); } catch (_) { storageOK = false; }
+    let d = null;
+    try { d = raw ? JSON.parse(raw) : null; } catch (_) { d = null; }
+    outbox = Array.isArray(d) ? d.filter(x => x && x.e && x.e.id) : [];
+  }
+  function saveOutbox() {
+    try {
+      if (outbox.length) localStorage.setItem(OUTLS, JSON.stringify(outbox));
+      else localStorage.removeItem(OUTLS);
+    } catch (_) { storageOK = false; }
+  }
+  function enqueue(e) {
+    e.pending = true;
+    const copy = Object.assign({}, e);
+    delete copy.pending;
+    outbox.push({ e: copy, err: "" });
+    saveOutbox();
+    render(); renderCloudBar();
+    armFlush();
+  }
+  /* 讀到新的一份之後,把還沒送出的接回畫面上 —— 不然重新整理一次,排著的那幾筆就看不到了 */
+  function mergeOutbox() {
+    outbox.forEach(item => {
+      const on = state.expenses.find(x => x.id === item.e.id);
+      if (on) { on.pending = true; on.sendErr = item.err || ""; return; }
+      state.expenses.push(Object.assign({}, item.e, { pending: true, sendErr: item.err || "" }));
+    });
+    sortExpenses();
+  }
+  function dropOutbox(id) {
+    outbox = outbox.filter(x => x.e.id !== id);
+    saveOutbox();
+    state.expenses = state.expenses.filter(x => !(x.id === id && x.pending));
+    render(); renderCloudBar();
+  }
+  /* 連上了就一筆一筆送。**照順序、一次一筆**:同時送的話,斷線時分不出哪幾筆到了。 */
+  async function flushOutbox() {
+    clearTimeout(flushTimer);
+    if (!online || flushing || !outbox.length) return;
+    flushing = true;
+    let sent = 0;
+    try {
+      for (const item of outbox.slice()) {
+        if (item.err) continue;   /* 伺服器說過不行的,等人決定(再送一次/取消這筆) */
+        try {
+          const { row } = await postExpense(item.e);
+          outbox = outbox.filter(x => x !== item);
+          saveOutbox();
+          sent++;
+          const fresh = expFromRow(row);
+          /* 同一筆可能已經被上一次「讀 Notion」拉回來了(送到了、只是回應沒收到)—— 那就只留那一份 */
+          const had = state.expenses.some(x => x.id === fresh.id);
+          const k = state.expenses.findIndex(x => x.id === item.e.id && x.pending);
+          if (k > -1) { if (had) state.expenses.splice(k, 1); else state.expenses[k] = fresh; }
+          else if (!had) state.expenses.push(fresh);
+        } catch (err) {
+          if (lostNet(err) || err.status === 401) break;   /* 還是沒網路 / 登入過期:整批等下一次 */
+          item.err = err.message || "伺服器不收";
+          saveOutbox();
+          const k = state.expenses.find(x => x.id === item.e.id && x.pending);
+          if (k) k.sendErr = item.err;
+        }
+      }
+    } finally {
+      flushing = false;
+      sortExpenses();
+      /* 先畫再講:render() 會把狀態列那行字換回「同步中」,反過來的話這句話一閃就沒了 */
+      render(); renderCloudBar();
+      if (sent) { saveSnap(); flash("送出了 " + sent + " 筆離線時記的帳"); }
+      armFlush();
+    }
+  }
+  /* 還有排著的就過一陣子再試。手機的 online 事件不可靠(地鐵進站時常常沒發),所以不能只靠它 */
+  function armFlush() {
+    clearTimeout(flushTimer);
+    if (online && outbox.some(x => !x.err)) flushTimer = setTimeout(flushOutbox, 20000);
+  }
+  const pendingCount = () => outbox.length;
+  window.addEventListener("online", () => {
+    if (online) { flushOutbox(); return; }
+    /* 開的時候就沒網路(看的是副本):網路回來了就自己連一次,連上了再送 */
+    if (onSnapshot()) goOnline().then(() => flash(pendingCount() ? "連上了,正在送出離線時記的帳" : "連上了,已換成最新的資料"))
+      .catch(() => {});
+  });
   async function removeExpense(id) {
+    /* 還沒送出的那幾筆:取消就是從排隊裡拿掉,不用連上網 */
+    if (state.expenses.some(x => x.id === id && x.pending)) { dropOutbox(id); flash("這筆取消了,不會送出"); return; }
     if (!mayEdit("cost")) return;
     const k = state.expenses.findIndex(x => x.id === id);
     const gone = k > -1 ? state.expenses.splice(k, 1)[0] : null;
@@ -2572,13 +2708,15 @@
     /* 三個請求都回來了才存,存的是完整的一份。
        放在 api() 那層各存各的話,其中一個失敗就會留下一份殘缺的副本。 */
     saveSnap();
+    mergeOutbox();
   }
 
   let pullTimer = null;
   function schedulePull() {
     if (!online) return;
     clearTimeout(pullTimer);
-    pullTimer = setTimeout(() => pull().then(render).catch(() => {}), 400);
+    /* 先送排著的,再讀:同時跑的話,讀回來的那份是送出之前的,剛送到的那筆會暫時從畫面上消失 */
+    pullTimer = setTimeout(() => { flushOutbox().catch(() => {}).then(pull).then(render).catch(() => {}); }, 400);
   }
 
   /* 按鈕原地轉圈,文字先收起來。寬高先鎖住,不然按下去整排會抽動一下。
@@ -2613,7 +2751,8 @@
     const on = editable();
     const bs = el("add-stop-btn"), be = el("add-exp-btn");
     if (bs) bs.hidden = !editable("plan");
-    if (be) be.hidden = !editable("cost");
+    /* 離線也能記帳(先排著,見「還沒送出的花費」)—— 所以這顆看的是 queueCost,不是 editable */
+    if (be) be.hidden = !(editable("cost") || queueCost());
     /* 這段字本來寫死「紀錄存在這台裝置的瀏覽器裡」。三種模式只有一種成立,
        而另外兩種它照樣印 —— 連著 Notion 的人讀到的是一句假話。
        而且「匯入備份」在唯讀時是藏起來的,說明卻還在教人按它。 */
@@ -2645,7 +2784,7 @@
        許願每個成員都能許,只有看副本(離線)時才收。 */
     if (!editable("plan")) closeStopAdd();
     if (onSnapshot()) closeWishAdd();
-    if (!editable("cost")) { const ef = el("exp-form"); if (ef) ef.hidden = true; }
+    if (!editable("cost") && !queueCost()) { const ef = el("exp-form"); if (ef) ef.hidden = true; }
     /* 「改」的判準不是 `editable()`,所以它不能掛在上面那個 `if (!on)` 裡:
        線上唯讀(有連線、沒通行碼)時那張表**該**留著,那正是這條路存在的理由。
        只有切進快照模式才要收。
@@ -2668,6 +2807,9 @@
     if (!snap) return false;
     snapAt = snap.at;
     apply(snap.data);
+    snapCan = { cost: !!(snap.data.can && snap.data.can.cost) };
+    loadOutbox();
+    mergeOutbox();
     if (snap.data.trip) { trip = snap.data.trip; }
     if (Array.isArray(snap.data.members)) setMembers(snap.data.members);
     if (snap.data.me) myMember = snap.data.me;
@@ -2684,6 +2826,7 @@
     /* **人要先換,再拉資料。** 花費的付款人、座位的旅客記的是成員代號,
        名單沒換好就畫的話,每一筆都會是「未指定付款人」—— 畫面看起來正常,只是錢算錯。 */
     await refreshTeam();
+    loadOutbox();
     await pull();
     online = true;
     fillPeopleControls();
@@ -2693,6 +2836,7 @@
     checkNewcomers();
     loadWeather();
     window.addEventListener("focus", schedulePull);
+    flushOutbox();
   }
 
   /* ================= 通知:有新成員加入(2026-09-29,Lulu) =================
@@ -4897,12 +5041,19 @@
     const whoShared = ps.length === IDS.length ? "全員均分" : ps.map(nameOf).join("、") + " 均分";
     const payer = e.payerId ? esc(nameOf(e.payerId)) + " 付" : '<span style="color:var(--warn)">未指定付款人</span>';
     const v = toTWD(e);
+    /* 還沒送出的:講清楚它還在手機上;送不出去的講原因。按鈕只給「取消這筆」(和再送一次)——
+       改的話要等它送到 Notion,不然會改到一筆 Notion 還沒有的東西 */
+    const wait = e.pending
+      ? '<div class="mt" style="color:var(--warn)"><span>' + (e.sendErr ? "⚠ 送不出去:" + esc(e.sendErr) : "⏳ 還沒送出 · 連上網會自動送") + "</span></div>" +
+        '<div class="ops">' + (e.sendErr ? '<button type="button" class="btn btn-ghost btn-sm" data-resend-exp="' + e.id + '">再送一次</button>' : "") +
+        '<button type="button" class="btn btn-ghost btn-sm" data-del-exp="' + e.id + '">取消這筆</button></div>'
+      : "";
     return '<div class="exp"><div class="hd"><span class="ti">' + linkify(e.title) + '</span><span class="rm-chip cat" style="background:' + c.color + '">' + c.name + "</span></div>" +
       '<div class="amt">' + twd(v) + (e.currency === "JPY" ? '<span class="sub">¥' + Math.round(e.amount).toLocaleString("en-US") + "</span>" : "") + "</div>" +
       '<div class="mt"><span>' + payer + "</span><span>·</span><span>" + esc(whoShared) + "</span>" +
       (ps.length ? '<span>·</span><span class="num">每人 ' + twd(v / ps.length) + "</span>" : "") +
-      (e.note ? "<span>·</span><span>" + linkify(e.note) + "</span>" : "") + "</div>" +
-      (editable("cost") ? '<div class="ops">' +
+      (e.note ? "<span>·</span><span>" + linkify(e.note) + "</span>" : "") + "</div>" + wait +
+      (editable("cost") && !e.pending ? '<div class="ops">' +
         '<button type="button" class="btn btn-ghost btn-sm" data-edit-exp="' + e.id + '">' +
         '<svg class="i" aria-hidden="true"><use href="#i-pen"></use></svg>改</button>' +
         '<button type="button" class="btn btn-ghost btn-sm" data-del-exp="' + e.id + '">刪除</button></div>' : "") + "</div>";
@@ -5289,6 +5440,14 @@
   el("exp-list").addEventListener("click", ev => {
     const b = ev.target.closest("[data-del-exp]");
     if (b) { removeExpense(b.dataset.delExp); return; }
+    const r = ev.target.closest("[data-resend-exp]");
+    if (r) {
+      const item = outbox.find(x => x.e.id === r.dataset.resendExp);
+      if (item) { item.err = ""; saveOutbox(); mergeOutbox(); render(); }
+      if (!online) { flash("還沒連上網,連上了會自動送"); return; }
+      flushOutbox();
+      return;
+    }
     const p = ev.target.closest("[data-edit-exp]");
     if (p) openExpEdit(p.dataset.editExp);
   });
@@ -6504,9 +6663,10 @@
     bar.className = "cloudbar " + (online ? "on" : "off");
     const who = myMember ? nameOf(myMember.id) + (myMember.role === "團主" ? " · 團主" : "") : "";
     /* 離線要講出時間:他看到的是真的行程,只是舊的。不說多舊,他會拿三天前的版本去趕車。 */
-    el("cloud-msg").textContent = online
+    const wait = pendingCount() ? " · " + pendingCount() + " 筆花費還沒送出" : "";
+    el("cloud-msg").textContent = (online
       ? (who || "已連上")
-      : "離線 · 這是 " + snapWhen(snapAt) + " 讀到的資料 · 不能編輯";
+      : "離線 · 這是 " + snapWhen(snapAt) + " 讀到的資料 · " + (snapCan.cost ? "只能記帳" : "不能編輯")) + wait;
     el("cloud-ops").innerHTML = online
       ? '<button type="button" class="btn btn-sm btn-ghost" id="cloud-sync">重新整理</button>' +
         '<button type="button" class="btn btn-sm" id="cloud-invite">邀請朋友</button>' +
