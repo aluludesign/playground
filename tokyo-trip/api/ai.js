@@ -17,10 +17,22 @@ const S = require("./_session.js");
 
 const ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/";
 
-/* 依序嘗試,**先用額度最多的**。2026/09 在 AI Studio 的 Rate Limit 頁看到的免費額度:
-   Flash-Lite 每天 500 次、每分鐘 15 次;Flash 每天 20 次。
-   前一個額度用完(429)或模型不存在(404)才換下一個。 */
-const MODELS = ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3.8-flash"];
+/* 依序嘗試,**先用額度最多的**。額度照 AI Studio 的 Rate Limit 頁(Lulu 2026-09-30 存的那一份,
+   專案「Trippps Gemini AI」、免費方案):
+     3.5 / 3.1 Flash-Lite   每天 500 次、每分鐘 15 次   ← 主力
+     3.8 Flash              每天  20 次、每分鐘  5 次
+     後面六個(2026-09-30 加):每天各 20 次,每分鐘 5 次(2.5 Flash-Lite 是 10 次)
+   前一個額度用完(429)、太忙(5xx)或模型不存在(404)才換下一個。
+
+   **後面六個是備用,不是主力。** 加它們的理由是 3.8 Flash 過去 28 天最忙的一天用到 14/20 ——
+   它只在前兩個失敗時才輪到,代表那天前兩個常常「太忙」,整個重量壓在一個每天 20 次的模型上。
+   多六個,每天多約 120 次,也多六次「換一個試試」的機會。順序:新的、強的在前。
+   Gemma 4(每天 14,400 次)沒有加:每分鐘只收 16K 字量,一張截圖就可能超過,讀圖和照格式回答也沒測過。 */
+const MODELS = [
+  "gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3.8-flash",
+  "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash", "gemini-3-flash",
+  "gemini-2.5-flash", "gemini-2.5-flash-lite",
+];
 
 const MAX_B64 = 3_000_000;   /* 前端送來的是縮過的 JPEG,正常 1MB 以內;這是防呆 */
 
@@ -28,7 +40,8 @@ const MAX_B64 = 3_000_000;   /* 前端送來的是縮過的 JPEG,正常 1MB 以�
    「AI 讀取中…」,直到 Vercel 在 30 秒把整個函式砍掉 —— 使用者看到的是
    「按了之後就卡住」,而那是最難判斷該不該再按一次的一種壞法。
    單次 10 秒:正常一兩秒就回來,10 秒是三四倍,夠寬。
-   總共 22 秒:三個模型輪完也不會撞到函式本身的 30 秒上限。 */
+   總共 22 秒:不管排了幾個模型,時間到就停,不會撞到函式本身的 30 秒上限
+   (模型多了之後,全部都忙的時候後面幾個輪不到 —— 那是對的,使用者不該等超過二十幾秒)。 */
 const CALL_MS = 10_000;
 const TOTAL_MS = 22_000;
 const MAX_TEXT = 1000;
