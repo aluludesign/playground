@@ -14,6 +14,8 @@
  */
 const path = process.env.SRC ||
   require("path").join(__dirname, "..", "tokyo-trip", "api", "ai.js");
+/* 模型清單從原始碼讀,不在這裡抄一份 —— 清單改了,測試跟著改 */
+const MODELS = eval(/const MODELS = (\[[\s\S]*?\]);/.exec(require("fs").readFileSync(path, "utf8"))[1]);
 
 function mkres() {
   const r = { code: 0, body: null, headers: {} };
@@ -81,7 +83,7 @@ function ok(name, cond, extra) {
   ok("回的不是 JSON → 給使用者看得懂的一句話", /沒讀懂/.test(msg), msg);
   ok("**而且不是原始的解析錯誤**(看的人只知道壞了,不知道該不該再按一次)",
     !/Unexpected token|JSON\.parse|SyntaxError/i.test(msg), msg);
-  ok("三個模型都試過才放棄(換一個有機會成功)", r.seen.length === 3, r.seen.length);
+  ok("每個模型都試過才放棄(換一個有機會成功)", r.seen.length === MODELS.length, { 試了: r.seen.length, 共有: MODELS.length });
 
   /* ---- 上游卡住 ---- */
   const t0 = Date.now();
@@ -124,7 +126,12 @@ function ok(name, cond, extra) {
   t1 = Date.now();
   r = await call({ text: "x" }, () => BUSY);
   const took2 = Date.now() - t1;
-  ok("全部都忙:每個模型各問兩次,而且總時間在函式的 30 秒上限之內", r.seen.length === 6 && took2 < 25000, { 次數: r.seen.length, 花了: took2 });
+  /* 模型多了之後(2026-09-30 起九個),全部都忙時不保證每個都問兩次 —— 時間到就停。
+     要守的是:時間在上限內、每個模型至少問過一次、主力(第一個)有等一下再問第二次。 */
+  const asked = new Set(r.seen.map(x => x.url));
+  ok("全部都忙:每個模型至少問過一次,主力等一下再問了第二次,總時間在函式的 30 秒上限之內",
+    asked.size === MODELS.length && r.seen[0].url === r.seen[1].url && took2 < 25000,
+    { 次數: r.seen.length, 問過幾個: asked.size, 共有: MODELS.length, 花了: took2 });
   ok("失敗的訊息附上 Google 的代碼(數字,不是英文原話)", /\(Google 503\)/.test(r.res.body.error) && !/high demand/.test(r.res.body.error), r.res.body.error);
 
   /* ---- 額度用完 ---- */
