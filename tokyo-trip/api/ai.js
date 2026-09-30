@@ -14,6 +14,7 @@
 // 現在每個人都是登入的,不擋就是把免費額度開給知道網址的任何人。
 
 const S = require("./_session.js");
+const U = require("./_usage.js");
 
 const ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/";
 
@@ -248,8 +249,14 @@ function clean(f, ctx) {
 
 module.exports = async (req, res) => {
   res.setHeader("Cache-Control", "no-store");
+  /* **GET = 今天全站還剩幾次**(AI 對話框一打開就問,見 _usage.js)。
+     一樣要登入 —— 不是祕密,但沒有理由講給不用這個網站的人聽。 */
+  if (req.method === "GET") {
+    if (!S.whoIs(req)) return res.status(401).json({ error: "請先用 LINE 登入", why: "login" });
+    return res.status(200).json({ usage: await U.status() });
+  }
   if (req.method !== "POST") {
-    res.setHeader("Allow", "POST");
+    res.setHeader("Allow", "GET, POST");
     return res.status(405).json({ error: "不支援的方法" });
   }
   if (!process.env.GEMINI_KEY) return res.status(503).json({ error: "伺服器還沒設定 GEMINI_KEY" });
@@ -280,10 +287,15 @@ module.exports = async (req, res) => {
     for (let n = 0; n < 2; n++) {
       if (until - Date.now() < 1500) break models;   /* 剩下的時間不夠再問一次,就別問了 */
       try {
-        return res.status(200).json({ result: clean(await ask(model, parts, until - Date.now(), SCHEMA), ctx), model });
+        const result = clean(await ask(model, parts, until - Date.now(), SCHEMA), ctx);
+        /* 數一次再回。**要等它寫完**:回應送出之後函式可能就被收掉,那一次就沒數到 */
+        await U.count(model, "ok");
+        return res.status(200).json({ result, model });
       } catch (e) {
         last = e;
         if (e.status) codes.push(e.status);
+        /* 429 = Google 說這個模型今天沒了。記下來,對話框的「還剩約幾次」就不會再把它算進去 */
+        if (e.status === 429) await U.count(model, "out");
         if (n === 0 && e.status >= 500 && until - Date.now() > BUSY_WAIT_MS + 4000) {
           await nap(BUSY_WAIT_MS + Math.floor(Math.random() * 500));
           continue;

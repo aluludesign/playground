@@ -1752,6 +1752,9 @@
 <div class="overlay" id="ai-overlay" hidden>
   <form class="signin" id="ai-form">
     <h2>AI 幫你加</h2>
+    <!-- 今天全站還剩約幾次(見 api/_usage.js)。外層不掛 class:裡面那個 .note 是 display:flex,
+         掛在同一層會蓋掉 [hidden] -->
+    <div id="ai-quota" hidden></div>
     <div class="fld"><label class="rm-label" for="ai-text" id="ai-ask-label">想做什麼</label>
       <textarea class="rm-input" id="ai-text" rows="3" placeholder="例:這家想去許願／加到第 3 天晚上 7 點／這張是車票或訂位確認"></textarea></div>
     <div class="fld" id="ai-img-row">
@@ -5920,6 +5923,38 @@
     el("ai-form").hidden = false; el("ai-confirm").hidden = true;
     el("ai-overlay").hidden = false;
     el("ai-text").focus();
+    loadAIQuota();
+  }
+
+  /* ---- 免費額度提醒(2026-09-29,Lulu:給會用 AI 的所有人看,放在這個對話框裡) ----
+     **這個額度是所有團一起用的**:一把 Google 金鑰,誰按都算。所以講「所有團共用」,
+     不然東京團的人會以為那是他自己的份。數字是伺服器自己數的,只能說「約」(見 api/_usage.js)。
+     讀不到就整行不出現 —— 講一個錯的數字比不講糟。 */
+  const AI_LOW = 0.1;   /* 剩一成以下改成黃底提醒 */
+  function paintAIQuota(u) {
+    const box = el("ai-quota");
+    if (!u || !u.total) { box.hidden = true; box.innerHTML = ""; return; }
+    let at = "";
+    try {
+      at = u.resetAt ? new Intl.DateTimeFormat("zh-TW", { timeZone: "Asia/Taipei", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })
+        .format(new Date(u.resetAt)) : "";
+    } catch (_) { at = ""; }
+    const when = at ? "台灣時間 " + at + " 重算" : "每天重算";
+    const warn = msg => '<div class="note" style="margin-bottom:12px"><span>⚠</span><span>' + esc(msg) + "</span></div>";
+    box.innerHTML = u.left <= 0
+      ? warn("今天所有團共用的免費 AI 額度大概用完了 · " + when + "。還是可以試試,或先手動加。")
+      : u.left <= u.total * AI_LOW
+        ? warn("今天所有團共用的 AI 只剩約 " + u.left + " 次 · " + when)
+        : "<p>今天所有團共用的 AI 還能用約 " + u.left + " 次 · " + when + "</p>";
+    box.hidden = false;
+  }
+  async function loadAIQuota() {
+    if (!online) { paintAIQuota(null); return; }
+    try {
+      const res = await fetch(AI_API, { credentials: "same-origin" });
+      const body = res.ok ? await res.json().catch(() => null) : null;
+      paintAIQuota(body && body.usage);
+    } catch (_) { paintAIQuota(null); }
   }
   function closeAI() {
     el("ai-overlay").hidden = true;
@@ -6125,6 +6160,8 @@
         } }),
       });
       const body = await res.json().catch(() => null);
+      /* 用掉一次(或 Google 說用完了)之後重數:回頭按「重來」時看到的是新的數字 */
+      loadAIQuota();
       /* **三種壞法分開講**(2026-09-28:預覽上一律顯示「連不上 AI」,但網路其實是好的 ——
          以前只要訊息是英文開頭就當成斷線,伺服器當掉、回的不是 JSON、畫面自己出錯全部混在一起)。 */
       if (!res.ok) throw Object.assign(new Error(body && body.error ? body.error : "AI 那邊出錯了(HTTP " + res.status + "),再試一次;一直這樣就截圖給團主"), { said: true });
