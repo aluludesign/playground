@@ -238,13 +238,13 @@ function seatOut(page) {
     flight: ttl(p["航班"]).toUpperCase().replace(/\s+/g, ""),
     date: dat(p["日期"]),
     passenger: txt(p["旅客"]) || null,
-    seat: txt(p["座位"]).toUpperCase(),
+    seat: txt(p["座位"]),   /* 照原樣,不轉大寫(2026-09-30:輸入什麼就是什麼) */
   };
 }
 function seatIn(b) {
   const props = {
     "航班": { title: richText(String(b.flight || "").toUpperCase()) },
-    "座位": { rich_text: richText(String(b.seat || "").toUpperCase()) },
+    "座位": { rich_text: richText(String(b.seat || "").trim().slice(0, 20)) },
   };
   if (b.date) props["日期"] = { date: { start: b.date } };
   if (b.passenger !== undefined) props["旅客"] = { rich_text: richText(b.passenger) };

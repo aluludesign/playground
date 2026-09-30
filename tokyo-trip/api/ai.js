@@ -185,8 +185,9 @@ function cleanLeg(f, ctx) {
   const kind = KINDS.indexOf(f.kind) >= 0 ? f.kind : "";
   const ids = ctx.members.map(m => m.id);
   const all = (Array.isArray(f.seats) ? f.seats : [])
-    .map(x => ({ member: ids.includes(x && x.member) ? x.member : "", seat: s(x && x.seat, 12).toUpperCase() }))
-    .filter(x => x.seat && (kind !== "飛機" || /^\d{1,3}[A-K]$/.test(x.seat)));
+    /* 座位不檢查格式(Lulu,2026-09-30:輸入什麼就是什麼)—— 票上寫什麼就留什麼 */
+    .map(x => ({ member: ids.includes(x && x.member) ? x.member : "", seat: s(x && x.seat, 12) }))
+    .filter(x => x.seat);
   const seats = all.filter(x => x.member);
   /* 票上有、團裡還沒有的乘客(Lulu:不記,等他加入後團主自己填)—— 只回個數,讓畫面講一聲 */
   const others = all.length - seats.length;
