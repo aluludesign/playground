@@ -359,6 +359,20 @@ const PALETTE = ["#E60012", "#F39700", "#009944", "#00A7DB", "#9B7CB6",
 const MEMBERS_PER_TRIP = 30;
 /* 測試環境:Vercel 的 preview、本機、驗收工具。**正式站 VERCEL_ENV 一定是 production。** */
 const DEV = process.env.VERCEL_ENV !== "production";
+/* **Google 的一天**(太平洋時間午夜 = 台灣下午 3 點,冬令 4 點)。AI 次數和「每天只能換一次副團主」
+   都照這一天算,兩條規則同一個時間重來(跟 api/_usage.js 同一套算法)。 */
+const PT = "America/Los_Angeles";
+const ptDay = d => new Intl.DateTimeFormat("en-CA", { timeZone: PT, year: "numeric", month: "2-digit", day: "2-digit" }).format(d || new Date());
+function nextReset(now) {
+  now = now || new Date();
+  const today = ptDay(now), t = new Date(now);
+  t.setUTCMinutes(0, 0, 0);
+  for (let i = 0; i < 26; i++) { t.setUTCHours(t.getUTCHours() + 1); if (ptDay(t) !== today) return t.toISOString(); }
+  return "";
+}
+/* 這一次重算之後有沒有換過(時間落在同一個太平洋日) */
+const sameGoogleDay = iso => !!iso && ptDay(new Date(iso)) === ptDay();
+const twClock = iso => { try { return new Intl.DateTimeFormat("zh-TW", { timeZone: "Asia/Taipei", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(iso)); } catch (_) { return ""; } };
 const VIEW_AS_COOKIE = "trip_as";
 const TRIPS_PER_PERSON = 10;
 
@@ -388,12 +402,15 @@ function tripOut(page) {
     end: dat(p["結束日"]),
     rate: (p["匯率"] && p["匯率"].number) || base.rate,
     kitty: (p["基金"] && p["基金"].number) || 0,
-    /* 成員能不能動這三塊,由團主決定。**預設全關** —— 沒設定不等於不設防。 */
+    /* **副團主能動哪幾塊**(2026-10-01 起)。一般成員只能許願,舊的「成員可管…」三欄不再用。
+       團主指派副團主的時候勾;預設全關。seat 這一塊就是「交通」(交通和座位)。 */
     can: {
-      plan: !!(p["成員可管行程"] && p["成員可管行程"].checkbox),
-      cost: !!(p["成員可管分帳"] && p["成員可管分帳"].checkbox),
-      seat: !!(p["成員可管機位"] && p["成員可管機位"].checkbox),
+      plan: !!(p["副團主可管行程"] && p["副團主可管行程"].checkbox),
+      cost: !!(p["副團主可管記帳"] && p["副團主可管記帳"].checkbox),
+      seat: !!(p["副團主可管交通"] && p["副團主可管交通"].checkbox),
     },
+    /* 上一次換掉(或取消)副團主是什麼時候。**每天只能換一次**,擋住一直換人刷 AI 的 +5 */
+    deputyAt: p["副團主換人時間"] && p["副團主換人時間"].date ? p["副團主換人時間"].date.start : "",
     page: page.id,
   };
 }
@@ -535,7 +552,9 @@ module.exports = async (req, res) => {
     const asMember = DEV && mine.role === "團主" && S.readCookies(req)[VIEW_AS_COOKIE] === "member";
     const role = asMember ? "成員" : mine.role;
     const owner = role === "團主";
-    return { code, trip, members, mine, role, asMember, owner, can: b => owner || !!trip.can[b] };
+    /* 團主全部都能動;副團主看團主勾了哪幾塊;一般成員只能許願(許願不走這裡) */
+    const deputy = role === "副團主";
+    return { code, trip, members, mine, role, asMember, owner, can: b => owner || (deputy && !!trip.can[b]) };
   }
   const stop = s => res.status(s.status).json({ error: s.error, why: s.why });
 
@@ -602,7 +621,7 @@ module.exports = async (req, res) => {
 
   /* ---------- 這一團 ----------
      GET   → 團的設定、成員名單、我是誰(含**我自己的**邀請碼)。
-     PATCH → 團主改團名、國家、城市、日期、匯率、基金、三個開關。 */
+     PATCH → 團主改團名、國家、城市、日期、匯率、基金、副團主和副團主能動的三塊。 */
   if (resource === "team") {
     if (!allow("GET", "PATCH")) return;
     try {
@@ -610,6 +629,9 @@ module.exports = async (req, res) => {
       if (c.stop) return stop(c.stop);
       if (method === "GET") {
         const { page, ...trip } = c.trip;
+        /* 今天換過了 → 畫面講「台灣時間幾點之後才能再換」 */
+        trip.deputyLocked = sameGoogleDay(trip.deputyAt);
+        trip.deputyNext = trip.deputyLocked ? nextReset() : "";
         return res.status(200).json({
           trip,
           members: c.members.map(memberPublic),
@@ -649,12 +671,38 @@ module.exports = async (req, res) => {
         props[col] = { number: n };
       }
       if (body.can) {
-        for (const [k, col] of [["plan", "成員可管行程"], ["cost", "成員可管分帳"], ["seat", "成員可管機位"]]) {
+        for (const [k, col] of [["plan", "副團主可管行程"], ["cost", "副團主可管記帳"], ["seat", "副團主可管交通"]]) {
           if (body.can[k] !== undefined) props[col] = { checkbox: !!body.can[k] };
         }
       }
-      if (!Object.keys(props).length) return res.status(400).json({ error: "沒有要改的東西" });
-      await notion("/pages/" + c.trip.page, { method: "PATCH", body: JSON.stringify({ properties: props }) });
+      /* ---- 副團主(2026-10-01)----
+         一團 1 位,只有團主能指派。**每天只能換一次**(一天 = 台灣 15:00 到隔天 15:00):
+         換人、取消都算一次;**第一次指派不算**(還沒有副團主、今天也沒換過的時候)。
+         換上來的人權限和 AI 次數馬上生效;換下去的人馬上變回一般成員。 */
+      let deputyChange = null;
+      if (body.deputy !== undefined) {
+        const want = String(body.deputy || "");
+        const current = c.members.find(m => m.role === "副團主") || null;
+        const target = want ? c.members.find(m => m.id === want) : null;
+        if (want && !target) return res.status(400).json({ error: "這一團沒有這個人" });
+        if (target && target.role === "團主") return res.status(400).json({ error: "團主不能兼副團主" });
+        if ((current ? current.id : "") !== want) {
+          if (sameGoogleDay(c.trip.deputyAt)) {
+            return res.status(409).json({ why: "deputy_today",
+              error: "今天已經換過副團主了,台灣時間 " + twClock(nextReset()) + " 之後才能再換" });
+          }
+          deputyChange = { current, target };
+          /* 有人被換掉(或取消)才算用掉今天那一次;第一次指派不算 */
+          if (current) props["副團主換人時間"] = { date: { start: new Date().toISOString() } };
+        }
+      }
+      if (!Object.keys(props).length && !deputyChange) return res.status(400).json({ error: "沒有要改的東西" });
+      if (Object.keys(props).length) await notion("/pages/" + c.trip.page, { method: "PATCH", body: JSON.stringify({ properties: props }) });
+      if (deputyChange) {
+        const setRole = (m, role) => notion("/pages/" + m.page, { method: "PATCH", body: JSON.stringify({ properties: { "角色": { select: { name: role } } } }) });
+        if (deputyChange.current) await setRole(deputyChange.current, "成員");
+        if (deputyChange.target) await setRole(deputyChange.target, "副團主");
+      }
       const { page, ...trip } = await findTrip(c.code);
       return res.status(200).json({ trip });
     } catch (e) { return fail(e); }
@@ -966,7 +1014,7 @@ module.exports = async (req, res) => {
        成員都能許、都能 +1。**這兩件事現在由伺服器認人**,不再是前端說了算:
          - 「誰許的」= 送出的那個人,前端送什麼都不理。
          - +1 只能加減**自己那一票**。
-       改內容和刪掉:許願的人自己、團主、或團主開了「成員可管行程」的人。 */
+       改內容和刪掉:許願的人自己、團主、或團主勾了「行程」的副團主。 */
     if (resource === "wishes") {
       const mineId = c.mine.id;
       if (method === "POST") {

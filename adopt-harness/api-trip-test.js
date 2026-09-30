@@ -268,12 +268,19 @@ const memberRow = (code, sub) => rowsIn(DB.members).find(p => plain(p.properties
   r = await call(LINE_A, "PATCH", { resource: "expenses", t: T1, id: stopA }, { title: "x" });
   ok("拿行程那一筆的 id 去打花費 → 404(表不對也不行)", r.code === 404, r.body);
 
-  /* ================= 三個開關 ================= */
+  /* ================= 副團主(2026-10-01 起;以前是整團一起開的三個開關) ================= */
   r = await call(LINE_B, "POST", { resource: "itinerary", t: T1 }, { title: "晴空塔", day: "2026-10-05" });
-  ok("成員加行程、團主還沒開「成員可管行程」→ 403", r.code === 403, r.body);
+  ok("一般成員加行程 → 403(一般成員只能許願)", r.code === 403, r.body);
   await call(LINE_A, "PATCH", { resource: "team", t: T1 }, { can: { plan: true } });
   r = await call(LINE_B, "POST", { resource: "itinerary", t: T1 }, { title: "晴空塔", day: "2026-10-05" });
-  ok("團主打開之後 → 成員加得了", r.code === 200, r.body);
+  ok("團主勾了「行程」但 B 不是副團主 → 還是 403(勾的是副團主的權限,不是整團的)", r.code === 403, r.body);
+  r = await call(LINE_B, "PATCH", { resource: "team", t: T1 }, { deputy: B_ID });
+  ok("成員不能自己指派副團主", r.code === 403, r.body);
+  r = await call(LINE_A, "PATCH", { resource: "team", t: T1 }, { deputy: B_ID });
+  ok("團主指派 B 當副團主(第一次指派)", r.code === 200 && memberRow(T1, LINE_B).properties["角色"].select.name === "副團主", r.body);
+  ok("第一次指派不算「今天換過」", !pages.find(p => plain(p.properties["代號"]) === T1 && p.properties["副團主換人時間"]), "");
+  r = await call(LINE_B, "POST", { resource: "itinerary", t: T1 }, { title: "晴空塔", day: "2026-10-05" });
+  ok("副團主馬上就能加行程", r.code === 200, r.body);
   r = await call(LINE_B, "POST", { resource: "expenses", t: T1 }, { title: "拉麵", amount: 1200 });
   ok("但分帳那個開關沒開 → 花費還是加不了", r.code === 403, r.body);
 
@@ -406,6 +413,24 @@ const memberRow = (code, sub) => rowsIn(DB.members).find(p => plain(p.properties
   ok("看過了 → 記下時間(伺服器蓋的)", r.code === 200 && /^\d{4}-\d{2}-\d{2}T/.test(r.body.me.seenAt), r.body);
   r = await call(LINE_A, "GET", { resource: "team", t: T1 });
   ok("重新讀一次還在", /^\d{4}-\d{2}-\d{2}T/.test(r.body.me.seenAt), r.body.me);
+
+  /* ================= 副團主每天只能換一次 ================= */
+  r = await call(LINE_A, "GET", { resource: "team", t: T1 });
+  ok("還沒換過:沒有鎖", r.body.trip.deputyLocked === false, r.body.trip);
+  r = await call(LINE_A, "PATCH", { resource: "team", t: T1 }, { deputy: D_ID });
+  ok("B 換成 D:可以(今天第一次換)", r.code === 200 && memberRow(T1, LINE_D).properties["角色"].select.name === "副團主" &&
+    memberRow(T1, LINE_B).properties["角色"].select.name === "成員", r.body);
+  r = await call(LINE_B, "POST", { resource: "itinerary", t: T1 }, { title: "被換下來還想加", day: "2026-10-05" });
+  ok("被換下來的 B 權限馬上收回", r.code === 403, r.body);
+  r = await call(LINE_A, "PATCH", { resource: "team", t: T1 }, { deputy: B_ID });
+  ok("今天再換一次 → 409,講幾點之後才能再換", r.code === 409 && r.body.why === "deputy_today" && /台灣時間 \d\d:\d\d 之後/.test(r.body.error), r.body);
+  r = await call(LINE_A, "PATCH", { resource: "team", t: T1 }, { deputy: "" });
+  ok("取消也算換 → 同樣 409", r.code === 409, r.body);
+  r = await call(LINE_A, "GET", { resource: "team", t: T1 });
+  ok("GET 講今天鎖住了、幾點解開", r.body.trip.deputyLocked === true && /T/.test(r.body.trip.deputyNext), r.body.trip);
+  const A_SELF = r.body.me.id;
+  r = await call(LINE_A, "PATCH", { resource: "team", t: T1 }, { deputy: A_SELF });
+  ok("團主不能兼副團主", r.code === 400, r.body);
 
   /* ================= 測試環境:團主「用成員身分看」 ================= */
   await call(LINE_A, "PATCH", { resource: "team", t: T1 }, { can: { plan: false, cost: false, seat: false } });

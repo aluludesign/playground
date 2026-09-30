@@ -28,7 +28,7 @@ return (async function () {
   if (mode === "member" && !/[?&]can=[^&]*seat/.test(w.location.search)) {
     await ask({ intent: "transport", legs: [{ kind: "巴士", depart: "2026-10-05T07:10" }] });
     out.卡 = { 開著: !q("#ai-overlay").hidden, 說: txt("#ai-err"), 交通表單: !q("#flight-overlay").hidden, 許願表單: !q("#wish-add-overlay").hidden };
-    ok("沒開交通的成員:留在 AI 視窗、講清楚,不會被倒進許願表", out.卡.開著 && /團主還沒開放/.test(out.卡.說) && !out.卡.交通表單 && !out.卡.許願表單, out.卡);
+    ok("沒開交通的成員:留在 AI 視窗、講清楚,不會被倒進許願表", out.卡.開著 && /只有團主和副團主能用/.test(out.卡.說) && !out.卡.交通表單 && !out.卡.許願表單, out.卡);
   } else {
     /* 1. 新的一段巴士 */
     await ask({ intent: "transport", message: "高速巴士的訂位確認", legs: [{ kind: "巴士", company: "WILLER", depart: "2026-10-05T07:10", arrive: "2026-10-05T09:00",
