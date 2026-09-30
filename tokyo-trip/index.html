@@ -1755,7 +1755,10 @@
     <div class="fld"><label class="rm-label" for="ai-text" id="ai-ask-label">想做什麼</label>
       <textarea class="rm-input" id="ai-text" rows="3" placeholder="例:這家想去許願／加到第 3 天晚上 7 點／這張是車票或訂位確認"></textarea></div>
     <div class="fld" id="ai-img-row">
-      <button type="button" class="btn btn-sm" id="ai-pick">📷 加一張圖</button>
+      <!-- 拍照:手機、平板才有(觸控螢幕)。capture 叫系統直接開相機,不先問要從哪裡選 -->
+      <button type="button" class="btn btn-sm" id="ai-shoot" hidden>📷 拍照</button>
+      <input type="file" accept="image/*" capture="environment" id="ai-cam" hidden>
+      <button type="button" class="btn btn-sm" id="ai-pick">🖼️ 選一張圖</button>
       <input type="file" accept="image/*" id="ai-file" hidden>
       <span id="ai-img-name"></span>
     </div>
@@ -6077,16 +6080,22 @@
   el("ai-cancel2").addEventListener("click", closeAI);
   /* 怎麼關:見「對話框怎麼關」那一段(2026-09-29 起全部一致)。這一張裝著**拿不回來的東西** ——
      你上傳的照片、AI 讀出來的結果 —— 所以選了照片就算改過(檔案欄選完會清空,光比欄位看不出來)。 */
+  /* 兩條路進同一張圖:「拍照」直接開相機(手機、平板才有),「選一張圖」從相簿或電腦裡挑(Lulu,2026-09-30) */
+  el("ai-shoot").hidden = !(window.matchMedia && window.matchMedia("(pointer: coarse)").matches);
+  el("ai-shoot").addEventListener("click", () => el("ai-cam").click());
   el("ai-pick").addEventListener("click", () => el("ai-file").click());
-  el("ai-file").addEventListener("change", async ev => {
+  async function takeAIImage(ev, fromCam) {
     const file = ev.target.files && ev.target.files[0];
     ev.target.value = "";
     if (file) el("ai-overlay").dataset.picked = "1";
     if (!file) return;
     el("ai-img-name").textContent = "處理圖片中…";
-    try { aiImage = await shrinkImage(file); el("ai-img-name").textContent = "已加入:" + file.name; }
+    /* 相機拍的檔名是 image.jpg 這種,講出來沒意義 */
+    try { aiImage = await shrinkImage(file); el("ai-img-name").textContent = "已加入:" + (fromCam ? "剛拍的照片" : file.name); }
     catch (e) { aiImage = ""; el("ai-img-name").textContent = e.message; }
-  });
+  }
+  el("ai-file").addEventListener("change", ev => takeAIImage(ev, false));
+  el("ai-cam").addEventListener("change", ev => takeAIImage(ev, true));
   el("ai-kind").addEventListener("change", aiShowKind);
   el("ai-back").addEventListener("click", () => {
     seekClear("ai-title");

@@ -148,6 +148,9 @@ FAKE_JS = r"""(function(){
   var q = location.search, mode = (/[?&]fake=([a-z]+)/.exec(q) || [])[1] || "owner";
   /* app:從主畫面打開的 App、還沒登入。iOS 用 navigator.standalone 講這件事 */
   if (mode === "app") { try { Object.defineProperty(navigator, "standalone", { value: true, configurable: true }); } catch (e) {} }
+  /* touch=1:扮成手機/平板(觸控螢幕)。要在程式開機之前換掉 —— 「有沒有拍照鈕」是開機時決定的 */
+  if (/[?&]touch=1/.test(q)) { var mm0 = window.matchMedia.bind(window);
+    window.matchMedia = function (x) { return /pointer:\s*coarse/.test(x) ? { matches: true, media: x, addEventListener: function(){}, removeEventListener: function(){}, addListener: function(){}, removeListener: function(){} } : mm0(x); }; }
   var CODE = %(code)s, TRIP = %(trip)s, MEMBERS = %(members)s, ROWS = %(rows)s, ME_ID = %(me)s;
   var OFFLINE = %(offline)s;
   /* 沒帶團代號就補上 —— 截圖和大部分探針要的是「打開這一團」那個畫面。
