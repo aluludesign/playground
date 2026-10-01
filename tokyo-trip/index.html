@@ -1635,7 +1635,7 @@
       <p class="st-hint" id="st-date-note" hidden></p>
       <div class="grid2">
         <div class="fld" id="st-rate-fld"><label class="rm-label" for="st-rate">匯率(1 外幣 = ? 台幣)</label><input class="rm-input" type="number" id="st-rate" step="0.0001" min="0"></div>
-        <div class="fld"><label class="rm-label" for="st-kitty">每人共同基金(台幣)</label><input class="rm-input" type="number" id="st-kitty" step="1" min="0"></div>
+        <div class="fld"><label class="rm-label" for="st-kitty">每人共同基金(台幣,0 = 沒有)</label><input class="rm-input" type="number" id="st-kitty" step="1" min="0"></div>
       </div>
       <!-- 副團主(2026-10-01):一般成員只能許願;團主指派 1 位副團主、勾他能管哪幾塊。每天只能換一次 -->
       <div class="fld"><label class="rm-label" for="st-deputy">副團主</label><select class="rm-input" id="st-deputy"></select></div>
@@ -2003,7 +2003,7 @@
 
   /* ================= 狀態 ================= */
   const state = { tab: "plan", day: "", rate: (window.TRIP_CONFIG || {}).rate || SEED.rate,
-    kitty: Number((window.TRIP_CONFIG || {}).kitty) || 30000, names: {}, expenses: [], stops: [], wishes: [], seats: [] };
+    kitty: 0, names: {}, expenses: [], stops: [], wishes: [], seats: [] };
   const nameOf = id => state.names[id] || (MEMBERS.find(m => m.id === id) || {}).def || id;
   const colorOf = id => (MEMBERS.find(m => m.id === id) || {}).color || "#7E8796";
 
@@ -2178,6 +2178,9 @@
     setDays(trip.start, trip.end);
     if (!DAYS.some(d => d.date === state.day)) state.day = initialDay();
     state.rate = trip.rate || state.rate;
+    /* **基金照這一團的設定**(2026-10-02 修):以前一直用舊東京團的 30,000,團主填 0 也一樣。
+       0 = 這一團沒有共同基金,整塊收起來 */
+    state.kitty = Math.max(0, Number(trip.kitty) || 0);
     setTripRegion();
     /* 台灣的團只有台幣:幣別選單收起來,預設台幣 */
     const twdOnly = trip.currency === "TWD";
@@ -5187,7 +5190,9 @@
     const used = IDS.reduce((s, id) => s + ledger().book[id].owed, 0);
     const left = pot - used;
     el("cost-stats").innerHTML = [
-      tile("基金剩餘", twd(Math.abs(left)), left < 0 ? "已經超支" : "每人約 " + twd(left / IDS.length)),
+      state.kitty > 0
+        ? tile("基金剩餘", twd(Math.abs(left)), left < 0 ? "已經超支" : "每人約 " + twd(left / IDS.length))
+        : tile("每人平均", twd(IDS.length ? total / IDS.length : 0), IDS.length + " 個人"),
       tile("總花費", twd(total), state.expenses.length + " 筆紀錄"),
       tile("行前預訂", twd(total - tripTotal), "機票、住宿等"),
       tile("旅途中", twd(tripTotal), "10/03 起"),
@@ -5243,6 +5248,10 @@
      這裡看的是「花掉多少」,不是「誰先墊的」 —— 墊款是下面「每個人的帳」在管。 */
   function renderFund() {
     const per = state.kitty;
+    /* 沒有共同基金:整塊不畫 */
+    const sec = el("fund-sub").closest(".sec");
+    if (sec) sec.hidden = !(per > 0);
+    if (!(per > 0)) return;
     const pot = per * IDS.length;
     const res = ledger();
     const used = IDS.reduce((s, id) => s + res.book[id].owed, 0);

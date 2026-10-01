@@ -940,7 +940,6 @@ module.exports = async (req, res) => {
         if (method === "DELETE") {
           if (!editor) return res.status(403).json({ error: "只有許願的人或管行程的人能刪掉這個願望" });
           await notion("/pages/" + page.id, { method: "PATCH", body: JSON.stringify({ archived: true }) });
-          await log("許願", me2 + " 刪掉了願望" + said(now.title));
           return res.status(200).json({ ok: true });
         }
         /* **沒送的欄位要留著原值,不能當成「改成空的」。** `wishIn()` 是整份覆寫,
@@ -959,11 +958,7 @@ module.exports = async (req, res) => {
           note: keep(body.note, now.note), by: now.by, votes, placeId: keep(body.placeId, now.placeId),
         });
         const saved = await notion("/pages/" + page.id, { method: "PATCH", body: JSON.stringify({ properties: props }) });
-        /* +1 不通知(太吵);改內容才講 */
-        if (wantsEdit) {
-          const ch = diffs(now, body, [["title", "名稱"], ["place", "地點"], ["note", "備註"]]);
-          if (ch.length) await log("許願", me2 + " 改了願望" + said(now.title) + ":" + ch.join("、"));
-        }
+        /* 改願望、刪願望、+1 都不通知(Lulu 2026-10-02):只講「誰許了什麼願」 */
         return res.status(200).json({ row: shape.out(saved) });
       }
       res.setHeader("Allow", "GET, POST, PATCH, DELETE");
@@ -1009,7 +1004,8 @@ module.exports = async (req, res) => {
       const row = shape.out(saved);
       if (resource === "itinerary") {
         if (!was.day && row.day) await log("行程", me2 + " 把願望" + said(row.title) + "排進 " + dayOf(row.day) + (row.time ? " " + row.time : ""), { day: row.day });
-        else if (was.day && body.day === null) await log("行程", me2 + " 把 " + dayOf(was.day) + said(was.title) + "退回許願", { day: was.day });
+        /* 退回許願 = 從行程拿掉,就講「刪掉了」(Lulu 2026-10-02) */
+        else if (was.day && body.day === null) await log("行程", me2 + " 刪掉了 " + dayOf(was.day) + said(was.title), { day: was.day });
         else {
           const ch = diffs(was, row, [["title", "名稱"], ["day", "日期", x => (x ? dayOf(x) : "沒排")], ["time", "時間"], ["place", "地點"], ["note", "備註"]], body);
           if (ch.length) await log("行程", me2 + " 改了 " + dayOf(was.day) + said(was.title) + ":" + ch.join("、"), { day: row.day || was.day });

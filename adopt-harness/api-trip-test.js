@@ -589,6 +589,18 @@ const memberRow = (code, sub) => rowsIn(DB.members).find(p => plain(p.properties
   ok("回給瀏覽器的沒有「給誰」(不洩漏誰分了哪筆帳)", fB.every(x => x.to === undefined), fB[0]);
   r = await call(LINE_C, "GET", { resource: "activity", t: T1 });
   ok("別團的人讀不到", r.code === 403, r.body);
+  /* 改願望、刪願望不通知;退回許願 = 刪行程(Lulu 2026-10-02) */
+  r = await call(LINE_B, "POST", { resource: "wishes", t: T1 }, { title: "東京鐵塔" });
+  const w2 = r.body.row.id, n0 = rowsIn(ACT).length;
+  await call(LINE_B, "PATCH", { resource: "wishes", t: T1, id: w2 }, { title: "東京鐵塔夜景" });
+  ok("改願望 → 不通知", rowsIn(ACT).length === n0, rowsIn(ACT).length - n0);
+  await call(LINE_A, "PATCH", { resource: "itinerary", t: T1, id: w2 }, { title: "東京鐵塔夜景", day: "2026-10-06" });
+  await call(LINE_A, "PATCH", { resource: "itinerary", t: T1, id: w2 }, { title: "東京鐵塔夜景", day: null });
+  const tB2 = (await feed(LINE_B)).map(x => x.text);
+  ok("退回許願 → 講「刪掉了 Day 4(10/6)「東京鐵塔夜景」」,不講退回", tB2.some(t => /刪掉了 Day 4\(10\/6\)「東京鐵塔夜景」/.test(t)) && !tB2.some(t => /退回/.test(t)), tB2.slice(-3));
+  const n1 = rowsIn(ACT).length;
+  await call(LINE_B, "DELETE", { resource: "wishes", t: T1, id: w2 });
+  ok("刪願望 → 不通知", rowsIn(ACT).length === n1, rowsIn(ACT).length - n1);
 
   /* ================= 最高權限:隱藏、刪除任何一團(2026-10-02) ================= */
   const LULU = "U" + "f".repeat(32);

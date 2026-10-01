@@ -167,6 +167,8 @@ FAKE_JS = r"""(function(){
                            MEMBERS[1].role = "團主"; }
   /* member 配 can=plan,cost…:團主只開了其中幾個開關(第 2 期以前三個全開才算數,現在一塊一塊看) */
   /* newbie=1:團主上次看過通知之後,又有一個人(小美)加入了。noflights=1:這一團還沒有交通 */
+  /* nokitty=1:這一團沒有共同基金(團主填 0) */
+  if (/[?&]nokitty=1/.test(q)) TRIP.kitty = 0;
   if (/[?&]newbie=1/.test(q)) MEMBERS.push({ id: "new_friend", name: "小美", color: "#E4007F", role: "成員", joinedAt: "2026-09-18T09:00:00.000Z" });
   if (/[?&]noflights=1/.test(q)) { ROWS.flights = []; ROWS.seats = []; }
   var SEEN = { at: %(seen)s };
