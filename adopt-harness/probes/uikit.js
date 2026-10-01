@@ -15,8 +15,12 @@ w.fetch = function (u, i) {
 };
 if (!noUI) {
   w.google = { maps: { importLibrary: () => Promise.resolve({}) } };
-  var PLACE = { id: "ChIJ_fake_ichiran", displayName: "一蘭 新宿中央東口店", formattedAddress: "東京都新宿區新宿3丁目34-11",
-    location: { lat: () => 35.6905, lng: () => 139.7020 } };
+  /* **真的 Google 清單點下去,place 只有編號和座標**(官方:IDs, locations, viewports)—— 名字要 fetchFields 再問。
+     noname=1:fetchFields 失敗(金鑰沒開 Places API (New)) */
+  var failName = /noname=1/.test(w.location.search);
+  var PLACE = { id: "ChIJ_fake_ichiran", location: { lat: () => 35.6905, lng: () => 139.7020 },
+    fetchFields: function () { if (failName) return Promise.reject(new Error("API not activated"));
+      this.displayName = "一蘭 新宿中央東口店"; this.formattedAddress = "東京都新宿區新宿3丁目34-11"; return Promise.resolve({ place: this }); } };
   w.customElements.define("gmp-place-search", class extends w.HTMLElement { get places() { return this._p || []; } });
   w.customElements.define("gmp-place-all-content", class extends w.HTMLElement {});
   w.customElements.define("gmp-place-text-search-request", class extends w.HTMLElement {
@@ -44,12 +48,18 @@ return (async function () {
     out.清單 = !!ps; out.查的字 = w.__uikitQuery; out.偏重 = w.__uikitBias;
     ok("強力搜 → Google 的清單出現,查的是輸入框的字、偏重這一團的城市", out.清單 && out.查的字 === "一蘭" && out.偏重 && Math.abs(out.偏重.lat - 35.68) < 0.1, out);
     ok("沒有打舊的強力搜(places)", !calls().some(c => /^GET places/.test(c)), calls());
-    var ev = new w.Event("gmp-select"); ev.place = PLACE; ps.dispatchEvent(ev); await wait(80);
+    out.照片 = !!q("#stop-form gmp-place-search gmp-place-media");
+    ok("清單內容有照片那一項(gmp-place-all-content 不帶照片)", out.照片, "");
+    var ev = new w.Event("gmp-select"); ev.place = PLACE; ps.dispatchEvent(ev); await wait(150);
+    var want = failName ? "一蘭" : "一蘭 新宿中央東口店";
     out.挑了 = { 輸入框: q("#sf-title").value, 狀態: txt("#sf-title-out") };
-    var pin = JSON.parse(w.localStorage.getItem("tokyo5-pin3") || "{}")["一蘭 新宿中央東口店"] || {};
+    var pin = JSON.parse(w.localStorage.getItem("tokyo5-pin3") || "{}")[want] || {};
     out.記下 = { la: pin.la, pid: pin.pid, 有日期: !!pin.t, src: pin.src };
-    ok("挑了一家:名字填進去、狀態講已標定+地址;手機記座標、編號、日期", out.挑了.輸入框 === "一蘭 新宿中央東口店" && /已標定/.test(out.挑了.狀態) && /新宿區/.test(out.挑了.狀態) &&
+    if (failName) ok("問不到名字:用打的字當名字,座標和編號照樣記下、已標定", out.挑了.輸入框 === "一蘭" && /已標定/.test(out.挑了.狀態) &&
+      pin.la === 35.6905 && pin.pid === "ChIJ_fake_ichiran", out);
+    else ok("挑了一家:名字(問 Google 拿到的)填進去、狀態講已標定+地址;手機記座標、編號、日期", out.挑了.輸入框 === "一蘭 新宿中央東口店" && /已標定/.test(out.挑了.狀態) && /新宿區/.test(out.挑了.狀態) &&
       pin.la === 35.6905 && pin.pid === "ChIJ_fake_ichiran" && !!pin.t && pin.src === "google", out);
+
     q("#sf-time").value = "12:00";
     q("#stop-form").requestSubmit(); await wait(400);
     var post = (w.__calls || []).filter(c => c.method === "POST" && /resource=itinerary/.test(c.url)).pop();

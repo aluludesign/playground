@@ -4335,30 +4335,45 @@
   function showUIKit(id, q) {
     seekReset(id); seekUsedStrong[id] = true;   /* 跟舊的強力搜一樣:只給用一次,跑完退回一般搜 */
     const box = seekBox(id);
-    box.innerHTML = '<div class="uikit"><gmp-place-search selectable><gmp-place-all-content></gmp-place-all-content>' +
+    /* **內容自己指定,照片排第一**(2026-10-02,Lulu:沒有照片)。`gmp-place-all-content` 在搜尋清單裡不帶照片 */
+    box.innerHTML = '<div class="uikit"><gmp-place-search selectable>' +
+      '<gmp-place-content-config><gmp-place-media></gmp-place-media><gmp-place-address></gmp-place-address>' +
+      '<gmp-place-rating></gmp-place-rating><gmp-place-type></gmp-place-type><gmp-place-price></gmp-place-price>' +
+      '<gmp-place-open-now-status></gmp-place-open-now-status></gmp-place-content-config>' +
       '<gmp-place-text-search-request max-result-count="8"></gmp-place-text-search-request></gmp-place-search></div>' + seekTail(id);
     box.hidden = false;
     const ps = box.querySelector("gmp-place-search"), req = box.querySelector("gmp-place-text-search-request");
     /* 偏重這一團的主要城市(跟免費那段的 viewbox 同一個意思),不硬限制 */
     try { req.locationBias = { lat: CITY.lat, lng: CITY.lon }; } catch (_) {}
-    ps.addEventListener("gmp-select", ev => takeGooglePlace(id, ev.place));
+    ps.addEventListener("gmp-select", ev => takeGooglePlace(id, ev.place, q));
     ps.addEventListener("gmp-load", () => { if (!(ps.places || []).length) seekSay(id, "Google 也找不到「" + q + "」。可以換個說法,或先不填地點。", true); });
     ps.addEventListener("gmp-error", () => seekSay(id, "Google 的清單沒有載出來,過一下再試", true));
     /* textQuery 一設就開始查(官方:沒設 textQuery 其他設定都不算) */
     req.textQuery = q;
   }
   /* 挑了 Google 清單裡的一家:名字、地址、座標、地點編號。座標記在這台手機(帶日期,30 天到期用),編號跟著行程/願望存進 Notion */
-  function takeGooglePlace(id, place) {
+  /* **清單點下去,給的只有地點編號和座標,沒有店名**(2026-10-02,Lulu:選了沒有代入輸入框)。
+     店名和地址用編號再問一次 Google(fetchFields);問不到(金鑰沒開 Places API (New)、網路斷)
+     就先用使用者打的字當名字 —— 座標照樣記下,地圖上的點是對的。 */
+  async function takeGooglePlace(id, place, typed) {
     const input = el(id);
     if (!place || !input) return;
     const loc = place.location;
     const la = loc && (typeof loc.lat === "function" ? loc.lat() : loc.lat), lo = loc && (typeof loc.lng === "function" ? loc.lng() : loc.lng);
-    const name = String(place.displayName || "").trim();
-    if (!name || !isFinite(la) || !isFinite(lo)) { seekSay(id, "這一家沒有位置資料,換一家試試", true); return; }
+    if (!isFinite(la) || !isFinite(lo)) { seekSay(id, "這一家沒有位置資料,換一家試試", true); return; }
+    seekSay(id, "讀取這一家的名字…");
+    let name = "", addr = "";
+    try {
+      if (!place.displayName && place.fetchFields) await place.fetchFields({ fields: ["displayName", "formattedAddress"] });
+      name = String(place.displayName || "").trim();
+      addr = String(place.formattedAddress || "").trim();
+    } catch (_) { /* 問不到:退回打的字 */ }
+    if (!name) name = String(typed || input.value || "").trim();
+    if (!name) { seekSay(id, "這一家讀不到名字,換一家試試", true); return; }
     input.value = name;
     /* 挑了就算「改過」(對話框的關閉規則):點外面不會把挑好的丟掉 */
     const ov = input.closest(".overlay"); if (ov) ov.dataset.picked = "1";
-    pins[name] = { la: +la, lo: +lo, by: "pick", at: place.formattedAddress || "", pid: place.id || "", src: "google", t: Date.now() };
+    pins[name] = { la: +la, lo: +lo, by: "pick", at: addr, pid: place.id || "", src: "google", t: Date.now() };
     savePins();
     seekReset(id);
     seekMark(id, name);
