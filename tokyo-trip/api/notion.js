@@ -317,7 +317,10 @@ function nextReset(now) {
 const sameGoogleDay = iso => !!iso && ptDay(new Date(iso)) === ptDay();
 const twClock = iso => { try { return new Intl.DateTimeFormat("zh-TW", { timeZone: "Asia/Taipei", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(iso)); } catch (_) { return ""; } };
 const VIEW_AS_COOKIE = "trip_as";
-const TRIPS_PER_PERSON = 10;
+/* **每人同時最多當 2 團的團主**(2026-10-02,Lulu:30 人試用)。**只算還沒結束的團** ——
+   網站沒有刪團,結束的也算的話開滿就永遠不能再開。`TRIPS_NO_LIMIT`(Vercel,逗號分隔的 LINE 編號)不受限:Lulu 自己 */
+const TRIPS_PER_PERSON = 2;
+const noTripLimit = sub => String(process.env.TRIPS_NO_LIMIT || "").split(",").map(x => x.trim()).filter(Boolean).includes(sub);
 
 /* 猜不到的代號。**團代號會出現在網址上,邀請碼會貼到 LINE 群組** ——
    兩個都不能是能用數的。去掉 0/o/1/l/i 這幾個手打容易錯的字。 */
@@ -548,8 +551,13 @@ module.exports = async (req, res) => {
         return res.status(400).json({ error: "一團最長 60 天" });
       }
       if (!myName) return res.status(400).json({ error: "要填你在這團叫什麼" });
-      if (mine.filter(m => m.role === "團主").length >= TRIPS_PER_PERSON) {
-        return res.status(429).json({ error: "你已經開了 " + TRIPS_PER_PERSON + " 團,先刪掉一團再開" });
+      if (!noTripLimit(me.sub)) {
+        const owned = mine.filter(m => m.role === "團主");
+        let open = 0;
+        for (const m of owned) { const t = await findTrip(m.trip); if (t && !t.ended) open++; }
+        if (open >= TRIPS_PER_PERSON) {
+          return res.status(429).json({ why: "trips", error: "你已經有 " + TRIPS_PER_PERSON + " 團還沒結束,等其中一團旅行結束後才能再開新的" });
+        }
       }
 
       /* 代號撞到的機率是 31^8 分之一,但撞到的代價是兩團共用一份資料 —— 所以還是查一次 */

@@ -3993,8 +3993,18 @@
      `pinFor` 是程式自己挑一筆直接標上去,框外的東西進來就是一顆沒有人看過的錯 pin,
      所以要硬界線。這裡是人在挑,**硬界線只會把他要的那個藏起來**,而挑錯的那個
      他不會按。viewbox 留著當加權(這趟在哪就偏重哪),那個沒有壞處。 */
+  /* **盡量鎖在這一團的城市**(2026-10-02,Lulu):先在城市周圍約 50 公里裡找(硬界線);
+     一筆都沒有才放寬到原本的大範圍。字串講了別的地方(「京都車站」、人工表裡的箱根、鎌倉…)
+     就不先鎖城市,直接照原本的走。 */
+  const cityView = () => [CITY.lon - 0.5, CITY.lat + 0.45, CITY.lon + 0.5, CITY.lat - 0.45].map(x => x.toFixed(3)).join(",");
   async function seekPlace(q) {
     const rg = regionFor(q);
+    if (rg === TRIP_REGION && !outsideHit(q) && CITY && isFinite(CITY.lat)) {
+      const near = await queued(() => fetch("https://nominatim.openstreetmap.org/search?format=json" +
+        "&limit=40&accept-language=zh-TW&countrycodes=" + rg.cc + "&bounded=1&viewbox=" + cityView() +
+        "&q=" + encodeURIComponent(q)).then(r => r.json()).catch(() => null));
+      if (near && near.length) return near;
+    }
     /* **免費搜不限 6 筆**(2026-10-01,Lulu):40 是 Nominatim 自己的上限。清單本來就會捲(露四則半),
        縮圖是捲到才載(loading="lazy"),筆數多了不會一次全載 */
     return queued(() => fetch("https://nominatim.openstreetmap.org/search?format=json" +
@@ -4354,8 +4364,9 @@
       '<gmp-place-text-search-request max-result-count="8"></gmp-place-text-search-request></gmp-place-search></div>' + seekTail(id);
     box.hidden = false;
     const ps = box.querySelector("gmp-place-search"), req = box.querySelector("gmp-place-text-search-request");
-    /* 偏重這一團的主要城市(跟免費那段的 viewbox 同一個意思),不硬限制 */
-    try { req.locationBias = { lat: CITY.lat, lng: CITY.lon }; } catch (_) {}
+    /* **偏重這一團的城市方圓 50 公里**(2026-10-02,Lulu:盡量鎖在選的地區)。只給一個點的話
+       Google 幾乎不理;給一個圈才有用。不硬限制 —— 字串講了別的地方(京都車站)還是找得到 */
+    try { req.locationBias = { center: { lat: CITY.lat, lng: CITY.lon }, radius: 50000 }; } catch (_) {}
     ps.addEventListener("gmp-select", ev => takeGooglePlace(id, ev.place, q));
     ps.addEventListener("gmp-load", () => { if (!(ps.places || []).length) seekSay(id, "Google 也找不到「" + q + "」。可以換個說法,或先不填地點。", true); });
     ps.addEventListener("gmp-error", () => {
@@ -6894,7 +6905,8 @@
     const msg = "一起來排「" + (trip ? trip.name : "") + "」的行程!\n" + url + "\n邀請碼:" + code;
     el("inv-line").href = "https://line.me/R/share?text=" + encodeURIComponent(msg);
   }
-  function openInvite() {
+  function openInvite(title) {
+    el("inv-title").textContent = typeof title === "string" ? title : "邀請朋友";
     fillInvite();
     el("invite-overlay").hidden = false;
   }
@@ -7634,7 +7646,8 @@
     if (fresh || joined || INVITE) {
       history.replaceState(null, "", location.pathname + "?t=" + encodeURIComponent(TRIP));
     }
-    if (fresh) { flash("開好了!你是團主。按「邀請朋友」把邀請碼傳給大家"); }
+    /* **剛開好的團:一進來就先跳邀請**(2026-10-02,Lulu)—— 開團的下一步就是找人 */
+    if (fresh) { flash("開好了!你是團主"); openInvite("邀請好友一起來參加"); }
     else if (joined) { flash("加入了「" + trip.name + "」"); }
   })();
 })();

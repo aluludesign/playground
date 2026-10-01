@@ -131,9 +131,10 @@ var SIX = [0, 1, 2, 3, 4, 5].map(function (i) {
       })(),
       [].map.call(d.querySelectorAll('[data-hit="sf-title"] .thumb img'),
         function (im) { return im.getAttribute("src"); }));
-    /* **硬界線不帶,是這一支最該守住的一條。** pinFor() 帶 bounded=1 是因為程式自己挑;
-       這裡是人挑,框起來只會把他要的藏起來。 */
-    ok("查詢不帶 bounded=1(人在挑,不需要硬界線)", asked.join(" ").indexOf("bounded") < 0, asked);
+    /* **2026-10-02 起先鎖這一團的城市**(Lulu:盡量鎖在選的地區):第一次查帶 bounded=1、框是城市周圍約 50 公里;
+       有結果就不再放寬。放寬那條(一筆都沒有)在 escalate.js 量 —— 那裡的樁一律回空的。 */
+    ok("先在這一團的城市周圍找(bounded=1,框約 1 度寬),有結果就不放寬", asked.length === 1 && /bounded=1/.test(asked[0]) &&
+      /viewbox=139\.\d+,3[56]\.\d+,140\.\d+,35\.\d+/.test(asked[0]), asked);
     ok("但 viewbox 留著當加權", /viewbox=/.test(asked.join(" ")), asked);
     ok("而且帶了國家代碼", /countrycodes=jp/.test(asked.join(" ")), asked);
 

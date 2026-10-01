@@ -526,6 +526,35 @@ const memberRow = (code, sub) => rowsIn(DB.members).find(p => plain(p.properties
   })();
   ok("伺服器沒設 LINE_CHANNEL_SECRET → 誰都是沒登入,讀不到任何一團", r.code === 401, r.body);
 
+  /* ================= 每人同時最多 2 團(2026-10-02) ================= */
+  /* C 已經開了台南那一團(還沒結束)。只算還沒結束的;TRIPS_NO_LIMIT 裡的人(Lulu)不受限 */
+  const trip2 = { ...good, name: "第二團", myName: "小陳" };
+  /* 先補到「剛好 2 團還沒結束」(前面的測試可能動過 C 的團) */
+  r = await call(LINE_C, "GET", { resource: "trips" });
+  const openNow = r.body.trips.filter(t => t.role === "團主" && !(t.end < "2026-10-01")).length;
+  let T3 = "";
+  for (let i = openNow; i < 2; i++) {
+    r = await call(LINE_C, "POST", { resource: "trips" }, trip2);
+    ok("還沒滿 2 團 → 開得了(第 " + (i + 1) + " 團)", r.code === 200 && !!r.body.code, r.body);
+    T3 = r.body.code;
+  }
+  const before3 = writes;
+  r = await call(LINE_C, "POST", { resource: "trips" }, { ...trip2, name: "第三團" });
+  ok("第 3 團 → 429,講「已經有 2 團還沒結束」,而且 Notion 一筆都沒寫", r.code === 429 && r.body.why === "trips" &&
+    /已經有 2 團還沒結束/.test(r.body.error) && writes === before3, r.body);
+  const t3row = rowsIn(DB.trips).find(p => plain(p.properties["代號"]) === T3);
+  t3row.properties["開始日"] = { date: { start: "2026-01-01" } }; t3row.properties["結束日"] = { date: { start: "2026-01-05" } };
+  r = await call(LINE_C, "POST", { resource: "trips" }, { ...trip2, name: "第三團" });
+  ok("其中一團旅行結束了 → 那一團不佔名額,又開得了", r.code === 200 && !!r.body.code, r.body);
+  r = await call(LINE_C, "POST", { resource: "trips" }, { ...trip2, name: "第四團" });
+  ok("又滿 2 團還沒結束 → 再擋", r.code === 429, r.body);
+  process.env.TRIPS_NO_LIMIT = "Uzzz, " + LINE_C;
+  r = await call(LINE_C, "POST", { resource: "trips" }, { ...trip2, name: "第四團" });
+  ok("在 TRIPS_NO_LIMIT 裡(Lulu)→ 不受限", r.code === 200 && !!r.body.code, r.body);
+  delete process.env.TRIPS_NO_LIMIT;
+  r = await call(LINE_D, "GET", { resource: "trips" });
+  ok("只是加入別人的團,不算自己開的(D 照樣開得了)", (await call(LINE_D, "POST", { resource: "trips" }, { ...trip2, myName: "阿D" })).code === 200, "");
+
   console.log(fails ? "\n有 " + fails + " 項沒過" : "\n全部通過");
   process.exit(fails ? 1 : 0);
 })();
