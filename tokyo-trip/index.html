@@ -7098,7 +7098,13 @@
     el("inv-url").textContent = url;
     el("inv-code").textContent = code;
     const msg = "一起來排「" + (trip ? trip.name : "") + "」的行程!\n" + url + "\n邀請碼:" + code;
-    el("inv-line").href = "https://line.me/R/share?text=" + encodeURIComponent(msg);
+    /* **電腦跟手機走不同的網址**(2026-10-02,Lulu 回報):`line.me/R/share` 是叫 LINE App 起來的,
+       電腦上沒有 App 可叫,LINE 直接把人轉去官網首頁。電腦改用 LINE 的網頁分享(先登入 LINE,再挑要傳給誰) */
+    const phone = !!(window.matchMedia && window.matchMedia("(pointer: coarse)").matches);
+    el("inv-line").href = phone
+      ? "https://line.me/R/share?text=" + encodeURIComponent(msg)
+      : "https://social-plugins.line.me/lineit/share?url=" + encodeURIComponent(url) +
+        "&text=" + encodeURIComponent("一起來排「" + (trip ? trip.name : "") + "」的行程!邀請碼:" + code);
   }
   function openInvite(title) {
     el("inv-title").textContent = typeof title === "string" ? title : "邀請朋友";
