@@ -169,6 +169,10 @@ FAKE_JS = r"""(function(){
   /* newbie=1:團主上次看過通知之後,又有一個人(小美)加入了。noflights=1:這一團還沒有交通 */
   /* nokitty=1:這一團沒有共同基金(團主填 0) */
   if (/[?&]nokitty=1/.test(q)) TRIP.kitty = 0;
+  /* fund=pot:一包錢,阿輝、佳瑜各 10,000、志偉 5,000,保管人佳瑜(keeper=0 不指定);fund=diff:預算、每人不一樣 */
+  var fq = (/[?&]fund=([a-z]+)/.exec(q) || [])[1];
+  if (fq === "pot") TRIP.fund = { mode: "pot", keeper: /keeper=0/.test(q) ? "" : "chang_chiayu", shares: { hsieh_chinhui: 10000, chang_chiayu: 10000, chang_chihwei: 5000 } };
+  if (fq === "diff") TRIP.fund = { mode: "budget", keeper: "", shares: { hsieh_chinhui: 20000, chang_chiayu: 10000 } };
   if (/[?&]newbie=1/.test(q)) MEMBERS.push({ id: "new_friend", name: "小美", color: "#E4007F", role: "成員", joinedAt: "2026-09-18T09:00:00.000Z" });
   if (/[?&]noflights=1/.test(q)) { ROWS.flights = []; ROWS.seats = []; }
   var SEEN = { at: %(seen)s };
@@ -256,6 +260,12 @@ FAKE_JS = r"""(function(){
       { id: "a3", text: "阿輝 改了交通 MM626(TPE→NRT):出發 10/03 10:50 → 10/03 11:20", kind: "交通", by: "m2", day: "", at: "2026-09-18T12:00:00.000Z" },
       { id: "a4", text: "阿輝 記了一筆「燒肉」 ¥12,000,2 人分(每人約 ¥6,000)", kind: "花費", by: "m2", day: "", at: "2026-09-18T13:00:00.000Z" },
       { id: "a0", text: "阿輝 在 Day 1(10/3) 加了「舊的那一則」", kind: "行程", by: "m2", day: "2026-10-03", at: "2026-09-01T09:00:00.000Z" }] : [] });
+    if (r === "fund" && method === "POST") {
+      var sh = Object.assign({}, (TRIP.fund || {}).shares || {});
+      (body.who || []).forEach(function (id) { sh[id] = (sh[id] || 0) + Number(body.amount); });
+      TRIP.fund = Object.assign({}, TRIP.fund, { shares: sh });
+      return reply({ ok: true, fund: TRIP.fund });
+    }
     if (r === "team") {
       if (method === "PATCH") {
         if (body.deputy !== undefined) {

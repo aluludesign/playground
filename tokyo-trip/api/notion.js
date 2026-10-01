@@ -348,6 +348,23 @@ function tripPhase(start, end, tz) {
   const today = localToday(tz);
   return { started: !!start && today >= start, ended: !!end && today > end, today };
 }
+const FUND_MODE = { "沒有": "none", "預算": "budget", "一包錢": "pot" };
+const FUND_NAME = { none: "沒有", budget: "預算", pot: "一包錢" };
+function sharesOf(s) {
+  const out = {};
+  String(s || "").split(",").forEach(x => {
+    const i = x.lastIndexOf(":");
+    if (i <= 0) return;
+    const id = x.slice(0, i).trim(), n = Math.round(Number(x.slice(i + 1)));
+    if (/^[a-z0-9_]{2,40}$/i.test(id) && isFinite(n) && n >= 0) out[id] = n;
+  });
+  return out;
+}
+const sharesIn = o => Object.keys(o || {}).map(id => id + ":" + Math.round(Number(o[id]) || 0)).join(",");
+function fundOut(p) {
+  const mode = FUND_MODE[sel(p["基金模式"])] || "none";
+  return { mode, keeper: p["基金保管人"] ? txt(p["基金保管人"]) : "", shares: p["基金出資"] ? sharesOf(txt(p["基金出資"])) : {} };
+}
 function tripOut(page) {
   const p = page.properties;
   const country = sel(p["國家"]) || "日本";
@@ -362,6 +379,10 @@ function tripOut(page) {
     end: dat(p["結束日"]),
     rate: (p["匯率"] && p["匯率"].number) || base.rate,
     kitty: (p["基金"] && p["基金"].number) || 0,
+    /* **共同基金**(2026-10-02,Lulu):mode = none(沒有)/ budget(預算:每人一個額度,只看花了多少)/
+       pot(一包錢:真的收了錢,結算算進去)。shares = 誰出、各出多少(台幣,含旅途中補的);
+       keeper = 一包錢的保管人(空的 = 不指定,轉帳寫「共同基金」) */
+    fund: fundOut(p),
     /* **副團主能動哪幾塊**(2026-10-01 起)。一般成員只能許願,舊的「成員可管…」三欄不再用。
        團主指派副團主的時候勾;預設全關。seat 這一塊就是「交通」(交通和座位)。 */
     can: {
@@ -644,7 +665,28 @@ module.exports = async (req, res) => {
         props["開始日"] = { date: { start } };
         props["結束日"] = { date: { start: end } };
       }
+      /* 共同基金:模式、誰出各出多少、保管人(只有團主能改;補基金走 resource=fund) */
+      if (body.fund !== undefined) {
+        const f = body.fund || {}, ids0 = c.members.map(m => m.id);
+        const mode = FUND_NAME[f.mode] ? f.mode : "none";
+        const shares = {};
+        for (const [id, v] of Object.entries(f.shares || {})) {
+          if (ids0.indexOf(id) < 0) return res.status(400).json({ error: "出基金的人不在這一團" });
+          const n = Math.round(Number(v));
+          if (!isFinite(n) || n < 0) return res.status(400).json({ error: "基金金額要是 0 或正數" });
+          shares[id] = n;
+        }
+        if (mode !== "none" && !Object.keys(shares).length) return res.status(400).json({ error: "要選誰有出共同基金" });
+        const keeper = mode === "pot" && f.keeper && ids0.indexOf(f.keeper) >= 0 ? f.keeper : "";
+        const vals = Object.values(shares);
+        props["基金模式"] = { select: { name: FUND_NAME[mode] } };
+        props["基金出資"] = { rich_text: richText(mode === "none" ? "" : sharesIn(shares)) };
+        props["基金保管人"] = { rich_text: richText(keeper) };
+        /* 「基金」那欄留著當「每人一樣」的金額(不一樣就是 0) */
+        props["基金"] = { number: mode !== "none" && vals.length && vals.every(v => v === vals[0]) ? vals[0] : 0 };
+      }
       for (const [k, col] of [["rate", "匯率"], ["kitty", "基金"]]) {
+        if (k === "kitty" && body.fund !== undefined) continue;
         if (body[k] === undefined) continue;
         const n = Number(body[k]);
         if (!isFinite(n) || n < 0) return res.status(400).json({ error: col + "要是 0 或正數" });
@@ -695,6 +737,38 @@ module.exports = async (req, res) => {
 
      **邀請碼是每個人各一組**(成員表的設計):朋友用誰的碼進來就記下是誰邀請的,
      想斷掉某一條擴散線就換那個人的碼,其他人的連結不受影響。 */
+  /* ---------- 補基金(2026-10-02) ----------
+     POST { who: [成員編號], amount } → 每個人的出資加 amount(台幣)。
+     一包錢模式才有;保管人、團主、有記帳權限的副團主能記。 */
+  if (resource === "fund") {
+    if (!allow("POST")) return;
+    try {
+      const c = await context(q.t);
+      if (c.stop) return stop(c.stop);
+      const f = c.trip.fund;
+      if (f.mode !== "pot") return res.status(400).json({ error: "這一團的共同基金不是「一包錢」,不用補" });
+      if (c.trip.ended) return res.status(403).json({ why: "ended", error: "這一團已經結束了" });
+      if (!(c.can("cost") || (f.keeper && f.keeper === c.mine.id))) return res.status(403).json({ error: "只有保管人、團主、有記帳權限的副團主能記補基金" });
+      const amount = Math.round(Number(body.amount));
+      if (!isFinite(amount) || amount <= 0) return res.status(400).json({ error: "補多少要填大於 0 的數字" });
+      const who = ids(body.who).filter(id => c.members.some(m => m.id === id));
+      if (!who.length) return res.status(400).json({ error: "要選誰補了" });
+      const shares = { ...f.shares };
+      who.forEach(id => { shares[id] = (shares[id] || 0) + amount; });
+      const vals = Object.values(shares);
+      await notion("/pages/" + c.trip.page, { method: "PATCH", body: JSON.stringify({ properties: {
+        "基金出資": { rich_text: richText(sharesIn(shares)) },
+        "基金": { number: vals.every(v => v === vals[0]) ? vals[0] : 0 } } }) });
+      try {
+        const nm = id => (c.members.find(m => m.id === id) || {}).name || "某人";
+        await notion("/pages", { method: "POST", body: JSON.stringify({ parent: { database_id: DB.activity }, properties: {
+          "說明": { title: richText(c.mine.name + " 記了補基金:" + who.map(nm).join("、") + " 各 NT$" + amount.toLocaleString("en-US")) },
+          "團": { rich_text: richText(c.code) }, "誰": { rich_text: richText(c.mine.id) }, "類型": { select: { name: "花費" } } } }) });
+      } catch (_) { /* 少一則通知 */ }
+      return res.status(200).json({ ok: true, fund: { ...f, shares } });
+    } catch (e) { return fail(e); }
+  }
+
   /* ================= 最高權限:所有的團(2026-10-02) =================
      GET  → 所有的團(名稱、代號、日期、團主、幾個人、隱藏了沒)
      POST { code, action: "hide" | "unhide" | "delete", confirm }
@@ -991,7 +1065,7 @@ module.exports = async (req, res) => {
       if (resource === "seats") await log("交通", me2 + " 填了" + nm(row.passenger) + "在 " + row.flight + " 的座位:" + (row.seat || "空的"));
       if (resource === "expenses" && row.participants && row.participants.length) {
         const n = row.participants.length;
-        await log("花費", me2 + " 記了一筆" + said(row.title) + " " + money(row.amount, row.currency) + "," + n + " 人分(每人約 " + money(row.amount / n, row.currency) + ")", { to: row.participants });
+        await log("花費", me2 + " 記了一筆" + said(row.title) + " " + money(row.amount, row.currency) + (row.payer === "fund" ? "(共同基金付)" : "") + "," + n + " 人分(每人約 " + money(row.amount / n, row.currency) + ")", { to: row.participants });
       }
       return res.status(200).json({ row });
     }
