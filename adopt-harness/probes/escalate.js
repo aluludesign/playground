@@ -118,136 +118,23 @@ async function press(id) {
     ok("而且不再覆誦「好 ——」(按的那顆就在上一句話裡)",
       boxText("sf-title").indexOf("好 ——") < 0, boxText("sf-title"));
 
-    // ---- 按下強力搜才走 Google ----
-    /* 第一筆帶照片代號、第二筆不帶 —— **兩半都要有人測**:
-       有照片的要換成照片,沒有的要退回地圖縮圖,而不是留一個白格子。 */
-    gooReply = { list: [{ la: 35.6267, lo: 139.7745, label: "富士電視台", addr: "東京都港區台場",
-                          photo: "places/ChIJfujitv/photos/AeJbb3fake" },
-                 { la: 35.66, lo: 139.79, label: "富士電視台 球體展望室", addr: "東京都港區台場 2-4-8" }] };
+    // ---- 按下強力搜 = Google 的 Places UI Kit 清單(2026-10-02;舊的伺服器那條拿掉了) ----
+    /* 這裡沒有 Google 元件(假後端也不給瀏覽器金鑰),所以走的是「載不出來」那條。
+       有元件的那條(清單、挑一家、編號存進 Notion)在 probes/uikit.js。 */
     await press("sf-title");
-    ok("按「強力搜」才問 Google", goo.length === 1, { google: goo.length });
-    ok("而且那一下不再問免費那家", osm.length === 2, { osm: osm.length });
-    /* **Places 回多筆,而那正是換掉 Geocoding 的理由。**
-       Geocoding 只回一筆,所以「三間 teamLab 讓你挑」這件事它做不到。 */
-    ok("Google 的結果照樣畫成可以挑的候選,而且是**多筆**",
-      d.querySelectorAll('[data-hit="sf-title"]').length === 2,
-      d.querySelectorAll('[data-hit="sf-title"]').length);
-
-    /* ---- 照片:**金鑰不可以走到前端** ----
-       Google 的圖片網址帶金鑰,所以那張圖一定要經過自己的後端。
-       這一條守的不是「好不好看」,是**那個網址裡有沒有出現不該出現的東西** ——
-       geofix 有一條在守 `GEOCODE_KEY` 這個名字不出現在 HTML 裡,這是同一條線的另一半:
-       名字沒印出來,但如果 src 直接指向 googleapis,金鑰一樣得跟著去。 */
-    var hits = d.querySelectorAll('[data-hit="sf-title"]');
-    var shot = hits[0].querySelector(".thumb img.shot");
-    ok("有照片的那一筆,縮圖換成照片", !!shot, hits[0].innerHTML.slice(0, 220));
-    ok("**照片走自己的後端**(resource=placephoto)",
-      !!shot && /resource=placephoto/.test(shot.getAttribute("src")), shot && shot.getAttribute("src"));
-    ok("**照片的網址不直接指向 Google**(直接指就得把金鑰一起帶過去)",
-      !!shot && !/googleapis\.com|googleusercontent\.com/.test(shot.getAttribute("src")),
-      shot && shot.getAttribute("src"));
-    ok("而且網址裡沒有任何看起來像金鑰的參數",
-      !!shot && !/[?&](key|api_?key)=/i.test(shot.getAttribute("src")), shot && shot.getAttribute("src"));
-    ok("照片是延後載入的(捲不到的那幾列不換圖就不計費)",
-      !!shot && shot.getAttribute("loading") === "lazy", shot && shot.getAttribute("loading"));
-    /* **這一條是給「CSS 壞掉不會報錯」用的。** 照片和圖磚共用同一格,而圖磚那條規則
-       寫死 256×256;`.shot` 要蓋掉它。蓋不過的話畫面上是一張被切掉一角的大圖,
-       而那長得像「照片剛好拍歪」,不像規則沒生效。量的是**照片有沒有填滿那一格**。 */
-    var thumbEl = hits[0].querySelector(".thumb");
-    var sbox = thumbEl.getBoundingClientRect(), tcs = w.getComputedStyle(thumbEl);
-    /* **比的是邊框內側,不是外緣。** 第一版拿 56 去比,量到 54 就紅了 ——
-       而 54 才是對的:`.thumb` 有 1px 邊框,絕對定位的圖填的是邊框裡面那一塊。
-       量錯基準的紅燈跟真的壞掉長得一模一樣,所以把基準算出來,不要用那個常數。 */
-    var bw = parseFloat(tcs.borderLeftWidth) + parseFloat(tcs.borderRightWidth);
-    var bh = parseFloat(tcs.borderTopWidth) + parseFloat(tcs.borderBottomWidth);
-    var sb = shot && shot.getBoundingClientRect(), scs = shot && w.getComputedStyle(shot);
-    ok("照片填滿那一格(沒有被圖磚那條 256px 的規則蓋住)",
-      !!sb && Math.abs(sb.width - (sbox.width - bw)) <= 1 &&
-      Math.abs(sb.height - (sbox.height - bh)) <= 1,
-      { 格內側: [Math.round(sbox.width - bw), Math.round(sbox.height - bh)],
-        圖: sb && [Math.round(sb.width), Math.round(sb.height)] });
-    ok("而且是裁切不是拉扁(object-fit:cover)", !!scs && scs.objectFit === "cover", scs && scs.objectFit);
-    /* 另一半:**沒有照片的那一筆不可以留白格子**,要退回地圖縮圖。 */
-    var noPhoto = hits[1].querySelector(".thumb");
-    ok("沒照片的那一筆退回地圖縮圖(不是空的一格)",
-      !!noPhoto && !noPhoto.querySelector("img.shot") && !!noPhoto.querySelector("img") &&
-      !!noPhoto.querySelector(".dot"), hits[1].innerHTML.slice(0, 220));
-
-    /* ---- **只給用一次:找到了也退回去,不必等他挑** ----
-       以前是「挑到候選才歸零」。於是查到一串、一筆都不想挑的人,
-       **下一按仍然是花錢的那一按,而他並沒有再同意一次。** */
-    ok("找到了就退回「搜尋」(不必等他挑)", btn("sf-title").textContent === "搜尋", btn("sf-title").textContent);
-    ok("輸入框也卸下來了", !inp.classList.contains("seek-armed"), inp.className);
-    ok("而且這時候才講退路(找到也講 —— 他可能一筆都不想挑)",
-      boxText("sf-title").indexOf("也可以許願") >= 0, boxText("sf-title"));
-
-    // ---- 挑到 → 全部歸零 ----
-    d.querySelector('[data-hit="sf-title"]').click();
-    await sleep(60);
-    ok("挑到之後按鈕變回「搜尋」", btn("sf-title").textContent === "搜尋", btn("sf-title").textContent);
-    ok("挑到之後那一欄換成挑到的名字", inp.value === "富士電視台", inp.value);
-
-    // ---- 強力搜也找不到:退回免費,並說「找不到也沒關係」 ----
-    osm.length = 0; goo.length = 0; osmReply = []; gooReply = { list: [] };
-    inp.value = "查不到的那種";
-    await press("sf-title"); await press("sf-title");
-    d.querySelector('[data-arm="sf-title"]').click();
-    await sleep(60);
-    await press("sf-title");
-    ok("強力搜真的送出去了", goo.length === 1, { google: goo.length });
-    ok("找不到 → 按鈕退回「搜尋」(再按一次是同一個字問同一家,白花錢)",
-      btn("sf-title").textContent === "搜尋", btn("sf-title").textContent);
-    /* 那句退路搬到 `seekTail()` 了,所以這裡比對的字換了 ——
-       **但要守的東西一樣**:講的是「不找了也沒關係」,不是「再試試」。 */
-    ok("講的是「也可以許願」,不是「再試試」",
-      boxText("sf-title").indexOf("也可以許願") >= 0, boxText("sf-title"));
-    ok("而且退路那句沒有被「找不到」那句蓋掉(兩句都在)",
-      boxText("sf-title").indexOf("換個說法") >= 0 && boxText("sf-title").indexOf("也可以許願") >= 0,
-      boxText("sf-title"));
-    osm.length = 0; goo.length = 0;
-    await press("sf-title");
-    ok("退回之後再按,問的是免費那家(不會又花一次錢)",
-      osm.length === 1 && goo.length === 0, { osm: osm.length, google: goo.length });
+    ok("強力搜不再打舊的伺服器搜尋(resource=places)", goo.length === 0, { google: goo.length });
+    ok("而且那一下也不問免費那家", osm.length === 2, { osm: osm.length });
+    ok("載不出 Google 清單 → 講「清單載入出現錯誤」,叫他稍後或重開再試(不講免費不免費)",
+      boxText("sf-title").indexOf("清單載入出現錯誤") >= 0 && boxText("sf-title").indexOf("免費") < 0, boxText("sf-title"));
+    ok("按鈕**留在**「強力搜」(這一下沒花到錢,不該逼他重走一輪)",
+      btn("sf-title").textContent === "強力搜", btn("sf-title").textContent);
+    ok("退路那句也在(他按到最後一段了)", boxText("sf-title").indexOf("也可以許願") >= 0, boxText("sf-title"));
 
     // ---- 換表單不可以帶著段數 ----
     osm.length = 0; goo.length = 0;
     d.getElementById("add-wish-btn").click();
     await until(function () { return !q("#wish-form").hidden; });
     ok("換到許願表單,按鈕是「搜尋」", btn("wf-title").textContent === "搜尋", btn("wf-title").textContent);
-
-    // ---- 伺服器回錯誤時,要轉述它的原話 ----
-    /* **這條就是咬到 Lulu 的那條。** preview 沒有 `GEOCODE_KEY`,伺服器明白回了
-       「伺服器還沒設定 GEOCODE_KEY」,而第一版的 `catch (_)` 把它吃掉,
-       換成我編的「可能是今天的查詢次數用完了」。 */
-    d.getElementById("wf-title").value = "某個查不到的";
-    await press("wf-title"); await press("wf-title");
-    d.querySelector('[data-arm="wf-title"]').click();
-    await sleep(60);
-    gooStatus = 503; gooReply = { error: "地點查詢服務說:Places API has not been used in project…" };
-    await press("wf-title");
-    ok("伺服器講得出原因時,畫面轉述它的原話",
-      boxText("wf-title").indexOf("Places API") >= 0, boxText("wf-title"));
-    ok("**不會換成自己編的原因**(例如「次數用完了」)",
-      boxText("wf-title").indexOf("次數用完") < 0, boxText("wf-title"));
-    /* **出錯這條路上,那兩個旗標各自該怎樣。**
-       這一段以前只問「訊息有沒有照轉」,沒有問按鈕停在哪、退路那句在不在 ——
-       而「只給用一次」是在**找到**和**零筆**兩條路上實作的,出錯這條當時漏掉了。 */
-    ok("出錯 → 按鈕**留在**「強力搜」(這一下一毛錢都沒花到,不該逼他重走一輪)",
-      btn("wf-title").textContent === "強力搜", btn("wf-title").textContent);
-    ok("而且輸入框也還上著膛", d.getElementById("wf-title").classList.contains("seek-armed"),
-      d.getElementById("wf-title").className);
-    ok("但退路那句要出現 —— 他按過了,而且手上什麼都沒有",
-      boxText("wf-title").indexOf("也可以許願") >= 0, boxText("wf-title"));
-    ok("而且伺服器的原話沒有被退路那句擠掉(兩句都在)",
-      boxText("wf-title").indexOf("Places API") >= 0 && boxText("wf-title").indexOf("也可以許願") >= 0,
-      boxText("wf-title"));
-    /* 連不上那條(`!res`)跟上面那條是不同的分支,各自有自己的 return —— 分開問一次。 */
-    gooStatus = 0; gooReply = null; gooThrow = true;
-    await press("wf-title");
-    ok("連不上 → 退路那句一樣要出現(不是只有伺服器講得出話的時候才講)",
-      boxText("wf-title").indexOf("也可以許願") >= 0, boxText("wf-title"));
-    gooThrow = false;
-    gooStatus = 200;
 
     // ---- 舊的那顆按鈕真的不見了 ----
     ok("`#we-again`(再查一次)不存在了", !d.getElementById("we-again"), "還在");

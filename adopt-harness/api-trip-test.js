@@ -432,6 +432,24 @@ const memberRow = (code, sub) => rowsIn(DB.members).find(p => plain(p.properties
   r = await call(LINE_A, "PATCH", { resource: "team", t: T1 }, { deputy: A_SELF });
   ok("團主不能兼副團主", r.code === 400, r.body);
 
+  /* ================= Places UI Kit(2026-10-02):地點編號存進 Notion、瀏覽器金鑰要登入才拿得到 ================= */
+  r = await call(LINE_A, "POST", { resource: "itinerary", t: T1 }, { title: "一蘭", day: "2026-10-05", place: "一蘭 新宿", placeId: "ChIJ_test" });
+  ok("行程帶著地點編號存進去、讀得回來", r.code === 200 && r.body.row.placeId === "ChIJ_test", r.body);
+  r = await call(LINE_B, "POST", { resource: "wishes", t: T1 }, { title: "一蘭", place: "一蘭 新宿", placeId: "ChIJ_wish" });
+  ok("願望也帶得了地點編號", r.code === 200 && r.body.row.placeId === "ChIJ_wish", r.body);
+  const wid = r.body.row.id;
+  r = await call(LINE_B, "PATCH", { resource: "wishes", t: T1, id: wid }, { note: "只改備註" });
+  ok("只改備註不會把地點編號清掉", r.body.row.placeId === "ChIJ_wish", r.body.row);
+  await call(LINE_B, "DELETE", { resource: "wishes", t: T1, id: wid });
+  process.env.GOOGLE_MAPS_BROWSER_KEY = "AIza-test";
+  r = await call(null, "GET", { resource: "mapskey" });
+  ok("沒登入拿不到瀏覽器金鑰", r.code === 401, r.body);
+  r = await call(LINE_A, "GET", { resource: "mapskey" });
+  ok("登入了拿得到", r.code === 200 && r.body.key === "AIza-test", r.body);
+  delete process.env.GOOGLE_MAPS_BROWSER_KEY;
+  r = await call(LINE_A, "GET", { resource: "mapskey" });
+  ok("沒設就回空的(前端退回舊的強力搜)", r.code === 200 && r.body.key === "", r.body);
+
   /* ================= 團的生命週期(2026-10-01):開始後只能延長、結束後鎖住 ================= */
   const tripOf = code => rowsIn(DB.trips).find(p => plain(p.properties["代號"]) === code);
   const twDay = n => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Taipei", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(Date.now() + n * 864e5));

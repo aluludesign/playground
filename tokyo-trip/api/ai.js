@@ -263,8 +263,24 @@ module.exports = async (req, res) => {
   if (req.method === "GET") {
     const who = S.whoIs(req);
     if (!who) return res.status(401).json({ error: "請先用 LINE 登入", why: "login" });
-    const m = await U.mine(who.sub);
-    return res.status(200).json({ mine: m && { left: m.left, limit: m.limit, used: m.used, resetAt: m.resetAt, when: m.when } });
+    const [m, st] = await Promise.all([U.mine(who.sub), U.strongMine(who.sub)]);
+    return res.status(200).json({ mine: m && { left: m.left, limit: m.limit, used: m.used, resetAt: m.resetAt, when: m.when }, strong: st });
+  }
+  /* **POST ?strong=1 = 要用一次強力搜**(2026-10-02)。Google 的清單是瀏覽器自己載的,伺服器看不到 ——
+     所以每次強力搜之前先來這裡記一次,沒次數了就不放行 */
+  if (req.method === "POST" && req.query && req.query.strong === "1") {
+    const who = S.whoIs(req);
+    if (!who) return res.status(401).json({ error: "請先用 LINE 登入", why: "login" });
+    /* ?strong=1&refund=1 = 清單出錯,退回剛剛那一次(要帶 strongUse 給的收據) */
+    if (req.query.refund === "1") {
+      let b = req.body; if (typeof b === "string") { try { b = JSON.parse(b); } catch (_) { b = {}; } }
+      const r = await U.strongRefund(who.sub, b && b.ticket);
+      return res.status(r.ok ? 200 : 409).json({ ok: r.ok, strong: r.mine || null });
+    }
+    const u = await U.strongUse(who.sub);
+    if (!u.ok) return res.status(429).json({ why: "strong", strong: u.mine,
+      error: "你今天的強力搜用完了," + (u.mine.when || "明天") + "後再用" });
+    return res.status(200).json({ ok: true, strong: u.mine, ticket: u.ticket || "" });
   }
   if (req.method !== "POST") {
     res.setHeader("Allow", "GET, POST");
@@ -355,7 +371,7 @@ module.exports = async (req, res) => {
     ? "(測試環境才看得到:" + String(last.status || "") + " " + String(last.message).slice(0, 160) + ")" : "";
   /* 失敗的時候附上 Google 回的代碼(只有數字,不是英文原話):之後再有人回報,看得出是哪一種 */
   const tag = codes.length ? "(Google " + Array.from(new Set(codes)).join("/") + ")" : "";
-  const msg = (quota ? "今天的免費 AI 額度用完了,明天再試,或先手動加" + tag
+  const msg = (quota ? "今天的 AI 額度用完了,明天再試,或先手動加" + tag
     : busy ? "AI 現在太忙(Google 那邊),過幾分鐘再試一次" + tag
     : last && last.soft ? last.message
     : "AI 這次沒成功,再試一次") + why;
