@@ -572,8 +572,11 @@
     .map:active{cursor:grabbing;}
     /* 拖曳／捏合時只動這一層的 transform,不重畫,圖磚才不會閃 */
     .map .layer{position:absolute; inset:0; transform-origin:0 0;}
+    /* **底圖降飽和到 0.6**(Lulu 2026-10-02 從六種濾鏡比較裡挑的 D3)。OSM 原本的綠和粉紅太搶,
+       行程的點跳不出來;0.6 還認得出公園和主要道路。只套圖磚 —— 標記在同一層但不是 .tile,
+       候選清單的縮圖她說不用套。驗收:adopt-harness/probes/tile-filter.js */
     .map .tile{position:absolute; width:256px; height:256px; pointer-events:none; user-select:none;
-      -webkit-user-drag:none;}
+      -webkit-user-drag:none; filter:saturate(.6) brightness(1.03) contrast(.93);}
     .map .mapzoom{position:absolute; right:8px; top:8px; z-index:4; display:flex; flex-direction:column; gap:1px;}
     .map .mapzoom button{width:30px; height:30px; border:1px solid var(--line); background:var(--surface);
       color:var(--ink); font-size:17px; line-height:1; cursor:pointer; padding:0;}
