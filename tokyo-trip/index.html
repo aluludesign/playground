@@ -1190,6 +1190,8 @@
     /* Google 的地點清單(Places UI Kit):樣式是 Google 的,只調字型、顏色、外框;它自己捲 */
     .uikit{max-height:360px; overflow:auto; border:1px solid var(--line); border-radius:10px; background:#fff;}
     .uikit gmp-place-search{--gmp-mat-font-family:inherit; color-scheme:light; width:100%;}
+    .uikit-wide{overflow-x:auto;}
+    .uikit-wide gmp-place-search{width:420px; min-width:420px;}
     .ended-bar{padding:8px 16px; font-size:13px; text-align:center;
       background:var(--ds-sys-shared-color-secondary-container); color:var(--ds-sys-shared-color-on-secondary-container);}
     /* 對話框改過卻點了外面:晃一下,底下講一句要按哪裡 */
@@ -4335,11 +4337,17 @@
   function showUIKit(id, q) {
     seekReset(id); seekUsedStrong[id] = true;   /* 跟舊的強力搜一樣:只給用一次,跑完退回一般搜 */
     const box = seekBox(id);
-    /* **內容自己指定,照片排第一**(2026-10-02,Lulu:沒有照片)。`gmp-place-all-content` 在搜尋清單裡不帶照片 */
-    box.innerHTML = '<div class="uikit"><gmp-place-search selectable>' +
-      '<gmp-place-content-config><gmp-place-media></gmp-place-media><gmp-place-address></gmp-place-address>' +
-      '<gmp-place-rating></gmp-place-rating><gmp-place-type></gmp-place-type><gmp-place-price></gmp-place-price>' +
-      '<gmp-place-open-now-status></gmp-place-open-now-status></gmp-place-content-config>' +
+    /* **縮圖要怎樣才出現,文件沒寫**(2026-10-02,Lulu:沒有縮圖)。暫時在網址上帶 ?uikit=1/2/3 試三種,
+       她看哪一種有縮圖再定下來(定了就把這一段收掉):
+         1 = 只放照片(content-config 裡只有 gmp-place-media)
+         2 = 全部內容 + 橫的排法(orientation="horizontal")
+         3 = 全部內容,但清單撐到 420px 寬(左右可以捲) */
+    const v = (/[?&]uikit=(\d)/.exec(location.search) || [])[1] || "";
+    const cfg = v === "1" ? '<gmp-place-content-config><gmp-place-media></gmp-place-media></gmp-place-content-config>'
+      : v === "2" || v === "3" ? "<gmp-place-all-content></gmp-place-all-content>"
+      : '<gmp-place-content-config><gmp-place-media></gmp-place-media><gmp-place-rating></gmp-place-rating>' +
+        '<gmp-place-price></gmp-place-price><gmp-place-open-now-status></gmp-place-open-now-status></gmp-place-content-config>';
+    box.innerHTML = '<div class="uikit' + (v === "3" ? " uikit-wide" : "") + '"><gmp-place-search selectable' + (v === "2" ? ' orientation="horizontal"' : "") + ">" + cfg +
       '<gmp-place-text-search-request max-result-count="8"></gmp-place-text-search-request></gmp-place-search></div>' + seekTail(id);
     box.hidden = false;
     const ps = box.querySelector("gmp-place-search"), req = box.querySelector("gmp-place-text-search-request");
