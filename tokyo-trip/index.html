@@ -1181,6 +1181,12 @@
     .bell-pop li small{color:var(--muted); font-size:12px;}
     .bell-pop li .btn{justify-self:start;}
     .bell-pop .empty{margin:0; font-size:14px; color:var(--muted);}
+    /* 漢堡選單最上面那一行:你今天的 AI 還剩幾次 */
+    .menu-ai{display:grid; gap:2px; padding:4px 2px 10px; margin-bottom:10px; border-bottom:1px solid var(--line); font-size:14px; color:var(--ink);}
+    .menu-ai small{font-size:12px; color:var(--muted);}
+    .ai-left{margin:0 0 12px; font-size:13px; color:var(--muted);}
+    .ai-left b{color:var(--ink);}
+    .st-hint{margin:-4px 0 4px; font-size:12px; color:var(--muted);}
     /* 對話框改過卻點了外面:晃一下,底下講一句要按哪裡 */
     @keyframes ov-nudge{0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)}}
     .nudge{animation:ov-nudge .28s ease-in-out;}
@@ -1433,6 +1439,8 @@
   </header>
   <div class="menu-pop bell-pop" id="bell-pop" role="dialog" aria-label="通知" hidden><div id="bell-list"></div></div>
   <div class="menu-pop" id="menu-pop" hidden>
+    <!-- 你今天的 AI 還剩幾次(2026-10-01):次數跟著人走、各團共用,所以放在個人的選單裡 -->
+    <div class="menu-ai" id="menu-ai" hidden></div>
 
 
     <div class="cloudbar" id="cloudbar" hidden>
@@ -1589,7 +1597,7 @@
   <div class="signin" id="home-card" role="dialog" aria-modal="true" aria-labelledby="home-title"></div>
 </div>
 
-<!-- 團的設定:團主改團名、國家、城市、日期、匯率、基金、三個開關。
+<!-- 團的設定:團主改團名、國家、城市、日期、匯率、基金、副團主和副團主能管的三塊。
      「我在這團的名字和顏色」每個人都能改,所以跟團的設定分開放在同一張卡的下半。 -->
 <div class="overlay" id="settings-overlay" hidden>
   <form class="signin wide" id="settings-form">
@@ -1608,11 +1616,14 @@
         <div class="fld" id="st-rate-fld"><label class="rm-label" for="st-rate">匯率(1 外幣 = ? 台幣)</label><input class="rm-input" type="number" id="st-rate" step="0.0001" min="0"></div>
         <div class="fld"><label class="rm-label" for="st-kitty">每人共同基金(台幣)</label><input class="rm-input" type="number" id="st-kitty" step="1" min="0"></div>
       </div>
-      <div class="fld"><span class="rm-label">成員也能改的</span>
+      <!-- 副團主(2026-10-01):一般成員只能許願;團主指派 1 位副團主、勾他能管哪幾塊。每天只能換一次 -->
+      <div class="fld"><label class="rm-label" for="st-deputy">副團主</label><select class="rm-input" id="st-deputy"></select></div>
+      <p class="st-hint" id="st-deputy-note"></p>
+      <div class="fld"><span class="rm-label">副團主可以管</span>
         <div class="who">
           <label class="rm-chip"><input type="checkbox" id="st-can-plan">行程</label>
-          <label class="rm-chip"><input type="checkbox" id="st-can-cost">分帳</label>
-          <label class="rm-chip"><input type="checkbox" id="st-can-seat">交通和座位</label>
+          <label class="rm-chip"><input type="checkbox" id="st-can-cost">記帳</label>
+          <label class="rm-chip"><input type="checkbox" id="st-can-seat">交通</label>
         </div>
       </div>
     </div>
@@ -1752,6 +1763,8 @@
 <div class="overlay" id="ai-overlay" hidden>
   <form class="signin" id="ai-form">
     <h2>AI 幫你加</h2>
+    <!-- 你今天還能用幾次(見 api/_usage.js)。外層不掛 class:裡面那個 .note 是 display:flex,掛在同一層會蓋掉 [hidden] -->
+    <div id="ai-quota" hidden></div>
     <div class="fld"><label class="rm-label" for="ai-text" id="ai-ask-label">想做什麼</label>
       <textarea class="rm-input" id="ai-text" rows="3" placeholder="例:這家想去許願／加到第 3 天晚上 7 點／這張是車票或訂位確認"></textarea></div>
     <div class="fld" id="ai-img-row">
@@ -2122,8 +2135,10 @@
     viewAs = body.viewAs || "";
     /* **能不能編輯,是從身分算出來的,而且一塊一塊算**:團主永遠可以;成員要看團主開了哪些開關。 */
     const c = (trip && trip.can) || {};
+    /* 2026-10-01 起:**一般成員只能許願**;副團主看團主勾了哪幾塊(trip.can 現在是副團主的權限) */
     const owner = !!myMember && myMember.role === "團主";
-    can = { plan: owner || (!!myMember && !!c.plan), cost: owner || (!!myMember && !!c.cost), seat: owner || (!!myMember && !!c.seat) };
+    const deputy = !!myMember && myMember.role === "副團主";
+    can = { plan: owner || (deputy && !!c.plan), cost: owner || (deputy && !!c.cost), seat: owner || (deputy && !!c.seat) };
     setMembers(body.members.map(m => ({
       id: m.id, def: m.name || m.id, key: m.id, full: m.name || m.id,
       color: m.color || "#7E8796", role: m.role || "成員", joinedAt: m.joinedAt || "",
@@ -2299,7 +2314,7 @@
   /* 唯讀時按鈕本來就藏起來了,這層是防手動戳 DOM 或 console */
   function mayEdit(b) {
     if (editable(b)) return true;
-    flash(onSnapshot() ? "這是離線副本,連上網才能改" : "這一塊團主還沒開放給成員(團主可以在「團的設定」打開)");
+    flash(onSnapshot() ? "這是離線副本,連上網才能改" : (myMember && myMember.role === "副團主" ? "這一塊團主沒有勾給副團主" : "這一塊只有團主和副團主能改,一般成員可以許願"));
     return false;
   }
   /* 「改我的願望」那條路的寫入閘門。**形狀跟 mayEdit() 一樣**:能寫回 true,
@@ -5225,6 +5240,7 @@
         const r = btn.getBoundingClientRect();
         pop.style.top = Math.round(r.bottom + window.scrollY + 6) + "px";
         pop.style.right = Math.round(window.innerWidth - r.right) + "px";
+        loadAIQuota();
       }
     }
     btn.addEventListener("click", ev => { ev.stopPropagation(); open(pop.hidden); });
@@ -5912,14 +5928,45 @@
     /* AI 能建的三種:許願(誰都行)、行程(要 plan)、座位(要 seat)。後兩種都不行才只問許願 */
     const wishOnly = !editable("plan") && !editable("seat");
     el("ai-ask-label").textContent = wishOnly ? "想去哪裡?" : "想做什麼";
+    /* **提示字照他能做的事組**(2026-10-01,Lulu:非團主只放許願的例子;被勾了權限的副團主看他能做的那幾種)。
+       只勾「行程」的副團主不該看到「車票」—— 那是他按了 AI 也加不進去的東西 */
     el("ai-text").placeholder = wishOnly
       ? "例:這家拉麵店想去／照片裡這個地方"
-      : "例:這家想去許願／加到第 3 天晚上 7 點／這張是車票或訂位確認";
+      : "例:" + ["這家想去許願", editable("plan") ? "加到第 3 天晚上 7 點" : "", editable("seat") ? "這張是車票或訂位確認" : ""].filter(Boolean).join("／");
     el("ai-img-name").textContent = "";
     aiErr("ai-err", "");
     el("ai-form").hidden = false; el("ai-confirm").hidden = true;
     el("ai-overlay").hidden = false;
     el("ai-text").focus();
+    loadAIQuota();
+  }
+
+  /* ---- 你今天的 AI 還剩幾次(2026-10-01,Lulu 定案) ----
+     每個人每天固定次數:一般成員 20、團主和副團主 25;參加好幾團也是同一份。成功拿到結果才扣。
+     **兩個地方講同一個數字**:個人漢堡選單(隨時查)、AI 對話框(按之前就知道)。
+     讀不到就不講 —— 講一個錯的數字比不講糟;那時候伺服器也不會擋。 */
+  let aiMine = null;
+  function paintAIQuota(u) {
+    aiMine = u || null;
+    const box = el("ai-quota"), menu = el("menu-ai");
+    el("ai-go").disabled = !!(u && u.left <= 0);   /* 伺服器也會擋;這裡先擋,免得等了幾秒才被拒絕 */
+    if (!u || !u.limit) { box.hidden = menu.hidden = true; box.innerHTML = menu.innerHTML = ""; return; }
+    const out = u.left <= 0;
+    const when = u.when || "明天";
+    box.innerHTML = out
+      ? '<div class="note" style="margin-bottom:12px"><span>⚠</span><span>你的 AI 額度用完了,' + esc(when) + "後再用</span></div>"
+      : '<p class="ai-left">你今天還能用 AI <b>' + u.left + "</b> 次(共 " + u.limit + " 次)· " + esc(when) + "重算</p>";
+    menu.innerHTML = "<b>今天的 AI</b><span>" + (out ? "用完了," + esc(when) + "後再用" : "還能用 " + u.left + "／" + u.limit + " 次") +
+      "</span><small>參加的團共用 · " + esc(when) + "重算</small>";
+    box.hidden = menu.hidden = false;
+  }
+  async function loadAIQuota() {
+    if (!online || !lineUser) { paintAIQuota(null); return; }
+    try {
+      const res = await fetch(AI_API, { credentials: "same-origin" });
+      const body = res.ok ? await res.json().catch(() => null) : null;
+      paintAIQuota(body && body.mine);
+    } catch (_) { paintAIQuota(null); }
   }
   function closeAI() {
     el("ai-overlay").hidden = true;
@@ -5940,7 +5987,7 @@
     /* 行程和座位跟手動加一樣要通行碼。**擋在按鈕上,不是等存的時候才說** ——
        讓人填完才告訴他不能存,是浪費他的時間。 */
     const need = (k === "stop" && !editable("plan")) || (k === "transport" && !mayFly());
-    aiErr("ai-cerr", need ? (k === "stop" ? "加行程" : "加交通") + "這一塊團主還沒開放給成員(團主可以在「團的設定」打開)。許願不用。" : "");
+    aiErr("ai-cerr", need ? (k === "stop" ? "加行程" : "加交通") + "只有團主和副團主能用(看團主勾了哪幾塊)。許願誰都可以。" : "");
     el("ai-ok").disabled = need;
   }
 
@@ -5954,7 +6001,7 @@
     /* 讀到的是交通,但這個人不能加交通:**不要把車票倒進許願表**,留在這裡講清楚 */
     if (r.intent === "transport" && !mayFly()) {
       const ks = Array.from(new Set((r.legs || []).map(l => l.kind).filter(Boolean)));
-      aiErr("ai-err", "這看起來是交通" + (ks.length ? "(" + ks.join("、") + ")" : "") + "。加交通這一塊團主還沒開放給成員 —— 請團主加,或請團主在「團的設定」打開。");
+      aiErr("ai-err", "這看起來是交通" + (ks.length ? "(" + ks.join("、") + ")" : "") + "。加交通只有團主和副團主能用 —— 請團主或副團主加。");
       return;
     }
     if (!editable("plan") && !editable("seat")) {
@@ -6121,10 +6168,12 @@
           days: DAYS.map(d => d.date),
           members: MEMBERS.map(m => ({ id: m.id, name: nameOf(m.id) })),
           legs: (state.flights || []).map(f => ({ id: f.id, kind: kindOf(f), no: f.no, date: dayOf(f.depart), from: f.from, to: f.to })),
-          trip: trip ? { name: trip.name, country: trip.country, city: trip.city } : {},
+          trip: trip ? { code: TRIP, name: trip.name, country: trip.country, city: trip.city } : {},
         } }),
       });
       const body = await res.json().catch(() => null);
+      /* 成功會帶著剩幾次回來;用完(429 why=mine)就重問一次,讓兩邊的數字對上 */
+      if (body && body.mine) paintAIQuota(body.mine); else if (body && body.why === "mine") loadAIQuota();
       /* **三種壞法分開講**(2026-09-28:預覽上一律顯示「連不上 AI」,但網路其實是好的 ——
          以前只要訊息是英文開頭就當成斷線,伺服器當掉、回的不是 JSON、畫面自己出錯全部混在一起)。 */
       if (!res.ok) throw Object.assign(new Error(body && body.error ? body.error : "AI 那邊出錯了(HTTP " + res.status + "),再試一次;一直這樣就截圖給團主"), { said: true });
@@ -6670,7 +6719,7 @@
     const bar = el("cloudbar");
     bar.hidden = false;
     bar.className = "cloudbar " + (online ? "on" : "off");
-    const who = myMember ? nameOf(myMember.id) + (myMember.role === "團主" ? " · 團主" : "") : "";
+    const who = myMember ? nameOf(myMember.id) + (myMember.role === "團主" || myMember.role === "副團主" ? " · " + myMember.role : "") : "";
     /* 離線要講出時間:他看到的是真的行程,只是舊的。不說多舊,他會拿三天前的版本去趕車。 */
     const wait = pendingCount() ? " · " + pendingCount() + " 筆花費還沒送出" : "";
     el("cloud-msg").textContent = (online
@@ -6753,6 +6802,16 @@
     el("st-rate").value = trip.rate || "";
     el("st-rate-fld").hidden = trip.currency === "TWD";
     el("st-kitty").value = trip.kitty || 0;
+    /* 副團主:一團 1 位,團主以外的人都可以挑。今天換過了就鎖住,講幾點之後才能再換 */
+    const dep = MEMBERS.find(m => m.role === "副團主");
+    el("st-deputy").innerHTML = '<option value="">— 沒有 —</option>' + MEMBERS.filter(m => m.role !== "團主").map(m =>
+      '<option value="' + esc(m.id) + '"' + (dep && dep.id === m.id ? " selected" : "") + ">" + esc(nameOf(m.id)) + "</option>").join("");
+    const locked = !!trip.deputyLocked;
+    el("st-deputy").disabled = locked;
+    const next = trip.deputyNext ? new Intl.DateTimeFormat("zh-TW", { timeZone: "Asia/Taipei", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(trip.deputyNext)) : "";
+    el("st-deputy-note").textContent = locked
+      ? "今天已經換過副團主了,台灣時間 " + next + " 之後才能再換。"
+      : "副團主每天 AI 25 次(一般成員 20 次)。每天只能換一次;第一次指派不算。";
     el("st-can-plan").checked = !!(trip.can && trip.can.plan);
     el("st-can-cost").checked = !!(trip.can && trip.can.cost);
     el("st-can-seat").checked = !!(trip.can && trip.can.seat);
@@ -6775,6 +6834,9 @@
           start: el("st-start").value, end: el("st-end").value, kitty: Number(el("st-kitty").value) || 0,
           can: { plan: el("st-can-plan").checked, cost: el("st-can-cost").checked, seat: el("st-can-seat").checked },
         };
+        /* 副團主有換才送(沒換也送的話,伺服器不會當成換人,但少一次往返) */
+        const dep = MEMBERS.find(m => m.role === "副團主");
+        if (!el("st-deputy").disabled && el("st-deputy").value !== (dep ? dep.id : "")) body.deputy = el("st-deputy").value;
         if (!el("st-rate-fld").hidden) body.rate = Number(el("st-rate").value) || 0;
         await api("?resource=team", { method: "PATCH", body: JSON.stringify(body) });
       }

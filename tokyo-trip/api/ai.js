@@ -14,6 +14,7 @@
 // 現在每個人都是登入的,不擋就是把免費額度開給知道網址的任何人。
 
 const S = require("./_session.js");
+const U = require("./_usage.js");
 
 const ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/";
 
@@ -69,7 +70,7 @@ function tripCtx(c) {
     date: l && typeof l.date === "string" && ISO_DAY.test(l.date) ? l.date : "", from: str(l && l.from, 40), to: str(l && l.to, 40),
   })).filter(l => l.id).slice(0, 40);
   const t = c.trip && typeof c.trip === "object" ? c.trip : {};
-  return { days, members, legs, trip: { name: str(t.name, 40), country: str(t.country, 10), city: str(t.city, 30) },
+  return { days, members, legs, trip: { code: /^[a-z0-9_-]{1,40}$/.test(String(t.code || "")) ? t.code : "", name: str(t.name, 40), country: str(t.country, 10), city: str(t.city, 30) },
     today: typeof c.today === "string" ? c.today.slice(0, 10) : "", dayN: days.indexOf(c.day) + 1 };
 }
 
@@ -248,15 +249,23 @@ function clean(f, ctx) {
 
 module.exports = async (req, res) => {
   res.setHeader("Cache-Control", "no-store");
+  /* **GET = 你今天還能用幾次**(個人漢堡選單、AI 對話框一打開就問,見 _usage.js) */
+  if (req.method === "GET") {
+    const who = S.whoIs(req);
+    if (!who) return res.status(401).json({ error: "請先用 LINE 登入", why: "login" });
+    const m = await U.mine(who.sub);
+    return res.status(200).json({ mine: m && { left: m.left, limit: m.limit, used: m.used, resetAt: m.resetAt, when: m.when } });
+  }
   if (req.method !== "POST") {
-    res.setHeader("Allow", "POST");
+    res.setHeader("Allow", "GET, POST");
     return res.status(405).json({ error: "不支援的方法" });
   }
   if (!process.env.GEMINI_KEY) return res.status(503).json({ error: "伺服器還沒設定 GEMINI_KEY" });
   /* **第 2 期起要登入。** 以前不擋,理由是「沒通行碼的人也要能許願」;現在每個用網站的人
      都是登入的,不擋等於把額度開給知道網址的任何人。只看「有沒有登入」,不看在哪一團 ——
      這一支只負責讀懂,存進哪一團、能不能存,是 api/notion.js 的事。 */
-  if (!S.whoIs(req)) return res.status(401).json({ error: "請先用 LINE 登入", why: "login" });
+  const who = S.whoIs(req);
+  if (!who) return res.status(401).json({ error: "請先用 LINE 登入", why: "login" });
 
   const b = (typeof req.body === "string" ? JSON.parse(req.body || "{}") : req.body) || {};
   const text = typeof b.text === "string" ? b.text.trim().slice(0, MAX_TEXT) : "";
@@ -265,6 +274,23 @@ module.exports = async (req, res) => {
   if (image.length > MAX_B64) return res.status(413).json({ error: "圖片太大" });
   const ctx = tripCtx(b.context);
   const SCHEMA = schema(ctx);
+
+  /* **每個人每天固定次數**(一般 20、團主和副團主 25,各團共用)。用完就不去問 Google。
+     讀不到用量(表壞了、Notion 慢)就不擋 —— 它是提醒兼閘門,但不能讓 AI 跟著壞 */
+  const mine = await U.mine(who.sub);
+  const role = (mine && mine.roles && mine.roles[ctx.trip.code]) || "成員";
+  const byModel = {};   /* 這一次按下去,每個模型實際打了幾次、成功了沒、說用完了沒 */
+  const tap = model => (byModel[model] = byModel[model] || { ok: 0, calls: 0, out: false });
+  const calls = () => Object.values(byModel).reduce((n, t) => n + t.calls, 0);
+  /* 記下來再回。**要等它寫完**:回應送出之後函式可能就被收掉,那一筆就沒記到 */
+  const done = (result, extra) => Promise.all([
+    U.record(Object.assign({ sub: who.sub, trip: ctx.trip.code, role, result, calls: calls() }, extra || {})),
+    U.tally(byModel),
+  ]);
+  if (mine && mine.left <= 0) {
+    await done("次數用完");
+    return res.status(429).json({ why: "mine", error: "你的 AI 額度用完了," + (mine.when || "明天") + "後再用" });
+  }
 
   const parts = [];
   if (image) parts.push({ inline_data: { mime_type: "image/jpeg", data: image } });
@@ -279,11 +305,19 @@ module.exports = async (req, res) => {
   models: for (const model of MODELS) {
     for (let n = 0; n < 2; n++) {
       if (until - Date.now() < 1500) break models;   /* 剩下的時間不夠再問一次,就別問了 */
+      tap(model).calls++;
       try {
-        return res.status(200).json({ result: clean(await ask(model, parts, until - Date.now(), SCHEMA), ctx), model });
+        const result = clean(await ask(model, parts, until - Date.now(), SCHEMA), ctx);
+        tap(model).ok++;
+        await done("成功", { intent: result.intent, model });
+        /* 剩幾次跟著回去:對話框和漢堡選單不必再問一次 */
+        const left = mine ? { left: Math.max(0, mine.left - 1), limit: mine.limit, used: mine.used + 1, resetAt: mine.resetAt, when: mine.when } : null;
+        return res.status(200).json({ result, model, mine: left });
       } catch (e) {
         last = e;
         if (e.status) codes.push(e.status);
+        /* 429 = Google 說這個模型今天沒了 */
+        if (e.status === 429) tap(model).out = true;
         if (n === 0 && e.status >= 500 && until - Date.now() > BUSY_WAIT_MS + 4000) {
           await nap(BUSY_WAIT_MS + Math.floor(Math.random() * 500));
           continue;
@@ -313,5 +347,6 @@ module.exports = async (req, res) => {
     : busy ? "AI 現在太忙(Google 那邊),過幾分鐘再試一次" + tag
     : last && last.soft ? last.message
     : "AI 這次沒成功,再試一次") + why;
+  await done("失敗", { model: Object.keys(byModel).pop() || "" });
   return res.status(quota ? 429 : 502).json({ error: msg });
 };

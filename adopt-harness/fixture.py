@@ -172,6 +172,10 @@ FAKE_JS = r"""(function(){
   var SEEN = { at: %(seen)s };
   var canQ = (/[?&]can=([a-z,]*)/.exec(q) || [])[1];
   if (canQ !== undefined) canQ.split(",").forEach(function(k){ if (k in TRIP.can) TRIP.can[k] = true; });
+  /* 2026-10-01 起 can 是**副團主**的權限,一般成員只能許願 —— 帶 can= 的成員就是副團主(deputy=0 可以關掉) */
+  if (mode === "member" && canQ !== undefined && !/[?&]deputy=0/.test(q)) MEMBERS.forEach(function(m){ if (m.id === ME_ID) m.role = "副團主"; });
+  /* ai=剩幾次/共幾次(例如 ai=3/20):AI 的每人次數。沒帶 = 讀不到(那一行不出現) */
+  var aiQ = /[?&]ai=(\d+)\/(\d+)/.exec(q), AIQ = aiQ ? { left: +aiQ[1], limit: +aiQ[2], used: +aiQ[2] - +aiQ[1], resetAt: "2026-09-19T07:00:00.000Z", when: "下午三點" } : null;
   var me = (mode === "anon" || mode === "app" || mode === "visitor") ? null : { id: "U-fake-0001", name: "測試的人", avatar: "" };
   var joined = mode !== "join" && mode !== "new";
   function reply(body, status){ status = status || 200; return Promise.resolve({ ok: status < 400, status: status,
@@ -192,6 +196,7 @@ FAKE_JS = r"""(function(){
       return c === "ABCD2345" ? reply({ ok: true, user: { id: "U-fake-0001", name: "測試的人" } })
         : reply({ error: "這組登入碼不對,或已經過期(10 分鐘)—— 回瀏覽器重新登入一次" }, 403);
     }
+    if (s.indexOf("/api/ai") >= 0 && method === "GET") return reply({ mine: AIQ });
     if (s.indexOf("/api/notion") < 0) return real(u, init);
     var r = param(s, "resource");
     if (!me) return reply({ error: "請先用 LINE 登入", why: "login" }, 401);
@@ -211,7 +216,14 @@ FAKE_JS = r"""(function(){
     }
     if (!joined) return reply({ error: "你還不是這一團的人 —— 要有邀請碼才能加入", why: "not_member" }, 403);
     if (r === "team") {
-      if (method === "PATCH") { Object.keys(body).forEach(function(k){ if (k !== "can") TRIP[k] = body[k]; });
+      if (method === "PATCH") {
+        if (body.deputy !== undefined) {
+          if (TRIP.deputyLocked) return reply({ why: "deputy_today", error: "今天已經換過副團主了,台灣時間 15:00 之後才能再換" }, 409);
+          var had = MEMBERS.filter(function(m){ return m.role === "副團主"; })[0];
+          MEMBERS.forEach(function(m){ if (m.role === "副團主") m.role = "成員"; if (m.id === body.deputy) m.role = "副團主"; });
+          if (had) TRIP.deputyLocked = true;
+        }
+        Object.keys(body).forEach(function(k){ if (k !== "can" && k !== "deputy") TRIP[k] = body[k]; });
         if (body.can) Object.keys(body.can).forEach(function(k){ TRIP.can[k] = body.can[k]; });
         return reply({ trip: TRIP }); }
       /* 測試環境的「用成員身分看」:跟伺服器同一條規則(只有團主能降級;prod=1 模擬正式站,整個不理) */
