@@ -1,19 +1,20 @@
-/* 通知的小鈴鐺(2026-09-29,Lulu):AI 和漢堡選單中間。團主才有。
+/* 通知的小鈴鐺(2026-09-29,Lulu):AI 和漢堡選單中間。團主和副團主(2026-10-02 起)才有,看到的一樣。
  * PAGE='/index.html?newbie=1'             團主上次看過之後,小美加入了 → 紅點;點開有「去填座位」
  * PAGE='/index.html?newbie=1&noflights=1'  還沒有交通 → 只說誰加入了
- * PAGE='/index.html?newbie=1&fake=member'  成員 → 沒有鈴鐺
+ * PAGE='/index.html?newbie=1&fake=member'  一般成員 → 沒有鈴鐺
+ * PAGE='/index.html?newbie=1&fake=member&can=seat'  副團主 → 跟團主一樣
  * PAGE='/index.html'                       沒有新成員 → 鈴鐺在、沒有紅點、點開說沒有新通知 */
 var q = s => d.querySelector(s), wait = ms => new Promise(r => w.setTimeout(r, ms));
 var txt = s => (q(s) && q(s).textContent || "").replace(/\s+/g, " ").trim();
 var shown = e => !!e && !e.hidden && e.getBoundingClientRect().width > 0;
-var qs = w.location.search, newbie = /newbie=1/.test(qs), noflights = /noflights=1/.test(qs), member = /fake=member/.test(qs);
+var qs = w.location.search, newbie = /newbie=1/.test(qs), noflights = /noflights=1/.test(qs), member = /fake=member/.test(qs) && !/can=/.test(qs);
 var seen = () => (w.__calls || []).filter(c => /resource=me/.test(c.url) && c.body && c.body.seen === true).length;
 return (async function () {
   var out = { 情境: qs }, bad = [];
   var ok = (n, c, g) => { if (!c) bad.push(n + " ← " + JSON.stringify(g)); };
   var bell = q("#bell-btn"), ai = q("#ai-btn"), menu = q("#menu-btn");
   out.鈴鐺 = shown(bell); out.紅點 = shown(q("#bell-dot"));
-  if (member) { ok("成員沒有鈴鐺", !out.鈴鐺, out); return fin(); }
+  if (member) { ok("一般成員沒有鈴鐺", !out.鈴鐺, out); return fin(); }
   var rb = bell.getBoundingClientRect(), ra = ai.getBoundingClientRect(), rm = menu.getBoundingClientRect();
   out.位置 = { AI右: Math.round(ra.right), 鈴左: Math.round(rb.left), 鈴右: Math.round(rb.right), 選單左: Math.round(rm.left) };
   ok("鈴鐺在 AI 和漢堡選單中間,不重疊", out.鈴鐺 && ra.right <= rb.left && rb.right <= rm.left, out.位置);

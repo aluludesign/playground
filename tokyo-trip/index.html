@@ -2890,11 +2890,12 @@
        - 這一團已經有交通:多一句「座位多了他的空格」和「去填座位」
        - 還沒有交通:只說誰加入了
      「看過了」記在伺服器(成員表的「通知已讀」),換手機不會再通知一次。
-     只給團主(測試環境「用成員身分看」時也不會有)。 */
+     給團主和副團主(2026-10-02,Lulu:副團主看到的跟團主一樣)—— 各自記各自看過了沒。
+     一般成員沒有(測試環境「用成員身分看」時也不會有)。 */
   let newcomers = [], newcomersSeen = false;
   function checkNewcomers() {
     newcomers = []; newcomersSeen = false;
-    const owner = online && !!myMember && myMember.role === "團主";
+    const owner = online && !!myMember && (myMember.role === "團主" || myMember.role === "副團主");
     el("bell-btn").hidden = !owner;
     if (owner) {
       const since = myMember.seenAt || myMember.joinedAt || "";
