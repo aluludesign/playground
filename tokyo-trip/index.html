@@ -1187,6 +1187,8 @@
     .ai-left{margin:0 0 12px; font-size:13px; color:var(--muted);}
     .ai-left b{color:var(--ink);}
     .st-hint{margin:-4px 0 4px; font-size:12px; color:var(--muted);}
+    .ended-bar{padding:8px 16px; font-size:13px; text-align:center;
+      background:var(--ds-sys-shared-color-secondary-container); color:var(--ds-sys-shared-color-on-secondary-container);}
     /* 對話框改過卻點了外面:晃一下,底下講一句要按哪裡 */
     @keyframes ov-nudge{0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)}}
     .nudge{animation:ov-nudge .28s ease-in-out;}
@@ -1437,6 +1439,8 @@
     <button type="button" class="hamb" id="menu-btn" aria-label="選單" aria-expanded="false"
       aria-controls="menu-pop"><span></span><span></span><span></span></button>
   </header>
+  <!-- 這一團結束了(2026-10-01):最後一天 23:59(當地時間)一過就是唯讀;團主和有記帳權限的副團主還能記帳 -->
+  <div class="ended-bar" id="ended-bar" role="status" hidden></div>
   <div class="menu-pop bell-pop" id="bell-pop" role="dialog" aria-label="通知" hidden><div id="bell-list"></div></div>
   <div class="menu-pop" id="menu-pop" hidden>
     <!-- 你今天的 AI 還剩幾次(2026-10-01):次數跟著人走、各團共用,所以放在個人的選單裡 -->
@@ -1612,6 +1616,7 @@
         <div class="fld"><label class="rm-label" for="st-start">第一天</label><input class="rm-input" type="date" id="st-start" required></div>
         <div class="fld"><label class="rm-label" for="st-end">最後一天</label><input class="rm-input" type="date" id="st-end" required></div>
       </div>
+      <p class="st-hint" id="st-date-note" hidden></p>
       <div class="grid2">
         <div class="fld" id="st-rate-fld"><label class="rm-label" for="st-rate">匯率(1 外幣 = ? 台幣)</label><input class="rm-input" type="number" id="st-rate" step="0.0001" min="0"></div>
         <div class="fld"><label class="rm-label" for="st-kitty">每人共同基金(台幣)</label><input class="rm-input" type="number" id="st-kitty" step="1" min="0"></div>
@@ -1789,6 +1794,7 @@
         <option value="wish">許願</option>
         <option value="stop">行程</option>
         <option value="transport">交通(機票、車票、租車、座位)</option>
+        <option value="expense">記帳(收據、帳單)</option>
       </select></div>
     <div class="fld" id="ai-f-day"><label class="rm-label" for="ai-day">哪一天</label><select class="rm-input" id="ai-day"></select></div>
     <div class="fld" id="ai-f-time"><label class="rm-label" for="ai-time">時間</label><input class="rm-input" type="time" id="ai-time"></div>
@@ -2139,6 +2145,8 @@
     const owner = !!myMember && myMember.role === "團主";
     const deputy = !!myMember && myMember.role === "副團主";
     can = { plan: owner || (deputy && !!c.plan), cost: owner || (deputy && !!c.cost), seat: owner || (deputy && !!c.seat) };
+    /* **結束的團**(2026-10-01,Lulu):行程、交通、許願都鎖住;只剩團主和有記帳權限的副團主能動花費 */
+    if (trip && trip.ended) { can.plan = false; can.seat = false; }
     setMembers(body.members.map(m => ({
       id: m.id, def: m.name || m.id, key: m.id, full: m.name || m.id,
       color: m.color || "#7E8796", role: m.role || "成員", joinedAt: m.joinedAt || "",
@@ -2605,7 +2613,7 @@
   }
   async function toggleVote(id) {
     const w = state.wishes.find(x => x.id === id);
-    if (!w) return;
+    if (!w || tripEnded()) return;
     const me = myName();
     if (!me) { flash("要先加入這一團才能 +1"); return; }
     const had = (w.votes || []).indexOf(me);
@@ -2767,6 +2775,13 @@
   /* 唯讀時把所有會改資料的入口收起來 */
   function renderEditAbility() {
     const on = editable();
+    /* 結束的團:AI 按鈕對所有人消失;頂端講一句發生了什麼、還能做什麼 */
+    const ended = online && tripEnded();
+    el("ai-btn").hidden = ended;
+    const bar = el("ended-bar");
+    bar.hidden = !ended;
+    if (ended) bar.textContent = "這一團已經在 " + String(trip.end || "").slice(5).replace("-", "/") + " 結束了,只能看" +
+      (editable("cost") ? " · 你還可以記帳、改花費" : "");
     const bs = el("add-stop-btn"), be = el("add-exp-btn");
     if (bs) bs.hidden = !editable("plan");
     /* 離線也能記帳(先排著,見「還沒送出的花費」)—— 所以這顆看的是 queueCost,不是 editable */
@@ -3730,7 +3745,9 @@
      「我許的,或者我拿得出通行碼」—— 跟隔壁「刪掉」用的是同一個 `editable()`,
      不長第二套。**而「刪掉」沒有跟著放寬**:改得動別人的願望和刪得掉別人的願望
      不是同一件事,前者留得下痕跡(改完還是他許的),後者不留。 */
-  const mayEditWish = w => (mineWish(w) || editable("plan")) && !onSnapshot();
+  /* 這一團結束了沒(伺服器照當地時間算好給的)。結束了:許願、投票、AI 都關掉 */
+  const tripEnded = () => !!(trip && trip.ended);
+  const mayEditWish = w => (mineWish(w) || editable("plan")) && !onSnapshot() && !tripEnded();
 
   async function loadSheetMap(force, keep) {
     if (el("map-sheet").hidden || !sheetMode) { sheetKey = null; return; }
@@ -4966,7 +4983,7 @@
     el("wish-n").textContent = list.length ? list.length + " 個" : "";
     /* 只有三欄版面拖得動 —— 那裡時間軸和願望並排看得到,滑鼠也拖得準。 */
     el("wish-list").classList.toggle("can-sort", editable("plan") && wideCols() && list.length > 0);
-    el("add-wish-btn").hidden = false;
+    el("add-wish-btn").hidden = tripEnded();
 
     if (!list.length) {
       el("wish-list").innerHTML = '<div class="empty">還沒有人許願。</div>';
@@ -5004,11 +5021,11 @@
           (mayEditWish(w) ? '<div class="wswipe">' +
             (mayEditWish(w) ? '<button type="button" class="wsw" data-edit-wish="' + esc(w.id || "") + '">編輯</button>' : "") +
             /* 刪得掉:許願的人自己、或管得了行程的人(跟伺服器同一條) */
-            ((mineWish(w) || editable("plan")) && !onSnapshot() ? '<button type="button" class="wsw wsw-del" data-del-wish="' + esc(w.id || "") + '">刪除</button>' : "") +
+            ((mineWish(w) || editable("plan")) && !onSnapshot() && !tripEnded() ? '<button type="button" class="wsw wsw-del" data-del-wish="' + esc(w.id || "") + '">刪除</button>' : "") +
             "</div>" : "") +
           '<div class="wops">' +
           '<button type="button" class="rm-chip rm-chip--selectable vote" aria-pressed="' +
-          (voted ? "true" : "false") + '" data-vote="' + esc(w.id || "") + '">' +
+          (voted ? "true" : "false") + '" data-vote="' + esc(w.id || "") + '"' + (tripEnded() ? " disabled" : "") + ">" +
           '<svg class="i" aria-hidden="true"><use href="#i-thumbs-up"></use></svg>' + votes.length + "</button>" +
           (editable("plan") ? '<button type="button" class="wadd" data-add-wish="' + esc(w.id || "") + '">加入</button>' : "") +
           "</div></div>";
@@ -5926,13 +5943,14 @@
        「想做什麼」配上三種例子,是問給管理員聽的;對其他四個人來說,
        那是三個選項裡有兩個他按不下去。 */
     /* AI 能建的三種:許願(誰都行)、行程(要 plan)、座位(要 seat)。後兩種都不行才只問許願 */
-    const wishOnly = !editable("plan") && !editable("seat");
+    const wishOnly = !editable("plan") && !editable("seat") && !editable("cost");
     el("ai-ask-label").textContent = wishOnly ? "想去哪裡?" : "想做什麼";
     /* **提示字照他能做的事組**(2026-10-01,Lulu:非團主只放許願的例子;被勾了權限的副團主看他能做的那幾種)。
        只勾「行程」的副團主不該看到「車票」—— 那是他按了 AI 也加不進去的東西 */
     el("ai-text").placeholder = wishOnly
       ? "例:這家拉麵店想去／照片裡這個地方"
-      : "例:" + ["這家想去許願", editable("plan") ? "加到第 3 天晚上 7 點" : "", editable("seat") ? "這張是車票或訂位確認" : ""].filter(Boolean).join("／");
+      : "例:" + ["這家想去許願", editable("plan") ? "加到第 3 天晚上 7 點" : "", editable("seat") ? "這張是車票或訂位確認" : "",
+          editable("cost") ? "這張收據記一筆" : ""].filter(Boolean).join("／");
     el("ai-img-name").textContent = "";
     aiErr("ai-err", "");
     el("ai-form").hidden = false; el("ai-confirm").hidden = true;
@@ -5978,6 +5996,7 @@
     wish:  ["title", "note"],   /* 不問「你是誰」:LINE 登入就知道了 */
     stop:  ["day", "time", "title", "note"],
     transport: [],              /* 交通不在這張卡上填:按確定就打開「加一段交通」,AI 讀到的都填進去 */
+    expense: [],                /* 記帳也一樣:按確定就打開「記一筆」(2026-10-01) */
   };
   function aiShowKind() {
     const k = el("ai-kind").value;
@@ -5986,8 +6005,8 @@
     });
     /* 行程和座位跟手動加一樣要通行碼。**擋在按鈕上,不是等存的時候才說** ——
        讓人填完才告訴他不能存,是浪費他的時間。 */
-    const need = (k === "stop" && !editable("plan")) || (k === "transport" && !mayFly());
-    aiErr("ai-cerr", need ? (k === "stop" ? "加行程" : "加交通") + "只有團主和副團主能用(看團主勾了哪幾塊)。許願誰都可以。" : "");
+    const need = (k === "stop" && !editable("plan")) || (k === "transport" && !mayFly()) || (k === "expense" && !editable("cost"));
+    aiErr("ai-cerr", need ? ({ stop: "加行程", transport: "加交通", expense: "記帳" })[k] + "只有團主和副團主能用(看團主勾了哪幾塊)。許願誰都可以。" : "");
     el("ai-ok").disabled = need;
   }
 
@@ -5999,6 +6018,13 @@
        同一條送出的路、同一份驗證,這裡不長第二套。
        AI 講的那句話跟著進去,不然他不知道為什麼欄位是這樣填的。 */
     /* 讀到的是交通,但這個人不能加交通:**不要把車票倒進許願表**,留在這裡講清楚 */
+    aiLast = r;
+    /* 記帳(要排在「只能許願」那條捷徑前面,只勾記帳的副團主才不會被帶去許願表):打開「記一筆」,讀到的填進去(有記帳權限的人);沒有的話留在這裡講清楚 */
+    if (r.intent === "expense") {
+      if (editable("cost")) { closeAI(); openExpenseFromAI(r); return; }
+      aiErr("ai-err", "這看起來是一筆花費。記帳只有團主和副團主能用(看團主勾了哪幾塊)。");
+      return;
+    }
     if (r.intent === "transport" && !mayFly()) {
       const ks = Array.from(new Set((r.legs || []).map(l => l.kind).filter(Boolean)));
       aiErr("ai-err", "這看起來是交通" + (ks.length ? "(" + ks.join("、") + ")" : "") + "。加交通只有團主和副團主能用 —— 請團主或副團主加。");
@@ -6036,6 +6062,22 @@
     /* 有地名就先幫他搜一次:**挑哪一個還是人挑**,這裡只是省他按一下「搜尋」。
        不挑的話照樣存得進去,只是不上地圖 —— 跟手動加同一條規則(locatedAt)。 */
     if (r.title && r.intent !== "transport") runSeek("ai-title");
+  }
+
+  /* **AI 讀到一筆花費 → 打開「記一筆」**(2026-10-01)。讀到的才填,讀不到的留原本的預設;
+     誰付的、誰分攤 AI 不猜(收據上看不出來),人自己勾 */
+  function openExpenseFromAI(r) {
+    switchTab("cost");
+    fillPeopleControls();
+    if (!el("ef-date").value) el("ef-date").value = defaultDate();
+    toggleForm("exp-form", true);
+    const put = (id, v) => { if (v) el(id).value = v; };
+    put("ef-title", r.title); put("ef-date", r.date); put("ef-note", r.note);
+    if (r.amount) el("ef-amount").value = r.amount;
+    if (r.currency) el("ef-cur").value = r.currency;
+    const cat = CATS.find(c => c.name === r.category);
+    if (cat) el("ef-cat").value = cat.id;
+    flash("AI 讀到的都填好了,看一下誰付的、誰分攤再存" + (r.message ? " · " + r.message : ""));
   }
 
   /* AI 讀到一段交通 → 打開交通表單。**已經有的那一段就改它**(AI 說的 id,或種類 + 班次 + 日期對得上),
@@ -6220,8 +6262,9 @@
       flash("已加到 Day " + (d ? d.n : "") + ":" + time + " " + title);
       return;
     }
-    /* 交通:換到這一類再按確定 —— 打開交通表單,把 AI 讀到的填進去(沒讀到交通就是一張空表) */
+    /* 交通、記帳:換到這一類再按確定 —— 打開那張表,把 AI 讀到的填進去 */
     closeAI();
+    if (k === "expense") { openExpenseFromAI(aiLast || {}); return; }
     startAIQueue(aiLast || {});
   });
 
@@ -6799,6 +6842,16 @@
     el("st-city").value = trip.city || "";
     el("st-start").value = trip.start || "";
     el("st-end").value = trip.end || "";
+    /* **延長日期只能在旅程裡做**(2026-10-01,Lulu):開始之後第一天不能動、最後一天只能往後延;
+       結束之後日期鎖住(團不會再打開)。伺服器也照這條擋 */
+    el("st-start").disabled = !!trip.started;
+    el("st-end").disabled = !!trip.ended;
+    el("st-end").min = trip.started ? (trip.end || "") : "";
+    const dn = el("st-date-note");
+    dn.hidden = !trip.started;
+    dn.textContent = trip.ended
+      ? "這一團已經結束了,日期不能再改。"
+      : "旅程已經開始了:第一天不能改,最後一天只能往後延。沒延長的話,最後一天過完這一團就結束(只能看)。";
     el("st-rate").value = trip.rate || "";
     el("st-rate-fld").hidden = trip.currency === "TWD";
     el("st-kitty").value = trip.kitty || 0;

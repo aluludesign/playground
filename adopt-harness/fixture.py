@@ -175,6 +175,9 @@ FAKE_JS = r"""(function(){
   /* 2026-10-01 起 can 是**副團主**的權限,一般成員只能許願 —— 帶 can= 的成員就是副團主(deputy=0 可以關掉) */
   if (mode === "member" && canQ !== undefined && !/[?&]deputy=0/.test(q)) MEMBERS.forEach(function(m){ if (m.id === ME_ID) m.role = "副團主"; });
   /* ai=剩幾次/共幾次(例如 ai=3/20):AI 的每人次數。沒帶 = 讀不到(那一行不出現) */
+  /* ended=1:這一團已經結束(最後一天過了);started=1:旅程進行中(第一天到了)。伺服器照當地時間算好給的 */
+  if (/[?&]ended=1/.test(q)) { TRIP.started = true; TRIP.ended = true; }
+  else if (/[?&]started=1/.test(q)) { TRIP.started = true; TRIP.ended = false; }
   var aiQ = /[?&]ai=(\d+)\/(\d+)/.exec(q), AIQ = aiQ ? { left: +aiQ[1], limit: +aiQ[2], used: +aiQ[2] - +aiQ[1], resetAt: "2026-09-19T07:00:00.000Z", when: "下午三點" } : null;
   var me = (mode === "anon" || mode === "app" || mode === "visitor") ? null : { id: "U-fake-0001", name: "測試的人", avatar: "" };
   var joined = mode !== "join" && mode !== "new";

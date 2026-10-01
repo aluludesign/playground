@@ -104,16 +104,21 @@ function schema(ctx) {
   return {
     type: "OBJECT",
     properties: {
-      intent:  { type: "STRING", enum: ["wish", "stop", "transport", "unknown"],
-                 description: "wish=想去的地方加進許願;stop=排進某一天的行程;transport=交通(機票、車票、船票、租車、座位);unknown=看不出來" },
+      intent:  { type: "STRING", enum: ["wish", "stop", "transport", "expense", "unknown"],
+                 description: "wish=想去的地方加進許願;stop=排進某一天的行程;transport=交通(機票、車票、船票、租車、座位);expense=一筆花費(收據、帳單、發票、刷卡紀錄、「晚餐 6000 日幣」);unknown=看不出來" },
       title:   { type: "STRING", description: "wish/stop:地點或活動名稱,用可以拿去地圖搜尋的寫法(店名、景點名、車站名),30 字以內;其他情況空字串" },
       day:     { type: "INTEGER", description: "stop:第幾天(1–" + (ctx.days.length || 1) + ");沒說就 0" },
       time:    { type: "STRING", description: "stop:開始時間 HH:MM(24 小時制);看不到就空字串" },
       note:    { type: "STRING", description: "wish/stop:值得記下的細節(營業時間、要預約等),100 字以內;沒有就空字串" },
+      /* 記帳(2026-10-01):AI 讀收據/帳單/一句話,打開「記一筆」填好,人看過再存 */
+      amount:  { type: "NUMBER", description: "expense:總金額(收據上的合計,含稅);看不出來就 0" },
+      currency:{ type: "STRING", enum: ["JPY", "TWD", "unknown"], description: "expense:幣別;日圓 JPY、台幣 TWD;看不出來 unknown" },
+      date:    { type: "STRING", description: "expense:消費日期 YYYY-MM-DD;看不出來就空字串" },
+      category:{ type: "STRING", enum: ["交通", "住宿", "餐飲", "景點", "購物", "其他"], description: "expense:分類" },
       legs:    { type: "ARRAY", description: "transport:讀到的每一段交通,照時間先後;文字和圖片講的是不同段就各列一段。不是交通就空陣列", items: LEG },
       message: { type: "STRING", description: "給使用者的一句話:判斷的理由,或還缺什麼資訊。繁體中文,40 字以內" },
     },
-    required: ["intent", "title", "day", "time", "note", "legs", "message"],
+    required: ["intent", "title", "day", "time", "note", "amount", "currency", "date", "category", "legs", "message"],
   };
 }
 
@@ -131,6 +136,7 @@ function prompt(text, ctx) {
     "- 使用者說「許願」「想去」「有空去」→ wish。",
     "- 使用者說「加到第幾天」「排進行程」「幾號去」→ stop。餐廳、門票的訂位確認上有日期,也算 stop,用日期換算第幾天。",
     "- 機票、登機證、車票(新幹線、JR、高鐵、台鐵)、巴士票、船票、租車確認、座位表、選位畫面 → transport。",
+    "- 收據、帳單、發票、刷卡紀錄,或「晚餐花了 6000 日幣」這種花了多少錢的話 → expense。title 寫店名或買了什麼(15 字以內),amount 寫合計。",
     "  kind:航班 → 飛機;新幹線、JR、鐵路、高鐵、台鐵、地鐵特急 → 火車;高速巴士、客運 → 巴士;渡輪、船 → 船;租車 → 租車。",
     "  時間一律寫票上的當地時間,不要換時區。票上只有時間、看不出日期,就把 depart/arrive 留空。",
     "  **一次可能有好幾段**(去程和回程、轉乘的每一段、文字講一段圖片又是另一段):每一段在 legs 各列一筆。",
@@ -229,7 +235,7 @@ function cleanLeg(f, ctx) {
 function clean(f, ctx) {
   const s = str;
   /* 以前的 seats(只改座位)併進 transport:模型照舊回 seats 也接得住 */
-  const intent = f.intent === "seats" ? "transport" : ["wish", "stop", "transport"].includes(f.intent) ? f.intent : "unknown";
+  const intent = f.intent === "seats" ? "transport" : ["wish", "stop", "transport", "expense"].includes(f.intent) ? f.intent : "unknown";
   const day = Number.isInteger(f.day) && f.day >= 1 && f.day <= ctx.days.length ? f.day : 0;
   const t = s(f.time, 5);
   /* 模型偶爾把一段交通攤在最外層(舊的形狀),也接得住 */
@@ -242,6 +248,10 @@ function clean(f, ctx) {
     day: day ? ctx.days[day - 1] : "",
     time: /^([01]\d|2[0-3]):[0-5]\d$/.test(t) ? t : "",
     note: s(f.note, 300),
+    amount: intent === "expense" && typeof f.amount === "number" && isFinite(f.amount) && f.amount > 0 ? Math.round(f.amount * 100) / 100 : 0,
+    currency: ["JPY", "TWD"].includes(f.currency) ? f.currency : "",
+    date: intent === "expense" && /^\d{4}-\d{2}-\d{2}$/.test(s(f.date, 10)) ? s(f.date, 10) : "",
+    category: ["交通", "住宿", "餐飲", "景點", "購物", "其他"].includes(f.category) ? f.category : "",
     legs,
     message: s(f.message, 120),
   };
@@ -277,7 +287,9 @@ module.exports = async (req, res) => {
 
   /* **每個人每天固定次數**(一般 20、團主和副團主 25,各團共用)。用完就不去問 Google。
      讀不到用量(表壞了、Notion 慢)就不擋 —— 它是提醒兼閘門,但不能讓 AI 跟著壞 */
-  const mine = await U.mine(who.sub);
+  /* **結束的團不能用 AI**(2026-10-01,Lulu:要記帳請在旅行期間記完)。查不到團就不擋 */
+  const [mine, ended] = await Promise.all([U.mine(who.sub), U.tripEnded(ctx.trip.code)]);
+  if (ended) return res.status(403).json({ why: "ended", error: "這一團已經結束了,AI 不能再用" });
   const role = (mine && mine.roles && mine.roles[ctx.trip.code]) || "成員";
   const byModel = {};   /* 這一次按下去,每個模型實際打了幾次、成功了沒、說用完了沒 */
   const tap = model => (byModel[model] = byModel[model] || { ok: 0, calls: 0, out: false });

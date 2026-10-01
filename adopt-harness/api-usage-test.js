@@ -24,7 +24,7 @@ function mkres() {
   return r;
 }
 const reply = (status, body) => ({ ok: status < 400, status, json: async () => body });
-const DB = { members: "bee61d7fae604013968455412b2d57a5", log: "370027ac48cb45cba6502926add29096", usage: "10c8d455f2294e75b44ff046913d4b70" };
+const DB = { members: "bee61d7fae604013968455412b2d57a5", log: "370027ac48cb45cba6502926add29096", usage: "10c8d455f2294e75b44ff046913d4b70", trips: "4802c8eac4a14943bf41a38394031acc" };
 
 /* 假的三張表。成員:U-member 在甲團是成員;U-boss 在甲團是成員、乙團是團主(取高 → 25) */
 const T = s => ({ rich_text: [{ plain_text: s }] });
@@ -38,6 +38,11 @@ function reset() {
       { id: "m3", properties: { "人": T("U-boss"), "團": T("trip-b"), "角色": { select: { name: "團主" } } } },
     ],
     [DB.log]: [], [DB.usage]: [],
+    /* trip-old 已經結束(最後一天是 2020 年);trip-a 還沒結束 */
+    [DB.trips]: [
+      { id: "t1", properties: { "代號": { title: [{ plain_text: "trip-a" }] }, "結束日": { date: { start: "2099-01-01" } }, "國家": { select: { name: "日本" } } } },
+      { id: "t2", properties: { "代號": { title: [{ plain_text: "trip-old" }] }, "結束日": { date: { start: "2020-01-01" } }, "國家": { select: { name: "台灣" } } } },
+    ],
   };
   gemini = () => reply(200, { candidates: [{ content: { parts: [{ text: JSON.stringify({ intent: "wish", title: "築地", day: 0, time: "", note: "", legs: [], message: "" }) }] } }] });
 }
@@ -48,7 +53,7 @@ function match(row, f) {
   if (!f) return true;
   if (f.and) return f.and.every(x => match(row, x));
   const v = val(row.properties[f.property]);
-  const want = (f.rich_text || f.select || f.date || {}).equals;
+  const want = (f.rich_text || f.title || f.select || f.date || {}).equals;
   return String(v) === String(want);
 }
 function fake(u, init) {
@@ -143,6 +148,13 @@ function ok(name, cond, extra) {
   ok("紀錄寫「次數用完」", val(logs()[logs().length - 1].properties["結果"]) === "次數用完", "");
   r = await ask("U-boss");
   ok("別人不受影響;前幾天的不算今天", r.code === 200, r.body);
+
+  /* 結束的團(2026-10-01):AI 不能用,也不去問 Google */
+  reset();
+  r = await call("POST", "U-member", { text: "x", context: { trip: { code: "trip-old" } } });
+  ok("**結束的團不能用 AI**(要記帳請在旅行期間記完)", r.code === 403 && r.body.why === "ended" && geminiCalls === 0, { code: r.code, body: r.body, gemini: geminiCalls });
+  r = await ask("U-member");
+  ok("還沒結束的團照常", r.code === 200, r.body);
 
   /* 表壞了 */
   reset();

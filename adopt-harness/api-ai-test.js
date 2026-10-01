@@ -188,6 +188,14 @@ function ok(name, cond, extra) {
   ok("模型把一段攤在最外層(舊的形狀)也接得住", r.res.body.result.legs.length === 1, r.res.body.result);
   ok("座位不檢查格式(照票上寫的);時間格式不對就清掉;不存在的 id 不認;unknown 方向變空的",
     JSON.stringify(pl.seats) === JSON.stringify([{ member: "m-aaa", seat: "27A" }, { member: "m-bbb", seat: "隨便" }]) && pl.depart === "" && pl.match === "" && pl.dir === "", pl);
+  /* 記帳(2026-10-01):收據 → 項目、金額、幣別、日期、分類 */
+  r = await call({ text: "這張收據", context: CTX }, () => okJson(JSON.stringify({ intent: "expense", title: "一蘭拉麵", amount: 2980, currency: "JPY",
+    date: "2026-11-02", category: "餐飲", note: "", legs: [], message: "拉麵店收據" })));
+  const ex = r.res.body.result;
+  ok("讀到一筆花費:項目、金額、幣別、日期、分類", ex.intent === "expense" && ex.title === "一蘭拉麵" && ex.amount === 2980 && ex.currency === "JPY" && ex.date === "2026-11-02" && ex.category === "餐飲", ex);
+  r = await call({ text: "x", context: CTX }, () => okJson(JSON.stringify({ intent: "expense", title: "x", amount: -5, currency: "USD", date: "昨天", category: "亂寫", legs: [], message: "" })));
+  const bad = r.res.body.result;
+  ok("金額不合理、幣別不認得、日期格式不對、分類亂寫 → 清掉", bad.amount === 0 && bad.currency === "" && bad.date === "" && bad.category === "", bad);
   r = await call({ text: "x", context: CTX }, () => okJson(JSON.stringify({ intent: "seats", seats: [], message: "" })));
   ok("以前的 seats(只改座位)當成交通", r.res.body.result.intent === "transport", r.res.body.result);
   r = await call({ text: "x", context: { days: ["亂寫"], members: "不是陣列", legs: [{ kind: "火箭" }] } }, () => okJson(GOOD));
