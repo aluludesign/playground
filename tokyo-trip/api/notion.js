@@ -185,6 +185,8 @@ function stopOut(page) {
     url: (p["連結"] && p["連結"].url) || "",
     /* 從願望排進來的那一列,「許願人」還留著(stopIn 不碰它)—— 畫面靠這個知道它退得回願望區 */
     by: p["許願人"] ? txt(p["許願人"]) : "",
+    /* Google 的地點編號(2026-10-02,Places UI Kit):從 Google 清單挑的才有。可以永久存 —— 座標不行(只能 30 天,手機自己記) */
+    placeId: p["地點編號"] ? txt(p["地點編號"]) : "",
   };
 }
 function stopIn(b) {
@@ -194,6 +196,7 @@ function stopIn(b) {
     "地點": { rich_text: richText(b.place) },
     "備註": { rich_text: richText(b.note) },
   };
+  if (b.placeId !== undefined) props["地點編號"] = { rich_text: richText(String(b.placeId || "").slice(0, 200)) };
   if (b.day) props["日期"] = { date: { start: b.day } };
   /* **退回願望區 = 把日期清掉**(2026-09-30):沒有日期的那一列就是願望,許願人和票都還在 */
   else if (b.day === null) props["日期"] = { date: null };
@@ -214,6 +217,7 @@ function wishOut(page) {
     note: txt(p["備註"]),
     votes: ids(txt(p["票"])),
     by: txt(p["許願人"]),
+    placeId: p["地點編號"] ? txt(p["地點編號"]) : "",
     createdAt: page.created_time,
   };
 }
@@ -224,6 +228,7 @@ function wishIn(b) {
     "地點": { rich_text: richText(b.place) },
     "備註": { rich_text: richText(b.note) },
     "許願人": { rich_text: richText(b.by) },
+    ...(b.placeId !== undefined ? { "地點編號": { rich_text: richText(String(b.placeId || "").slice(0, 200)) } } : {}),
     "票": { rich_text: richText(ids(b.votes).join(",")) },
   };
 }
@@ -820,6 +825,13 @@ module.exports = async (req, res) => {
      而那正是搜尋框要的東西。用的是 Places API (New):
      POST /v1/places:searchText,金鑰走標頭,要回什麼欄位用 FieldMask 指定
      —— **欄位要得越少越便宜**,所以只要名字、地址、座標。 */
+  /* **Places UI Kit 的瀏覽器金鑰**(2026-10-02)。它本來就是公開的金鑰(會放在網頁上、靠網址白名單保護),
+     但網站是純靜態頁、沒有 build,所以由這裡轉交;一樣要登入才拿得到。沒設就回空的,前端退回舊的強力搜 */
+  if (resource === "mapskey") {
+    if (!allow("GET")) return;
+    if (!me) return stop({ status: 401, why: "login", error: "請先用 LINE 登入" });
+    return res.status(200).json({ key: process.env.GOOGLE_MAPS_BROWSER_KEY || "" });
+  }
   if (resource === "places") {
     if (req.method !== "GET") {
       res.setHeader("Allow", "GET");
@@ -1067,7 +1079,7 @@ module.exports = async (req, res) => {
         }
         const props = shape.in({
           title: keep(body.title, now.title), place: keep(body.place, now.place),
-          note: keep(body.note, now.note), by: now.by, votes,
+          note: keep(body.note, now.note), by: now.by, votes, placeId: keep(body.placeId, now.placeId),
         });
         const saved = await notion("/pages/" + page.id, { method: "PATCH", body: JSON.stringify({ properties: props }) });
         return res.status(200).json({ row: shape.out(saved) });

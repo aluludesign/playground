@@ -1,0 +1,62 @@
+/* 強力搜換成 Places UI Kit(2026-10-02)。真的 Google 元件在這裡載不到,所以裝一個假的同名元件
+ * (gmp-place-search / gmp-place-text-search-request),照官方範例的形狀:設 textQuery 就查、查完發 gmp-load、
+ * 點一家發 gmp-select(event.place 有 id、displayName、formattedAddress、location)。
+ *   WIDTH=390 ./probe.sh probes/uikit.js            有 Google 元件:清單是 Google 的;挑了記座標+編號,存行程時編號進 Notion
+ *   PAGE='/index.html?nouikit=1' ./probe.sh ...      沒有(金鑰沒設):退回舊的強力搜(resource=places) */
+var q = s => d.querySelector(s), wait = ms => new Promise(r => w.setTimeout(r, ms));
+var txt = s => (q(s) && q(s).textContent || "").replace(/\s+/g, " ").trim();
+var noUI = /nouikit=1/.test(w.location.search);
+var calls = () => (w.__calls || []).map(c => c.method + " " + c.url.replace(/^.*resource=/, ""));
+/* 免費那段:回一筆不對的,讓人走到強力搜 */
+var real = w.fetch;
+w.fetch = function (u, i) {
+  if (/nominatim/.test(String(u))) return Promise.resolve({ ok: true, json: () => Promise.resolve([{ lat: "35.6", lon: "139.7", display_name: "不是這間, 東京都, 日本" }]) });
+  return real(u, i);
+};
+if (!noUI) {
+  w.google = { maps: { importLibrary: () => Promise.resolve({}) } };
+  var PLACE = { id: "ChIJ_fake_ichiran", displayName: "一蘭 新宿中央東口店", formattedAddress: "東京都新宿區新宿3丁目34-11",
+    location: { lat: () => 35.6905, lng: () => 139.7020 } };
+  w.customElements.define("gmp-place-search", class extends w.HTMLElement { get places() { return this._p || []; } });
+  w.customElements.define("gmp-place-all-content", class extends w.HTMLElement {});
+  w.customElements.define("gmp-place-text-search-request", class extends w.HTMLElement {
+    set textQuery(v) { this._q = v; var ps = this.closest("gmp-place-search"); w.__uikitQuery = v; w.__uikitBias = this.locationBias;
+      w.setTimeout(() => { ps._p = [PLACE]; ps.dispatchEvent(new w.Event("gmp-load")); }, 20); }
+    get textQuery() { return this._q; }
+  });
+}
+return (async function () {
+  var out = { 模式: noUI ? "沒有 UI Kit" : "有 UI Kit" }, bad = [];
+  var ok = (n, c, g) => { if (!c) bad.push(n + " ← " + JSON.stringify(g)); };
+  q("#add-stop-btn").click(); await wait(80);
+  q("#sf-title").value = "一蘭";
+  var b = q('[data-seek="sf-title"]');
+  for (var k = 0; k < 2; k++) { b.click(); await wait(1400); }
+  var arm = q('[data-arm="sf-title"]');
+  ok("兩次沒挑到 → 出現強力搜", !!arm, txt("#sf-title-out"));
+  if (arm) arm.click(); await wait(50);
+  b.click(); await wait(400);
+  if (noUI) {
+    out.呼叫 = calls().filter(c => /mapskey|places/.test(c));
+    ok("沒有 UI Kit:先問金鑰、拿不到就走舊的強力搜(places)", out.呼叫.some(c => /mapskey/.test(c)) && out.呼叫.some(c => /^GET places/.test(c)) && !q("#stop-form gmp-place-search"), out.呼叫);
+  } else {
+    var ps = q("#stop-form gmp-place-search");
+    out.清單 = !!ps; out.查的字 = w.__uikitQuery; out.偏重 = w.__uikitBias;
+    ok("強力搜 → Google 的清單出現,查的是輸入框的字、偏重這一團的城市", out.清單 && out.查的字 === "一蘭" && out.偏重 && Math.abs(out.偏重.lat - 35.68) < 0.1, out);
+    ok("沒有打舊的強力搜(places)", !calls().some(c => /^GET places/.test(c)), calls());
+    var ev = new w.Event("gmp-select"); ev.place = PLACE; ps.dispatchEvent(ev); await wait(80);
+    out.挑了 = { 輸入框: q("#sf-title").value, 狀態: txt("#sf-title-out") };
+    var pin = JSON.parse(w.localStorage.getItem("tokyo5-pin3") || "{}")["一蘭 新宿中央東口店"] || {};
+    out.記下 = { la: pin.la, pid: pin.pid, 有日期: !!pin.t, src: pin.src };
+    ok("挑了一家:名字填進去、狀態講已標定+地址;手機記座標、編號、日期", out.挑了.輸入框 === "一蘭 新宿中央東口店" && /已標定/.test(out.挑了.狀態) && /新宿區/.test(out.挑了.狀態) &&
+      pin.la === 35.6905 && pin.pid === "ChIJ_fake_ichiran" && !!pin.t && pin.src === "google", out);
+    q("#sf-time").value = "12:00";
+    q("#stop-form").requestSubmit(); await wait(400);
+    var post = (w.__calls || []).filter(c => c.method === "POST" && /resource=itinerary/.test(c.url)).pop();
+    out.存進Notion = post && post.body && post.body.placeId;
+    ok("存行程:地點編號跟著送進 Notion", out.存進Notion === "ChIJ_fake_ichiran", post && post.body);
+  }
+  out.結論 = bad.length ? "✗ " + bad.join(" ;; ") : "全部通過";
+  out.errors = w.__errors || [];
+  return out;
+})();

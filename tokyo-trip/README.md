@@ -241,6 +241,19 @@ Notion 那邊出事的時候**放行**,不是把所有人鎖在外面 —— 那
 **預報只到今天之後 16 天。** 出發前太早看,行程那幾天根本還沒有資料,
 那幾格就不顯示天氣 —— 空白是正常的,不是壞掉。大約 9/23 之後整趟都會有。
 
+### 強力搜 = Google 的 Places UI Kit 清單(2026-10-02)
+
+搜尋鈕第 3 段「強力搜」改成 Google 的 **Places UI Kit**(Place Search 元件)清單 —— 為了 Google 的條款
+(Google 的資料畫在非 Google 地圖上只允許用 UI Kit,§15.1)。地圖照舊是 OpenStreetMap,第 1、2 段照舊是免費的 Nominatim。
+
+- **瀏覽器金鑰**:Vercel 的 `GOOGLE_MAPS_BROWSER_KEY`(Production 和 Preview 都要),由 `api/notion.js?resource=mapskey` 轉交(要登入)。
+  它本來就是公開的,靠 Google Cloud 的網址白名單保護。**沒設、或 8 秒內載不到,強力搜自動走舊的那條**(`resource=places`)。
+- 挑一家:名字、地址、座標記在這台手機(`tokyo5-pin3`,帶 `pid` 地點編號和 `t` 挑的時間);**地點編號**跟著行程／願望存進 Notion
+  「行程」表的「地點編號」欄。座標不進 Notion(條款:最多 30 天)。地圖上的點點過去用編號開 Google 地圖,一定是挑的那一間。
+- 1 次 = 按一次強力搜、出一份清單(照片包含在內)。Google Cloud 那邊設了每天 300 次上限。
+- 還沒做(第 ②、③ 步):30 天到期後改用免費搜尋按名字查、查不到在那一列提示「地圖上沒有位置 · 重新挑一次」;拿掉伺服器舊的 places/placephoto。
+- 驗收:`probes/uikit.js`(假的同名元件)、`PAGE='/index.html?nouikit=1'`(退回舊的)、`api-trip-test.js` 的 UI Kit 那段。
+
 ### 地點怎麼判斷
 
 `index.html` 的 `OUTSIDE` 是一份寫死的對照表(箱根、日光、鎌倉、橫濱、川越、
