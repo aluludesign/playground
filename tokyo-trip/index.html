@@ -1186,6 +1186,13 @@
     .bell-pop li small{color:var(--muted); font-size:12px;}
     .bell-pop li .btn{justify-self:start;}
     .bell-pop .empty{margin:0; font-size:14px; color:var(--muted);}
+    .bell-pop{max-height:min(70vh, 520px); overflow-y:auto;}
+    .bell-pop li{gap:2px; padding:6px 8px; margin:0 -8px; border-radius:8px;}
+    .bell-pop li[data-bell-go]{cursor:pointer;}
+    .bell-pop li[data-bell-go]:hover{background:var(--accent-soft);}
+    .bell-pop li.new span::before{content:""; display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--accent, #e4572e); margin-right:6px; vertical-align:middle;}
+    .bell-pop li small.when{font-size:11px;}
+    .bell-pop .empty + ul{margin-top:8px; opacity:.75;}
     /* 漢堡選單最上面那一行:你今天的 AI 還剩幾次 */
     .menu-ai{display:grid; gap:2px; padding:4px 2px 10px; margin-bottom:10px; border-bottom:1px solid var(--line); font-size:14px; color:var(--ink);}
     .menu-ai small{font-size:12px; color:var(--muted);}
@@ -2753,7 +2760,7 @@
     if (!online) return;
     clearTimeout(pullTimer);
     /* 先送排著的,再讀:同時跑的話,讀回來的那份是送出之前的,剛送到的那筆會暫時從畫面上消失 */
-    pullTimer = setTimeout(() => { flushOutbox().catch(() => {}).then(pull).then(render).catch(() => {}); }, 400);
+    pullTimer = setTimeout(() => { flushOutbox().catch(() => {}).then(pull).then(render).then(loadFeed).catch(() => {}); }, 400);
   }
 
   /* 按鈕原地轉圈,文字先收起來。寬高先鎖住,不然按下去整排會抽動一下。
@@ -2892,29 +2899,54 @@
      「看過了」記在伺服器(成員表的「通知已讀」),換手機不會再通知一次。
      給團主和副團主(2026-10-02,Lulu:副團主看到的跟團主一樣)—— 各自記各自看過了沒。
      一般成員沒有(測試環境「用成員身分看」時也不會有)。 */
-  let newcomers = [], newcomersSeen = false;
+  /* **2026-10-02 起全部人都有鈴鐺**(Lulu):誰許願、哪一天行程改了什麼(含願望排進行程)、交通異動、
+     有新帳要分(只給要分的人)、有新人加入。自己做的不通知自己。動態記在伺服器的「動態」表。
+     有新人加入:全部人都看得到;「座位多了他的空格 / 去填座位」只給團主和副團主。 */
+  let newcomers = [], feed = [], bellSince = "", newcomersSeen = false;
+  const bellBoss = () => !!myMember && (myMember.role === "團主" || myMember.role === "副團主");
   function checkNewcomers() {
-    newcomers = []; newcomersSeen = false;
-    const owner = online && !!myMember && (myMember.role === "團主" || myMember.role === "副團主");
-    el("bell-btn").hidden = !owner;
-    if (owner) {
-      const since = myMember.seenAt || myMember.joinedAt || "";
-      newcomers = MEMBERS.filter(m => m.id !== myMember.id && m.joinedAt && m.joinedAt > since);
-    }
+    newcomersSeen = false;
+    const on = online && !!myMember;
+    el("bell-btn").hidden = !on;
+    bellSince = (myMember && (myMember.seenAt || myMember.joinedAt)) || "";
+    /* 新人:我加入之後才加入的(我自己加入之前的人不算「新」) */
+    const joined = (myMember && myMember.joinedAt) || "";
+    newcomers = on ? MEMBERS.filter(m => m.id !== myMember.id && m.joinedAt && m.joinedAt > joined) : [];
     paintBell();
+    if (on) loadFeed();
   }
+  async function loadFeed() {
+    try { feed = (await api("?resource=activity&t=" + encodeURIComponent(TRIP))).rows || []; }
+    catch (_) { feed = []; }
+    paintBell();
+    if (!el("bell-pop").hidden) renderBell();
+  }
+  /* 一則一則照時間排(新的在上面);比上次打開鈴鐺還新的是「沒看過的」 */
+  function bellItems() {
+    const boss = bellBoss(), legs = (state.flights || []).some(f => !KIND[kindOf(f)].noSeats);
+    /* 座位提醒只掛在「還沒看過」的那幾位身上 —— 早就加入的人,再提醒一次只是噪音 */
+    const items = newcomers.map(m => ({ at: m.joinedAt, kind: "成員",
+      html: "<span><b>" + esc(nameOf(m.id)) + "</b> 加入了這一團</span>" +
+        (boss && legs && m.joinedAt > bellSince ? "<small>交通的座位多了" + esc(nameOf(m.id)) + "的空格</small>" +
+          '<button type="button" class="btn btn-sm" data-bell-fly>去填座位</button>' : "") }));
+    for (const x of feed) items.push({ at: x.at, kind: x.kind, day: x.day, html: "<span>" + esc(x.text) + "</span>" });
+    return items.sort((a, b) => String(b.at).localeCompare(String(a.at))).slice(0, 40);
+  }
+  const unread = () => bellItems().filter(x => x.at > bellSince).length;
   function paintBell() {
-    const on = newcomers.length > 0 && !newcomersSeen;
-    el("bell-dot").hidden = !on;
-    el("bell-btn").setAttribute("aria-label", on ? "通知(" + newcomers.length + " 則新的)" : "通知");
+    const n = newcomersSeen ? 0 : unread();
+    el("bell-dot").hidden = !n;
+    el("bell-btn").setAttribute("aria-label", n ? "通知(" + n + " 則新的)" : "通知");
   }
+  const BELL_TAB = { "許願": "wish", "行程": "plan", "交通": "fly", "花費": "cost" };
+  const bellWhen = iso => { try { return new Intl.DateTimeFormat("zh-TW", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(iso)); } catch (_) { return ""; } };
   function renderBell() {
-    const legs = (state.flights || []).some(f => !KIND[kindOf(f)].noSeats);
-    el("bell-list").innerHTML = newcomers.length
-      ? "<ul>" + newcomers.map(m => "<li><span><b>" + esc(nameOf(m.id)) + "</b> 加入了這一團</span>" +
-          (legs ? "<small>交通的座位多了" + esc(nameOf(m.id)) + "的空格</small>" +
-            '<button type="button" class="btn btn-sm" data-bell-fly>去填座位</button>' : "") + "</li>").join("") + "</ul>"
-      : '<p class="empty">目前沒有新通知。</p>';
+    const items = bellItems();
+    el("bell-list").innerHTML = (items.length && !unread() ? '<p class="empty">目前沒有新通知。之前的:</p>' : "") + (items.length
+      ? "<ul>" + items.map(x => '<li class="' + (x.at > bellSince ? "new" : "") + '"' +
+          (BELL_TAB[x.kind] ? ' data-bell-go="' + BELL_TAB[x.kind] + '"' + (x.day ? ' data-bell-day="' + esc(x.day) + '"' : "") : "") + ">" +
+          x.html + '<small class="when">' + esc(bellWhen(x.at)) + "</small></li>").join("") + "</ul>"
+      : '<p class="empty">目前沒有新通知。</p>');
   }
   async function markNewcomersSeen() {
     newcomersSeen = true;
@@ -2927,22 +2959,35 @@
   (function () {
     const btn = el("bell-btn"), pop = el("bell-pop");
     function open(on) {
+      const was = !pop.hidden;
       pop.hidden = !on;
       btn.setAttribute("aria-expanded", String(on));
-      if (!on) return;
+      if (!on) {
+        /* 關掉之後,剛剛看過的就不再是「新的」 */
+        if (was && myMember && myMember.seenAt) { bellSince = myMember.seenAt; newcomersSeen = false; paintBell(); }
+        return;
+      }
       renderBell();
       /* 貼在頂列下面,靠右對齊這顆鈴鐺(跟漢堡選單同一個算法) */
       const r = btn.getBoundingClientRect();
       pop.style.top = Math.round(r.bottom + window.scrollY + 6) + "px";
       pop.style.right = Math.max(16, Math.round(window.innerWidth - r.right)) + "px";
-      /* 打開 = 看到了:紅點收掉,清單這一次還留著 */
-      if (newcomers.length && !newcomersSeen) markNewcomersSeen();
+      /* 打開 = 看到了:紅點收掉,清單這一次還留著(沒看過的那幾則這一次還是亮的) */
+      if (unread() && !newcomersSeen) markNewcomersSeen();
     }
     btn.addEventListener("click", ev => { ev.stopPropagation(); open(pop.hidden); });
     pop.addEventListener("click", ev => {
-      if (!ev.target.closest("[data-bell-fly]")) return;
+      if (ev.target.closest("[data-bell-fly]")) { open(false); switchTab("fly"); return; }
+      /* 點一則 = 去那裡看:行程跳到那一天、交通、花費、許願 */
+      const li = ev.target.closest("[data-bell-go]");
+      if (!li) return;
       open(false);
-      switchTab("fly");
+      switchTab(li.dataset.bellGo);
+      const day = li.dataset.bellDay;
+      if (li.dataset.bellGo === "plan" && day && state.day !== day) {
+        const b = document.querySelector('#days [data-day="' + day + '"]');
+        if (b) b.click();
+      }
     });
     document.addEventListener("click", ev => {
       if (!pop.hidden && !ev.target.closest("#bell-pop") && !ev.target.closest("#bell-btn")) open(false);

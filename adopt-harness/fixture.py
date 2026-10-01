@@ -247,6 +247,13 @@ FAKE_JS = r"""(function(){
     }
     if (HID && !ADMIN) return reply({ error: "這一團暫時關閉了", why: "hidden" }, 403);
     if (!joined) return reply({ error: "你還不是這一團的人 —— 要有邀請碼才能加入", why: "not_member" }, 403);
+    /* feed=1:小鈴鐺的動態(2026-10-02)—— 伺服器已經濾掉自己做的、不是給我的帳 */
+    if (r === "activity") return reply({ rows: /[?&]feed=1/.test(q) ? [
+      { id: "a1", text: "阿輝 許願:「築地市場」", kind: "許願", by: "m2", day: "", at: "2026-09-18T10:00:00.000Z" },
+      { id: "a2", text: "阿輝 把願望「築地市場」排進 Day 2(10/4) 08:00", kind: "行程", by: "m2", day: "2026-10-04", at: "2026-09-18T11:00:00.000Z" },
+      { id: "a3", text: "阿輝 改了交通 MM626(TPE→NRT):出發 10/03 10:50 → 10/03 11:20", kind: "交通", by: "m2", day: "", at: "2026-09-18T12:00:00.000Z" },
+      { id: "a4", text: "阿輝 記了一筆「燒肉」 ¥12,000,2 人分(每人約 ¥6,000)", kind: "花費", by: "m2", day: "", at: "2026-09-18T13:00:00.000Z" },
+      { id: "a0", text: "阿輝 在 Day 1(10/3) 加了「舊的那一則」", kind: "行程", by: "m2", day: "2026-10-03", at: "2026-09-01T09:00:00.000Z" }] : [] });
     if (r === "team") {
       if (method === "PATCH") {
         if (body.deputy !== undefined) {

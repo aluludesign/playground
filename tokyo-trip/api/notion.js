@@ -32,6 +32,8 @@ const DB = {
   people: process.env.NOTION_DB_PEOPLE || "c38c62febb87434ca29e264cd9fd24b5",
   trips: process.env.NOTION_DB_TRIPS || "4802c8eac4a14943bf41a38394031acc",
   members: process.env.NOTION_DB_MEMBERS || "bee61d7fae604013968455412b2d57a5",
+  /* 小鈴鐺的「動態」(2026-10-02):誰許願、行程/交通改了什麼、有新帳要分。一件事一列 */
+  activity: process.env.NOTION_DB_ACTIVITY || "ee00c7c3212a4bdf81f5bf49759f9665",
 };
 
 /* ---------- Notion 呼叫 ---------- */
@@ -732,7 +734,7 @@ module.exports = async (req, res) => {
       if (String(body.confirm || "").trim() !== trip.name) return res.status(400).json({ error: "團名打得不一樣,沒有刪" });
       /* 先丟這一團的每一列,最後才丟「團」那一列 —— 中途斷掉的話團還在,可以再按一次刪乾淨 */
       let n = 0;
-      for (const db of [DB.expenses, DB.itinerary, DB.seats, DB.flights, DB.members]) {
+      for (const db of [DB.expenses, DB.itinerary, DB.seats, DB.flights, DB.activity, DB.members]) {
         let cursor;
         const ids = [];
         do {
@@ -822,6 +824,31 @@ module.exports = async (req, res) => {
     if (!me) return stop({ status: 401, why: "login", error: "請先用 LINE 登入" });
     return res.status(200).json({ key: process.env.GOOGLE_MAPS_BROWSER_KEY || "" });
   }
+  /* ---------- 小鈴鐺的動態(2026-10-02,Lulu) ----------
+     GET → 這一團最近的動態,**只回給你看的**:不含你自己做的;「給誰」有寫的(新帳)只給那幾個人。
+     你加入之前的不回。 */
+  if (resource === "activity") {
+    if (!allow("GET")) return;
+    try {
+      const c = await context(q.t);
+      if (c.stop) return stop(c.stop);
+      const page = await notion("/databases/" + DB.activity + "/query", { method: "POST", body: JSON.stringify({
+        page_size: 60, filter: { property: "團", rich_text: { equals: c.code } },
+        sorts: [{ timestamp: "created_time", direction: "descending" }] }) });
+      const mineId = c.mine.id, since = c.mine.joinedAt || "";
+      const rows = page.results.map(pg => {
+        const p = pg.properties;
+        return { id: pg.id, text: ttl(p["說明"]), kind: sel(p["類型"]), by: txt(p["誰"]), day: txt(p["日"]),
+                 to: ids(txt(p["給誰"]).split(",")), at: pg.created_time };
+      }).filter(x => x.by !== mineId && (!x.to.length || x.to.indexOf(mineId) >= 0) && (!since || x.at >= since))
+        .map(({ to, ...x }) => x);
+      return res.status(200).json({ rows });
+    } catch (e) {
+      /* 表還沒接上 integration 之類的:鈴鐺照常(只是沒有動態),不要讓整頁壞掉 */
+      return res.status(200).json({ rows: [], error: String(e.message || e) });
+    }
+  }
+
   const shape = SHAPES[resource];
   if (!shape) return res.status(400).json({ error: "不認識的資料表:" + resource });
 
@@ -848,6 +875,41 @@ module.exports = async (req, res) => {
     const gone = () => res.status(404).json({ error: "這一團沒有這一筆 —— 可能已經被刪掉了" });
     const withTrip = props => ({ ...props, "團": { rich_text: richText(c.code) } });
 
+    /* ---------- 記一筆動態(小鈴鐺用) ----------
+       **記不進去不能讓存檔失敗** —— 動態是附帶的,行程、帳才是正事。 */
+    const nm = id => { const m = c.members.find(x => x.id === id); return m ? m.name : "某人"; };
+    const me2 = c.mine.name;
+    const dayOf = d => {
+      if (!d) return "";
+      const n = c.trip.start ? Math.round((Date.parse(d) - Date.parse(c.trip.start)) / 864e5) + 1 : 0;
+      return (n >= 1 ? "Day " + n + "(" : "(") + Number(d.slice(5, 7)) + "/" + Number(d.slice(8, 10)) + ")";
+    };
+    const money = (amt, cur) => (cur === "TWD" ? "NT$" : "¥") + Math.round(Number(amt) || 0).toLocaleString("en-US");
+    const clock = v => (v ? String(v).slice(5, 16).replace("-", "/").replace("T", " ") : "沒填");
+    const said = v => "「" + String(v || "").slice(0, 40) + "」";
+    async function log(kind, text, extra) {
+      try {
+        const e = extra || {};
+        await notion("/pages", { method: "POST", body: JSON.stringify({ parent: { database_id: DB.activity }, properties: {
+          "說明": { title: richText(text.slice(0, 300)) }, "團": { rich_text: richText(c.code) },
+          "誰": { rich_text: richText(c.mine.id) }, "類型": { select: { name: kind } },
+          "給誰": { rich_text: richText((e.to || []).join(",")) }, "日": { rich_text: richText(e.day || "") } } }) });
+      } catch (_) { /* 少一則通知 */ }
+    }
+    /* 改了什麼:只比這次有送的欄位,值用**存進去之後**的(送來的字可能被整理過,例如時間格式不對就是沒填) */
+    function diffs(was, now, fields, sent) {
+      const out = [];
+      for (const [k, label, fmt] of fields) {
+        if ((sent || now)[k] === undefined) continue;
+        const a = was[k] == null ? "" : String(was[k]), b = now[k] == null ? "" : String(now[k]);
+        if (a === b) continue;
+        const f = fmt || (x => x || "空的");
+        out.push(label + " " + f(a) + " → " + f(b));
+      }
+      return out;
+    }
+    const legName = f => (f.kind && f.kind !== "飛機" ? f.kind + " " : "") + (f.no || "") + (f.from || f.to ? "(" + (f.from || "?") + "→" + (f.to || "?") + ")" : "");
+
     if (method === "GET") {
       const filter = shape.filter
         ? { and: [{ property: "團", rich_text: { equals: c.code } }, shape.filter] }
@@ -867,6 +929,7 @@ module.exports = async (req, res) => {
         const props = shape.in({ ...body, by: mineId, votes: ids(body.votes).filter(v => v === mineId) });
         const page = await notion("/pages", { method: "POST",
           body: JSON.stringify({ parent: { database_id: shape.db }, properties: withTrip(props) }) });
+        await log("許願", me2 + " 許願:" + said(body.title || "想去的地方"));
         return res.status(200).json({ row: shape.out(page) });
       }
       if (method === "PATCH" || method === "DELETE") {
@@ -877,6 +940,7 @@ module.exports = async (req, res) => {
         if (method === "DELETE") {
           if (!editor) return res.status(403).json({ error: "只有許願的人或管行程的人能刪掉這個願望" });
           await notion("/pages/" + page.id, { method: "PATCH", body: JSON.stringify({ archived: true }) });
+          await log("許願", me2 + " 刪掉了願望" + said(now.title));
           return res.status(200).json({ ok: true });
         }
         /* **沒送的欄位要留著原值,不能當成「改成空的」。** `wishIn()` 是整份覆寫,
@@ -895,6 +959,11 @@ module.exports = async (req, res) => {
           note: keep(body.note, now.note), by: now.by, votes, placeId: keep(body.placeId, now.placeId),
         });
         const saved = await notion("/pages/" + page.id, { method: "PATCH", body: JSON.stringify({ properties: props }) });
+        /* +1 不通知(太吵);改內容才講 */
+        if (wantsEdit) {
+          const ch = diffs(now, body, [["title", "名稱"], ["place", "地點"], ["note", "備註"]]);
+          if (ch.length) await log("許願", me2 + " 改了願望" + said(now.title) + ":" + ch.join("、"));
+        }
         return res.status(200).json({ row: shape.out(saved) });
       }
       res.setHeader("Allow", "GET, POST, PATCH, DELETE");
@@ -921,19 +990,54 @@ module.exports = async (req, res) => {
       }
       const page = await notion("/pages", { method: "POST",
         body: JSON.stringify({ parent: { database_id: shape.db }, properties: props }) });
-      return res.status(200).json({ row: shape.out(page) });
+      const row = shape.out(page);
+      if (resource === "itinerary") await log("行程", me2 + " 在 " + dayOf(row.day) + " 加了" + said(row.title) + (row.time ? " " + row.time : ""), { day: row.day });
+      if (resource === "flights") await log("交通", me2 + " 加了交通:" + legName(row) + (row.depart ? " " + clock(row.depart) : ""));
+      if (resource === "seats") await log("交通", me2 + " 填了" + nm(row.passenger) + "在 " + row.flight + " 的座位:" + (row.seat || "空的"));
+      if (resource === "expenses" && row.participants && row.participants.length) {
+        const n = row.participants.length;
+        await log("花費", me2 + " 記了一筆" + said(row.title) + " " + money(row.amount, row.currency) + "," + n + " 人分(每人約 " + money(row.amount / n, row.currency) + ")", { to: row.participants });
+      }
+      return res.status(200).json({ row });
     }
     if (method === "PATCH") {
       const page = await rowOf(q.id);
       if (!page) return gone();
+      const was = shape.out(page);
       const saved = await notion("/pages/" + page.id, { method: "PATCH",
         body: JSON.stringify({ properties: shape.in(body) }) });
-      return res.status(200).json({ row: shape.out(saved) });
+      const row = shape.out(saved);
+      if (resource === "itinerary") {
+        if (!was.day && row.day) await log("行程", me2 + " 把願望" + said(row.title) + "排進 " + dayOf(row.day) + (row.time ? " " + row.time : ""), { day: row.day });
+        else if (was.day && body.day === null) await log("行程", me2 + " 把 " + dayOf(was.day) + said(was.title) + "退回許願", { day: was.day });
+        else {
+          const ch = diffs(was, row, [["title", "名稱"], ["day", "日期", x => (x ? dayOf(x) : "沒排")], ["time", "時間"], ["place", "地點"], ["note", "備註"]], body);
+          if (ch.length) await log("行程", me2 + " 改了 " + dayOf(was.day) + said(was.title) + ":" + ch.join("、"), { day: row.day || was.day });
+        }
+      }
+      if (resource === "flights") {
+        const ch = diffs(was, row, [["no", "班次"], ["kind", "種類"], ["depart", "出發", clock], ["arrive", "抵達", clock], ["from", "從"], ["to", "到"], ["airline", "公司"], ["code", "訂位代號"], ["note", "備註"]], body);
+        if (ch.length) await log("交通", me2 + " 改了交通 " + legName(was) + ":" + ch.join("、"));
+      }
+      if (resource === "seats" && body.seat !== undefined && String(was.seat || "") !== String(row.seat || ""))
+        await log("交通", me2 + " 改了" + nm(row.passenger) + "在 " + row.flight + " 的座位:" + (was.seat || "空的") + " → " + (row.seat || "空的"));
+      if (resource === "expenses") {
+        const ch = diffs(was, row, [["title", "項目"], ["amount", "金額", x => money(x, row.currency)], ["date", "日期"]], body);
+        const who = Array.from(new Set([].concat(was.participants || [], row.participants || [])));
+        const moved = JSON.stringify((was.participants || []).slice().sort()) !== JSON.stringify((row.participants || []).slice().sort());
+        if (moved) ch.push("分的人改成 " + (row.participants || []).map(nm).join("、"));
+        if (ch.length && who.length) await log("花費", me2 + " 改了帳" + said(was.title) + ":" + ch.join("、"), { to: who });
+      }
+      return res.status(200).json({ row });
     }
     if (method === "DELETE") {
       const page = await rowOf(q.id);
       if (!page) return gone();
+      const was = shape.out(page);
       await notion("/pages/" + page.id, { method: "PATCH", body: JSON.stringify({ archived: true }) });
+      if (resource === "itinerary") await log("行程", me2 + " 刪掉了 " + dayOf(was.day) + said(was.title), { day: was.day });
+      if (resource === "flights") await log("交通", me2 + " 刪掉了交通:" + legName(was));
+      if (resource === "expenses" && (was.participants || []).length) await log("花費", me2 + " 刪掉了帳" + said(was.title) + " " + money(was.amount, was.currency), { to: was.participants });
       return res.status(200).json({ ok: true });
     }
     res.setHeader("Allow", "GET, POST, PATCH, DELETE");
