@@ -263,8 +263,18 @@ module.exports = async (req, res) => {
   if (req.method === "GET") {
     const who = S.whoIs(req);
     if (!who) return res.status(401).json({ error: "請先用 LINE 登入", why: "login" });
-    const m = await U.mine(who.sub);
-    return res.status(200).json({ mine: m && { left: m.left, limit: m.limit, used: m.used, resetAt: m.resetAt, when: m.when } });
+    const [m, st] = await Promise.all([U.mine(who.sub), U.strongMine(who.sub)]);
+    return res.status(200).json({ mine: m && { left: m.left, limit: m.limit, used: m.used, resetAt: m.resetAt, when: m.when }, strong: st });
+  }
+  /* **POST ?strong=1 = 要用一次強力搜**(2026-10-02)。Google 的清單是瀏覽器自己載的,伺服器看不到 ——
+     所以每次強力搜之前先來這裡記一次,沒次數了就不放行 */
+  if (req.method === "POST" && req.query && req.query.strong === "1") {
+    const who = S.whoIs(req);
+    if (!who) return res.status(401).json({ error: "請先用 LINE 登入", why: "login" });
+    const u = await U.strongUse(who.sub);
+    if (!u.ok) return res.status(429).json({ why: "strong", strong: u.mine,
+      error: "你今天的強力搜用完了," + (u.mine.when || "明天") + "後再用 —— 先用免費搜尋" });
+    return res.status(200).json({ ok: true, strong: u.mine });
   }
   if (req.method !== "POST") {
     res.setHeader("Allow", "GET, POST");

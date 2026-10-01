@@ -178,6 +178,7 @@ FAKE_JS = r"""(function(){
   /* ended=1:這一團已經結束(最後一天過了);started=1:旅程進行中(第一天到了)。伺服器照當地時間算好給的 */
   if (/[?&]ended=1/.test(q)) { TRIP.started = true; TRIP.ended = true; }
   else if (/[?&]started=1/.test(q)) { TRIP.started = true; TRIP.ended = false; }
+  var stQ = /[?&]strong=(\d+)\/(\d+)/.exec(q), STQ = stQ ? { left: +stQ[1], limit: +stQ[2], used: +stQ[2] - +stQ[1], resetAt: "2026-09-19T07:00:00.000Z", when: "下午三點" } : null;
   var aiQ = /[?&]ai=(\d+)\/(\d+)/.exec(q), AIQ = aiQ ? { left: +aiQ[1], limit: +aiQ[2], used: +aiQ[2] - +aiQ[1], resetAt: "2026-09-19T07:00:00.000Z", when: "下午三點" } : null;
   var me = (mode === "anon" || mode === "app" || mode === "visitor") ? null : { id: "U-fake-0001", name: "測試的人", avatar: "" };
   var joined = mode !== "join" && mode !== "new";
@@ -199,7 +200,13 @@ FAKE_JS = r"""(function(){
       return c === "ABCD2345" ? reply({ ok: true, user: { id: "U-fake-0001", name: "測試的人" } })
         : reply({ error: "這組登入碼不對,或已經過期(10 分鐘)—— 回瀏覽器重新登入一次" }, 403);
     }
-    if (s.indexOf("/api/ai") >= 0 && method === "GET") return reply({ mine: AIQ });
+    /* strong=剩幾次/共幾次:強力搜的每人次數(2026-10-02)。POST ?strong=1 用掉一次,沒了回 429 */
+    if (s.indexOf("/api/ai") >= 0 && s.indexOf("strong=1") >= 0 && method === "POST") {
+      if (!STQ) return reply({ ok: true, strong: null });
+      if (STQ.left <= 0) return reply({ why: "strong", strong: STQ, error: "你今天的強力搜用完了,下午三點後再用 —— 先用免費搜尋" }, 429);
+      STQ.left--; STQ.used++; return reply({ ok: true, strong: STQ });
+    }
+    if (s.indexOf("/api/ai") >= 0 && method === "GET") return reply({ mine: AIQ, strong: STQ });
     if (s.indexOf("/api/notion") < 0) return real(u, init);
     var r = param(s, "resource");
     if (!me) return reply({ error: "請先用 LINE 登入", why: "login" }, 401);

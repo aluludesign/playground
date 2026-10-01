@@ -28,6 +28,7 @@ return (async function () {
   if (!aiQ) ok("讀不到次數 → 選單和對話框都不講", !out.選單看得到 && !out.對話框, out);
   else if (+aiQ[1] === 0) ok("用完:講「你的 AI 額度用完了,下午三點後再用」,按不下去;選單也講用完", /你的 AI 額度用完了,下午三點後再用/.test(out.對話框) && !out.交給AI按得下去 && /用完了/.test(out.選單), out);
   else ok("選單「今天的 AI 還能用 N／M 次 · 參加的團共用」;對話框「你今天還能用 AI N 次」", /還能用 18／20 次/.test(out.選單) && /參加的團共用/.test(out.選單) && /你今天還能用 AI 18 次/.test(out.對話框) && out.交給AI按得下去, out);
+  if (/strong=5\/8/.test(qs)) ok("選單也寫強力搜還能用幾次", /強力搜:還能用 5／8 次/.test(out.選單), out.選單);
   /* 權限 */
   out.加行程 = shown(q("#add-stop-btn"));
   q("#tab-fly").click(); await wait(80); out.加交通 = !!q("[data-flight-add]"); q("#tab-plan").click();

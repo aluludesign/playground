@@ -2,7 +2,8 @@
  * (gmp-place-search / gmp-place-text-search-request),照官方範例的形狀:設 textQuery 就查、查完發 gmp-load、
  * 點一家發 gmp-select(event.place 有 id、displayName、formattedAddress、location)。
  *   WIDTH=390 ./probe.sh probes/uikit.js            有 Google 元件:清單是 Google 的;挑了記座標+編號,存行程時編號進 Notion
- *   PAGE='/index.html?nouikit=1' ./probe.sh ...      沒有(金鑰沒設):退回舊的強力搜(resource=places) */
+ *   PAGE='/index.html?nouikit=1' ./probe.sh ...      沒有(金鑰沒設):講清單載不出來(舊的強力搜 2026-10-02 拿掉了)
+ *   PAGE='/index.html?strong=5/8' / strong=0/8       強力搜的每人次數:提示句寫剩幾次、先跟伺服器記一次;用完不給按 */
 var q = s => d.querySelector(s), wait = ms => new Promise(r => w.setTimeout(r, ms));
 var txt = s => (q(s) && q(s).textContent || "").replace(/\s+/g, " ").trim();
 var noUI = /nouikit=1/.test(w.location.search);
@@ -37,14 +38,26 @@ return (async function () {
   var b = q('[data-seek="sf-title"]');
   for (var k = 0; k < 2; k++) { b.click(); await wait(1400); }
   var arm = q('[data-arm="sf-title"]');
-  ok("兩次沒挑到 → 出現強力搜", !!arm, txt("#sf-title-out"));
+  var stQ = /strong=(\d+)\//.exec(w.location.search);
+  if (stQ && +stQ[1] > 0) ok("強力搜的提示句旁邊寫今天還能用幾次", /今天還能用 \d+ 次/.test(txt("#sf-title-out")), txt("#sf-title-out"));
+  if (!/strong=0\//.test(w.location.search)) ok("兩次沒挑到 → 出現強力搜", !!arm, txt("#sf-title-out"));
   if (arm) arm.click(); await wait(50);
   b.click(); await wait(400);
+  if (stQ && +stQ[1] === 0) {
+    out.用完 = { 提示: txt("#sf-title-out"), 清單: !!q("#stop-form gmp-place-search") };
+    ok("強力搜用完(strong=0/8):不給強力搜那顆、講幾點重算", !arm && /強力搜用完了/.test(txt("#sf-title-out")), out.用完);
+    out.結論 = bad.length ? "✗ " + bad.join(" ;; ") : "全部通過"; out.errors = w.__errors || []; return out;
+  }
   if (noUI) {
     out.呼叫 = calls().filter(c => /mapskey|places/.test(c));
-    ok("沒有 UI Kit:先問金鑰、拿不到就走舊的強力搜(places)", out.呼叫.some(c => /mapskey/.test(c)) && out.呼叫.some(c => /^GET places/.test(c)) && !q("#stop-form gmp-place-search"), out.呼叫);
+    ok("沒有 UI Kit(金鑰拿不到):不再走舊的強力搜,講「Google 的清單現在載不出來」", out.呼叫.some(c => /mapskey/.test(c)) && !out.呼叫.some(c => /^GET places/.test(c)) &&
+      !q("#stop-form gmp-place-search") && /Google 的清單現在載不出來/.test(txt("#sf-title-out")), { 呼叫: out.呼叫, 說: txt("#sf-title-out") });
   } else {
     var ps = q("#stop-form gmp-place-search");
+    if (stQ) {
+      var used = (w.__calls || []).filter(c => /\/api\/ai\?strong=1/.test(c.url) && c.method === "POST").length;
+      ok("清單出來之前先跟伺服器記一次強力搜", used === 1, used);
+    }
     out.清單 = !!ps; out.查的字 = w.__uikitQuery; out.偏重 = w.__uikitBias;
     ok("強力搜 → Google 的清單出現,查的是輸入框的字、偏重這一團的城市", out.清單 && out.查的字 === "一蘭" && out.偏重 && Math.abs(out.偏重.lat - 35.68) < 0.1, out);
     ok("沒有打舊的強力搜(places)", !calls().some(c => /^GET places/.test(c)), calls());

@@ -29,6 +29,10 @@ const TZ = { "日本": "Asia/Tokyo", "台灣": "Asia/Taipei" };
 /* 每個人每天幾次(Lulu 2026-09-30 定:20／25)。30 人全 25 也才 750,離 Google 全站每天約 1,140 次
    留了空間給重試和換模型(一次成功可能打好幾次 Google)。 */
 const LIMIT = { "團主": 25, "副團主": 25, "成員": 20 };
+/* **強力搜(Places UI Kit 清單)每人每天幾次**(2026-10-02,Lulu 照建議定)。一般 8、團主和副團主 12,各團共用、身分取高。
+   用 Google Cloud 那道每天 300 次的保險去分:30 人一半是團主或副團主 → 15×12 + 15×8 = 300。
+   數在「AI 用量」表,一人一天一列(模型欄寫「強力搜:LINE ID」);按一次強力搜、出一份清單算 1 次 */
+const STRONG = { "團主": 12, "副團主": 12, "成員": 8 };
 
 const PT = "America/Los_Angeles";
 function ptDay(d) {
@@ -88,7 +92,8 @@ async function rolesOf(sub) {
   const roles = {};
   for (const r of found.results) roles[plain(r.properties["團"])] = sel(r.properties["角色"]) || "成員";
   const limit = Math.max(LIMIT["成員"], ...Object.values(roles).map(x => LIMIT[x] || LIMIT["成員"]));
-  return { roles, limit };
+  const strong = Math.max(STRONG["成員"], ...Object.values(roles).map(x => STRONG[x] || STRONG["成員"]));
+  return { roles, limit, strong };
 }
 /* 今天(Google 的一天)成功了幾次 */
 async function usedToday(sub, day) {
@@ -193,4 +198,41 @@ async function tripEnded(code) {
 }
 
 const KIND_OF = { wish: "許願", stop: "行程", transport: "交通", expense: "記帳" };
-module.exports = { mine, record, tally, tripEnded, LIMIT, ptDay, nextReset, twWhen };
+/* ---- 強力搜 ---- */
+const strongKey = sub => "強力搜:" + sub;
+async function strongRow(sub, day) {
+  const found = await notion("/databases/" + DB_USAGE + "/query", {
+    method: "POST",
+    body: JSON.stringify({ page_size: 2, filter: { and: [
+      { property: "日期", date: { equals: day } }, { property: "模型", rich_text: { equals: strongKey(sub) } }] } }),
+  });
+  return found.results[0] || null;
+}
+/* 這個人今天強力搜還剩幾次:{ left, limit, used, resetAt, when }。讀不到回 null(不擋,也不講數字) */
+async function strongMine(sub) {
+  if (!ready() || !sub) return null;
+  try {
+    const day = ptDay();
+    const [r, row] = await Promise.all([rolesOf(sub), strongRow(sub, day)]);
+    const used = (row && row.properties["次數"] && row.properties["次數"].number) || 0;
+    const resetAt = nextReset();
+    return { left: Math.max(0, r.strong - used), limit: r.strong, used, resetAt, when: twWhen(resetAt) };
+  } catch (_) { return null; }
+}
+/* 用掉一次。**先看還有沒有**:沒有就回 { ok:false };讀不到表就放行(它不能讓強力搜跟著壞) */
+async function strongUse(sub) {
+  const m = await strongMine(sub);
+  if (!m) return { ok: true, mine: null };
+  if (m.left <= 0) return { ok: false, mine: m };
+  try {
+    const day = ptDay(), row = await strongRow(sub, day);
+    const props = { "次數": { number: m.used + 1 } };
+    if (row) await notion("/pages/" + row.id, { method: "PATCH", body: JSON.stringify({ properties: props }) });
+    else await notion("/pages", { method: "POST", body: JSON.stringify({ parent: { database_id: DB_USAGE }, properties: {
+      ...props, "鍵": { title: rt(day + " " + strongKey(sub)) }, "日期": { date: { start: day } },
+      "模型": { rich_text: rt(strongKey(sub)) }, "用完": { checkbox: false } } }) });
+  } catch (_) { /* 少記一次 */ }
+  return { ok: true, mine: Object.assign({}, m, { left: m.left - 1, used: m.used + 1 }) };
+}
+
+module.exports = { mine, record, tally, tripEnded, strongMine, strongUse, LIMIT, STRONG, ptDay, nextReset, twWhen };

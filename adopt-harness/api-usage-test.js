@@ -76,12 +76,12 @@ function fake(u, init) {
   }
   return Promise.resolve(reply(500, { message: "沒認出 " + url }));
 }
-async function call(method, sub, body) {
+async function call(method, sub, body, query) {
   global.fetch = fake;
   delete require.cache[require.resolve(AI)];
   delete require.cache[require.resolve(USAGE)];
   const res = mkres();
-  await require(AI)({ method, headers: { cookie: sub ? cookie(sub) : "" }, body: body ? JSON.stringify(body) : undefined }, res);
+  await require(AI)({ method, query: query || {}, headers: { cookie: sub ? cookie(sub) : "" }, body: body ? JSON.stringify(body) : undefined }, res);
   return res;
 }
 const ask = (sub, extra) => call("POST", sub, Object.assign({ text: "想去築地", context: { trip: { code: "trip-a", name: "甲團" } } }, extra || {}));
@@ -148,6 +148,24 @@ function ok(name, cond, extra) {
   ok("紀錄寫「次數用完」", val(logs()[logs().length - 1].properties["結果"]) === "次數用完", "");
   r = await ask("U-boss");
   ok("別人不受影響;前幾天的不算今天", r.code === 200, r.body);
+
+  /* 強力搜(2026-10-02):一般 8、團主和副團主 12,各團共用;先記一次才放行,用完 429 */
+  reset();
+  r = await call("GET", "U-member");
+  ok("GET 也講強力搜:一般成員 8 次", r.body.strong && r.body.strong.limit === 8 && r.body.strong.left === 8, r.body.strong);
+  r = await call("GET", "U-boss");
+  ok("在某一團是團主 → 強力搜 12 次", r.body.strong && r.body.strong.limit === 12, r.body.strong);
+  for (let i = 0; i < 8; i++) r = await call("POST", "U-member", {}, { strong: "1" });
+  ok("用掉 8 次:每次都放行,最後剩 0", r.code === 200 && r.body.strong.left === 0, r.body);
+  ok("一人一天一列(不是每次多一列)", tables[DB.usage].filter(x => val(x.properties["模型"]) === "強力搜:U-member").length === 1, tables[DB.usage].length);
+  r = await call("POST", "U-member", {}, { strong: "1" });
+  ok("第 9 次 → 429「你今天的強力搜用完了,下午X點後再用」", r.code === 429 && r.body.why === "strong" && /強力搜用完了,(下午|早上|晚上).+點後再用/.test(r.body.error), r.body);
+  ok("而且強力搜不會去問 Gemini(兩件事分開)", geminiCalls === 0, geminiCalls);
+  r = await call("POST", "", {}, { strong: "1" });
+  ok("沒登入 → 401", r.code === 401, r.body);
+  notionDown = true;
+  r = await call("POST", "U-member", {}, { strong: "1" });
+  ok("表讀不到 → 放行(數次數不能讓強力搜跟著壞)", r.code === 200, r.body);
 
   /* 結束的團(2026-10-01):AI 不能用,也不去問 Google */
   reset();

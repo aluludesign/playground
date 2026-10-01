@@ -1186,12 +1186,11 @@
     .menu-ai small{font-size:12px; color:var(--muted);}
     .ai-left{margin:0 0 12px; font-size:13px; color:var(--muted);}
     .ai-left b{color:var(--ink);}
+    .strong-left{margin-left:6px; font-size:12px; color:var(--muted);}
     .st-hint{margin:-4px 0 4px; font-size:12px; color:var(--muted);}
     /* Google 的地點清單(Places UI Kit):樣式是 Google 的,只調字型、顏色、外框;它自己捲 */
-    .uikit{max-height:360px; overflow:auto; border:1px solid var(--line); border-radius:10px; background:#fff;}
+    .uikit{overflow:hidden; border:1px solid var(--line); border-radius:10px; background:#fff;}
     .uikit gmp-place-search{--gmp-mat-font-family:inherit; color-scheme:light; width:100%;}
-    .uikit-wide{overflow-x:auto;}
-    .uikit-wide gmp-place-search{width:420px; min-width:420px;}
     .ended-bar{padding:8px 16px; font-size:13px; text-align:center;
       background:var(--ds-sys-shared-color-secondary-container); color:var(--ds-sys-shared-color-on-secondary-container);}
     /* 對話框改過卻點了外面:晃一下,底下講一句要按哪裡 */
@@ -2872,6 +2871,7 @@
     renderEditAbility();
     renderCloudBar();
     checkNewcomers();
+    loadAIQuota();   /* AI 和強力搜今天還剩幾次:漢堡選單、強力搜的提示句要用 */
     loadWeather();
     window.addEventListener("focus", schedulePull);
     flushOutbox();
@@ -4029,20 +4029,10 @@
      而讓那個點指到別的地方去。z 是 13(一塊約 4.9 km,窗內約 1 km):再近就每一列
      都長得像「一條街」,再遠就看不出街廓。要調就改這一個常數。
 
-     強力搜那條路回的形狀跟這裡一樣(`seekStrong` 對齊過 `lat`/`lon`),所以這個槽
-     兩邊共用 —— Google 的照片要接的話接在這裡,不用再開一個位置。 */
+     (2026-10-02 起只有免費那兩段用這個槽;強力搜改成 Google 的 UI Kit 清單,照片是它自己的。) */
   const THUMB = 56, THUMB_Z = 13;
   function hitThumb(r) {
     const la = +r.lat, lo = +r.lon;
-    /* **強力搜那條路有真的照片,就放照片。** 只有它有 —— 見上面那份量測。
-       網址走自己的後端(`resource=placephoto`),因為 Google 的圖片網址帶著金鑰。
-       **那一下要錢**,而且是跟搜尋分開計費的:六筆候選 = 六次。
-       免費那條路的 `photo` 是空的,一次都不會叫到。
-       `loading="lazy"` 是為了錢不是為了速度:捲不到的那幾列不換圖就不計費。 */
-    if (r.photo) {
-      return '<span class="thumb"><img class="shot" alt="" loading="lazy" src="' +
-        esc(API + "?resource=placephoto&h=112&ref=" + encodeURIComponent(r.photo)) + '"></span>';
-    }
     if (!isFinite(la) || !isFinite(lo)) return "";
     const fx = projX(lo, THUMB_Z), fy = projY(la, THUMB_Z);
     const tx = Math.floor(fx), ty = Math.floor(fy);
@@ -4163,16 +4153,26 @@
     paintSeekBtn(id);
     if (b0) b0.disabled = true;
     seekSay(id, "「" + q + "」搜尋中…");
-    /* **強力搜換成 Google 的 Places UI Kit 清單**(2026-10-02,為了 Google 的條款,見 README)。
-       載得到就用它;沒金鑰、載不到就照舊走下面那條(一按不會白費) */
-    if (strong && await uikitReady()) {
+    /* **強力搜 = Google 的 Places UI Kit 清單**(2026-10-02,為了 Google 的條款,見 README)。
+       舊的那條(伺服器去問 Google、座標畫在 OpenStreetMap 上)拿掉了。載不到就講一聲,
+       上膛不卸 —— 這一按沒花到錢,不該逼他重走兩次才能再試 */
+    if (strong) {
+      const okUI = await uikitReady();
       if (b0) b0.disabled = false;
+      if (!okUI) { seekUsedStrong[id] = true; seekSay(id, "Google 的清單現在載不出來,先用免費搜尋,或先不填地點(之後再改)。", true); return; }
+      /* **每人每天固定次數**(一般 8、團主和副團主 12):先跟伺服器記一次,沒次數就不載清單 */
+      try {
+        const res = await fetch(AI_API + "?strong=1", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: "{}" });
+        const body = await res.json().catch(() => ({}));
+        if (body && body.strong) strongMine = body.strong;
+        if (res.status === 429) { seekReset(id); seekUsedStrong[id] = true; seekSay(id, body.error || "你今天的強力搜用完了", true); return; }
+      } catch (_) { /* 記不到就放行 —— 數次數不能讓強力搜跟著壞 */ }
       showUIKit(id, q);
       return;
     }
     let res;
     try {
-      res = strong ? await seekStrong(q) : await seekPlace(q);
+      res = await seekPlace(q);
     } finally {
       if (b0) b0.disabled = false;
     }
@@ -4242,7 +4242,6 @@
          顯示他們的 Places 資料要標來源」,而免費那家是 OpenStreetMap ——
          對免費的結果標 Google,是把來源講錯,比不標更糟。
          `strong` 在這裡還在,不用另外記一個旗標。 */
-      (strong ? '<div class="said soft cred">Powered by Google</div>' : "") +
       seekTail(id);
     box.hidden = false;
     box._hits = res;
@@ -4294,10 +4293,12 @@
     const h = seekHint(id);
     if (!h) return "";
     if (h !== HINT_STRONG) return '<div class="said hint">' + esc(h) + "</div>";
+    /* 強力搜用完了:不給那顆按鈕,講幾點重算 */
+    if (strongMine && strongMine.left <= 0) return '<div class="said hint">' + esc("今天的強力搜用完了(" + (strongMine.when || "明天") + "重算),先用免費搜尋。") + "</div>";
     /* 「」留在一般文字色,只有三個字是連結 —— 引號是句子的一部分,不是按鈕的。 */
     return '<div class="said hint ask">' + esc(h) + "「" +
       '<button type="button" class="seek-arm" data-arm="' + id + '">強力搜</button>' +
-      "」</div>";
+      "」" + (strongMine ? '<span class="strong-left">今天還能用 ' + strongMine.left + " 次</span>" : "") + "</div>";
   }
 
   function seekHint(id) {
@@ -4309,9 +4310,6 @@
     return "";
   }
 
-  /* 第 3 段走的那一家。**跟「再查一次」以前走的是同一條後端路徑,一個字都沒改**
-     —— 差別只在前端怎麼決定要不要走它,以及送出去的是輸入框裡的字。
-     回傳格式對齊 `seekPlace()`(一個陣列),所以上面那段畫候選的程式不用分兩套。 */
   /* ---- Places UI Kit(2026-10-02,Lulu 決定:地圖留 OpenStreetMap,Google 那一段改用 UI Kit 清單) ----
      條款允許 UI Kit 配非 Google 的地圖(§15.1);清單裡的 Google 標示不能遮;
      **座標只能在手機上記 30 天**(§15.2),地點編號可以永久存 —— 所以編號進 Notion,座標只進這台手機。
@@ -4327,7 +4325,7 @@
           /* Google 官方的載入程式(bootstrap loader),原樣照抄 */
           (g=>{var h,a,k,p="The Google Maps JavaScript API",c="google",l="importLibrary",q="__ib__",m=document,b=window;b=b[c]||(b[c]={});var d=b.maps||(b.maps={}),r=new Set,e=new URLSearchParams,u=()=>h||(h=new Promise(async(f,n)=>{await (a=m.createElement("script"));e.set("libraries",[...r]+"");for(k in g)e.set(k.replace(/[A-Z]/g,t=>"_"+t[0].toLowerCase()),g[k]);e.set("callback",c+".maps."+q);a.src=`https://maps.${c}apis.com/maps/api/js?`+e;d[q]=f;a.onerror=()=>h=n(Error(p+" could not load."));a.nonce=m.querySelector("script[nonce]")?.nonce||"";m.head.append(a)}));d[l]?console.warn(p+" only loads once. Ignoring:",g):d[l]=(f,...n)=>r.add(f)&&u().then(()=>d[l](f,...n))})({ key: r.key, language: "zh-TW" });
         }
-        /* 載太久就當載不到(8 秒),退回舊的 —— 出門在外網路慢,不要讓人卡在「搜尋中」 */
+        /* 載太久就當載不到(8 秒)—— 出門在外網路慢,不要讓人卡在「搜尋中」 */
         await Promise.race([google.maps.importLibrary("places"), new Promise((_, no) => setTimeout(() => no(new Error("timeout")), 8000))]);
         return !!customElements.get("gmp-place-search");
       } catch (_) { uikitP = null; return false; }
@@ -4337,17 +4335,11 @@
   function showUIKit(id, q) {
     seekReset(id); seekUsedStrong[id] = true;   /* 跟舊的強力搜一樣:只給用一次,跑完退回一般搜 */
     const box = seekBox(id);
-    /* **縮圖要怎樣才出現,文件沒寫**(2026-10-02,Lulu:沒有縮圖)。暫時在網址上帶 ?uikit=1/2/3 試三種,
-       她看哪一種有縮圖再定下來(定了就把這一段收掉):
-         1 = 只放照片(content-config 裡只有 gmp-place-media)
-         2 = 全部內容 + 橫的排法(orientation="horizontal")
-         3 = 全部內容,但清單撐到 420px 寬(左右可以捲) */
-    const v = (/[?&]uikit=(\d)/.exec(location.search) || [])[1] || "";
-    const cfg = v === "1" ? '<gmp-place-content-config><gmp-place-media></gmp-place-media></gmp-place-content-config>'
-      : v === "2" || v === "3" ? "<gmp-place-all-content></gmp-place-all-content>"
-      : '<gmp-place-content-config><gmp-place-media></gmp-place-media><gmp-place-rating></gmp-place-rating>' +
-        '<gmp-place-price></gmp-place-price><gmp-place-open-now-status></gmp-place-open-now-status></gmp-place-content-config>';
-    box.innerHTML = '<div class="uikit' + (v === "3" ? " uikit-wide" : "") + '"><gmp-place-search selectable' + (v === "2" ? ' orientation="horizontal"' : "") + ">" + cfg +
+    /* **橫的排法才有照片**(2026-10-02 用真的金鑰量過:直的清單不放照片,Google 自己的範例也一樣)。
+       一家一張卡,照片在上,左右滑。內容:照片、評分、價位、營業中 */
+    box.innerHTML = '<div class="uikit"><gmp-place-search selectable orientation="horizontal">' +
+      '<gmp-place-content-config><gmp-place-media></gmp-place-media><gmp-place-rating></gmp-place-rating>' +
+      '<gmp-place-price></gmp-place-price><gmp-place-open-now-status></gmp-place-open-now-status></gmp-place-content-config>' +
       '<gmp-place-text-search-request max-result-count="8"></gmp-place-text-search-request></gmp-place-search></div>' + seekTail(id);
     box.hidden = false;
     const ps = box.querySelector("gmp-place-search"), req = box.querySelector("gmp-place-text-search-request");
@@ -4389,42 +4381,6 @@
   /* 這個地點是從 Google 清單挑的嗎 → 它的地點編號(存進 Notion 用) */
   const pidOf = place => (place && pins[place] && pins[place].pid) || "";
 
-  async function seekStrong(q) {
-    try {
-      /* **打 `places` 不是 `geocode`。** 後者是「地址 → 座標」,會把店名解析成
-         整個行政區(量過:「一蘭拉麵 新宿」回整個新宿區、「藏前 咖啡」回台東區藏前)。
-         前者才是「關鍵字 → 一串地點」,**而且回多筆** —— 跟免費那家同一個形狀,
-         所以下面畫候選那段不用分兩套。 */
-      const r = await api("?resource=places&q=" + encodeURIComponent(q) +
-        "&cc=" + encodeURIComponent(regionFor(q).cc));
-      return ((r && r.list) || []).map(x => ({
-        lat: String(x.la), lon: String(x.lo),
-        display_name: x.addr ? x.label + ", " + x.addr : x.label,
-        /* **只有這條路有照片。** 免費那家沒有照片可以給(量過,見 hitThumb),
-           所以 `photo` 在 `seekPlace()` 回來的那些身上是 undefined ——
-           一列要畫照片還是畫地圖,就靠這個欄位在不在。 */
-        photo: x.photo || "",
-      }));
-    } catch (e) {
-      /* **把伺服器講的原話帶出來,不要換成自己猜的。**
-         第一版這裡是 `catch (_) { return null; }`,而顯示的是
-         「可能是今天的查詢次數用完了,或是網路不順」—— 那是我編的。
-
-         Lulu 在 preview 上按下去「都沒東西」,真正的原因是
-         **preview 部署沒有那把地名查詢的金鑰**(它只設在 Production),
-         而伺服器明明白白回了「伺服器還沒設定…」——
-         **是我把那句話吃掉,換成一個聽起來很合理的原因。**
-
-         這個專案一路在拆的就是這種東西:用一個猜測蓋掉一個明確的訊號。
-         而這次那個猜測特別壞 —— 它指向「額度用完」,會讓人去查帳單,
-         而真正該做的是去 Vercel 把那個環境變數也給 Preview。
-
-         (**這段註解本來寫了那個環境變數的名字,被 geofix 的斷言擋下來。**
-          那條斷言守的是「前端不要出現金鑰的變數名」—— 名字本身不是秘密,
-          但那是一道刻意畫的線,**不該為了我的註解好讀就把線挪開**。) */
-      return { 錯: String((e && e.message) || e) };
-    }
-  }
 
   /* 選了一個:地點欄換成那個名字,座標**同時**寫進快取,所以這一筆從此不會再被查。
      `by:"pick"` 是「這是人親手選的」—— 開場那段跟人工表對帳的程式碼會跳過它,
@@ -6085,15 +6041,20 @@
     box.innerHTML = out
       ? '<div class="note" style="margin-bottom:12px"><span>⚠</span><span>你的 AI 額度用完了,' + esc(when) + "後再用</span></div>"
       : '<p class="ai-left">你今天還能用 AI <b>' + u.left + "</b> 次(共 " + u.limit + " 次)· " + esc(when) + "重算</p>";
-    menu.innerHTML = "<b>今天的 AI</b><span>" + (out ? "用完了," + esc(when) + "後再用" : "還能用 " + u.left + "／" + u.limit + " 次") +
-      "</span><small>參加的團共用 · " + esc(when) + "重算</small>";
+    menu.innerHTML = "<b>今天的 AI</b><span>" + (out ? "用完了," + esc(when) + "後再用" : "還能用 " + u.left + "／" + u.limit + " 次") + "</span>" +
+      /* 強力搜(Google 清單)也是每人每天固定次數(2026-10-02),排在 AI 下面 */
+      (strongMine ? "<span>強力搜:" + (strongMine.left <= 0 ? "用完了" : "還能用 " + strongMine.left + "／" + strongMine.limit + " 次") + "</span>" : "") +
+      "<small>參加的團共用 · " + esc(when) + "重算</small>";
     box.hidden = menu.hidden = false;
   }
+  /* 強力搜今天還剩幾次(伺服器數的;讀不到就是 null,不講數字也不擋) */
+  let strongMine = null;
   async function loadAIQuota() {
     if (!online || !lineUser) { paintAIQuota(null); return; }
     try {
       const res = await fetch(AI_API, { credentials: "same-origin" });
       const body = res.ok ? await res.json().catch(() => null) : null;
+      strongMine = (body && body.strong) || null;
       paintAIQuota(body && body.mine);
     } catch (_) { paintAIQuota(null); }
   }
