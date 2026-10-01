@@ -22,6 +22,9 @@ const CALL_MS = 3000;   /* 比 AI 本身快很多才行 —— 數次數拖慢�
 const DB_USAGE = process.env.NOTION_DB_AI_USAGE || "10c8d455f2294e75b44ff046913d4b70";
 const DB_LOG = process.env.NOTION_DB_AI_LOG || "370027ac48cb45cba6502926add29096";
 const DB_MEMBERS = process.env.NOTION_DB_MEMBERS || "bee61d7fae604013968455412b2d57a5";
+const DB_TRIPS = process.env.NOTION_DB_TRIPS || "4802c8eac4a14943bf41a38394031acc";
+/* 跟 api/notion.js 的 COUNTRIES 同一份:團的當地時區 */
+const TZ = { "日本": "Asia/Tokyo", "台灣": "Asia/Taipei" };
 
 /* 每個人每天幾次(Lulu 2026-09-30 定:20／25)。30 人全 25 也才 750,離 Google 全站每天約 1,140 次
    留了空間給重試和換模型(一次成功可能打好幾次 Google)。 */
@@ -130,7 +133,7 @@ async function record(e) {
           "人": { rich_text: rt(e.sub) },
           "團": { rich_text: rt(e.trip || "") },
           "身分": { select: { name: LIMIT[e.role] ? e.role : "成員" } },
-          "類型": { select: { name: KIND[e.intent] || "看不出來" } },
+          "類型": { select: { name: KIND_OF[e.intent] || "看不出來" } },
           "結果": { select: { name: e.result } },
           "模型": { rich_text: rt(e.model || "") },
           "Google 次數": { number: e.calls || 0 },
@@ -174,4 +177,20 @@ async function tally(byModel) {
   }));
 }
 
-module.exports = { mine, record, tally, LIMIT, ptDay, nextReset, twWhen };
+/* 這一團結束了沒(照當地時間,最後一天 23:59 過了)。查不到就當沒結束 —— 它不能讓 AI 跟著壞 */
+async function tripEnded(code) {
+  if (!ready() || !code) return false;
+  try {
+    const found = await notion("/databases/" + DB_TRIPS + "/query", {
+      method: "POST", body: JSON.stringify({ page_size: 1, filter: { property: "代號", title: { equals: code } } }) });
+    const p = found.results[0] && found.results[0].properties;
+    if (!p) return false;
+    const end = p["結束日"] && p["結束日"].date && p["結束日"].date.start;
+    const tz = TZ[sel(p["國家"])] || "Asia/Taipei";
+    const today = new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+    return !!end && today > String(end).slice(0, 10);
+  } catch (_) { return false; }
+}
+
+const KIND_OF = { wish: "許願", stop: "行程", transport: "交通", expense: "記帳" };
+module.exports = { mine, record, tally, tripEnded, LIMIT, ptDay, nextReset, twWhen };

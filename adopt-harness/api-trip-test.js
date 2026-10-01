@@ -432,6 +432,37 @@ const memberRow = (code, sub) => rowsIn(DB.members).find(p => plain(p.properties
   r = await call(LINE_A, "PATCH", { resource: "team", t: T1 }, { deputy: A_SELF });
   ok("團主不能兼副團主", r.code === 400, r.body);
 
+  /* ================= 團的生命週期(2026-10-01):開始後只能延長、結束後鎖住 ================= */
+  const tripOf = code => rowsIn(DB.trips).find(p => plain(p.properties["代號"]) === code);
+  const twDay = n => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Taipei", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(Date.now() + n * 864e5));
+  const setDates = (code, a, b) => { const t = tripOf(code); t.properties["開始日"] = { date: { start: a } }; t.properties["結束日"] = { date: { start: b } }; };
+  /* T2 是台灣的團(台灣時間):從昨天開始、三天後結束 → 進行中 */
+  setDates(T2, twDay(-1), twDay(3));
+  r = await call(LINE_C, "GET", { resource: "team", t: T2 });
+  ok("進行中:started、沒有 ended", r.body.trip.started === true && r.body.trip.ended === false, r.body.trip);
+  r = await call(LINE_C, "PATCH", { resource: "team", t: T2 }, { start: twDay(0), end: twDay(3) });
+  ok("開始之後第一天不能改", r.code === 400 && /第一天/.test(r.body.error), r.body);
+  r = await call(LINE_C, "PATCH", { resource: "team", t: T2 }, { start: twDay(-1), end: twDay(2) });
+  ok("開始之後最後一天不能提早", r.code === 400 && /往後延/.test(r.body.error), r.body);
+  r = await call(LINE_C, "PATCH", { resource: "team", t: T2 }, { start: twDay(-1), end: twDay(5) });
+  ok("開始之後最後一天可以往後延", r.code === 200 && r.body.trip.end === twDay(5), r.body);
+  /* 結束了:最後一天是昨天 */
+  setDates(T2, twDay(-4), twDay(-1));
+  r = await call(LINE_C, "GET", { resource: "team", t: T2 });
+  ok("最後一天過了 → ended", r.body.trip.ended === true, r.body.trip);
+  r = await call(LINE_C, "PATCH", { resource: "team", t: T2 }, { start: twDay(-4), end: twDay(3) });
+  ok("結束之後不能再延(團不會再打開)", r.code === 403 && r.body.why === "ended", r.body);
+  r = await call(LINE_C, "PATCH", { resource: "team", t: T2 }, { name: "台南吃吃吃(結束了)", start: twDay(-4), end: twDay(-1) });
+  ok("結束之後團名還能改(日期沒動就不算改日期)", r.code === 200, r.body);
+  r = await call(LINE_C, "POST", { resource: "itinerary", t: T2 }, { title: "結束後加行程", day: twDay(-2) });
+  ok("結束之後團主也不能加行程", r.code === 403, r.body);
+  r = await call(LINE_C, "POST", { resource: "flights", t: T2 }, { kind: "火車", no: "x", depart: twDay(-2) + "T09:00" });
+  ok("結束之後不能加交通", r.code === 403, r.body);
+  r = await call(LINE_C, "POST", { resource: "wishes", t: T2 }, { title: "結束後許願" });
+  ok("結束之後不能許願", r.code === 403 && r.body.why === "ended", r.body);
+  r = await call(LINE_C, "POST", { resource: "expenses", t: T2 }, { title: "結束後補一筆", amount: 100, currency: "TWD", date: twDay(-2), category: "餐飲", payer: "", participants: [] });
+  ok("**結束之後團主還能記帳**", r.code === 200, r.body);
+
   /* ================= 測試環境:團主「用成員身分看」 ================= */
   await call(LINE_A, "PATCH", { resource: "team", t: T1 }, { can: { plan: false, cost: false, seat: false } });
   r = await call(LINE_A, "GET", { resource: "team", t: T1 });

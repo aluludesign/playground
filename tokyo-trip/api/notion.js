@@ -349,8 +349,8 @@ async function listAll(shape) {
 const COUNTRIES = {
   /* 國家決定兩件事:幣別和城市的預設。**先開放這兩個**(Lulu 定的)。
      匯率只是預設值,團主進去之後可以改。 */
-  "日本": { city: "東京", rate: 0.21, currency: "JPY" },
-  "台灣": { city: "台北", rate: 1, currency: "TWD" },
+  "日本": { city: "東京", rate: 0.21, currency: "JPY", tz: "Asia/Tokyo" },
+  "台灣": { city: "台北", rate: 1, currency: "TWD", tz: "Asia/Taipei" },
 };
 const PALETTE = ["#E60012", "#F39700", "#009944", "#00A7DB", "#9B7CB6",
                  "#E85298", "#0068B7", "#8F7E00", "#6C4A2E", "#4D4D4D"];
@@ -388,6 +388,15 @@ function randomCode(n) {
 
 const isDate = v => /^\d{4}-\d{2}-\d{2}$/.test(String(v || "")) && !isNaN(Date.parse(v));
 
+/* 這一團在當地是第幾天了。不靠存一個「已結束」的欄位 —— 時間到了就是結束,不需要誰去按 */
+function localToday(tz) {
+  try { return new Intl.DateTimeFormat("en-CA", { timeZone: tz || "Asia/Taipei", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date()); }
+  catch (_) { return new Date().toISOString().slice(0, 10); }
+}
+function tripPhase(start, end, tz) {
+  const today = localToday(tz);
+  return { started: !!start && today >= start, ended: !!end && today > end, today };
+}
 function tripOut(page) {
   const p = page.properties;
   const country = sel(p["國家"]) || "日本";
@@ -411,6 +420,10 @@ function tripOut(page) {
     },
     /* 上一次換掉(或取消)副團主是什麼時候。**每天只能換一次**,擋住一直換人刷 AI 的 +5 */
     deputyAt: p["副團主換人時間"] && p["副團主換人時間"].date ? p["副團主換人時間"].date.start : "",
+    /* **團的生命週期**(2026-10-01,Lulu):照旅遊當地時間算 ——
+       started:第一天到了(第一天不能再改,最後一天只能往後延);
+       ended:最後一天 23:59 過了 → 這一團結束,只剩團主和有記帳權限的副團主能動花費,AI 對所有人關掉 */
+    ...tripPhase(dat(p["開始日"]), dat(p["結束日"]), base.tz),
     page: page.id,
   };
 }
@@ -554,7 +567,9 @@ module.exports = async (req, res) => {
     const owner = role === "團主";
     /* 團主全部都能動;副團主看團主勾了哪幾塊;一般成員只能許願(許願不走這裡) */
     const deputy = role === "副團主";
-    return { code, trip, members, mine, role, asMember, owner, can: b => owner || (deputy && !!trip.can[b]) };
+    /* 結束的團:只剩花費(團主,和團主勾了記帳的副團主);行程、交通、許願全部鎖住 */
+    const can = b => (trip.ended && b !== "cost") ? false : owner || (deputy && !!trip.can[b]);
+    return { code, trip, members, mine, role, asMember, owner, deputy, can };
   }
   const stop = s => res.status(s.status).json({ error: s.error, why: s.why });
 
@@ -659,6 +674,11 @@ module.exports = async (req, res) => {
       const end = body.end !== undefined ? body.end : c.trip.end;
       if (body.start !== undefined || body.end !== undefined) {
         if (!isDate(start) || !isDate(end)) return res.status(400).json({ error: "日期的格式不對" });
+        /* **延長日期只能在旅程裡做**(2026-10-01,Lulu):開始之前隨便改;開始之後第一天不能動、
+           最後一天只能往後延;結束之後就不能再改(團不會再打開) */
+        if (c.trip.ended && (start !== c.trip.start || end !== c.trip.end)) return res.status(403).json({ why: "ended", error: "這一團已經結束了,日期不能再改" });
+        if (c.trip.started && start !== c.trip.start) return res.status(400).json({ error: "旅程已經開始了,第一天不能再改" });
+        if (c.trip.started && end < c.trip.end) return res.status(400).json({ error: "旅程已經開始了,最後一天只能往後延" });
         if (end < start) return res.status(400).json({ error: "結束日不能比開始日早" });
         if ((Date.parse(end) - Date.parse(start)) / 864e5 > 60) return res.status(400).json({ error: "一團最長 60 天" });
         props["開始日"] = { date: { start } };
@@ -1017,6 +1037,7 @@ module.exports = async (req, res) => {
        改內容和刪掉:許願的人自己、團主、或團主勾了「行程」的副團主。 */
     if (resource === "wishes") {
       const mineId = c.mine.id;
+      if (c.trip.ended) return res.status(403).json({ why: "ended", error: "這一團已經結束了,不能再許願或投票" });
       if (method === "POST") {
         const props = shape.in({ ...body, by: mineId, votes: ids(body.votes).filter(v => v === mineId) });
         const page = await notion("/pages", { method: "POST",
