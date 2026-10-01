@@ -271,10 +271,16 @@ module.exports = async (req, res) => {
   if (req.method === "POST" && req.query && req.query.strong === "1") {
     const who = S.whoIs(req);
     if (!who) return res.status(401).json({ error: "請先用 LINE 登入", why: "login" });
+    /* ?strong=1&refund=1 = 清單出錯,退回剛剛那一次(要帶 strongUse 給的收據) */
+    if (req.query.refund === "1") {
+      let b = req.body; if (typeof b === "string") { try { b = JSON.parse(b); } catch (_) { b = {}; } }
+      const r = await U.strongRefund(who.sub, b && b.ticket);
+      return res.status(r.ok ? 200 : 409).json({ ok: r.ok, strong: r.mine || null });
+    }
     const u = await U.strongUse(who.sub);
     if (!u.ok) return res.status(429).json({ why: "strong", strong: u.mine,
       error: "你今天的強力搜用完了," + (u.mine.when || "明天") + "後再用" });
-    return res.status(200).json({ ok: true, strong: u.mine });
+    return res.status(200).json({ ok: true, strong: u.mine, ticket: u.ticket || "" });
   }
   if (req.method !== "POST") {
     res.setHeader("Allow", "GET, POST");

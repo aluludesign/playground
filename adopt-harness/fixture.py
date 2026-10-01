@@ -203,8 +203,13 @@ FAKE_JS = r"""(function(){
     /* strong=剩幾次/共幾次:強力搜的每人次數(2026-10-02)。POST ?strong=1 用掉一次,沒了回 429 */
     if (s.indexOf("/api/ai") >= 0 && s.indexOf("strong=1") >= 0 && method === "POST") {
       if (!STQ) return reply({ ok: true, strong: null });
+      /* 退回:收據是「t+第幾次」,只有最後那一次退得了 */
+      if (s.indexOf("refund=1") >= 0) {
+        if (body.ticket !== "t" + STQ.used) return reply({ ok: false, strong: null }, 409);
+        STQ.left++; STQ.used--; return reply({ ok: true, strong: STQ });
+      }
       if (STQ.left <= 0) return reply({ why: "strong", strong: STQ, error: "你今天的強力搜用完了,下午三點後再用" }, 429);
-      STQ.left--; STQ.used++; return reply({ ok: true, strong: STQ });
+      STQ.left--; STQ.used++; return reply({ ok: true, strong: STQ, ticket: "t" + STQ.used });
     }
     if (s.indexOf("/api/ai") >= 0 && method === "GET") return reply({ mine: AIQ, strong: STQ });
     if (s.indexOf("/api/notion") < 0) return real(u, init);

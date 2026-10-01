@@ -3,7 +3,8 @@
  * 點一家發 gmp-select(event.place 有 id、displayName、formattedAddress、location)。
  *   WIDTH=390 ./probe.sh probes/uikit.js            有 Google 元件:清單是 Google 的;挑了記座標+編號,存行程時編號進 Notion
  *   PAGE='/index.html?nouikit=1' ./probe.sh ...      沒有(金鑰沒設):講清單載不出來(舊的強力搜 2026-10-02 拿掉了)
- *   PAGE='/index.html?strong=5/8' / strong=0/8       強力搜的每人次數:提示句寫剩幾次、先跟伺服器記一次;用完不給按 */
+ *   PAGE='/index.html?strong=5/8' / strong=0/8       強力搜的每人次數:提示句寫剩幾次、先跟伺服器記一次;用完不給按
+ *   PAGE='/index.html?ai=18/20&strong=5/8&gmperror=1'清單出錯(gmp-error):講清單載入出現錯誤,退回剛剛扣的那一次(只退一次) */
 var q = s => d.querySelector(s), wait = ms => new Promise(r => w.setTimeout(r, ms));
 var txt = s => (q(s) && q(s).textContent || "").replace(/\s+/g, " ").trim();
 var noUI = /nouikit=1/.test(w.location.search);
@@ -57,6 +58,15 @@ return (async function () {
     if (stQ) {
       var used = (w.__calls || []).filter(c => /\/api\/ai\?strong=1/.test(c.url) && c.method === "POST").length;
       ok("清單出來之前先跟伺服器記一次強力搜", used === 1, used);
+    }
+    if (/gmperror=1/.test(w.location.search)) {
+      ps.dispatchEvent(new w.Event("gmp-error")); ps.dispatchEvent(new w.Event("gmp-error")); await wait(200);
+      var refunds = (w.__calls || []).filter(c => /refund=1/.test(c.url));
+      out.出錯 = { 說: txt("#sf-title-out"), 退了幾次: refunds.length, 收據: refunds[0] && refunds[0].body.ticket };
+      q("#menu-btn").click(); await wait(80); out.出錯.選單 = txt("#menu-ai"); q("#menu-btn").click();
+      ok("清單出錯 → 講清單載入出現錯誤、退回那一次(錯兩次也只退一次)、選單回到 5／8",
+        /清單載入出現錯誤/.test(out.出錯.說) && refunds.length === 1 && out.出錯.收據 === "t4" && /強力搜:還能用 5／8 次/.test(out.出錯.選單), out.出錯);
+      out.結論 = bad.length ? "✗ " + bad.join(" ;; ") : "全部通過"; out.errors = w.__errors || []; return out;
     }
     out.清單 = !!ps; out.查的字 = w.__uikitQuery; out.偏重 = w.__uikitBias;
     ok("強力搜 → Google 的清單出現,查的是輸入框的字、偏重這一團的城市", out.清單 && out.查的字 === "一蘭" && out.偏重 && Math.abs(out.偏重.lat - 35.68) < 0.1, out);

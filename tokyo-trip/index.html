@@ -4161,13 +4161,15 @@
       if (b0) b0.disabled = false;
       if (!okUI) { seekUsedStrong[id] = true; seekSay(id, "清單載入出現錯誤,請稍後再試,或重新打開 App 再試一次。", true); return; }
       /* **每人每天固定次數**(一般 8、團主和副團主 12):先跟伺服器記一次,沒次數就不載清單 */
+      let ticket = "";
       try {
         const res = await fetch(AI_API + "?strong=1", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: "{}" });
         const body = await res.json().catch(() => ({}));
         if (body && body.strong) strongMine = body.strong;
+        ticket = (body && body.ticket) || "";
         if (res.status === 429) { seekReset(id); seekUsedStrong[id] = true; seekSay(id, body.error || "你今天的強力搜用完了", true); return; }
       } catch (_) { /* 記不到就放行 —— 數次數不能讓強力搜跟著壞 */ }
-      showUIKit(id, q);
+      showUIKit(id, q, ticket);
       return;
     }
     let res;
@@ -4321,7 +4323,7 @@
       try {
         if (!(window.google && google.maps && google.maps.importLibrary)) {
           const r = await api("?resource=mapskey");
-          if (!r || !r.key) return false;   /* 金鑰還沒設:走舊的強力搜 */
+          if (!r || !r.key) return false;   /* 金鑰還沒設:講清單載入出現錯誤 */
           /* Google 官方的載入程式(bootstrap loader),原樣照抄 */
           (g=>{var h,a,k,p="The Google Maps JavaScript API",c="google",l="importLibrary",q="__ib__",m=document,b=window;b=b[c]||(b[c]={});var d=b.maps||(b.maps={}),r=new Set,e=new URLSearchParams,u=()=>h||(h=new Promise(async(f,n)=>{await (a=m.createElement("script"));e.set("libraries",[...r]+"");for(k in g)e.set(k.replace(/[A-Z]/g,t=>"_"+t[0].toLowerCase()),g[k]);e.set("callback",c+".maps."+q);a.src=`https://maps.${c}apis.com/maps/api/js?`+e;d[q]=f;a.onerror=()=>h=n(Error(p+" could not load."));a.nonce=m.querySelector("script[nonce]")?.nonce||"";m.head.append(a)}));d[l]?console.warn(p+" only loads once. Ignoring:",g):d[l]=(f,...n)=>r.add(f)&&u().then(()=>d[l](f,...n))})({ key: r.key, language: "zh-TW" });
         }
@@ -4332,7 +4334,16 @@
     })();
     return uikitP;
   }
-  function showUIKit(id, q) {
+  /* 清單出錯 → 退回剛剛扣的那一次(2026-10-02:沒拿到東西不該少一次)。一張收據只退一次 */
+  async function refundStrong(ticket) {
+    if (!ticket) return;
+    try {
+      const res = await fetch(AI_API + "?strong=1&refund=1", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ticket }) });
+      const body = await res.json().catch(() => ({}));
+      if (res.ok && body && body.strong) { strongMine = body.strong; paintAIQuota(aiMine); }
+    } catch (_) { /* 退不回就算了 —— 頂多少一次,不能讓畫面卡住 */ }
+  }
+  function showUIKit(id, q, ticket) {
     seekReset(id); seekUsedStrong[id] = true;   /* 跟舊的強力搜一樣:只給用一次,跑完退回一般搜 */
     const box = seekBox(id);
     /* **橫的排法才有照片**(2026-10-02 用真的金鑰量過:直的清單不放照片,Google 自己的範例也一樣)。
@@ -4347,7 +4358,10 @@
     try { req.locationBias = { lat: CITY.lat, lng: CITY.lon }; } catch (_) {}
     ps.addEventListener("gmp-select", ev => takeGooglePlace(id, ev.place, q));
     ps.addEventListener("gmp-load", () => { if (!(ps.places || []).length) seekSay(id, "Google 也找不到「" + q + "」。可以換個說法,或先不填地點。", true); });
-    ps.addEventListener("gmp-error", () => seekSay(id, "Google 的清單沒有載出來,過一下再試", true));
+    ps.addEventListener("gmp-error", () => {
+      seekSay(id, "清單載入出現錯誤,請稍後再試,或重新打開 App 再試一次。", true);
+      const t = ticket; ticket = ""; refundStrong(t);   /* 同一份清單錯好幾次也只退一次 */
+    });
     /* textQuery 一設就開始查(官方:沒設 textQuery 其他設定都不算) */
     req.textQuery = q;
   }

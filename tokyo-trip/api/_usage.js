@@ -16,6 +16,7 @@
 //
 // **這兩張表出事的時候,AI 照常能用** —— 讀不到就不擋、不講剩幾次;寫不進去就少記一筆。
 
+const crypto = require("crypto");
 const NOTION = "https://api.notion.com/v1";
 const VERSION = "2022-06-28";
 const CALL_MS = 3000;   /* 比 AI 本身快很多才行 —— 數次數拖慢了 AI,就是本末倒置 */
@@ -232,7 +233,24 @@ async function strongUse(sub) {
       ...props, "鍵": { title: rt(day + " " + strongKey(sub)) }, "日期": { date: { start: day } },
       "模型": { rich_text: rt(strongKey(sub)) }, "用完": { checkbox: false } } }) });
   } catch (_) { /* 少記一次 */ }
-  return { ok: true, mine: Object.assign({}, m, { left: m.left - 1, used: m.used + 1 }) };
+  return { ok: true, mine: Object.assign({}, m, { left: m.left - 1, used: m.used + 1 }), ticket: strongTicket(sub, ptDay(), m.used + 1) };
+}
+/* **退回一次**(2026-10-02):扣了之後 Google 的清單出錯(斷線、Google 故障、全站 300 次到頂),
+   使用者什麼都沒拿到,不該少一次。要拿 strongUse 給的那張收據來退 —— 收據綁「誰、哪天、第幾次」,
+   而且只有那一次之後還沒再用過才退得了;退完次數少一,同一張就對不上了(不能一張退很多次)。 */
+function strongTicket(sub, day, n) {
+  const key = process.env.LINE_CHANNEL_SECRET || "";
+  return key ? crypto.createHmac("sha256", key).update("strong|" + sub + "|" + day + "|" + n).digest("base64url").slice(0, 22) : "";
+}
+async function strongRefund(sub, ticket) {
+  if (!ready() || !sub || !ticket) return { ok: false };
+  try {
+    const day = ptDay(), row = await strongRow(sub, day);
+    const used = (row && row.properties["次數"] && row.properties["次數"].number) || 0;
+    if (!row || used <= 0 || ticket !== strongTicket(sub, day, used)) return { ok: false };
+    await notion("/pages/" + row.id, { method: "PATCH", body: JSON.stringify({ properties: { "次數": { number: used - 1 } } }) });
+    return { ok: true, mine: await strongMine(sub) };
+  } catch (_) { return { ok: false }; }
 }
 
-module.exports = { mine, record, tally, tripEnded, strongMine, strongUse, LIMIT, STRONG, ptDay, nextReset, twWhen };
+module.exports = { mine, record, tally, tripEnded, strongMine, strongUse, strongRefund, LIMIT, STRONG, ptDay, nextReset, twWhen };

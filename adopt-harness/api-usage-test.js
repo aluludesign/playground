@@ -161,6 +161,23 @@ function ok(name, cond, extra) {
   r = await call("POST", "U-member", {}, { strong: "1" });
   ok("第 9 次 → 429「你今天的強力搜用完了,下午X點後再用」", r.code === 429 && r.body.why === "strong" && /強力搜用完了,(下午|早上|晚上).+點後再用/.test(r.body.error), r.body);
   ok("而且強力搜不會去問 Gemini(兩件事分開)", geminiCalls === 0, geminiCalls);
+  /* 退回(清單出錯):要拿那一次的收據;退過一次,同一張就不能再退 */
+  reset();
+  r = await call("POST", "U-member", {}, { strong: "1" });
+  r = await call("POST", "U-member", {}, { strong: "1" });
+  const tk = r.body.ticket;
+  ok("用一次會拿到一張收據", typeof tk === "string" && tk.length > 10, r.body);
+  r = await call("POST", "U-member", { ticket: "亂打的" }, { strong: "1", refund: "1" });
+  ok("收據不對 → 不退(409)", r.code === 409, r.body);
+  r = await call("POST", "U-member", { ticket: tk }, { strong: "1", refund: "1" });
+  ok("拿對的收據 → 退回,剩 7 次", r.code === 200 && r.body.strong && r.body.strong.left === 7, r.body);
+  r = await call("POST", "U-member", { ticket: tk }, { strong: "1", refund: "1" });
+  ok("同一張再退一次 → 不退(不能一張退很多次)", r.code === 409, r.body);
+  r = await call("POST", "U-member", {}, { strong: "1" });
+  ok("退完再用:照常扣,剩 6 次", r.code === 200 && r.body.strong.left === 6, r.body);
+  r = await call("POST", "U-boss", { ticket: r.body.ticket }, { strong: "1", refund: "1" });
+  ok("拿別人的收據 → 不退", r.code === 409, r.body);
+
   r = await call("POST", "", {}, { strong: "1" });
   ok("沒登入 → 401", r.code === 401, r.body);
   notionDown = true;
