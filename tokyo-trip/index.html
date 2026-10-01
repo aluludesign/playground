@@ -3987,8 +3987,10 @@
      他不會按。viewbox 留著當加權(這趟在哪就偏重哪),那個沒有壞處。 */
   async function seekPlace(q) {
     const rg = regionFor(q);
+    /* **免費搜不限 6 筆**(2026-10-01,Lulu):40 是 Nominatim 自己的上限。清單本來就會捲(露四則半),
+       縮圖是捲到才載(loading="lazy"),筆數多了不會一次全載 */
     return queued(() => fetch("https://nominatim.openstreetmap.org/search?format=json" +
-      "&limit=6&accept-language=zh-TW&countrycodes=" + rg.cc + "&viewbox=" + rg.view +
+      "&limit=40&accept-language=zh-TW&countrycodes=" + rg.cc + "&viewbox=" + rg.view +
       "&q=" + encodeURIComponent(q)).then(r => r.json()).catch(() => null));
   }
 
@@ -4219,11 +4221,7 @@
        所以它同時是「在最後面」和「一直看得到」。
        四則半是刻意的:露一半的那則就是在說「底下還有,可以捲」。
        **退路那句在更下面** —— 它是「都不挑也沒關係」,看完清單之後的事。 */
-    box.innerHTML = '<div class="hits">' +
-      res.map((r, i) =>
-        '<button type="button" class="hit" data-hit="' + id + '" data-i="' + i + '">' +
-        hitThumb(r) + '<span class="txt"><b>' + esc(hitName(r)) + '</b><span class="at">' +
-        esc(hitAddr(r)) + "</span></span></button>").join("") + "</div>" +
+    box.innerHTML = '<div class="hits">' + res.slice(0, HIT_PAGE).map((r, i) => hitHTML(id, r, i)).join("") + "</div>" +
       hintHTML(id) +
       /* **只有這一輪真的問了 Google 才標。** Google 的條款要求「在非 Google 地圖上
          顯示他們的 Places 資料要標來源」,而免費那家是 OpenStreetMap ——
@@ -4234,6 +4232,27 @@
     box.hidden = false;
     box._hits = res;
     capHits(box);
+    moreHitsOnScroll(box, id);
+  }
+
+  /* **候選分批出現,一次 8 筆**(2026-10-01,Lulu:搜尋清單動態載入,每 8 筆一次)。
+     資料是同一次請求就拿回來的(免費那段最多 40 筆),只是畫面上先排 8 筆,
+     捲到底再接下 8 筆 —— 一次排 40 列、40 張小地圖,手機上會頓。 */
+  const HIT_PAGE = 8;
+  const hitHTML = (id, r, i) =>
+    '<button type="button" class="hit" data-hit="' + id + '" data-i="' + i + '">' +
+    hitThumb(r) + '<span class="txt"><b>' + esc(hitName(r)) + '</b><span class="at">' +
+    esc(hitAddr(r)) + "</span></span></button>";
+  function moreHitsOnScroll(box, id) {
+    const list = box.querySelector(".hits");
+    if (!list || !box._hits || box._hits.length <= HIT_PAGE) return;
+    const more = () => {
+      const shown = list.querySelectorAll(".hit").length, all = box._hits;
+      if (shown >= all.length) return;
+      if (list.scrollTop + list.clientHeight < list.scrollHeight - 40) return;   /* 還沒捲到底 */
+      list.insertAdjacentHTML("beforeend", all.slice(shown, shown + HIT_PAGE).map((r, k) => hitHTML(id, r, shown + k)).join(""));
+    };
+    list.addEventListener("scroll", more, { passive: true });
   }
 
   /* **四則半是量出來的,不是用 CSS 猜的。** 每一列的高度不一樣(地址有的一行有的兩行、
