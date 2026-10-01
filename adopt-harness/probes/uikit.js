@@ -69,7 +69,7 @@ return (async function () {
       out.結論 = bad.length ? "✗ " + bad.join(" ;; ") : "全部通過"; out.errors = w.__errors || []; return out;
     }
     out.清單 = !!ps; out.查的字 = w.__uikitQuery; out.偏重 = w.__uikitBias;
-    ok("強力搜 → Google 的清單出現,查的是輸入框的字、偏重這一團的城市", out.清單 && out.查的字 === "一蘭" && out.偏重 && Math.abs(out.偏重.lat - 35.68) < 0.1, out);
+    ok("強力搜 → Google 的清單出現,查的是輸入框的字、偏重這一團的城市", out.清單 && out.查的字 === "一蘭" && out.偏重 && out.偏重.center && Math.abs(out.偏重.center.lat - 35.68) < 0.1 && out.偏重.radius === 50000, out);
     ok("沒有打舊的強力搜(places)", !calls().some(c => /^GET places/.test(c)), calls());
     out.照片 = !!q("#stop-form gmp-place-search gmp-place-media");
     ok("清單內容有照片那一項(gmp-place-all-content 不帶照片)", out.照片, "");

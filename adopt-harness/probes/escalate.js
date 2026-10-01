@@ -70,7 +70,7 @@ async function press(id) {
     osm.length = 0; goo.length = 0; osmReply = [];
     inp.value = "泡溫泉";
     await press("sf-title");
-    ok("第 1 次問免費那家", osm.length === 1 && goo.length === 0, { osm: osm.length, google: goo.length });
+    ok("第 1 次問免費那家(城市裡沒有 → 再放寬問一次,所以是 2 次)", osm.length === 2 && /bounded=1/.test(osm[0]) && osm[1].indexOf("bounded") < 0 && goo.length === 0, { osm: osm.length, google: goo.length });
     ok("第 1 次搜完就給「加地點名」", boxText("sf-title").indexOf("加入地點名") >= 0, boxText("sf-title"));
     ok("第 1 次**不問**要不要強力搜", boxText("sf-title").indexOf("強力搜") < 0, boxText("sf-title"));
     ok("按鈕還是「搜尋」", btn("sf-title").textContent === "搜尋", btn("sf-title").textContent);
@@ -113,7 +113,7 @@ async function press(id) {
        只換右下角那顆小東西的話,狀態變了而看的人不在那裡。 */
     ok("而且輸入框也跟著上膛(seek-armed)", inp.classList.contains("seek-armed"), inp.className);
     ok("**點下去那一下不查任何東西**(花錢的是下一下)",
-      osm.length === 2 && goo.length === 0, { osm: osm.length, google: goo.length });
+      osm.length === 4 && goo.length === 0, { osm: osm.length, google: goo.length });
     ok("而且它告訴你下一步做什麼", boxText("sf-title").indexOf("按「強力搜」") >= 0, boxText("sf-title"));
     ok("而且不再覆誦「好 ——」(按的那顆就在上一句話裡)",
       boxText("sf-title").indexOf("好 ——") < 0, boxText("sf-title"));
@@ -123,7 +123,7 @@ async function press(id) {
        有元件的那條(清單、挑一家、編號存進 Notion)在 probes/uikit.js。 */
     await press("sf-title");
     ok("強力搜不再打舊的伺服器搜尋(resource=places)", goo.length === 0, { google: goo.length });
-    ok("而且那一下也不問免費那家", osm.length === 2, { osm: osm.length });
+    ok("而且那一下也不問免費那家", osm.length === 4, { osm: osm.length });
     ok("載不出 Google 清單 → 講「清單載入出現錯誤」,叫他稍後或重開再試(不講免費不免費)",
       boxText("sf-title").indexOf("清單載入出現錯誤") >= 0 && boxText("sf-title").indexOf("免費") < 0, boxText("sf-title"));
     ok("按鈕**留在**「強力搜」(這一下沒花到錢,不該逼他重走一輪)",

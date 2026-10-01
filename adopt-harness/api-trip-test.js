@@ -526,6 +526,75 @@ const memberRow = (code, sub) => rowsIn(DB.members).find(p => plain(p.properties
   })();
   ok("伺服器沒設 LINE_CHANNEL_SECRET → 誰都是沒登入,讀不到任何一團", r.code === 401, r.body);
 
+  /* ================= 每人同時最多 2 團(2026-10-02) ================= */
+  /* C 已經開了台南那一團(還沒結束)。只算還沒結束的;TRIPPPS_ADMIN(最高權限,Lulu)不受限 */
+  const trip2 = { ...good, name: "第二團", myName: "小陳" };
+  /* 先補到「剛好 2 團還沒結束」(前面的測試可能動過 C 的團) */
+  r = await call(LINE_C, "GET", { resource: "trips" });
+  const openNow = r.body.trips.filter(t => t.role === "團主" && !(t.end < "2026-10-01")).length;
+  let T3 = "";
+  for (let i = openNow; i < 2; i++) {
+    r = await call(LINE_C, "POST", { resource: "trips" }, trip2);
+    ok("還沒滿 2 團 → 開得了(第 " + (i + 1) + " 團)", r.code === 200 && !!r.body.code, r.body);
+    T3 = r.body.code;
+  }
+  const before3 = writes;
+  r = await call(LINE_C, "POST", { resource: "trips" }, { ...trip2, name: "第三團" });
+  ok("第 3 團 → 429,講「已經有 2 團還沒結束」,而且 Notion 一筆都沒寫", r.code === 429 && r.body.why === "trips" &&
+    /已經有 2 團還沒結束/.test(r.body.error) && writes === before3, r.body);
+  const t3row = rowsIn(DB.trips).find(p => plain(p.properties["代號"]) === T3);
+  t3row.properties["開始日"] = { date: { start: "2026-01-01" } }; t3row.properties["結束日"] = { date: { start: "2026-01-05" } };
+  r = await call(LINE_C, "POST", { resource: "trips" }, { ...trip2, name: "第三團" });
+  ok("其中一團旅行結束了 → 那一團不佔名額,又開得了", r.code === 200 && !!r.body.code, r.body);
+  r = await call(LINE_C, "POST", { resource: "trips" }, { ...trip2, name: "第四團" });
+  ok("又滿 2 團還沒結束 → 再擋", r.code === 429, r.body);
+  process.env.TRIPPPS_ADMIN = "Uzzz, " + LINE_C;
+  r = await call(LINE_C, "POST", { resource: "trips" }, { ...trip2, name: "第四團" });
+  ok("最高權限(TRIPPPS_ADMIN)→ 開團不受限", r.code === 200 && !!r.body.code, r.body);
+  delete process.env.TRIPPPS_ADMIN;
+  r = await call(LINE_D, "GET", { resource: "trips" });
+  ok("只是加入別人的團,不算自己開的(D 照樣開得了)", (await call(LINE_D, "POST", { resource: "trips" }, { ...trip2, myName: "阿D" })).code === 200, "");
+
+  /* ================= 最高權限:隱藏、刪除任何一團(2026-10-02) ================= */
+  const LULU = "U" + "f".repeat(32);
+  r = await call(LINE_A, "GET", { resource: "admin" });
+  ok("不是最高權限 → 403,看不到所有的團", r.code === 403, r.body);
+  r = await call(LINE_A, "GET", { resource: "trips" });
+  ok("一般人的「我的團」回 admin:false", r.body.admin === false, r.body.admin);
+  process.env.TRIPPPS_ADMIN = LULU;
+  r = await call(LULU, "GET", { resource: "trips" });
+  ok("最高權限的「我的團」回 admin:true(前端才放「管理所有團」)", r.body.admin === true, r.body.admin);
+  r = await call(LULU, "GET", { resource: "admin" });
+  const t1 = r.body.trips && r.body.trips.find(t => t.code === T1);
+  ok("最高權限看得到所有的團:名稱、團主、幾個人、隱藏了沒(自己不在那團也看得到)",
+    r.code === 200 && t1 && !!t1.name && t1.owner === "佳瑜" && t1.people >= 2 && t1.hidden === false, t1 || r.body);
+  r = await call(LINE_A, "POST", { resource: "admin" }, { code: T1, action: "hide" });
+  ok("一般人(連團主也不行)不能隱藏", r.code === 403, r.body);
+  r = await call(LULU, "POST", { resource: "admin" }, { code: T1, action: "hide" });
+  ok("最高權限隱藏 → 「團」那一列勾上隱藏", r.code === 200 && rowsIn(DB.trips).find(p => plain(p.properties["代號"]) === T1).properties["隱藏"].checkbox === true, r.body);
+  r = await call(LINE_A, "GET", { resource: "team", t: T1 });
+  ok("隱藏的團:連團主也進不去,講「這一團暫時關閉了」", r.code === 403 && r.body.why === "hidden" && r.body.error === "這一團暫時關閉了", r.body);
+  r = await call(LINE_A, "GET", { resource: "itinerary", t: T1 });
+  ok("隱藏的團:讀行程也擋", r.code === 403 && r.body.why === "hidden", r.body);
+  r = await call(LINE_A, "GET", { resource: "trips" });
+  ok("「我的團」裡還在,標著 hidden(畫面寫「這一團暫時關閉了」)", r.body.trips.some(t => t.code === T1 && t.hidden === true), r.body.trips);
+  r = await call(LINE_C, "POST", { resource: "join" }, { trip: T1, invite: inviteA });
+  ok("隱藏的團:拿邀請碼也加入不了", r.code === 403 && r.body.why === "hidden", r.body);
+  r = await call(LULU, "POST", { resource: "admin" }, { code: T1, action: "unhide" });
+  r = await call(LINE_A, "GET", { resource: "team", t: T1 });
+  ok("取消隱藏 → 全部回來", r.code === 200 && r.body.trip && r.body.trip.code === T1, r.body);
+  r = await call(LULU, "POST", { resource: "admin" }, { code: T1, action: "delete", confirm: t1.name.slice(0, 1) });
+  ok("刪除:團名打得不一樣 → 不刪(400)", r.code === 400 && !!rowsIn(DB.trips).find(p => plain(p.properties["代號"]) === T1), r.body);
+  r = await call(LULU, "POST", { resource: "admin" }, { code: T1, action: "delete", confirm: t1.name });
+  ok("刪除:團名對了 → 團和它的每一列都丟進垃圾桶", r.code === 200 && r.body.deleted >= 3 &&
+    !rowsIn(DB.trips).some(p => plain(p.properties["代號"]) === T1) &&
+    !rowsIn(DB.members).some(p => plain(p.properties["團"]) === T1) && !rowsIn(DB.itinerary).some(p => plain(p.properties["團"]) === T1), r.body);
+  r = await call(LINE_C, "GET", { resource: "itinerary", t: T2 });
+  ok("別團的資料一筆都沒動", r.code === 200 && r.body.rows.length >= 1, r.body);
+  r = await call(LINE_A, "GET", { resource: "team", t: T1 });
+  ok("刪掉之後進那團 → 404「沒有這一團」", r.code === 404, r.body);
+  delete process.env.TRIPPPS_ADMIN;
+
   console.log(fails ? "\n有 " + fails + " 項沒過" : "\n全部通過");
   process.exit(fails ? 1 : 0);
 })();
