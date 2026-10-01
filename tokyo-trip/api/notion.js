@@ -318,9 +318,12 @@ const sameGoogleDay = iso => !!iso && ptDay(new Date(iso)) === ptDay();
 const twClock = iso => { try { return new Intl.DateTimeFormat("zh-TW", { timeZone: "Asia/Taipei", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(iso)); } catch (_) { return ""; } };
 const VIEW_AS_COOKIE = "trip_as";
 /* **每人同時最多當 2 團的團主**(2026-10-02,Lulu:30 人試用)。**只算還沒結束的團** ——
-   網站沒有刪團,結束的也算的話開滿就永遠不能再開。`TRIPS_NO_LIMIT`(Vercel,逗號分隔的 LINE 編號)不受限:Lulu 自己 */
+   結束的也算的話開滿就永遠不能再開。最高權限(見下)不受限 */
 const TRIPS_PER_PERSON = 2;
-const noTripLimit = sub => String(process.env.TRIPS_NO_LIMIT || "").split(",").map(x => x.trim()).filter(Boolean).includes(sub);
+/* **最高權限**(2026-10-02,Lulu):`TRIPPPS_ADMIN`(Vercel,逗號分隔的 LINE 編號)裡的人
+   開團不受限,而且能看到所有的團、隱藏或刪掉任何一團(`resource=admin`)。 */
+const isAdmin = sub => !!sub && String(process.env.TRIPPPS_ADMIN || "").split(",").map(x => x.trim()).filter(Boolean).includes(sub);
+const HIDDEN = "這一團暫時關閉了";
 
 /* 猜不到的代號。**團代號會出現在網址上,邀請碼會貼到 LINE 群組** ——
    兩個都不能是能用數的。去掉 0/o/1/l/i 這幾個手打容易錯的字。 */
@@ -366,6 +369,8 @@ function tripOut(page) {
     },
     /* 上一次換掉(或取消)副團主是什麼時候。**每天只能換一次**,擋住一直換人刷 AI 的 +5 */
     deputyAt: p["副團主換人時間"] && p["副團主換人時間"].date ? p["副團主換人時間"].date.start : "",
+    /* 最高權限勾了「隱藏」:資料都在,成員只看到「這一團暫時關閉了」 */
+    hidden: !!(p["隱藏"] && p["隱藏"].checkbox),
     /* **團的生命週期**(2026-10-01,Lulu):照旅遊當地時間算 ——
        started:第一天到了(第一天不能再改,最後一天只能往後延);
        ended:最後一天 23:59 過了 → 這一團結束,只剩團主和有記帳權限的副團主能動花費,AI 對所有人關掉 */
@@ -499,6 +504,7 @@ module.exports = async (req, res) => {
     if (!code) return { stop: { status: 400, error: "團的代號不對" } };
     const trip = await findTrip(code);
     if (!trip) return { stop: { status: 404, why: "no_trip", error: "沒有這一團,或它已經被刪掉了" } };
+    if (trip.hidden && !isAdmin(me.sub)) return { stop: { status: 403, why: "hidden", error: HIDDEN } };
     const members = await membersOf(code);
     const mine = members.find(m => m.line && m.line === me.sub);
     if (!mine) return { stop: { status: 403, why: "not_member", error: "你還不是這一團的人 —— 要有邀請碼才能加入" } };
@@ -533,10 +539,10 @@ module.exports = async (req, res) => {
           const t = await findTrip(m.trip);
           /* 團被刪掉、成員那一列還在:不列出來,不要給一個點了會 404 的東西 */
           if (t) trips.push({ code: t.code, name: t.name, country: t.country, city: t.city,
-                              start: t.start, end: t.end, role: m.role });
+                              start: t.start, end: t.end, role: m.role, hidden: t.hidden && !isAdmin(me.sub) });
         }
         trips.sort((a, b) => String(b.start || "").localeCompare(String(a.start || "")));
-        return res.status(200).json({ trips });
+        return res.status(200).json({ trips, admin: isAdmin(me.sub) });
       }
 
       const name = String(body.name || "").trim().slice(0, 40);
@@ -551,7 +557,7 @@ module.exports = async (req, res) => {
         return res.status(400).json({ error: "一團最長 60 天" });
       }
       if (!myName) return res.status(400).json({ error: "要填你在這團叫什麼" });
-      if (!noTripLimit(me.sub)) {
+      if (!isAdmin(me.sub)) {
         const owned = mine.filter(m => m.role === "團主");
         let open = 0;
         for (const m of owned) { const t = await findTrip(m.trip); if (t && !t.ended) open++; }
@@ -605,6 +611,7 @@ module.exports = async (req, res) => {
              畫面靠它決定要不要畫「切回團主」。dev 為真時才畫那顆切換鈕 —— 正式站不會有。 */
           me: { ...memberPublic(c.mine), role: c.role, realRole: c.mine.role, invite: c.mine.invite, seenAt: c.mine.seenAt || "" },
           dev: DEV,
+          admin: isAdmin(me.sub),   /* 最高權限:選單多一顆「管理所有團」 */
           viewAs: c.asMember ? "member" : "",
         });
       }
@@ -686,6 +693,63 @@ module.exports = async (req, res) => {
 
      **邀請碼是每個人各一組**(成員表的設計):朋友用誰的碼進來就記下是誰邀請的,
      想斷掉某一條擴散線就換那個人的碼,其他人的連結不受影響。 */
+  /* ================= 最高權限:所有的團(2026-10-02) =================
+     GET  → 所有的團(名稱、代號、日期、團主、幾個人、隱藏了沒)
+     POST { code, action: "hide" | "unhide" | "delete", confirm }
+       delete 要 confirm 打一樣的團名;團和它的成員、行程、許願、花費、交通、座位全部丟進 Notion 垃圾桶
+       (30 天內可以在 Notion 救回來)。 */
+  if (resource === "admin") {
+    if (!allow("GET", "POST")) return;
+    if (!me) return stop({ status: 401, why: "login", error: "請先用 LINE 登入" });
+    if (!isAdmin(me.sub)) return res.status(403).json({ error: "只有最高權限能用" });
+    try {
+      if (method === "GET") {
+        const pages = [];
+        let cursor;
+        do {
+          const page = await notion("/databases/" + DB.trips + "/query", { method: "POST",
+            body: JSON.stringify({ page_size: 100, start_cursor: cursor, sorts: [{ property: "開始日", direction: "descending" }] }) });
+          pages.push(...page.results);
+          cursor = page.has_more ? page.next_cursor : null;
+        } while (cursor);
+        const trips = [];
+        for (const pg of pages) {
+          const t = tripOut(pg), ms = await membersOf(t.code);
+          const boss = ms.find(m => m.role === "團主");
+          trips.push({ code: t.code, name: t.name, country: t.country, city: t.city, start: t.start, end: t.end,
+                       ended: t.ended, hidden: t.hidden, owner: boss ? boss.name : "", people: ms.length });
+        }
+        return res.status(200).json({ trips });
+      }
+      const code = codeOf(body.code), action = String(body.action || "");
+      const trip = code ? await findTrip(code) : null;
+      if (!trip) return res.status(404).json({ error: "沒有這一團,或它已經被刪掉了" });
+      if (action === "hide" || action === "unhide") {
+        await notion("/pages/" + trip.page, { method: "PATCH", body: JSON.stringify({ properties: { "隱藏": { checkbox: action === "hide" } } }) });
+        return res.status(200).json({ ok: true, hidden: action === "hide" });
+      }
+      if (action !== "delete") return res.status(400).json({ error: "不知道要做什麼" });
+      if (String(body.confirm || "").trim() !== trip.name) return res.status(400).json({ error: "團名打得不一樣,沒有刪" });
+      /* 先丟這一團的每一列,最後才丟「團」那一列 —— 中途斷掉的話團還在,可以再按一次刪乾淨 */
+      let n = 0;
+      for (const db of [DB.expenses, DB.itinerary, DB.seats, DB.flights, DB.members]) {
+        let cursor;
+        const ids = [];
+        do {
+          const page = await notion("/databases/" + db + "/query", { method: "POST",
+            body: JSON.stringify({ page_size: 100, start_cursor: cursor, filter: { property: "團", rich_text: { equals: code } } }) });
+          page.results.forEach(x => ids.push(x.id));
+          cursor = page.has_more ? page.next_cursor : null;
+        } while (cursor);
+        for (const id of ids) { await notion("/pages/" + id, { method: "PATCH", body: JSON.stringify({ archived: true }) }); n++; }
+      }
+      await notion("/pages/" + trip.page, { method: "PATCH", body: JSON.stringify({ archived: true }) });
+      return res.status(200).json({ ok: true, deleted: n });
+    } catch (e) {
+      return res.status(502).json({ error: "Notion 那邊出錯了:" + e.message });
+    }
+  }
+
   if (resource === "join") {
     if (!allow("GET", "POST")) return;
     if (!me) return stop({ status: 401, why: "login", error: "請先用 LINE 登入" });
@@ -695,6 +759,7 @@ module.exports = async (req, res) => {
     try {
       const trip = await findTrip(code);
       if (!trip) return stop({ status: 404, why: "no_trip", error: "沒有這一團,或它已經被刪掉了" });
+      if (trip.hidden && !isAdmin(me.sub)) return stop({ status: 403, why: "hidden", error: HIDDEN });
       const members = await membersOf(code);
       const already = members.find(m => m.line === me.sub);
       /* 已經在團裡的人再按一次邀請連結:直接放行,不要讓他看到一句「你已經加入了」的錯誤 */

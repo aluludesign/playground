@@ -216,10 +216,26 @@ FAKE_JS = r"""(function(){
     var r = param(s, "resource");
     if (!me) return reply({ error: "請先用 LINE 登入", why: "login" }, 401);
     var mine = MEMBERS.filter(function(m){ return m.id === ME_ID; })[0];
+    /* admin=1:最高權限(2026-10-02)。hidden=1:這一團被隱藏了(不是最高權限就進不去) */
+    var ADMIN = /[?&]admin=1/.test(q), HID = /[?&]hidden=1/.test(q);
+    window.__adminTrips = window.__adminTrips || [
+      { code: CODE, name: TRIP.name, country: TRIP.country, city: TRIP.city, start: TRIP.start, end: TRIP.end, ended: false, hidden: false, owner: "佳瑜", people: MEMBERS.length },
+      { code: "other123", name: "別人的團", country: "台灣", city: "高雄", start: "2026-11-01", end: "2026-11-03", ended: false, hidden: true, owner: "阿輝", people: 2 }];
+    if (r === "admin") {
+      if (!ADMIN) return reply({ error: "只有最高權限能用" }, 403);
+      if (method === "GET") return reply({ trips: window.__adminTrips });
+      var at = window.__adminTrips.filter(function(t){ return t.code === body.code; })[0];
+      if (!at) return reply({ error: "沒有這一團,或它已經被刪掉了" }, 404);
+      if (body.action === "delete") {
+        if (body.confirm !== at.name) return reply({ error: "團名打得不一樣,沒有刪" }, 400);
+        window.__adminTrips = window.__adminTrips.filter(function(t){ return t !== at; }); return reply({ ok: true, deleted: 9 });
+      }
+      at.hidden = body.action === "hide"; return reply({ ok: true, hidden: at.hidden });
+    }
     if (r === "trips") {
       if (method === "POST") return reply({ code: "newtrip1", me: { id: "mnew01", name: body.myName, color: "#E60012", role: "團主" } });
       return reply({ trips: joined ? [{ code: CODE, name: TRIP.name, country: TRIP.country, city: TRIP.city,
-        start: TRIP.start, end: TRIP.end, role: mine.role }] : [] });
+        start: TRIP.start, end: TRIP.end, role: mine.role, hidden: HID && !ADMIN }] : [], admin: ADMIN });
     }
     if (r === "join") {
       if (method === "GET") return param(s, "code") === "q4wn8t"
@@ -229,6 +245,7 @@ FAKE_JS = r"""(function(){
       joined = true;
       return reply({ joined: true, me: { id: ME_ID, name: body.name, color: "#E60012", role: "成員" }, trip: { code: CODE, name: TRIP.name } });
     }
+    if (HID && !ADMIN) return reply({ error: "這一團暫時關閉了", why: "hidden" }, 403);
     if (!joined) return reply({ error: "你還不是這一團的人 —— 要有邀請碼才能加入", why: "not_member" }, 403);
     if (r === "team") {
       if (method === "PATCH") {
@@ -244,7 +261,7 @@ FAKE_JS = r"""(function(){
       /* 測試環境的「用成員身分看」:跟伺服器同一條規則(只有團主能降級;prod=1 模擬正式站,整個不理) */
       var dev = !/[?&]prod=1/.test(q);
       var asM = dev && mine.role === "團主" && /(?:^|;\s*)trip_as=member/.test(document.cookie);
-      return reply({ trip: TRIP, members: MEMBERS, dev: dev, viewAs: asM ? "member" : "",
+      return reply({ trip: TRIP, members: MEMBERS, dev: dev, admin: ADMIN, viewAs: asM ? "member" : "",
         me: { id: mine.id, name: mine.name, color: mine.color, role: asM ? "成員" : mine.role, realRole: mine.role, invite: "q4wn8t",
               joinedAt: mine.joinedAt, seenAt: mine.role === "團主" ? SEEN.at : "" } });
     }

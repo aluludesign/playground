@@ -1095,6 +1095,11 @@
     .home-trip b{font-size:15px; font-weight:600;}
     .home-trip small{grid-column:1; font-size:12px; color:var(--muted);}
     .home-trip .role{grid-row:1 / span 2; grid-column:2; font-size:11px; color:var(--muted);}
+    .home-trip.off{cursor:default; opacity:.6;}
+    .home-trip.off:hover{border-color:var(--line);}
+    .home-trip.adm{cursor:default; opacity:1;}
+    .home-trip.adm.off b{color:var(--muted);}
+    .home-trip .adm-ops{grid-row:1 / span 2; grid-column:2; display:flex; gap:6px;}
     .home-card-form{display:grid; gap:12px;}
     .set-sep{border:0; border-top:1px solid var(--line); margin:4px 0;}
     .inv-row{display:flex; gap:8px; align-items:center;}
@@ -2090,6 +2095,7 @@
   /* 測試環境(preview)才有的:團主可以切成「用成員身分看」。伺服器說了才算,正式站 dev 永遠是 false。 */
   let devEnv = false;
   let viewAs = "";
+  let isAdmin = false;   /* 最高權限(2026-10-02):伺服器說了才算 */
   const setViewAs = v => {
     document.cookie = "trip_as=" + (v ? "member" : "") + "; Path=/; SameSite=Lax; Secure" + (v ? "" : "; Max-Age=0");
     location.reload();
@@ -2142,6 +2148,7 @@
     trip = body.trip;
     myMember = body.me || null;
     devEnv = !!body.dev;
+    isAdmin = !!body.admin;
     viewAs = body.viewAs || "";
     /* **能不能編輯,是從身分算出來的,而且一塊一塊算**:團主永遠可以;成員要看團主開了哪些開關。 */
     const c = (trip && trip.can) || {};
@@ -6731,7 +6738,7 @@
     if (kind === "trips") {
       c.innerHTML = '<h2 id="home-title">我的團</h2><p>讀取中…</p>';
       let trips = [];
-      try { trips = (await api("?resource=trips")).trips || []; }
+      try { const b = await api("?resource=trips"); trips = b.trips || []; isAdmin = !!b.admin; }
       catch (e) {
         if (e.why === "login") return openHome("signin");
         c.innerHTML = '<h2 id="home-title">我的團</h2><div class="err">讀不到你的團:' + esc(e.message) + "</div>";
@@ -6740,13 +6747,18 @@
       /* **一團都沒有就直接開團** —— 空的清單配一顆「開新的一團」,多一步沒有意義 */
       if (!trips.length) return openHome("create", { first: true });
       c.innerHTML = '<h2 id="home-title">我的團</h2>' +
-        '<div class="home-list">' + trips.map(t =>
-          '<a class="home-trip" href="?t=' + encodeURIComponent(t.code) + '"><b>' + esc(t.name) + "</b>" +
+        '<div class="home-list">' + trips.map(t => t.hidden
+          /* 最高權限隱藏了這一團:還列著,但點不進去 */
+          ? '<div class="home-trip off" aria-disabled="true"><b>' + esc(t.name) + "</b><small>這一團暫時關閉了</small>" +
+            '<span class="role">' + esc(t.role) + "</span></div>"
+          : '<a class="home-trip" href="?t=' + encodeURIComponent(t.code) + '"><b>' + esc(t.name) + "</b>" +
           "<small>" + esc(t.city || t.country) + " · " + fmtRange(t.start, t.end) + "</small>" +
           '<span class="role">' + esc(t.role) + "</span></a>").join("") + "</div>" +
         '<div class="ops"><button type="button" class="btn btn-main" id="h-new">開新的一團</button>' +
+        (isAdmin ? '<button type="button" class="btn btn-sm" id="h-admin">管理所有團</button>' : "") +
         '<button type="button" class="btn btn-ghost btn-sm" id="h-out">登出</button></div>';
       el("h-new").addEventListener("click", () => openHome("create"));
+      if (el("h-admin")) el("h-admin").addEventListener("click", () => openHome("admin"));
       el("h-out").addEventListener("click", logout);
       return;
     }
@@ -6832,6 +6844,43 @@
       });
       return;
     }
+    /* **最高權限:所有的團**(2026-10-02,Lulu)—— 隱藏(資料都在,成員看到「這一團暫時關閉了」)、
+       取消隱藏、刪除(整團丟進 Notion 垃圾桶,30 天內可以在 Notion 救回來;要打團名確認) */
+    if (kind === "admin") {
+      c.innerHTML = '<h2 id="home-title">管理所有團</h2><p>讀取中…</p>';
+      let all = [];
+      try { all = (await api("?resource=admin")).trips || []; }
+      catch (e) { c.innerHTML = '<h2 id="home-title">管理所有團</h2><div class="err">' + esc(e.message) + "</div>"; return; }
+      c.innerHTML = '<h2 id="home-title">管理所有團</h2><p>共 ' + all.length + " 團。隱藏:資料都在,成員只看到「這一團暫時關閉了」。刪除:整團丟進 Notion 垃圾桶,30 天內可以在 Notion 救回來。</p>" +
+        '<div class="home-list">' + all.map(t =>
+          '<div class="home-trip adm' + (t.hidden ? " off" : "") + '"><b>' + esc(t.name) + (t.hidden ? " · 隱藏中" : t.ended ? " · 已結束" : "") + "</b>" +
+          "<small>團主 " + esc(t.owner || "?") + " · " + t.people + " 人 · " + esc(t.city || t.country) + " · " + fmtRange(t.start, t.end) + " · " + esc(t.code) + "</small>" +
+          '<span class="adm-ops"><button type="button" class="btn btn-sm" data-adm="' + (t.hidden ? "unhide" : "hide") + '" data-code="' + esc(t.code) + '">' + (t.hidden ? "取消隱藏" : "隱藏") + "</button>" +
+          '<button type="button" class="btn btn-sm btn-ghost" data-adm="delete" data-code="' + esc(t.code) + '" data-name="' + esc(t.name) + '">刪除</button></span></div>').join("") + "</div>" +
+        '<div class="err" id="adm-err" hidden></div>' +
+        '<div class="ops"><a class="btn btn-ghost btn-sm" href="' + location.pathname + '">回我的團</a></div>';
+      c.querySelectorAll("[data-adm]").forEach(b => b.addEventListener("click", async () => {
+        const action = b.dataset.adm, code = b.dataset.code;
+        let confirmName = "";
+        if (action === "delete") {
+          confirmName = prompt("刪除「" + b.dataset.name + "」:整團(成員、行程、許願、花費、交通)都丟進 Notion 垃圾桶。\n確定的話,打一次團名:") || "";
+          if (!confirmName) return;
+        }
+        b.disabled = true;
+        try {
+          await api("?resource=admin", { method: "POST", body: JSON.stringify({ code, action, confirm: confirmName }) });
+          flash(action === "delete" ? "刪掉了" : action === "hide" ? "隱藏了" : "取消隱藏了");
+          openHome("admin");
+        } catch (e) { const er = el("adm-err"); er.textContent = e.message; er.hidden = false; b.disabled = false; }
+      }));
+      return;
+    }
+    /* 最高權限隱藏了這一團 */
+    if (kind === "hidden") {
+      c.innerHTML = '<h2 id="home-title">這一團暫時關閉了</h2><p>資料都還在,開放之後就能再進來。</p>' +
+        '<div class="ops"><a class="btn btn-main" href="' + location.pathname + '">回我的團</a></div>';
+      return;
+    }
     if (kind === "notrip") {
       c.innerHTML = '<h2 id="home-title">找不到這一團</h2><p>可能網址少了幾個字,或這一團已經被刪掉了。</p>' +
         '<div class="ops"><a class="btn btn-main" href="' + location.pathname + '">回我的團</a></div>';
@@ -6870,6 +6919,7 @@
         '<button type="button" class="btn btn-sm" id="cloud-invite">邀請朋友</button>' +
         '<button type="button" class="btn btn-sm btn-ghost" id="cloud-set">團的設定</button>' +
         '<a class="btn btn-sm btn-ghost" id="cloud-home" href="' + location.pathname + '">我的團</a>' +
+        (isAdmin ? '<button type="button" class="btn btn-sm btn-ghost" id="cloud-admin">管理所有團</button>' : "") +
         /* 只在測試環境、而且你真正是團主的時候才畫 —— 正式站 devEnv 永遠是 false */
         (devEnv && myMember && myMember.realRole === "團主"
           ? '<button type="button" class="btn btn-sm btn-ghost" id="cloud-viewas">' + (viewAs ? "切回團主(測試)" : "用成員身分看(測試)") + "</button>"
@@ -6890,6 +6940,7 @@
     if (el("cloud-invite")) el("cloud-invite").addEventListener("click", openInvite);
     if (el("cloud-viewas")) el("cloud-viewas").addEventListener("click", () => setViewAs(!viewAs));
     if (el("cloud-set")) el("cloud-set").addEventListener("click", openSettings);
+    if (el("cloud-admin")) el("cloud-admin").addEventListener("click", () => openHome("admin"));
     if (el("cloud-out")) el("cloud-out").addEventListener("click", logout);
     if (el("cloud-in")) el("cloud-in").addEventListener("click", () => location.reload());
   }
@@ -7636,6 +7687,7 @@
       if (e.why === "login") { openHome("signin"); return; }
       if (e.why === "not_member") { openHome("join"); return; }
       if (e.why === "no_trip") { openHome("notrip"); return; }
+      if (e.why === "hidden") { openHome("hidden"); return; }
       /* 連不上:有這一團的副本就顯示副本(唯讀),沒有就講清楚 */
       if (!goLocal()) openHome("offline", { msg: "連不上伺服器:" + e.message });
       else flash("連不上,先顯示上次讀到的資料:" + e.message);
