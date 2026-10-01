@@ -3955,8 +3955,10 @@
      他不會按。viewbox 留著當加權(這趟在哪就偏重哪),那個沒有壞處。 */
   async function seekPlace(q) {
     const rg = regionFor(q);
+    /* **免費搜不限 6 筆**(2026-10-01,Lulu):40 是 Nominatim 自己的上限。清單本來就會捲(露四則半),
+       縮圖是捲到才載(loading="lazy"),筆數多了不會一次全載 */
     return queued(() => fetch("https://nominatim.openstreetmap.org/search?format=json" +
-      "&limit=6&accept-language=zh-TW&countrycodes=" + rg.cc + "&viewbox=" + rg.view +
+      "&limit=40&accept-language=zh-TW&countrycodes=" + rg.cc + "&viewbox=" + rg.view +
       "&q=" + encodeURIComponent(q)).then(r => r.json()).catch(() => null));
   }
 
