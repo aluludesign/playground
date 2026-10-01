@@ -19,6 +19,11 @@ return (async function () {
   q("#menu-btn").click();
   q("#ai-btn").click(); await wait(250);
   out.對話框 = txt("#ai-quota"); out.交給AI按得下去 = !q("#ai-go").disabled;
+  /* 提示字照能做的事組(2026-10-01):一般成員只有許願;只勾行程的副團主沒有「車票」 */
+  out.提示字 = q("#ai-text").placeholder;
+  if (mode === "owner") ok("團主:提示字三種都有", /許願/.test(out.提示字) && /第 3 天/.test(out.提示字) && /車票/.test(out.提示字), out.提示字);
+  if (mode === "member" && !deputy) ok("一般成員:提示字只有許願的例子", !/第 3 天|車票/.test(out.提示字), out.提示字);
+  if (mode === "member" && /can=plan/.test(qs)) ok("只勾行程的副團主:有「第 3 天」、沒有「車票」", /第 3 天/.test(out.提示字) && !/車票/.test(out.提示字), out.提示字);
   q("#ai-cancel").click(); await wait(50);
   if (!aiQ) ok("讀不到次數 → 選單和對話框都不講", !out.選單看得到 && !out.對話框, out);
   else if (+aiQ[1] === 0) ok("用完:講「你的 AI 額度用完了,下午三點後再用」,按不下去;選單也講用完", /你的 AI 額度用完了,下午三點後再用/.test(out.對話框) && !out.交給AI按得下去 && /用完了/.test(out.選單), out);
