@@ -273,7 +273,7 @@ module.exports = async (req, res) => {
     if (!who) return res.status(401).json({ error: "請先用 LINE 登入", why: "login" });
     const u = await U.strongUse(who.sub);
     if (!u.ok) return res.status(429).json({ why: "strong", strong: u.mine,
-      error: "你今天的強力搜用完了," + (u.mine.when || "明天") + "後再用 —— 先用免費搜尋" });
+      error: "你今天的強力搜用完了," + (u.mine.when || "明天") + "後再用" });
     return res.status(200).json({ ok: true, strong: u.mine });
   }
   if (req.method !== "POST") {
@@ -365,7 +365,7 @@ module.exports = async (req, res) => {
     ? "(測試環境才看得到:" + String(last.status || "") + " " + String(last.message).slice(0, 160) + ")" : "";
   /* 失敗的時候附上 Google 回的代碼(只有數字,不是英文原話):之後再有人回報,看得出是哪一種 */
   const tag = codes.length ? "(Google " + Array.from(new Set(codes)).join("/") + ")" : "";
-  const msg = (quota ? "今天的免費 AI 額度用完了,明天再試,或先手動加" + tag
+  const msg = (quota ? "今天的 AI 額度用完了,明天再試,或先手動加" + tag
     : busy ? "AI 現在太忙(Google 那邊),過幾分鐘再試一次" + tag
     : last && last.soft ? last.message
     : "AI 這次沒成功,再試一次") + why;

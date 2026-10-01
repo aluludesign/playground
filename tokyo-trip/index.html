@@ -4159,7 +4159,7 @@
     if (strong) {
       const okUI = await uikitReady();
       if (b0) b0.disabled = false;
-      if (!okUI) { seekUsedStrong[id] = true; seekSay(id, "Google 的清單現在載不出來,先用免費搜尋,或先不填地點(之後再改)。", true); return; }
+      if (!okUI) { seekUsedStrong[id] = true; seekSay(id, "清單載入出現錯誤,請稍後再試,或重新打開 App 再試一次。", true); return; }
       /* **每人每天固定次數**(一般 8、團主和副團主 12):先跟伺服器記一次,沒次數就不載清單 */
       try {
         const res = await fetch(AI_API + "?strong=1", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: "{}" });
@@ -4294,7 +4294,7 @@
     if (!h) return "";
     if (h !== HINT_STRONG) return '<div class="said hint">' + esc(h) + "</div>";
     /* 強力搜用完了:不給那顆按鈕,講幾點重算 */
-    if (strongMine && strongMine.left <= 0) return '<div class="said hint">' + esc("今天的強力搜用完了(" + (strongMine.when || "明天") + "重算),先用免費搜尋。") + "</div>";
+    if (strongMine && strongMine.left <= 0) return '<div class="said hint">' + esc("今天的強力搜用完了(" + (strongMine.when || "明天") + "重算)。") + "</div>";
     /* 「」留在一般文字色,只有三個字是連結 —— 引號是句子的一部分,不是按鈕的。 */
     return '<div class="said hint ask">' + esc(h) + "「" +
       '<button type="button" class="seek-arm" data-arm="' + id + '">強力搜</button>' +

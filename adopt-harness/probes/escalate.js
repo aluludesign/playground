@@ -124,8 +124,8 @@ async function press(id) {
     await press("sf-title");
     ok("強力搜不再打舊的伺服器搜尋(resource=places)", goo.length === 0, { google: goo.length });
     ok("而且那一下也不問免費那家", osm.length === 2, { osm: osm.length });
-    ok("載不出 Google 清單 → 講清楚,叫他先用免費搜尋或先不填",
-      boxText("sf-title").indexOf("Google 的清單現在載不出來") >= 0, boxText("sf-title"));
+    ok("載不出 Google 清單 → 講「清單載入出現錯誤」,叫他稍後或重開再試(不講免費不免費)",
+      boxText("sf-title").indexOf("清單載入出現錯誤") >= 0 && boxText("sf-title").indexOf("免費") < 0, boxText("sf-title"));
     ok("按鈕**留在**「強力搜」(這一下沒花到錢,不該逼他重走一輪)",
       btn("sf-title").textContent === "強力搜", btn("sf-title").textContent);
     ok("退路那句也在(他按到最後一段了)", boxText("sf-title").indexOf("也可以許願") >= 0, boxText("sf-title"));

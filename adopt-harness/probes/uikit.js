@@ -45,13 +45,13 @@ return (async function () {
   b.click(); await wait(400);
   if (stQ && +stQ[1] === 0) {
     out.用完 = { 提示: txt("#sf-title-out"), 清單: !!q("#stop-form gmp-place-search") };
-    ok("強力搜用完(strong=0/8):不給強力搜那顆、講幾點重算", !arm && /強力搜用完了/.test(txt("#sf-title-out")), out.用完);
+    ok("強力搜用完(strong=0/8):不給強力搜那顆、講幾點重算", !arm && /強力搜用完了/.test(txt("#sf-title-out")) && !/免費/.test(txt("#sf-title-out")), out.用完);
     out.結論 = bad.length ? "✗ " + bad.join(" ;; ") : "全部通過"; out.errors = w.__errors || []; return out;
   }
   if (noUI) {
     out.呼叫 = calls().filter(c => /mapskey|places/.test(c));
-    ok("沒有 UI Kit(金鑰拿不到):不再走舊的強力搜,講「Google 的清單現在載不出來」", out.呼叫.some(c => /mapskey/.test(c)) && !out.呼叫.some(c => /^GET places/.test(c)) &&
-      !q("#stop-form gmp-place-search") && /Google 的清單現在載不出來/.test(txt("#sf-title-out")), { 呼叫: out.呼叫, 說: txt("#sf-title-out") });
+    ok("沒有 UI Kit(金鑰拿不到):不再走舊的強力搜,講「清單載入出現錯誤」", out.呼叫.some(c => /mapskey/.test(c)) && !out.呼叫.some(c => /^GET places/.test(c)) &&
+      !q("#stop-form gmp-place-search") && /清單載入出現錯誤/.test(txt("#sf-title-out")) && !/免費/.test(txt("#sf-title-out")), { 呼叫: out.呼叫, 說: txt("#sf-title-out") });
   } else {
     var ps = q("#stop-form gmp-place-search");
     if (stQ) {
