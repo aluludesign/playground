@@ -1,5 +1,5 @@
-/* 通知的小鈴鐺(2026-09-29,Lulu):AI 和漢堡選單中間。2026-10-02 起全部人都有;「去填座位」只給團主和副團主。
- * PAGE='/index.html?newbie=1'             團主上次看過之後,小美加入了 → 紅點;點開有「去填座位」
+/* 通知的小鈴鐺(2026-09-29,Lulu):AI 和漢堡選單中間。2026-10-02 起全部人都有;「可能要調整:座位、之前的帳」那一句只給團主和副團主(不再有按鈕)。
+ * PAGE='/index.html?newbie=1'             團主上次看過之後,小美加入了 → 紅點;點開講「可能要調整:交通的座位、之前記的帳」
  * PAGE='/index.html?newbie=1&noflights=1'  還沒有交通 → 只說誰加入了
  * PAGE='/index.html?newbie=1&fake=member'  一般成員 → 看得到小美加入,沒有座位提醒
  * PAGE='/index.html?feed=1'                動態:許願、行程、交通、新帳;照時間排、新的有點、點了跳過去
@@ -44,17 +44,9 @@ return (async function () {
   bell.click(); await wait(200);
   out.清單 = txt("#bell-list"); out.去填座位 = !!q("#bell-list [data-bell-fly]");
   if (!newbie) ok("點開:目前沒有新通知(之前的照列,但不再提醒填座位)", /^目前沒有新通知/.test(out.清單) && !out.去填座位 && seen() === 0, out);
-  else if (noflights) ok("還沒有交通:只說誰加入了,沒有去填座位", /小美 加入了這一團/.test(out.清單) && !out.去填座位 && !/座位/.test(out.清單), out);
-  else ok("有交通:說誰加入了、座位多了空格、有去填座位", /小美 加入了這一團/.test(out.清單) && /座位多了小美的空格/.test(out.清單) && out.去填座位, out);
+  else if (noflights) ok("還沒有交通:講誰加入了、帳要不要算他(有記過帳),不講座位、沒有按鈕", /小美 加入了這一團/.test(out.清單) && /可能要調整:之前記的帳要不要也算小美一份/.test(out.清單) && !/座位/.test(out.清單) && !out.去填座位, out);
+  else ok("有交通也有帳:一句話講兩處(座位、之前的帳),沒有按鈕", /小美 加入了這一團/.test(out.清單) && /可能要調整:交通的座位\(多了小美的空格\)、之前記的帳要不要也算小美一份/.test(out.清單) && !out.去填座位 && !q("#bell-list li button"), out);
   if (newbie) ok("點開之後紅點收掉,伺服器記下看過了", !shown(q("#bell-dot")) && seen() === 1, { 紅點: shown(q("#bell-dot")), 記: seen() });
-  if (newbie && !noflights) {
-    q("#bell-list [data-bell-fly]").click(); await wait(200);
-    out.點了之後 = { 分頁: (q('.tab[aria-selected="true"]') || {}).id, 清單關了: q("#bell-pop").hidden };
-    ok("去填座位 → 到交通頁、通知收起來", out.點了之後.分頁 === "tab-fly" && out.點了之後.清單關了, out.點了之後);
-    q("[data-flight-edit]").click(); await wait(100);
-    ok("交通表單裡有小美的座位格", !!q("#fl-seat-new_friend"), "");
-    q("#fl-cancel").click();
-  }
   return fin();
   function fin() { out.結論 = bad.length ? "✗ " + bad.join(" ;; ") : "全部通過"; out.errors = w.__errors || []; return out; }
 })();
