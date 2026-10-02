@@ -871,12 +871,23 @@
     /* iOS Safari 把 input[type=time] 畫成一顆圓角灰按鈕,跟旁邊的文字框差很多。
        關掉原生外觀讓它跟其他欄位一樣 —— 點下去還是叫得出原生的時間轉盤。
        ::-webkit-date-and-time-value 預設有自己的 margin 和置中,也要一起清掉。 */
-    .fld input[type="time"],.fld input[type="date"]{
+    /* datetime-local(交通的起飛/抵達)也一樣 —— 2026-10-02 量到它比旁邊的文字欄高 2px,
+       並排那一列就跟著高,下一列的間距變成 14 */
+    .fld input[type="time"],.fld input[type="date"],.fld input[type="datetime-local"]{
       -webkit-appearance:none; appearance:none; font-family:inherit; height:auto;}
     .fld input[type="time"]::-webkit-date-and-time-value,
-    .fld input[type="date"]::-webkit-date-and-time-value{margin:0; text-align:left; line-height:1.5;}
+    .fld input[type="date"]::-webkit-date-and-time-value,
+    .fld input[type="datetime-local"]::-webkit-date-and-time-value{margin:0; text-align:left; line-height:1.5;}
+    /* Chrome 的日期時間欄裡面那一層自帶上下各 1px —— 量到就是多出來的那 2px */
+    .fld input[type="time"]::-webkit-datetime-edit,
+    .fld input[type="date"]::-webkit-datetime-edit,
+    .fld input[type="datetime-local"]::-webkit-datetime-edit,
+    .fld input[type="time"]::-webkit-datetime-edit-fields-wrapper,
+    .fld input[type="date"]::-webkit-datetime-edit-fields-wrapper,
+    .fld input[type="datetime-local"]::-webkit-datetime-edit-fields-wrapper{padding:0;}
     .fld input[type="time"]::-webkit-calendar-picker-indicator,
-    .fld input[type="date"]::-webkit-calendar-picker-indicator{opacity:.45; padding:0; margin:0;
+    .fld input[type="date"]::-webkit-calendar-picker-indicator,
+    .fld input[type="datetime-local"]::-webkit-calendar-picker-indicator{opacity:.45; padding:0; margin:0;
       width:1em; height:1em; block-size:1em;}
     .fld input[type="number"]{font-family:var(--font-mono);}
     /* :53 的 :focus-visible 也設了 border-radius:4px(那是為了讓沒有圓角的東西
@@ -1084,7 +1095,10 @@
       overflow-y:auto; overscroll-behavior:contain;
       background:color-mix(in srgb, var(--paper) 86%, transparent); backdrop-filter:blur(6px);}
     .signin{margin:auto; width:100%; max-width:380px; background:var(--surface); border:1px solid var(--line); border-radius:12px;
-      padding:24px 22px; box-shadow:var(--shadow); display:grid; gap:14px;}
+      padding:24px 22px; box-shadow:var(--shadow); display:grid; gap:12px;}
+    /* **對話框裡上下兩格輸入框一律 12px**(2026-10-02,Lulu)。包著好幾格的那一層(例如「團的設定」的 #set-trip、
+       共同基金那一塊)以前是普通的 div,裡面的格子一格貼一格(量到 0px)。驗收:probes/dialog-gap.js */
+    .signin div:has(> .fld):not(.grid2):not(.fld){display:grid; gap:12px;}
     .signin h2{font-family:var(--font-sign); font-size:19px; letter-spacing:.03em;}
     .signin p{font-size:12.5px; color:var(--muted); line-height:1.55;}
     .signin .err{font-size:12.5px; color:var(--neg); line-height:1.5;}
@@ -1143,7 +1157,7 @@
       .dev-badge{position:fixed; left:50%; transform:translateX(-50%); bottom:calc(env(safe-area-inset-bottom, 0px) + 70px);
         z-index:40; box-shadow:var(--shadow);}
     }
-    .seatform{display:grid; grid-template-columns:auto 1fr; gap:6px 10px; align-items:center;}
+    .seatform{display:grid; grid-template-columns:auto 1fr; gap:12px 10px; align-items:center;}
     /* 看板是深底,設計系統的淺色按鈕放上去像貼了一張便條紙 —— 改成看板自己的線和字色 */
     .board .pen, .board .board-add{background:transparent; border:1px solid var(--board-line); color:var(--board-muted); box-shadow:none;}
     .board .pen:hover, .board .board-add:hover{color:var(--board-ink); border-color:var(--board-muted);}
