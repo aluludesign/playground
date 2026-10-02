@@ -107,7 +107,8 @@ def pixels(p):
     return w, h, ch, out
 
 near = lambda v, t: all(abs(v[j] - t[j]) <= 12 for j in range(3))
-AMBER, bad = (0xF0, 0xB4, 0x29), False
+# 2026-10-02 起圖形是 emoji 🗼(紅白,不是琥珀色):改數「不是底色」的像素 —— 要擋的一樣是「整張只有底色」
+BG, bad = (0x12, 0x14, 0x1A), False
 # 門檻分兩級。maskable 那張的圖形縮到 0.68,面積只剩 0.46 倍,琥珀色自然少一半 ——
 # 拿滿版那張的門檻去套它會誤報。要擋的是「完全沒畫上去」(0%),不是「畫小了」,
 # 所以兩個門檻都離 0 很近就夠,不必貼著實測值。
@@ -116,7 +117,7 @@ FLOOR = {"icon-192.png": 3.0, "icon-512.png": 3.0,
 for name, floor in FLOOR.items():
     p = pathlib.Path(sys.argv[1]) / name
     w, h, ch, rows = pixels(p)
-    hit = sum(1 for r in rows for x in range(0, w * ch, ch) if near(r[x:x+3], AMBER))
+    hit = sum(1 for r in rows for x in range(0, w * ch, ch) if not near(r[x:x+3], BG))
     pct = 100.0 * hit / (w * h)
     ok = pct >= floor
     print("  %-22s %dx%d  塔佔 %.1f%%(至少要 %.1f%%)  %s"
