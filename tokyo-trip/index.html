@@ -2999,14 +2999,14 @@
   /* ================= 通知:有新成員加入(2026-09-29,Lulu) =================
      團主要知道有人加入了 —— 交通的座位是照成員列的,有人加入就多一格,但不說的話沒人會去填。
      **右上角一個小鈴鐺**(AI 和漢堡選單中間),有新的就一個紅點;點開列出誰加入了:
-       - 這一團已經有交通:多一句「座位多了他的空格」和「去填座位」
+       - 團主、副團主多一句「可能要調整:交通的座位、之前記的帳」(2026-10-02 起不放「去填座位」按鈕)
        - 還沒有交通:只說誰加入了
      「看過了」記在伺服器(成員表的「通知已讀」),換手機不會再通知一次。
      給團主和副團主(2026-10-02,Lulu:副團主看到的跟團主一樣)—— 各自記各自看過了沒。
      一般成員沒有(測試環境「用成員身分看」時也不會有)。 */
   /* **2026-10-02 起全部人都有鈴鐺**(Lulu):誰許願、哪一天行程改了什麼(含願望排進行程)、交通異動、
      有新帳要分(只給要分的人)、有新人加入。自己做的不通知自己。動態記在伺服器的「動態」表。
-     有新人加入:全部人都看得到;「座位多了他的空格 / 去填座位」只給團主和副團主。 */
+     有新人加入:全部人都看得到;「可能要調整:…」那一句只給團主和副團主。 */
   let newcomers = [], feed = [], bellSince = "", newcomersSeen = false;
   const bellBoss = () => !!myMember && (myMember.role === "團主" || myMember.role === "副團主");
   function checkNewcomers() {
@@ -3029,11 +3029,17 @@
   /* 一則一則照時間排(新的在上面);比上次打開鈴鐺還新的是「沒看過的」 */
   function bellItems() {
     const boss = bellBoss(), legs = (state.flights || []).some(f => !KIND[kindOf(f)].noSeats);
-    /* 座位提醒只掛在「還沒看過」的那幾位身上 —— 早就加入的人,再提醒一次只是噪音 */
-    const items = newcomers.map(m => ({ at: m.joinedAt, kind: "成員",
-      html: "<span><b>" + esc(nameOf(m.id)) + "</b> 加入了這一團</span>" +
-        (boss && legs && m.joinedAt > bellSince ? "<small>交通的座位多了" + esc(nameOf(m.id)) + "的空格</small>" +
-          '<button type="button" class="btn btn-sm" data-bell-fly>去填座位</button>' : "") }));
+    /* **新人加入,要調整的不只座位**(2026-10-02,Lulu):帳也可能要算他一份。不放按鈕,用一句話講有哪幾處要看 ——
+       只講這一團真的有的(有要劃位的交通才講座位、記過帳才講分攤)。只掛在「還沒看過」的那幾位身上 */
+    const hasExp = (state.expenses || []).length > 0;
+    const items = newcomers.map(m => {
+      const n = esc(nameOf(m.id)), todo = [];
+      if (legs) todo.push("交通的座位(多了" + n + "的空格)");
+      if (hasExp) todo.push("之前記的帳要不要也算" + n + "一份");
+      return { at: m.joinedAt, kind: "成員",
+        html: "<span><b>" + n + "</b> 加入了這一團</span>" +
+          (boss && todo.length && m.joinedAt > bellSince ? "<small>可能要調整:" + todo.join("、") + "</small>" : "") };
+    });
     for (const x of feed) items.push({ at: x.at, kind: x.kind, day: x.day, html: "<span>" + esc(x.text) + "</span>" });
     return items.sort((a, b) => String(b.at).localeCompare(String(a.at))).slice(0, 40);
   }
@@ -3082,7 +3088,6 @@
     }
     btn.addEventListener("click", ev => { ev.stopPropagation(); open(pop.hidden); });
     pop.addEventListener("click", ev => {
-      if (ev.target.closest("[data-bell-fly]")) { open(false); switchTab("fly"); return; }
       /* 點一則 = 去那裡看:行程跳到那一天、交通、花費、許願 */
       const li = ev.target.closest("[data-bell-go]");
       if (!li) return;
