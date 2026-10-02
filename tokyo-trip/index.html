@@ -1257,6 +1257,22 @@
     .seatfld{display:flex; flex-direction:column; gap:8px; min-width:0;}
     /* 花費那張表欄位多,要寬一點,而且手機上高度會爆,所以讓它自己捲 */
     .signin.wide{max-width:440px; max-height:calc(100vh - 40px); overflow-y:auto; gap:12px;}
+    /* ---- 疊起來的卡片(AI 一次讀到好幾段交通,2026-10-02)----
+       後面兩張是裝飾,往下錯開、縮一點;存了這張 → 它往左滑走(slide-out),後面那張推到前面(advance)。 */
+    .stack{position:relative; margin:auto; width:100%; max-width:440px;}
+    /* **好幾筆的時候,卡片一律是螢幕的 60% 高**(2026-10-02,Lulu):每一張一樣大,換下一張不會忽大忽小;內容多就在卡片裡捲 */
+    .stack.multi > .signin{height:60vh; max-height:60vh; overflow-y:auto; align-content:start;}
+    /* **景深**(Lulu:前後要有景深、大小的區別):越後面越小、越往下、越暗、影子越淡;最前面那張影子最重 */
+    .stack > .signin{position:relative; z-index:2; margin:0; max-width:none;
+      box-shadow:0 10px 28px rgba(60,30,15,.22), 0 2px 6px rgba(60,30,15,.12);}
+    .stack-ghost{position:absolute; inset:0; border-radius:12px; background:var(--surface); border:1px solid var(--line);
+      pointer-events:none; transform-origin:50% 100%; transition:transform .3s ease, filter .3s ease, box-shadow .3s ease;}
+    .stack-ghost.g1{z-index:1; transform:translateY(16px) scale(.93); filter:brightness(.95); box-shadow:0 6px 16px rgba(60,30,15,.14);}
+    .stack-ghost.g2{z-index:0; transform:translateY(30px) scale(.86); filter:brightness(.89); box-shadow:0 3px 8px rgba(60,30,15,.10);}
+    .stack.advance .stack-ghost.g1{transform:none; filter:none; box-shadow:0 10px 28px rgba(60,30,15,.22), 0 2px 6px rgba(60,30,15,.12);}
+    .stack.advance .stack-ghost.g2{transform:translateY(16px) scale(.93); filter:brightness(.95); box-shadow:0 6px 16px rgba(60,30,15,.14);}
+    .stack > .signin.slide-out{transform:translateX(-120%) rotate(-6deg); opacity:0; transition:transform .32s ease-in, opacity .32s ease-in;}
+    .stack-n{position:absolute; top:26px; right:22px; font-family:var(--font-mono); font-size:12px; color:var(--muted);}
 
     @media (max-width:1279px){
       .topbar h1{font-size:19px;}
@@ -1744,8 +1760,12 @@
 <!-- 加一段交通 / 改這一段。**交通不是只有飛機**(Lulu,2026-09-28):先選種類,下面的欄位跟著換字、
      租車沒有座位、改問誰開車。座位也在這裡填 —— 以前只能靠 AI 按鈕改座位。 -->
 <div class="overlay" id="flight-overlay" hidden>
+  <!-- AI 一次讀到好幾段(2026-10-02,Lulu):後面疊著還沒填的那幾張,存了這張就往左滑走、後面那張推上來 -->
+  <div class="stack" id="fl-stack">
+  <div class="stack-ghost g2" id="fl-g2" hidden></div>
+  <div class="stack-ghost g1" id="fl-g1" hidden></div>
   <form class="signin wide" id="flight-form">
-    <h2 id="fl-title">加一段交通</h2>
+    <h2 id="fl-title">加一段交通</h2><span class="stack-n" id="fl-stack-n" hidden></span>
     <p class="note" id="fl-ai" hidden></p>
     <div class="fld"><span class="rm-label">種類</span><div class="who kinds" id="fl-kinds" role="radiogroup" aria-label="種類"></div></div>
     <div class="grid2">
@@ -1773,11 +1793,13 @@
       <button type="button" class="btn btn-ghost btn-sm" id="fl-cancel">取消</button>
     </div>
   </form>
+  </div>
 </div>
 
 <div class="overlay" id="exp-edit-overlay" hidden>
   <form class="signin wide" id="exp-edit-form">
-    <h2>改這一筆</h2>
+    <h2 id="xe-h2">改這一筆</h2>
+    <p class="note" id="xe-ai" hidden></p>
     <div class="grid2">
       <div class="fld"><label class="rm-label" for="xe-date">日期</label><input class="rm-input" type="date" id="xe-date" required></div>
       <div class="fld"><label class="rm-label" for="xe-title">項目</label><input class="rm-input" type="text" id="xe-title" required></div>
@@ -1793,6 +1815,7 @@
     <div class="err" id="xe-err" hidden></div>
     <div class="ops">
       <button type="submit" class="btn btn-main">存起來</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="xe-skip" hidden>跳過這一筆</button>
       <button type="button" class="btn btn-ghost btn-sm" id="xe-cancel">取消</button>
     </div>
   </form>
@@ -1887,6 +1910,7 @@
     <div class="err" id="ai-cerr" hidden></div>
     <div class="ops">
       <button type="submit" class="btn btn-main" id="ai-ok">確定</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="ai-skip" hidden>跳過這一筆</button>
       <button type="button" class="btn btn-ghost btn-sm" id="ai-back">重來</button>
       <button type="button" class="btn btn-ghost btn-sm" id="ai-cancel2">取消</button>
     </div>
@@ -1906,6 +1930,7 @@
     <div class="err" id="wf-err" hidden></div>
     <div class="ops">
       <button type="submit" class="btn btn-main" id="wf-submit">許下去</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="wf-skip" hidden>跳過這一筆</button>
       <button type="button" class="btn btn-ghost btn-sm" id="wf-cancel">取消</button>
     </div>
   </form>
@@ -3435,7 +3460,9 @@
     el("flight-overlay").hidden = false;
     if (kind === "租車") el("fl-airline").focus(); else el("fl-no").focus();
   }
-  function closeFlight() { el("flight-overlay").hidden = true; flightEditing = null; delete el("flight-overlay").dataset.keep; }
+  function closeFlight() { el("flight-overlay").hidden = true; flightEditing = null; delete el("flight-overlay").dataset.keep; paintStack(0, 0); }
+  function paintStack(pos, total) { stackPaint("flight-form", pos, total); }
+  async function slideToNextAI() { await stackSlide("flight-form", openNextAI); }
   el("fl-kinds").addEventListener("change", () => applyKind(flKind()));
 
   /* 把某一段的座位寫回去。**空白代表「這個人這段沒有座位」**:原本有就刪掉 ——
@@ -3503,11 +3530,11 @@
       /* 租車沒有座位:換成租車的那一段,原本的座位一起清掉(seats 是空的,writeSeats 會刪) */
       await writeSeats(legKey(row), dayOf(row.depart), seats);
       saveSnap();
-      closeFlight();
       render();
       renderCountdown();
       flash(was ? "改好了" : "加好了:" + legName(row));
-      openNextAI();   /* AI 一次讀到好幾段:存完這一段,接著開下一段 */
+      /* AI 一次讀到好幾段:存完這一段,這張往左滑走、接著是下一段;沒有了才關 */
+      if (aiQueue.length) await slideToNextAI(); else closeFlight();
     } catch (e) {
       showFlightErr(e.message);
     }
@@ -5787,6 +5814,8 @@
     const e = state.expenses.find(x => x.id === id);
     if (!e) return;
     editingExp = id;
+    el("xe-h2").textContent = "改這一筆"; el("xe-ai").hidden = true; el("xe-skip").hidden = true;
+    stackPaint("exp-edit-form", 0, 0);
     el("xe-date").value = e.date || "";
     el("xe-title").value = e.title || "";
     el("xe-cat").value = e.category || "other";
@@ -5802,6 +5831,8 @@
   function closeExpEdit() {
     editingExp = null;
     showExpError("");
+    aiItems = []; aiItemTotal = 0; stackPaint("exp-edit-form", 0, 0);
+    delete el("exp-edit-overlay").dataset.keep;
     el("exp-edit-overlay").hidden = true;
   }
   el("xe-cancel").addEventListener("click", closeExpEdit);
@@ -5814,6 +5845,19 @@
     const ps = Array.prototype.map.call(el("xe-who").querySelectorAll("input:checked"), i => i.value);
     if (!ps.length) { showExpError("至少要選一個人分攤。"); return; }
     const id = editingExp;
+    /* AI 讀到的新的一筆(editingExp === "new"):記進去;後面還有就滑到下一筆 */
+    if (id === "new") {
+      addExpense({
+        id: uid(), date: el("xe-date").value, title, category: el("xe-cat").value,
+        amount: Math.abs(parseFloat(el("xe-amount").value) || 0), currency: el("xe-cur").value,
+        payerId: el("xe-payer").value || null, participants: ps, note: el("xe-note").value.trim(),
+        createdAt: new Date().toISOString(),
+      });
+      flash("記下來了:" + title);
+      if (aiItems.length) { stackSlide("exp-edit-form", openExpenseNextAI); return; }
+      closeExpEdit();
+      return;
+    }
     const patch = {
       date: el("xe-date").value,
       title: title,
@@ -6274,7 +6318,55 @@
   function closeAI() {
     el("ai-overlay").hidden = true;
     seekClear("ai-title");
+    aiItems = []; aiItemTotal = 0; stackPaint("ai-confirm", 0, 0); delete el("ai-overlay").dataset.keep;
   }
+
+  /* ================= 疊起來的卡片(AI 一次讀到好幾筆,2026-10-02,Lulu) =================
+     **交通、行程、許願、記帳都一樣**:後面疊著還沒填的(最多畫三張的樣子),右上角「第幾 / 共幾」;
+     一張一張填,**存了這張才往左滑走**、後面那張推上來;「跳過這一筆」直接換下一張;「取消」後面的都不要了。
+     好幾筆的時候卡片一律螢幕 60% 高。 */
+  function stackOf(formId) {
+    const form = el(formId);
+    let st = form.parentElement;
+    if (!st.classList.contains("stack")) {
+      st = document.createElement("div"); st.className = "stack";
+      form.parentElement.insertBefore(st, form);
+      const g2 = document.createElement("div"), g1 = document.createElement("div");
+      g2.className = "stack-ghost g2"; g1.className = "stack-ghost g1"; g2.hidden = g1.hidden = true;
+      st.append(g2, g1, form);
+    }
+    let n = form.querySelector(":scope > .stack-n");
+    if (!n) { n = document.createElement("span"); n.className = "stack-n"; n.hidden = true; form.insertBefore(n, form.firstChild); }
+    return { st, form, g1: st.querySelector(".g1"), g2: st.querySelector(".g2"), n };
+  }
+  function stackPaint(formId, pos, total) {
+    const k = stackOf(formId), left = total > 1 ? total - pos : 0;
+    k.g1.hidden = left < 1; k.g2.hidden = left < 2;
+    k.n.hidden = !(total > 1); k.n.textContent = total > 1 ? pos + " / " + total : "";
+    k.st.classList.toggle("multi", total > 1);
+  }
+  /* 存了這張、後面還有:這張往左滑走,後面那張推上來,再把下一筆填進表單 */
+  async function stackSlide(formId, fillNext) {
+    const k = stackOf(formId);
+    const still = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (!still) {
+      k.form.classList.add("slide-out"); k.st.classList.add("advance");
+      await new Promise(res => setTimeout(res, 330));
+    }
+    /* 換內容的那一下不要有動畫,不然會看到它從左邊飛回來 */
+    k.form.style.transition = k.g1.style.transition = k.g2.style.transition = "none";
+    k.form.classList.remove("slide-out"); k.st.classList.remove("advance");
+    fillNext();
+    k.form.scrollTop = 0;
+    void k.form.offsetWidth;
+    k.form.style.transition = k.g1.style.transition = k.g2.style.transition = "";
+  }
+  /* 行程、許願、記帳那一列(交通用自己的 aiQueue) */
+  let aiItems = [], aiItemTotal = 0, aiItemSay = "";
+  const itemsOf = r => (Array.isArray(r.items) && r.items.length ? r.items : [r]);
+  function startItems(r) { aiItems = itemsOf(r).slice(); aiItemTotal = aiItems.length; aiItemSay = r.message || ""; }
+  const itemPos = () => aiItemTotal - aiItems.length;
+  const itemSay = (pos, total, what) => (total > 1 ? "AI 讀到 " + total + " " + what + ",這是第 " + pos + " " + what + "。" : "") + (aiItemSay && pos <= 1 ? aiItemSay : "");
 
   /* 哪一種資料要哪幾欄。類型選單可以改 —— AI 看錯了,人換一下就好,不必重來。 */
   const AI_FIELDS = {
@@ -6306,7 +6398,7 @@
     aiLast = r;
     /* 記帳(要排在「只能許願」那條捷徑前面,只勾記帳的副團主才不會被帶去許願表):打開「記一筆」,讀到的填進去(有記帳權限的人);沒有的話留在這裡講清楚 */
     if (r.intent === "expense") {
-      if (editable("cost")) { closeAI(); openExpenseFromAI(r); return; }
+      if (editable("cost")) { closeAI(); startItems(r); openExpenseNextAI(); return; }
       aiErr("ai-err", "這看起來是一筆花費。記帳只有團主和副團主能用(看團主勾了哪幾塊)。");
       return;
     }
@@ -6317,20 +6409,23 @@
     }
     if (!editable("plan") && !editable("seat")) {
       closeAI();
-      openWishAdd();
-      el("wish-add-overlay").dataset.keep = "1";   /* AI 填的也算「改過」 */
-      el("wf-title").value = r.title || "";
-      el("wf-note").value = r.note || "";
-      sayHere("wish-msg", r.message || "");
-      /* 有地名就先搜一次 —— **挑哪一個還是人挑**,跟手動加同一條規則。 */
-      if (r.title) runSeek("wf-title");
+      startItems(r);
+      openWishNextAI();
       return;
     }
     aiLast = r;
     /* 交通:直接打開「加一段交通」,讀到的都填進去 —— 同一張表、同一份驗證,這裡不長第二套 */
     if (r.intent === "transport" && mayFly()) { closeAI(); startAIQueue(r); return; }
-    el("ai-say").textContent = r.message || "";
     el("ai-kind").value = r.intent === "unknown" ? "wish" : r.intent;
+    startItems(r);
+    fillAIConfirm(aiItems.shift());
+    el("ai-form").hidden = true; el("ai-confirm").hidden = false;
+    aiShowKind();
+  }
+  /* 確認卡上填一筆(好幾筆的時候,存了一筆就滑到下一筆) */
+  function fillAIConfirm(r) {
+    const pos = itemPos(), total = aiItemTotal;
+    el("ai-say").textContent = itemSay(pos, total, "筆") || r.message || "";
     el("ai-day").innerHTML = DAYS.map(d => '<option value="' + d.date + '">Day ' + d.n + " · " +
       d.date.slice(5).replace("-", "/") + " (" + d.w + ")</option>").join("");
     el("ai-day").value = r.day || state.day;
@@ -6342,27 +6437,52 @@
     el("ai-by").innerHTML = '<option value="">— 選一下 —</option>' + MEMBERS.map(m =>
       '<option value="' + m.id + '"' + (m.id === me ? " selected" : "") + ">" + esc(nameOf(m.id)) + "</option>").join("");
     lockWho(el("ai-by"));
-    el("ai-form").hidden = true; el("ai-confirm").hidden = false;
-    aiShowKind();
+    el("ai-skip").hidden = !(total > 1);
+    stackPaint("ai-confirm", pos, total);
+    if (total > 1) el("ai-overlay").dataset.keep = "1";
     /* 有地名就先幫他搜一次:**挑哪一個還是人挑**,這裡只是省他按一下「搜尋」。
        不挑的話照樣存得進去,只是不上地圖 —— 跟手動加同一條規則(locatedAt)。 */
-    if (r.title && r.intent !== "transport") runSeek("ai-title");
+    if (r.title && el("ai-kind").value !== "transport") runSeek("ai-title");
   }
-
-  /* **AI 讀到一筆花費 → 打開「記一筆」**(2026-10-01)。讀到的才填,讀不到的留原本的預設;
-     誰付的、誰分攤 AI 不猜(收據上看不出來),人自己勾 */
-  function openExpenseFromAI(r) {
+  /* 許願表(只能許願的人):一筆一筆開 */
+  function openWishNextAI() {
+    const r = aiItems.shift(); if (!r) return false;
+    const pos = itemPos(), total = aiItemTotal;
+    openWishAdd();
+    el("wish-add-overlay").dataset.keep = "1";   /* AI 填的也算「改過」 */
+    el("wf-title").value = r.title || "";
+    el("wf-note").value = r.note || "";
+    sayHere("wish-msg", itemSay(pos, total, "筆") || r.message || "");
+    el("wf-skip").hidden = !(total > 1);
+    stackPaint("wish-form", pos, total);
+    /* 有地名就先搜一次 —— **挑哪一個還是人挑**,跟手動加同一條規則。 */
+    if (r.title) runSeek("wf-title");
+    return true;
+  }
+  /* 記帳:AI 讀到的打開「記一筆」對話框(以前是花費頁上那張內嵌的表;要疊卡片,改成對話框) */
+  function openExpenseNextAI() {
+    const r = aiItems.shift(); if (!r) return false;
+    const pos = itemPos(), total = aiItemTotal;
     switchTab("cost");
-    fillPeopleControls();
-    if (!el("ef-date").value) el("ef-date").value = defaultDate();
-    toggleForm("exp-form", true);
-    const put = (id, v) => { if (v) el(id).value = v; };
-    put("ef-title", r.title); put("ef-date", r.date); put("ef-note", r.note);
-    if (r.amount) el("ef-amount").value = r.amount;
-    if (r.currency) el("ef-cur").value = r.currency;
+    editingExp = "new";
+    el("xe-h2").textContent = "記一筆";
+    el("xe-date").value = r.date || defaultDate();
+    el("xe-title").value = r.title || "";
     const cat = CATS.find(c => c.name === r.category);
-    if (cat) el("ef-cat").value = cat.id;
-    flash("AI 讀到的都填好了,看一下誰付的、誰分攤再存" + (r.message ? " · " + r.message : ""));
+    el("xe-cat").value = cat ? cat.id : "other";
+    el("xe-amount").value = r.amount || "";
+    el("xe-cur").value = r.currency === "TWD" || (trip && trip.currency === "TWD") ? "TWD" : (r.currency || "JPY");
+    fillExpPeople("", IDS.slice());
+    el("xe-note").value = r.note || "";
+    el("xe-ai").textContent = itemSay(pos, total, "筆") + "AI 讀到的都填好了,看一下誰付的、誰分攤再存。";
+    el("xe-ai").hidden = false;
+    el("xe-skip").hidden = !(total > 1);
+    showExpError("");
+    stackPaint("exp-edit-form", pos, total);
+    tuckMapForDialog(false);
+    el("exp-edit-overlay").dataset.keep = "1";
+    el("exp-edit-overlay").hidden = false;
+    return true;
   }
 
   /* AI 讀到一段交通 → 打開交通表單。**已經有的那一段就改它**(AI 說的 id,或種類 + 班次 + 日期對得上),
@@ -6410,6 +6530,7 @@
       (aiSay && pos <= 1 ? " " + aiSay : "");
     el("fl-ai").hidden = false;
     el("fl-skip").hidden = !(total > 1);
+    paintStack(pos, total);
     el("flight-overlay").dataset.keep = "1";   /* AI 填的也算「改過」:點外面不會把它丟掉 */
   }
 
@@ -6471,7 +6592,12 @@
   el("ai-file").addEventListener("change", ev => takeAIImage(ev, false));
   el("ai-cam").addEventListener("change", ev => takeAIImage(ev, true));
   el("ai-kind").addEventListener("change", aiShowKind);
+  /* 跳過這一筆:不存,直接下一筆;最後一筆跳過就關 */
+  el("ai-skip").addEventListener("click", () => { if (aiItems.length) fillAIConfirm(aiItems.shift()); else closeAI(); });
+  el("wf-skip").addEventListener("click", () => { if (!openWishNextAI()) closeWishAdd(); });
+  el("xe-skip").addEventListener("click", () => { if (!openExpenseNextAI()) closeExpEdit(); });
   el("ai-back").addEventListener("click", () => {
+    aiItems = []; aiItemTotal = 0; stackPaint("ai-confirm", 0, 0);
     seekClear("ai-title");
     el("ai-confirm").hidden = true; el("ai-form").hidden = false;
     el("ai-text").focus();
@@ -6527,10 +6653,11 @@
       const by = el("ai-by").value;
       if (!by) { aiErr("ai-cerr", "還認不出你是誰 —— 重新整理一下再許一次。"); return; }
       addWish({ id: uid(), title, place, note, by, votes: [by], createdAt: new Date().toISOString() });
+      flash("已加進許願:" + title);
+      if (aiItems.length) { await stackSlide("ai-confirm", () => fillAIConfirm(aiItems.shift())); return; }
       closeAI();
       switchTab("wish");
       checkPlace({ place, title }, "wish-msg");
-      flash("已加進許願:" + title);
       return;
     }
     if (k === "stop") {
@@ -6538,18 +6665,19 @@
       if (!title) { aiErr("ai-cerr", "總要寫要去哪。"); return; }
       if (!time) { aiErr("ai-cerr", "行程要有時間,填一下。"); return; }
       addStop({ id: uid(), day, time, title, place, note });
+      const d = DAYS.find(x => x.date === day);
+      flash("已加到 Day " + (d ? d.n : "") + ":" + time + " " + title);
+      if (aiItems.length) { await stackSlide("ai-confirm", () => fillAIConfirm(aiItems.shift())); return; }
       closeAI();
       state.day = day;
       switchTab("plan");
       renderDays(); renderRoute();
       checkPlace({ place, title }, "stop-msg");
-      const d = DAYS.find(x => x.date === day);
-      flash("已加到 Day " + (d ? d.n : "") + ":" + time + " " + title);
       return;
     }
     /* 交通、記帳:換到這一類再按確定 —— 打開那張表,把 AI 讀到的填進去 */
     closeAI();
-    if (k === "expense") { openExpenseFromAI(aiLast || {}); return; }
+    if (k === "expense") { startItems(aiLast || {}); openExpenseNextAI(); return; }
     startAIQueue(aiLast || {});
   });
 
@@ -6607,6 +6735,7 @@
     el("wf-title").focus();
   }
   function closeWishAdd() {
+    aiItems = []; aiItemTotal = 0; stackPaint("wish-form", 0, 0); el("wf-skip").hidden = true;
     el("wish-add-overlay").hidden = true;
     seekClear("wf-title");
     showWishError("");
@@ -6637,6 +6766,7 @@
        存進去之後地圖上就是沒有它,而使用者分不出那是「我沒填」「還在查」還是「壞了」。
        跟行程走同一個 checkPlace(),不長第二套。 */
     checkPlace({ place: place, title: title }, "wish-msg");
+    if (aiItems.length) { flash("已加進許願:" + title); stackSlide("wish-form", openWishNextAI); return; }
     el("wish-form").reset();
     closeWishAdd();
   });

@@ -47,7 +47,8 @@ return (async function () {
     q("#ai-btn").click(); await wait(100);
     out.提示字 = q("#ai-text").placeholder;
     q("#ai-text").value = "這張收據"; q("#ai-form").requestSubmit(); await wait(400);
-    out.記一筆 = { 開著: !q("#exp-form").hidden, 分頁: (q('.tab[aria-selected="true"]') || {}).id, 項目: q("#ef-title").value, 金額: q("#ef-amount").value, 幣別: q("#ef-cur").value, 日期: q("#ef-date").value, 分類: q("#ef-cat").value, AI關了: q("#ai-overlay").hidden };
+    /* 2026-10-02 起 AI 讀到的帳開「記一筆」對話框(為了好幾筆可以疊卡片),不再是花費頁上那張內嵌的表 */
+    out.記一筆 = { 開著: !q("#exp-edit-overlay").hidden && q("#xe-h2").textContent === "記一筆", 分頁: (q('.tab[aria-selected="true"]') || {}).id, 項目: q("#xe-title").value, 金額: q("#xe-amount").value, 幣別: q("#xe-cur").value, 日期: q("#xe-date").value, 分類: q("#xe-cat").value, AI關了: q("#ai-overlay").hidden };
     ok("提示字有「收據」的例子", /收據/.test(out.提示字), out.提示字);
     ok("AI 讀收據 → 到花費頁、打開記一筆,項目/金額/幣別/日期/分類都填好", out.記一筆.開著 && out.記一筆.分頁 === "tab-cost" && out.記一筆.項目 === "一蘭拉麵" &&
       out.記一筆.金額 === "2980" && out.記一筆.幣別 === "JPY" && out.記一筆.日期 === "2026-10-05" && out.記一筆.分類 === "food" && out.記一筆.AI關了, out.記一筆);

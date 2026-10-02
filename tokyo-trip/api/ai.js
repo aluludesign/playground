@@ -100,6 +100,24 @@ const LEG = {
   },
   required: ["kind", "no", "company", "depart", "from", "arrive", "to", "code", "dir", "match", "note", "seats"],
 };
+/* **一次可能好幾筆**(2026-10-02,Lulu:「只要是能用 AI 的功能都要一樣」):好幾個想去的地方、好幾個行程、
+   一張收據兩筆帳……每一筆列在 items。最外層那幾欄照舊放第一筆(舊的前端只看最外層,也接得住)。 */
+function itemSchema(ctx) {
+  return {
+    type: "OBJECT",
+    properties: {
+      title:   { type: "STRING", description: "地點/活動名稱(wish/stop)或店名/買了什麼(expense)" },
+      day:     { type: "INTEGER", description: "stop:第幾天(1–" + (ctx.days.length || 1) + ");沒說就 0" },
+      time:    { type: "STRING", description: "stop:HH:MM;看不到就空字串" },
+      note:    { type: "STRING", description: "值得記下的細節,100 字以內;沒有就空字串" },
+      amount:  { type: "NUMBER", description: "expense:這一筆的金額;看不出來 0" },
+      currency:{ type: "STRING", enum: ["JPY", "TWD", "unknown"] },
+      date:    { type: "STRING", description: "expense:YYYY-MM-DD;看不出來空字串" },
+      category:{ type: "STRING", enum: ["交通", "住宿", "餐飲", "景點", "購物", "其他"] },
+    },
+    required: ["title", "day", "time", "note", "amount", "currency", "date", "category"],
+  };
+}
 function schema(ctx) {
   return {
     type: "OBJECT",
@@ -116,9 +134,10 @@ function schema(ctx) {
       date:    { type: "STRING", description: "expense:消費日期 YYYY-MM-DD;看不出來就空字串" },
       category:{ type: "STRING", enum: ["交通", "住宿", "餐飲", "景點", "購物", "其他"], description: "expense:分類" },
       legs:    { type: "ARRAY", description: "transport:讀到的每一段交通,照時間先後;文字和圖片講的是不同段就各列一段。不是交通就空陣列", items: LEG },
+      items:   { type: "ARRAY", description: "wish/stop/expense:讀到的每一筆(好幾個想去的地方、好幾個行程、好幾筆花費各列一筆,照出現的順序);只有一筆也列一筆。transport 用 legs,這裡空陣列", items: itemSchema(ctx) },
       message: { type: "STRING", description: "給使用者的一句話:判斷的理由,或還缺什麼資訊。繁體中文,40 字以內" },
     },
-    required: ["intent", "title", "day", "time", "note", "amount", "currency", "date", "category", "legs", "message"],
+    required: ["intent", "title", "day", "time", "note", "amount", "currency", "date", "category", "legs", "items", "message"],
   };
 }
 
@@ -140,6 +159,7 @@ function prompt(text, ctx) {
     "  kind:航班 → 飛機;新幹線、JR、鐵路、高鐵、台鐵、地鐵特急 → 火車;高速巴士、客運 → 巴士;渡輪、船 → 船;租車 → 租車。",
     "  時間一律寫票上的當地時間,不要換時區。票上只有時間、看不出日期,就把 depart/arrive 留空。",
     "  **一次可能有好幾段**(去程和回程、轉乘的每一段、文字講一段圖片又是另一段):每一段在 legs 各列一筆。",
+    "- **wish/stop/expense 也可能好幾筆**(「想去淺草寺和晴空塔」、一張截圖列了三家店、一張收據要拆兩筆):每一筆在 items 各列一筆,最外層的欄位填第一筆。",
     "- 使用者的話優先於圖片的樣子。都看不出來 → unknown,並在 message 說還需要什麼。",
     "- 看不清楚的欄位留空,不要猜。",
     "",
@@ -232,6 +252,21 @@ function cleanLeg(f, ctx) {
 }
 /* 模型回什麼都不直接信:型別、格式、範圍在這裡再過一次,
    前端拿到的一定是確認卡、交通表單填得進去的值。 */
+function cleanItem(f, ctx, intent) {
+  const s = str;
+  const day = Number.isInteger(f.day) && f.day >= 1 && f.day <= ctx.days.length ? f.day : 0;
+  const t = s(f.time, 5);
+  return {
+    title: s(f.title, 60),
+    day: day ? ctx.days[day - 1] : "",
+    time: /^([01]\d|2[0-3]):[0-5]\d$/.test(t) ? t : "",
+    note: s(f.note, 300),
+    amount: intent === "expense" && typeof f.amount === "number" && isFinite(f.amount) && f.amount > 0 ? Math.round(f.amount * 100) / 100 : 0,
+    currency: ["JPY", "TWD"].includes(f.currency) ? f.currency : "",
+    date: intent === "expense" && /^\d{4}-\d{2}-\d{2}$/.test(s(f.date, 10)) ? s(f.date, 10) : "",
+    category: ["交通", "住宿", "餐飲", "景點", "購物", "其他"].includes(f.category) ? f.category : "",
+  };
+}
 function clean(f, ctx) {
   const s = str;
   /* 以前的 seats(只改座位)併進 transport:模型照舊回 seats 也接得住 */
@@ -253,6 +288,13 @@ function clean(f, ctx) {
     date: intent === "expense" && /^\d{4}-\d{2}-\d{2}$/.test(s(f.date, 10)) ? s(f.date, 10) : "",
     category: ["交通", "住宿", "餐飲", "景點", "購物", "其他"].includes(f.category) ? f.category : "",
     legs,
+    /* 好幾筆:最多 8 筆;空的(連名字和金額都沒有)丟掉;一筆都沒有就用最外層那一筆 */
+    items: (() => {
+      if (intent === "transport" || intent === "unknown") return [];
+      const raw = Array.isArray(f.items) && f.items.length ? f.items : [f];
+      const xs = raw.slice(0, 8).map(x => cleanItem(x || {}, ctx, intent)).filter(x => x.title || x.amount);
+      return xs.length ? xs : [cleanItem(f, ctx, intent)];
+    })(),
     message: s(f.message, 120),
   };
 }
