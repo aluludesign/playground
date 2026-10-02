@@ -544,7 +544,9 @@
     .wish-head{list-style:none; cursor:pointer; display:flex; align-items:center; gap:8px; padding:13px 15px;
       font-family:var(--font-sign); font-size:14px; font-weight:600;}
     .wish-head::-webkit-details-marker{display:none;}
-    .wish-head .i:first-child{color:var(--warn);}
+    /* 只給標題前面那顆星(直接在 .wish-head 底下的第一個)—— 寫成 `.wish-head .i:first-child` 的時候,
+       「＋許願」按鈕裡的 ＋ 也是它自己那一層的第一個,被染成琥珀色(2026-10-02 Lulu 抓到) */
+    .wish-head > .i:first-child{color:var(--warn);}
     .wish-n{font-family:var(--font-mono); font-size:11px; color:var(--muted); font-weight:400;}
     .wish-caret{color:var(--muted); font-size:12px; transition:transform .18s;}
     /* 摺疊列裡的地圖入口:靠右,箭頭跟在它後面 */
