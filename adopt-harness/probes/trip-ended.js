@@ -19,7 +19,7 @@ return (async function () {
     q("#tab-wish").click(); await wait(80);
     out.許願 = shown(q("#add-wish-btn")); out.投票按得下去 = qa("#wish-list [data-vote]").some(b => !b.disabled);
     out.改願望 = qa("#wish-list [data-edit-wish], #wish-list [data-del-wish]").length;
-    q("#tab-fly").click(); await wait(80); out.加交通 = !!q("[data-flight-add]");
+    q("#tab-fly").click(); await wait(80); out.加交通 = !!(q("[data-flight-add]") && !q("[data-flight-add]").hidden);
     q("#tab-cost").click(); await wait(80); out.記一筆 = shown(q("#add-exp-btn"));
     ok("結束:AI、行程、許願、投票、改願望、交通都沒有", !out.AI && !out.加行程 && !out.許願 && !out.投票按得下去 && !out.改願望 && !out.加交通, out);
     if (member) ok("一般成員:不能記帳;橫幅講結束了、只能看", !out.記一筆 && /結束了,只能看/.test(out.橫幅) && !/記帳/.test(out.橫幅), out);

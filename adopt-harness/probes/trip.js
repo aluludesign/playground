@@ -20,7 +20,7 @@ return {
   seats: qa("#board-wrap .seat").length,
   moved: qa("#board-wrap .seat.moved").map(x => x.textContent),
   anchorsDay1: (function(){ return qa(".stop.anchor").map(x => x.textContent.replace(/\s+/g, " ").trim().slice(0, 40)); })(),
-  flightAdd: !!q("[data-flight-add]"),
+  flightAdd: !!(q("[data-flight-add]") && !q("[data-flight-add]").hidden),
   canEdit: d.body.classList.contains("can-edit"),
   calls: (w.__calls || []).map(c => c.method + " " + c.url.replace(/^.*\/api\//, "")).slice(0, 12),
 };
