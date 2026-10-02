@@ -455,7 +455,9 @@
 
       /* 把手:整條可按,點它就回到預設那一段(iOS 那種)。
          `touch-action:none` 一樣是功能不是樣式,少了它往上拖會被當成捲頁面。 */
-      .pg-grab{display:block; position:sticky; top:0; z-index:2; width:100%;
+      /* **跟整張 sheet 一樣寬**(2026-10-02,Lulu):sheet 左右有 15px 內距,把手只有內距裡面那麼寬的話,
+         兩邊各留一條縫,捲上來的時間軸會從縫裡露出來。往外撐回 sheet 的邊 */
+      .pg-grab{display:block; position:sticky; top:0; z-index:2; width:calc(100% + 30px); margin:0 -15px;
         --grabh:20px;
         padding:9px 0 7px; border:0; background:var(--surface); cursor:grab;
         touch-action:none; border-radius:16px 16px 0 0;}
@@ -469,7 +471,9 @@
          底下的東西經過時**一定**要被它蓋住,不然會看到兩層混在一起。 */
       body[data-view="plan"] #days,
       body[data-view="wish"] #days{position:sticky; top:var(--grabh,20px); z-index:5;
-        background:var(--surface); padding-block:8px; margin-block:0;}
+        background:var(--surface); padding-block:8px; margin-block:0;
+        /* 跟把手同一個理由:黏住的這一排也要蓋滿整張 sheet 的寬,兩邊不留縫 */
+        margin-inline:-15px; padding-inline:15px; scroll-padding-inline:15px;}
 
       /* 兩個檢視共用同一個 panel:露出哪一欄由 data-view 決定。 */
       /* sheet 自己就是捲動容器,`.wrap` 不必再為那條浮起來的許願 bar 讓位 */
@@ -1046,6 +1050,7 @@
     .foot-row{display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:center;}
     .backup{display:flex; gap:7px; flex-wrap:wrap; margin-top:12px;}
     .sync{font-family:var(--font-mono); font-size:10.5px; letter-spacing:.06em;}
+    .foot-mark{margin:0; text-align:center; font-size:12px; letter-spacing:.04em;}
 
     /* ---- cloud status + auth ---- */
     /* 三條線的漢堡。**用三個 span 不用字元或圖示**:這一版的圖示表裡沒有漢堡,
@@ -1626,15 +1631,9 @@
     </section>
   </main>
 
+  <!-- 頁尾只寫一句(2026-10-02,Lulu)。#sync 也是「已刪除」「存好了」這種操作回饋的地方(flash):講 2.8 秒,再換回這一句 -->
   <footer>
-    <div class="foot-row">
-      <span id="trip-foot"></span>
-      <span class="sync" id="sync"></span>
-    </div>
-    <div class="backup">
-      <button class="btn btn-sm" id="export-btn" type="button">匯出備份</button>
-    </div>
-    <p style="margin-top:10px; line-height:1.55" id="backup-note"></p>
+    <p class="foot-mark" id="sync">2026 @ Trippps Beta</p>
   </footer>
 </div>
 
@@ -2296,7 +2295,7 @@
     el("dev-badge").hidden = !(devEnv && viewAs === "member");
     el("trip-name").textContent = trip.name;
     const nights = Math.max(0, DAYS.length - 1);
-    el("trip-foot").textContent = (trip.start || "").replace(/-/g, ".") + " – " + (trip.end || "").slice(5).replace("-", ".") +
+    if (el("trip-foot")) el("trip-foot").textContent = (trip.start || "").replace(/-/g, ".") + " – " + (trip.end || "").slice(5).replace("-", ".") +
       " · " + (trip.city || trip.country) + " " + DAYS.length + " 天 " + nights + " 夜 · " + MEMBERS.length + " 人";
   }
 
@@ -5459,10 +5458,10 @@
       : '<div class="empty">' + (state.expenses.length ? "目前所有人都打平了,不用轉帳。" : (editable("cost") ? "還沒有花費紀錄,先去記一筆。" : "還沒有花費紀錄。")) + "</div>";
   }
 
+  /* 平常就是那一句;只有一種情況要講:這台瀏覽器連存都存不了(離開就會不見),那是使用者必須知道的 */
+  const FOOT = "2026 @ Trippps Beta";
   function renderSync() {
-    el("sync").textContent = online ? "● Notion 同步中"
-      : storageOK ? "● 紀錄存在這台裝置"
-      : "○ 瀏覽器不讓存檔,離開後會消失";
+    el("sync").textContent = !online && !storageOK ? "○ 瀏覽器不讓存檔,離開後會消失" : FOOT;
   }
 
   function render() { renderCountdown(); renderSeats(); renderDays(); renderRoute(); renderWishes(); renderCost(); renderFund(); renderSplit(); renderSync(); }
@@ -6943,7 +6942,8 @@
   }
 
   /* --- 備份 --- */
-  el("export-btn").addEventListener("click", () => {
+  /* 頁尾的「匯出備份」2026-10-02 拿掉了(Lulu:頁尾只寫一句);功能留著,哪天要放回來直接接上 */
+  if (el("export-btn")) el("export-btn").addEventListener("click", () => {
     const blob = new Blob([JSON.stringify(snapshot(), null, 2)], { type: "application/json" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
