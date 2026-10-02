@@ -167,6 +167,12 @@ FAKE_JS = r"""(function(){
                            MEMBERS[1].role = "團主"; }
   /* member 配 can=plan,cost…:團主只開了其中幾個開關(第 2 期以前三個全開才算數,現在一塊一塊看) */
   /* newbie=1:團主上次看過通知之後,又有一個人(小美)加入了。noflights=1:這一團還沒有交通 */
+  /* nokitty=1:這一團沒有共同基金(團主填 0) */
+  if (/[?&]nokitty=1/.test(q)) TRIP.kitty = 0;
+  /* fund=pot:一包錢,阿輝、佳瑜各 10,000、志偉 5,000,保管人佳瑜(keeper=0 不指定);fund=diff:預算、每人不一樣 */
+  var fq = (/[?&]fund=([a-z]+)/.exec(q) || [])[1];
+  if (fq === "pot") TRIP.fund = { mode: "pot", keeper: /keeper=0/.test(q) ? "" : "chang_chiayu", shares: { hsieh_chinhui: 10000, chang_chiayu: 10000, chang_chihwei: 5000 } };
+  if (fq === "diff") TRIP.fund = { mode: "budget", keeper: "", shares: { hsieh_chinhui: 20000, chang_chiayu: 10000 } };
   if (/[?&]newbie=1/.test(q)) MEMBERS.push({ id: "new_friend", name: "小美", color: "#E4007F", role: "成員", joinedAt: "2026-09-18T09:00:00.000Z" });
   if (/[?&]noflights=1/.test(q)) { ROWS.flights = []; ROWS.seats = []; }
   var SEEN = { at: %(seen)s };
@@ -247,6 +253,19 @@ FAKE_JS = r"""(function(){
     }
     if (HID && !ADMIN) return reply({ error: "這一團暫時關閉了", why: "hidden" }, 403);
     if (!joined) return reply({ error: "你還不是這一團的人 —— 要有邀請碼才能加入", why: "not_member" }, 403);
+    /* feed=1:小鈴鐺的動態(2026-10-02)—— 伺服器已經濾掉自己做的、不是給我的帳 */
+    if (r === "activity") return reply({ rows: /[?&]feed=1/.test(q) ? [
+      { id: "a1", text: "阿輝 許願:「築地市場」", kind: "許願", by: "m2", day: "", at: "2026-09-18T10:00:00.000Z" },
+      { id: "a2", text: "阿輝 把願望「築地市場」排進 Day 2(10/4) 08:00", kind: "行程", by: "m2", day: "2026-10-04", at: "2026-09-18T11:00:00.000Z" },
+      { id: "a3", text: "阿輝 改了交通 MM626(TPE→NRT):出發 10/03 10:50 → 10/03 11:20", kind: "交通", by: "m2", day: "", at: "2026-09-18T12:00:00.000Z" },
+      { id: "a4", text: "阿輝 記了一筆「燒肉」 ¥12,000,2 人分(每人約 ¥6,000)", kind: "花費", by: "m2", day: "", at: "2026-09-18T13:00:00.000Z" },
+      { id: "a0", text: "阿輝 在 Day 1(10/3) 加了「舊的那一則」", kind: "行程", by: "m2", day: "2026-10-03", at: "2026-09-01T09:00:00.000Z" }] : [] });
+    if (r === "fund" && method === "POST") {
+      var sh = Object.assign({}, (TRIP.fund || {}).shares || {});
+      (body.who || []).forEach(function (id) { sh[id] = (sh[id] || 0) + Number(body.amount); });
+      TRIP.fund = Object.assign({}, TRIP.fund, { shares: sh });
+      return reply({ ok: true, fund: TRIP.fund });
+    }
     if (r === "team") {
       if (method === "PATCH") {
         if (body.deputy !== undefined) {

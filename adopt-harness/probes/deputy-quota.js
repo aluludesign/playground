@@ -38,7 +38,8 @@ return (async function () {
     q("#menu-btn").click(); q("#cloud-set").click(); if (!q("#menu-pop").hidden) q("#menu-btn").click(); await wait(100);
     var sel = q("#st-deputy");
     out.副團主選單 = qa("#st-deputy option").map(o => o.textContent);
-    out.權限標籤 = qa("#set-trip .who label").map(l => l.textContent.trim());
+    /* 只看「副團主可以管」那三顆(2026-10-02 起設定裡還有共同基金的勾選) */
+    out.權限標籤 = ["#st-can-plan", "#st-can-cost", "#st-can-seat"].map(x => q(x).closest("label").textContent.trim());
     ok("設定裡有副團主(不含團主自己)、三塊權限叫 行程/記帳/交通", out.副團主選單[0] === "— 沒有 —" && out.副團主選單.indexOf("阿輝") < 0 && out.副團主選單.indexOf("佳瑜") > 0 &&
       out.權限標籤.join() === "行程,記帳,交通" && /25 次/.test(txt("#st-deputy-note")), out);
     sel.value = "chang_chiayu"; sel.dispatchEvent(new w.Event("change", { bubbles: true }));

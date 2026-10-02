@@ -321,8 +321,8 @@ const memberRow = (code, sub) => rowsIn(DB.members).find(p => plain(p.properties
   ok("團主加航班:航班號轉大寫去空白,起降時間照登機證上的當地時間存(不換時區)",
     r.code === 200 && r.body.row.no === "MM626" && r.body.row.dir === "去程" &&
     r.body.row.depart === "2026-10-03T10:50" && r.body.row.arrive === "2026-10-03T15:20", r.body);
-  const fl = r.body.row.id;
-  r = await call(LINE_A, "PATCH", { resource: "flights", t: T1, id: fl }, { dir: "亂寫", depart: "10:50" });
+  const legId = r.body.row.id;
+  r = await call(LINE_A, "PATCH", { resource: "flights", t: T1, id: legId }, { dir: "亂寫", depart: "10:50" });
   ok("方向不認得就當「其他」;時間格式不對就清掉,不存一個讀不懂的字串",
     r.code === 200 && r.body.row.dir === "其他" && r.body.row.depart === null && r.body.row.no === "MM626", r.body);
   await call(LINE_A, "PATCH", { resource: "team", t: T1 }, { can: { seat: true } });
@@ -531,7 +531,8 @@ const memberRow = (code, sub) => rowsIn(DB.members).find(p => plain(p.properties
   const trip2 = { ...good, name: "第二團", myName: "小陳" };
   /* 先補到「剛好 2 團還沒結束」(前面的測試可能動過 C 的團) */
   r = await call(LINE_C, "GET", { resource: "trips" });
-  const openNow = r.body.trips.filter(t => t.role === "團主" && !(t.end < "2026-10-01")).length;
+  const todayTW = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Tokyo", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+  const openNow = r.body.trips.filter(t => t.role === "團主" && !(t.end < todayTW)).length;
   let T3 = "";
   for (let i = openNow; i < 2; i++) {
     r = await call(LINE_C, "POST", { resource: "trips" }, trip2);
@@ -554,6 +555,87 @@ const memberRow = (code, sub) => rowsIn(DB.members).find(p => plain(p.properties
   delete process.env.TRIPPPS_ADMIN;
   r = await call(LINE_D, "GET", { resource: "trips" });
   ok("只是加入別人的團,不算自己開的(D 照樣開得了)", (await call(LINE_D, "POST", { resource: "trips" }, { ...trip2, myName: "阿D" })).code === 200, "");
+
+  /* ================= 小鈴鐺的動態(2026-10-02) ================= */
+  /* 誰許願、行程改了什麼、交通異動、有新帳要分(只給要分的人);自己做的不通知自己 */
+  const ACT = "ee00c7c3212a4bdf81f5bf49759f9665";
+  const meOf = async who => (await call(who, "GET", { resource: "team", t: T1 })).body.me;
+  const [mA, mB, mD] = [await meOf(LINE_A), await meOf(LINE_B), await meOf(LINE_D)];
+  const feed = async who => (await call(who, "GET", { resource: "activity", t: T1 })).body.rows || [];
+  const actBefore = rowsIn(ACT).length;
+  r = await call(LINE_B, "POST", { resource: "wishes", t: T1 }, { title: "築地市場" });
+  const wishId = r.body.row.id;
+  r = await call(LINE_A, "PATCH", { resource: "itinerary", t: T1, id: wishId }, { title: "築地市場", day: "2026-10-04", time: "08:00" });
+  r = await call(LINE_A, "POST", { resource: "itinerary", t: T1 }, { title: "晴空塔", day: "2026-10-05", time: "10:00" });
+  const sky = r.body.row.id;
+  r = await call(LINE_A, "PATCH", { resource: "itinerary", t: T1, id: sky }, { title: "晴空塔", day: "2026-10-05", time: "11:30" });
+  r = await call(LINE_A, "POST", { resource: "flights", t: T1 }, { kind: "飛機", no: "MM626", dir: "去程", from: "TPE", to: "NRT", depart: "2026-10-03T10:50" });
+  const fl = r.body.row.id;
+  r = await call(LINE_A, "PATCH", { resource: "flights", t: T1, id: fl }, { depart: "2026-10-03T11:20" });
+  r = await call(LINE_A, "POST", { resource: "expenses", t: T1 }, { title: "燒肉", amount: 12000, currency: "JPY", payer: mA.id, participants: [mA.id, mB.id] });
+  r = await call(LINE_A, "DELETE", { resource: "itinerary", t: T1, id: sky });
+  const fB = await feed(LINE_B), fA = await feed(LINE_A), fD = await feed(LINE_D);
+  const tB = fB.map(x => x.text);
+  ok("動態寫進「動態」表了", rowsIn(ACT).length - actBefore >= 7, rowsIn(ACT).length - actBefore);
+  ok("許願:團主看得到「阿輝 許願:「築地市場」」", fA.some(x => x.kind === "許願" && /許願:「築地市場」/.test(x.text)), fA.map(x => x.text));
+  ok("願望排進行程:「把願望「築地市場」排進 Day 2(10/4) 08:00」", tB.some(t => /把願望「築地市場」排進 Day 2\(10\/4\) 08:00/.test(t)), tB);
+  ok("改行程講出改了什麼:「改了 Day 3(10/5)「晴空塔」:時間 10:00 → 11:30」", tB.some(t => /改了 Day 3\(10\/5\)「晴空塔」:時間 10:00 → 11:30/.test(t)), tB);
+  ok("刪行程:「刪掉了 Day 3(10/5)「晴空塔」」", tB.some(t => /刪掉了 Day 3\(10\/5\)「晴空塔」/.test(t)), tB);
+  ok("交通異動:加了 MM626、改了出發時間", tB.some(t => /加了交通:MM626\(TPE→NRT\)/.test(t)) && tB.some(t => /改了交通 MM626.*出發 10\/03 10:50 → 10\/03 11:20/.test(t)), tB);
+  ok("新帳:要分的人(阿輝)看得到「記了一筆「燒肉」¥12,000,2 人分(每人約 ¥6,000)」", tB.some(t => /記了一筆「燒肉」 ¥12,000,2 人分\(每人約 ¥6,000\)/.test(t)), tB);
+  ok("新帳:沒分到的人看不到(燒肉只有佳瑜和阿輝分)", !fD.some(x => /燒肉/.test(x.text)), fD.map(x => x.text));
+  ok("沒分到的人還是看得到行程、交通、許願", fD.some(x => x.kind === "行程") && fD.some(x => x.kind === "交通") && fD.some(x => x.kind === "許願"), fD.map(x => x.kind));
+  ok("自己做的不通知自己(團主看不到自己改的行程/交通/帳)", !fA.some(x => x.by === mA.id), fA.map(x => x.text));
+  ok("回給瀏覽器的沒有「給誰」(不洩漏誰分了哪筆帳)", fB.every(x => x.to === undefined), fB[0]);
+  r = await call(LINE_C, "GET", { resource: "activity", t: T1 });
+  ok("別團的人讀不到", r.code === 403, r.body);
+  /* 改願望、刪願望不通知;退回許願 = 刪行程(Lulu 2026-10-02) */
+  r = await call(LINE_B, "POST", { resource: "wishes", t: T1 }, { title: "東京鐵塔" });
+  const w2 = r.body.row.id, n0 = rowsIn(ACT).length;
+  await call(LINE_B, "PATCH", { resource: "wishes", t: T1, id: w2 }, { title: "東京鐵塔夜景" });
+  ok("改願望 → 不通知", rowsIn(ACT).length === n0, rowsIn(ACT).length - n0);
+  await call(LINE_A, "PATCH", { resource: "itinerary", t: T1, id: w2 }, { title: "東京鐵塔夜景", day: "2026-10-06" });
+  await call(LINE_A, "PATCH", { resource: "itinerary", t: T1, id: w2 }, { title: "東京鐵塔夜景", day: null });
+  const tB2 = (await feed(LINE_B)).map(x => x.text);
+  ok("退回許願 → 講「刪掉了 Day 4(10/6)「東京鐵塔夜景」」,不講退回", tB2.some(t => /刪掉了 Day 4\(10\/6\)「東京鐵塔夜景」/.test(t)) && !tB2.some(t => /退回/.test(t)), tB2.slice(-3));
+  const n1 = rowsIn(ACT).length;
+  await call(LINE_B, "DELETE", { resource: "wishes", t: T1, id: w2 });
+  ok("刪願望 → 不通知", rowsIn(ACT).length === n1, rowsIn(ACT).length - n1);
+
+  /* ================= 共同基金:沒有/預算/一包錢、誰出多少、保管人、補基金(2026-10-02) ================= */
+  r = await call(LINE_A, "PATCH", { resource: "team", t: T1 }, { fund: { mode: "pot", shares: { [mA.id]: 5000, [mB.id]: 3000 }, keeper: mB.id } });
+  let tr = rowsIn(DB.trips).find(p => plain(p.properties["代號"]) === T1);
+  ok("團主設一包錢:模式、誰出多少、保管人寫進「團」;每人不一樣 → 「基金」= 0",
+    r.code === 200 && tr.properties["基金模式"].select.name === "一包錢" && plain(tr.properties["基金出資"]) === mA.id + ":5000," + mB.id + ":3000" &&
+    plain(tr.properties["基金保管人"]) === mB.id && tr.properties["基金"].number === 0, tr.properties);
+  r = await call(LINE_B, "GET", { resource: "team", t: T1 });
+  ok("讀出來是 fund:{mode:pot, shares, keeper}", r.body.trip.fund && r.body.trip.fund.mode === "pot" && r.body.trip.fund.shares[mA.id] === 5000 && r.body.trip.fund.keeper === mB.id, r.body.trip.fund);
+  r = await call(LINE_A, "PATCH", { resource: "team", t: T1 }, { fund: { mode: "budget", shares: { [mA.id]: 4000, [mB.id]: 4000, [mD.id]: 4000 } } });
+  tr = rowsIn(DB.trips).find(p => plain(p.properties["代號"]) === T1);
+  ok("每人一樣 → 「基金」= 那個金額;預算模式沒有保管人", tr.properties["基金"].number === 4000 && plain(tr.properties["基金保管人"]) === "", tr.properties["基金"]);
+  r = await call(LINE_A, "PATCH", { resource: "team", t: T1 }, { fund: { mode: "pot", shares: { Uzz_not_member: 100 } } });
+  ok("出基金的人不在這一團 → 400", r.code === 400, r.body);
+  r = await call(LINE_A, "PATCH", { resource: "team", t: T1 }, { fund: { mode: "pot", shares: {} } });
+  ok("一包錢但沒選誰出 → 400", r.code === 400, r.body);
+  r = await call(LINE_B, "PATCH", { resource: "team", t: T1 }, { fund: { mode: "none" } });
+  ok("不是團主不能改基金設定", r.code === 403, r.body);
+  r = await call(LINE_A, "POST", { resource: "fund", t: T1 }, { who: [mA.id], amount: 100 });
+  ok("預算模式不能補基金", r.code === 400, r.body);
+  await call(LINE_A, "PATCH", { resource: "team", t: T1 }, { fund: { mode: "pot", shares: { [mA.id]: 5000, [mB.id]: 5000 }, keeper: mB.id } });
+  r = await call(LINE_D, "POST", { resource: "fund", t: T1 }, { who: [mA.id, mB.id], amount: 2000 });
+  ok("一般成員(不是保管人)不能記補基金", r.code === 403, r.body);
+  r = await call(LINE_B, "POST", { resource: "fund", t: T1 }, { who: [mA.id, mB.id], amount: 2000 });
+  tr = rowsIn(DB.trips).find(p => plain(p.properties["代號"]) === T1);
+  ok("保管人(就算只是一般成員)能記補基金:兩人各 +2,000", r.code === 200 && plain(tr.properties["基金出資"]) === mA.id + ":7000," + mB.id + ":7000" && tr.properties["基金"].number === 7000, plain(tr.properties["基金出資"]));
+  ok("補基金也進動態", (await feed(LINE_A)).some(x => /記了補基金:.*各 NT\$2,000/.test(x.text)), (await feed(LINE_A)).slice(-2));
+  r = await call(LINE_A, "POST", { resource: "fund", t: T1 }, { who: [mA.id], amount: 0 });
+  ok("補 0 元 → 400", r.code === 400, r.body);
+  r = await call(LINE_A, "POST", { resource: "expenses", t: T1 }, { title: "租車", amount: 9000, currency: "TWD", payer: "fund", participants: [mA.id, mB.id, mD.id] });
+  ok("記帳付款人可以是「共同基金」", r.code === 200 && r.body.row.payer === "fund", r.body.row);
+  ok("動態寫「(共同基金付)」", (await feed(LINE_B)).some(x => /租車.*\(共同基金付\)/.test(x.text)), "");
+  await call(LINE_A, "PATCH", { resource: "team", t: T1 }, { fund: { mode: "none" } });
+  tr = rowsIn(DB.trips).find(p => plain(p.properties["代號"]) === T1);
+  ok("改回沒有 → 出資清空、基金 0", tr.properties["基金模式"].select.name === "沒有" && plain(tr.properties["基金出資"]) === "" && tr.properties["基金"].number === 0, "");
 
   /* ================= 最高權限:隱藏、刪除任何一團(2026-10-02) ================= */
   const LULU = "U" + "f".repeat(32);

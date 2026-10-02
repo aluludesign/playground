@@ -1010,6 +1010,7 @@
     .fund-note{font-size:11px; color:var(--muted);}
     .fund-people{margin-top:14px; padding-top:13px; border-top:1px solid var(--line-soft); display:grid; gap:9px;}
     .fp{display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:10px;}
+    .fund-ops{margin-top:12px; display:flex; justify-content:flex-end;}
     .fp .nm{display:flex; align-items:center; gap:6px; font-size:13px; min-width:52px;}
     .fp .track{height:6px; border-radius:99px; background:var(--surface-2); overflow:hidden;}
     .fp .track i{display:block; height:100%; background:var(--fc,var(--accent));}
@@ -1189,6 +1190,13 @@
     .bell-pop li small{color:var(--muted); font-size:12px;}
     .bell-pop li .btn{justify-self:start;}
     .bell-pop .empty{margin:0; font-size:14px; color:var(--muted);}
+    .bell-pop{max-height:min(70vh, 520px); overflow-y:auto;}
+    .bell-pop li{gap:2px; padding:6px 8px; margin:0 -8px; border-radius:8px;}
+    .bell-pop li[data-bell-go]{cursor:pointer;}
+    .bell-pop li[data-bell-go]:hover{background:var(--accent-soft);}
+    .bell-pop li.new span::before{content:""; display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--accent, #e4572e); margin-right:6px; vertical-align:middle;}
+    .bell-pop li small.when{font-size:11px;}
+    .bell-pop .empty + ul{margin-top:8px; opacity:.75;}
     /* 漢堡選單最上面那一行:你今天的 AI 還剩幾次 */
     .menu-ai{display:grid; gap:2px; padding:4px 2px 10px; margin-bottom:10px; border-bottom:1px solid var(--line); font-size:14px; color:var(--ink);}
     .menu-ai small{font-size:12px; color:var(--muted);}
@@ -1629,9 +1637,25 @@
         <div class="fld"><label class="rm-label" for="st-end">最後一天</label><input class="rm-input" type="date" id="st-end" required></div>
       </div>
       <p class="st-hint" id="st-date-note" hidden></p>
-      <div class="grid2">
-        <div class="fld" id="st-rate-fld"><label class="rm-label" for="st-rate">匯率(1 外幣 = ? 台幣)</label><input class="rm-input" type="number" id="st-rate" step="0.0001" min="0"></div>
-        <div class="fld"><label class="rm-label" for="st-kitty">每人共同基金(台幣)</label><input class="rm-input" type="number" id="st-kitty" step="1" min="0"></div>
+      <div class="fld" id="st-rate-fld"><label class="rm-label" for="st-rate">匯率(1 外幣 = ? 台幣)</label><input class="rm-input" type="number" id="st-rate" step="0.0001" min="0"></div>
+      <!-- 共同基金(2026-10-02,Lulu):沒有/預算/一包錢;誰有出、每人一樣或不一樣;一包錢才有保管人 -->
+      <div class="fld"><label class="rm-label" for="st-fund-mode">共同基金</label>
+        <select class="rm-input" id="st-fund-mode">
+          <option value="none">沒有</option>
+          <option value="budget">預算(每人一個額度)</option>
+          <option value="pot">一包錢(真的收錢)</option>
+        </select></div>
+      <div id="st-fund-box" hidden>
+        <div class="fld"><span class="rm-label">誰有出</span><div class="who" id="st-fund-who"></div></div>
+        <div class="fld"><span class="rm-label">金額</span>
+          <div class="who">
+            <label class="rm-chip"><input type="radio" name="st-fund-same" id="st-fund-same1" value="same" checked>每人一樣</label>
+            <label class="rm-chip"><input type="radio" name="st-fund-same" id="st-fund-same0" value="diff">每人不一樣</label>
+          </div></div>
+        <div class="fld" id="st-kitty-fld"><label class="rm-label" for="st-kitty">每人出多少(台幣)</label><input class="rm-input" type="number" id="st-kitty" step="1" min="0"></div>
+        <div class="grid2" id="st-fund-each" hidden></div>
+        <div class="fld" id="st-keeper-fld" hidden><label class="rm-label" for="st-keeper">保管人(錢在誰手上)</label><select class="rm-input" id="st-keeper"></select></div>
+        <p class="st-hint" id="st-fund-note"></p>
       </div>
       <!-- 副團主(2026-10-01):一般成員只能許願;團主指派 1 位副團主、勾他能管哪幾塊。每天只能換一次 -->
       <div class="fld"><label class="rm-label" for="st-deputy">副團主</label><select class="rm-input" id="st-deputy"></select></div>
@@ -1654,6 +1678,21 @@
     <div class="ops">
       <button type="submit" class="btn btn-main" id="st-save">存起來</button>
       <button type="button" class="btn btn-ghost btn-sm" id="st-cancel">取消</button>
+    </div>
+  </form>
+</div>
+
+<!-- 補基金(2026-10-02):一包錢的時候,旅途中誰補了多少。保管人、團主、有記帳權限的副團主能記 -->
+<div class="overlay" id="fund-top-overlay" hidden>
+  <form class="signin" id="fund-top-form" role="dialog" aria-modal="true" aria-labelledby="ft-title">
+    <h2 id="ft-title">補基金</h2>
+    <p>旅途中基金不夠,大家再湊一點。記下誰補了、每人補多少(台幣),結算時會算進去。</p>
+    <div class="fld"><span class="rm-label">誰補了</span><div class="who" id="ft-who"></div></div>
+    <div class="fld"><label class="rm-label" for="ft-amt">每人補多少(台幣)</label><input class="rm-input" type="number" id="ft-amt" min="1" step="1" required></div>
+    <div class="err" id="ft-err" hidden></div>
+    <div class="ops">
+      <button type="submit" class="btn btn-main" id="ft-save">記下來</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="ft-cancel">取消</button>
     </div>
   </form>
 </div>
@@ -1999,8 +2038,10 @@
 
   /* ================= 狀態 ================= */
   const state = { tab: "plan", day: "", rate: (window.TRIP_CONFIG || {}).rate || SEED.rate,
-    kitty: Number((window.TRIP_CONFIG || {}).kitty) || 30000, names: {}, expenses: [], stops: [], wishes: [], seats: [] };
-  const nameOf = id => state.names[id] || (MEMBERS.find(m => m.id === id) || {}).def || id;
+    kitty: 0, names: {}, expenses: [], stops: [], wishes: [], seats: [] };
+  const nameOf = id => (id === "fund" ? "共同基金" : state.names[id] || (MEMBERS.find(m => m.id === id) || {}).def || id);
+  /* **共同基金**(2026-10-02):mode none/budget/pot;shares = 誰出多少(台幣,含補的);keeper = 一包錢的保管人 */
+  let FUND = { mode: "none", keeper: "", shares: {} };
   const colorOf = id => (MEMBERS.find(m => m.id === id) || {}).color || "#7E8796";
 
   const twd = n => "NT$" + Math.round(n).toLocaleString("en-US");
@@ -2174,6 +2215,17 @@
     setDays(trip.start, trip.end);
     if (!DAYS.some(d => d.date === state.day)) state.day = initialDay();
     state.rate = trip.rate || state.rate;
+    /* **基金照這一團的設定**(2026-10-02 修):以前一直用舊東京團的 30,000,團主填 0 也一樣。
+       0 = 這一團沒有共同基金,整塊收起來 */
+    state.kitty = Math.max(0, Number(trip.kitty) || 0);
+    {
+      const f = trip.fund || {}, shares = {};
+      Object.keys(f.shares || {}).forEach(id => { if (IDS.includes(id)) shares[id] = Number(f.shares[id]) || 0; });
+      let mode = ["none", "budget", "pot"].includes(f.mode) ? f.mode : "none";
+      /* 舊的團只有「基金」一個數字:當成全部人一樣的預算 */
+      if (mode === "none" && !f.mode && state.kitty > 0) { mode = "budget"; IDS.forEach(id => { shares[id] = state.kitty; }); }
+      FUND = { mode, keeper: mode === "pot" && IDS.includes(f.keeper) ? f.keeper : "", shares: mode === "none" ? {} : shares };
+    }
     setTripRegion();
     /* 台灣的團只有台幣:幣別選單收起來,預設台幣 */
     const twdOnly = trip.currency === "TWD";
@@ -2226,7 +2278,7 @@
   const expToRow = e => ({
     title: e.title, date: e.date, category: CAT_TO_NOTION[e.category] || "其他",
     amount: e.amount, currency: e.currency,
-    payer: nameById(e.payerId) || "",
+    payer: e.payerId === "fund" ? "fund" : nameById(e.payerId) || "",
     participants: (e.participants || []).map(nameById).filter(Boolean),
     note: e.note,
   });
@@ -2756,7 +2808,7 @@
     if (!online) return;
     clearTimeout(pullTimer);
     /* 先送排著的,再讀:同時跑的話,讀回來的那份是送出之前的,剛送到的那筆會暫時從畫面上消失 */
-    pullTimer = setTimeout(() => { flushOutbox().catch(() => {}).then(pull).then(render).catch(() => {}); }, 400);
+    pullTimer = setTimeout(() => { flushOutbox().catch(() => {}).then(pull).then(render).then(loadFeed).catch(() => {}); }, 400);
   }
 
   /* 按鈕原地轉圈,文字先收起來。寬高先鎖住,不然按下去整排會抽動一下。
@@ -2893,30 +2945,56 @@
        - 這一團已經有交通:多一句「座位多了他的空格」和「去填座位」
        - 還沒有交通:只說誰加入了
      「看過了」記在伺服器(成員表的「通知已讀」),換手機不會再通知一次。
-     只給團主(測試環境「用成員身分看」時也不會有)。 */
-  let newcomers = [], newcomersSeen = false;
+     給團主和副團主(2026-10-02,Lulu:副團主看到的跟團主一樣)—— 各自記各自看過了沒。
+     一般成員沒有(測試環境「用成員身分看」時也不會有)。 */
+  /* **2026-10-02 起全部人都有鈴鐺**(Lulu):誰許願、哪一天行程改了什麼(含願望排進行程)、交通異動、
+     有新帳要分(只給要分的人)、有新人加入。自己做的不通知自己。動態記在伺服器的「動態」表。
+     有新人加入:全部人都看得到;「座位多了他的空格 / 去填座位」只給團主和副團主。 */
+  let newcomers = [], feed = [], bellSince = "", newcomersSeen = false;
+  const bellBoss = () => !!myMember && (myMember.role === "團主" || myMember.role === "副團主");
   function checkNewcomers() {
-    newcomers = []; newcomersSeen = false;
-    const owner = online && !!myMember && myMember.role === "團主";
-    el("bell-btn").hidden = !owner;
-    if (owner) {
-      const since = myMember.seenAt || myMember.joinedAt || "";
-      newcomers = MEMBERS.filter(m => m.id !== myMember.id && m.joinedAt && m.joinedAt > since);
-    }
+    newcomersSeen = false;
+    const on = online && !!myMember;
+    el("bell-btn").hidden = !on;
+    bellSince = (myMember && (myMember.seenAt || myMember.joinedAt)) || "";
+    /* 新人:我加入之後才加入的(我自己加入之前的人不算「新」) */
+    const joined = (myMember && myMember.joinedAt) || "";
+    newcomers = on ? MEMBERS.filter(m => m.id !== myMember.id && m.joinedAt && m.joinedAt > joined) : [];
     paintBell();
+    if (on) loadFeed();
   }
+  async function loadFeed() {
+    try { feed = (await api("?resource=activity&t=" + encodeURIComponent(TRIP))).rows || []; }
+    catch (_) { feed = []; }
+    paintBell();
+    if (!el("bell-pop").hidden) renderBell();
+  }
+  /* 一則一則照時間排(新的在上面);比上次打開鈴鐺還新的是「沒看過的」 */
+  function bellItems() {
+    const boss = bellBoss(), legs = (state.flights || []).some(f => !KIND[kindOf(f)].noSeats);
+    /* 座位提醒只掛在「還沒看過」的那幾位身上 —— 早就加入的人,再提醒一次只是噪音 */
+    const items = newcomers.map(m => ({ at: m.joinedAt, kind: "成員",
+      html: "<span><b>" + esc(nameOf(m.id)) + "</b> 加入了這一團</span>" +
+        (boss && legs && m.joinedAt > bellSince ? "<small>交通的座位多了" + esc(nameOf(m.id)) + "的空格</small>" +
+          '<button type="button" class="btn btn-sm" data-bell-fly>去填座位</button>' : "") }));
+    for (const x of feed) items.push({ at: x.at, kind: x.kind, day: x.day, html: "<span>" + esc(x.text) + "</span>" });
+    return items.sort((a, b) => String(b.at).localeCompare(String(a.at))).slice(0, 40);
+  }
+  const unread = () => bellItems().filter(x => x.at > bellSince).length;
   function paintBell() {
-    const on = newcomers.length > 0 && !newcomersSeen;
-    el("bell-dot").hidden = !on;
-    el("bell-btn").setAttribute("aria-label", on ? "通知(" + newcomers.length + " 則新的)" : "通知");
+    const n = newcomersSeen ? 0 : unread();
+    el("bell-dot").hidden = !n;
+    el("bell-btn").setAttribute("aria-label", n ? "通知(" + n + " 則新的)" : "通知");
   }
+  const BELL_TAB = { "許願": "wish", "行程": "plan", "交通": "fly", "花費": "cost" };
+  const bellWhen = iso => { try { return new Intl.DateTimeFormat("zh-TW", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(iso)); } catch (_) { return ""; } };
   function renderBell() {
-    const legs = (state.flights || []).some(f => !KIND[kindOf(f)].noSeats);
-    el("bell-list").innerHTML = newcomers.length
-      ? "<ul>" + newcomers.map(m => "<li><span><b>" + esc(nameOf(m.id)) + "</b> 加入了這一團</span>" +
-          (legs ? "<small>交通的座位多了" + esc(nameOf(m.id)) + "的空格</small>" +
-            '<button type="button" class="btn btn-sm" data-bell-fly>去填座位</button>' : "") + "</li>").join("") + "</ul>"
-      : '<p class="empty">目前沒有新通知。</p>';
+    const items = bellItems();
+    el("bell-list").innerHTML = (items.length && !unread() ? '<p class="empty">目前沒有新通知。之前的:</p>' : "") + (items.length
+      ? "<ul>" + items.map(x => '<li class="' + (x.at > bellSince ? "new" : "") + '"' +
+          (BELL_TAB[x.kind] ? ' data-bell-go="' + BELL_TAB[x.kind] + '"' + (x.day ? ' data-bell-day="' + esc(x.day) + '"' : "") : "") + ">" +
+          x.html + '<small class="when">' + esc(bellWhen(x.at)) + "</small></li>").join("") + "</ul>"
+      : '<p class="empty">目前沒有新通知。</p>');
   }
   async function markNewcomersSeen() {
     newcomersSeen = true;
@@ -2929,22 +3007,35 @@
   (function () {
     const btn = el("bell-btn"), pop = el("bell-pop");
     function open(on) {
+      const was = !pop.hidden;
       pop.hidden = !on;
       btn.setAttribute("aria-expanded", String(on));
-      if (!on) return;
+      if (!on) {
+        /* 關掉之後,剛剛看過的就不再是「新的」 */
+        if (was && myMember && myMember.seenAt) { bellSince = myMember.seenAt; newcomersSeen = false; paintBell(); }
+        return;
+      }
       renderBell();
       /* 貼在頂列下面,靠右對齊這顆鈴鐺(跟漢堡選單同一個算法) */
       const r = btn.getBoundingClientRect();
       pop.style.top = Math.round(r.bottom + window.scrollY + 6) + "px";
       pop.style.right = Math.max(16, Math.round(window.innerWidth - r.right)) + "px";
-      /* 打開 = 看到了:紅點收掉,清單這一次還留著 */
-      if (newcomers.length && !newcomersSeen) markNewcomersSeen();
+      /* 打開 = 看到了:紅點收掉,清單這一次還留著(沒看過的那幾則這一次還是亮的) */
+      if (unread() && !newcomersSeen) markNewcomersSeen();
     }
     btn.addEventListener("click", ev => { ev.stopPropagation(); open(pop.hidden); });
     pop.addEventListener("click", ev => {
-      if (!ev.target.closest("[data-bell-fly]")) return;
+      if (ev.target.closest("[data-bell-fly]")) { open(false); switchTab("fly"); return; }
+      /* 點一則 = 去那裡看:行程跳到那一天、交通、花費、許願 */
+      const li = ev.target.closest("[data-bell-go]");
+      if (!li) return;
       open(false);
-      switchTab("fly");
+      switchTab(li.dataset.bellGo);
+      const day = li.dataset.bellDay;
+      if (li.dataset.bellGo === "plan" && day && state.day !== day) {
+        const b = document.querySelector('#days [data-day="' + day + '"]');
+        if (b) b.click();
+      }
     });
     document.addEventListener("click", ev => {
       if (!pop.hidden && !ev.target.closest("#bell-pop") && !ev.target.closest("#bell-btn")) open(false);
@@ -3006,22 +3097,39 @@
   }
 
   /* ================= 分帳計算 ================= */
+  /* **一包錢的時候怎麼結算**(2026-10-02):每個人交進基金的錢算「已付」,基金付的帳照分攤的人分;
+     基金裡剩的錢在保管人手上(沒指定就是「共同基金」本身)—— 所以保管人的淨額要扣掉剩的那一包,
+     剩的退、不夠的補,跟個人墊款合併成最少轉帳。每個人最後付的剛好是自己分到的那幾筆。 */
   function ledger() {
     const book = {};
-    IDS.forEach(id => book[id] = { paid: 0, owed: 0 });
-    let unassigned = 0;
+    IDS.forEach(id => book[id] = { paid: 0, owed: 0, put: 0 });
+    const pot = FUND.mode === "pot";
+    let unassigned = 0, fundPaid = 0;
     state.expenses.forEach(e => {
       const v = toTWD(e);
-      if (e.payerId && book[e.payerId]) book[e.payerId].paid += v; else unassigned++;
+      if (e.payerId === "fund" && pot) fundPaid += v;
+      else if (e.payerId && book[e.payerId]) book[e.payerId].paid += v; else unassigned++;
       const ps = (e.participants || []).filter(p => book[p]);
       if (ps.length) { const each = v / ps.length; ps.forEach(p => book[p].owed += each); }
     });
-    return { book, unassigned };
+    if (pot) IDS.forEach(id => { book[id].put = FUND.shares[id] || 0; });
+    const fundIn = IDS.reduce((s, id) => s + book[id].put, 0);
+    return { book, unassigned, fundPaid, fundIn, fundLeft: fundIn - fundPaid };
   }
-  function transfers(book) {
-    const owe = [], get = [];
-    IDS.forEach(id => {
-      const net = Math.round(book[id].paid - book[id].owed);
+  /* 淨額:正的要收回、負的要付出。一包錢的時候多一方「共同基金」(或保管人扛著它) */
+  function nets(res) {
+    const out = {};
+    IDS.forEach(id => { const b = res.book[id]; out[id] = b.paid + b.put - b.owed; });
+    if (FUND.mode === "pot" && Math.abs(res.fundLeft) >= 0.5) {
+      if (FUND.keeper && out[FUND.keeper] !== undefined) out[FUND.keeper] -= res.fundLeft;
+      else out.fund = -res.fundLeft;
+    }
+    return out;
+  }
+  function transfers(res) {
+    const owe = [], get = [], n = nets(res);
+    Object.keys(n).forEach(id => {
+      const net = Math.round(n[id]);
       if (net < 0) owe.push({ id, v: -net }); else if (net > 0) get.push({ id, v: net });
     });
     owe.sort((a, b) => b.v - a.v); get.sort((a, b) => b.v - a.v);
@@ -5140,11 +5248,15 @@
     const total = state.expenses.reduce((s, e) => s + toTWD(e), 0);
     const tripTotal = state.expenses.filter(e => e.date >= (trip && trip.start || "")).reduce((s, e) => s + toTWD(e), 0);
     /* 記完一筆最想馬上知道的是基金還剩多少,所以擺在第一格 */
-    const pot = state.kitty * IDS.length;
-    const used = IDS.reduce((s, id) => s + ledger().book[id].owed, 0);
+    const res = ledger(), who = Object.keys(FUND.shares);
+    const pot = who.reduce((s, id) => s + FUND.shares[id], 0);
+    /* 預算:出了基金的人分到多少;一包錢:基金裡實際付掉多少 */
+    const used = FUND.mode === "pot" ? res.fundPaid : who.reduce((s, id) => s + res.book[id].owed, 0);
     const left = pot - used;
     el("cost-stats").innerHTML = [
-      tile("基金剩餘", twd(Math.abs(left)), left < 0 ? "已經超支" : "每人約 " + twd(left / IDS.length)),
+      FUND.mode !== "none" && pot > 0
+        ? tile("基金剩餘", twd(Math.abs(left)), left < 0 ? (FUND.mode === "pot" ? "不夠了,要補" : "已經超支") : FUND.mode === "pot" ? "基金付了 " + twd(used) : "每人約 " + twd(left / (who.length || 1)))
+        : tile("每人平均", twd(IDS.length ? total / IDS.length : 0), IDS.length + " 個人"),
       tile("總花費", twd(total), state.expenses.length + " 筆紀錄"),
       tile("行前預訂", twd(total - tripTotal), "機票、住宿等"),
       tile("旅途中", twd(tripTotal), "10/03 起"),
@@ -5198,20 +5310,44 @@
 
   /* 共同基金:每人先拿 kitty 元進來,分攤到的錢就從自己那份扣。
      這裡看的是「花掉多少」,不是「誰先墊的」 —— 墊款是下面「每個人的帳」在管。 */
+  /* 共同基金那一塊。預算:每人一個額度,看各自分到多少;一包錢:收了多少、基金付了多少、剩多少(在誰手上) */
   function renderFund() {
-    const per = state.kitty;
-    const pot = per * IDS.length;
+    const sec = el("fund-sub").closest(".sec");
+    const who = MEMBERS.filter(m => FUND.shares[m.id] !== undefined);
+    const pot = who.reduce((s, m) => s + FUND.shares[m.id], 0);
+    if (sec) sec.hidden = FUND.mode === "none" || !who.length;
+    if (FUND.mode === "none" || !who.length) return;
     const res = ledger();
-    const used = IDS.reduce((s, id) => s + res.book[id].owed, 0);
+    const vals = who.map(m => FUND.shares[m.id]);
+    const same = vals.every(v => v === vals[0]);
+    el("fund-sub").textContent = (FUND.mode === "pot" ? "一包錢 · " : "預算 · ") + (same ? "每人 " + twd(vals[0]) : "每人不一樣") + " · 共 " + twd(pot);
+    const pre = state.expenses.filter(e => e.date < (trip && trip.start || "")).reduce((s, e) => s + toTWD(e), 0);
+    const canTop = FUND.mode === "pot" && online && !(trip && trip.ended) &&
+      (editable("cost") || (FUND.keeper && myMember && FUND.keeper === myMember.id));
+
+    if (FUND.mode === "pot") {
+      const used = res.fundPaid, left = res.fundLeft;
+      const pct = pot > 0 ? Math.min(100, used / pot * 100) : 0;
+      const rows = who.map(m => '<div class="fp" style="--fc:' + m.color + '">' +
+        '<span class="nm"><span class="dot" style="background:' + m.color + '"></span>' + esc(nameOf(m.id)) + "</span>" +
+        '<span class="track"><i style="width:' + (pot > 0 ? FUND.shares[m.id] / pot * 100 : 0) + '%"></i></span>' +
+        '<span class="amt">出了 <b>' + twd(FUND.shares[m.id]) + "</b></span></div>").join("");
+      el("fund").innerHTML =
+        '<div class="fund-top"><span class="used">基金付了 ' + twd(used) + "</span>" +
+        '<span class="left">' + (left < 0 ? "不夠 <b style=\"color:var(--neg)\">" + twd(-left) + "</b>" : "還剩 <b>" + twd(left) + "</b>") + "</span></div>" +
+        '<div class="fund-bar' + (left < 0 ? " over" : "") + '"><i style="width:' + pct + '%"></i></div>' +
+        '<div class="fund-note">錢在 ' + esc(FUND.keeper ? nameOf(FUND.keeper) : "共同基金") + " 手上 · 收了 " + twd(pot) +
+        (left < 0 ? " · 不夠的照結清方式補" : left > 0 ? " · 剩的照結清方式退" : "") + "</div>" +
+        '<div class="fund-people">' + rows + "</div>" +
+        (canTop ? '<div class="fund-ops"><button type="button" class="btn btn-sm" id="fund-top-btn">補基金</button></div>' : "");
+      if (el("fund-top-btn")) el("fund-top-btn").addEventListener("click", openTopup);
+      return;
+    }
+    const used = who.reduce((s, m) => s + res.book[m.id].owed, 0);
     const left = pot - used;
     const pct = pot > 0 ? Math.min(100, used / pot * 100) : 0;
-
-    el("fund-sub").textContent = "每人 " + twd(per) + " · 共 " + twd(pot);
-
-    /* 行前的花費(機票之類)如果也記進來了,要講出來,不然這個數字會被誤讀 */
-    const pre = state.expenses.filter(e => e.date < (trip && trip.start || "")).reduce((s, e) => s + toTWD(e), 0);
-
-    const rows = MEMBERS.map(m => {
+    const rows = who.map(m => {
+      const per = FUND.shares[m.id];
       const u = res.book[m.id].owed;
       const rest = per - u;
       const p = per > 0 ? Math.min(100, u / per * 100) : 0;
@@ -5220,7 +5356,6 @@
         '<span class="track"><i style="width:' + p + '%"></i></span>' +
         '<span class="amt">用 <b>' + twd(u) + "</b> · " + (rest < 0 ? "超支 " : "剩 ") + twd(Math.abs(rest)) + "</span></div>";
     }).join("");
-
     el("fund").innerHTML =
       '<div class="fund-top"><span class="used">已用 ' + twd(used) + "</span>" +
       '<span class="left">' + (left < 0 ? "超出 <b style=\"color:var(--neg)\">" + twd(-left) + "</b>" : "還剩 <b>" + twd(left) + "</b>") + "</span></div>" +
@@ -5235,19 +5370,23 @@
     el("split-warn").innerHTML = res.unassigned
       ? '<div class="note" style="margin-bottom:18px"><span>⚠</span><span>有 ' + res.unassigned +
         " 筆花費還沒指定付款人,這些錢算進「該付」但沒算成任何人「已付」,結算金額會不準。</span></div>" : "";
+    const nt = nets(res), pot = FUND.mode === "pot";
     el("people").innerHTML = MEMBERS.map(m => {
       const b = res.book[m.id];
-      const net = b.paid - b.owed;
+      /* 保管人手上有基金剩的錢:他的淨額已經扣掉了,卡片也照這個講 */
+      const net = nt[m.id];
       const col = net > 0.5 ? "var(--pos)" : net < -0.5 ? "var(--neg)" : "var(--muted)";
       const word = net > 0.5 ? "應收回" : net < -0.5 ? "要付出" : "剛好打平";
       return '<div class="person"><div class="nm"><span class="dot" style="background:' + m.color + '"></span>' + esc(nameOf(m.id)) + "</div>" +
         '<div class="kv"><span>已付</span><span class="num">' + twd(b.paid) + "</span></div>" +
+        (pot && b.put ? '<div class="kv"><span>出基金</span><span class="num">' + twd(b.put) + "</span></div>" : "") +
+        (pot && FUND.keeper === m.id && Math.abs(res.fundLeft) >= 0.5 ? '<div class="kv"><span>' + (res.fundLeft > 0 ? "手上基金剩" : "基金墊不夠") + '</span><span class="num">' + twd(Math.abs(res.fundLeft)) + "</span></div>" : "") +
         '<div class="kv"><span>該付</span><span class="num">' + twd(b.owed) + "</span></div>" +
         '<div class="net"><span>' + word + '</span><span class="v" style="color:' + col + '">' +
         (Math.abs(net) < 0.5 ? "—" : twd(Math.abs(net))) + "</span></div></div>";
     }).join("");
 
-    const t = transfers(res.book);
+    const t = transfers(res);
     el("transfers").innerHTML = t.length
       ? t.map(x => '<div class="pay"><span class="dot" style="background:' + colorOf(x.from) + '"></span><span class="who1">' + esc(nameOf(x.from)) +
           '</span><span class="arr">→</span><span class="dot" style="background:' + colorOf(x.to) + '"></span><span class="who2">' + esc(nameOf(x.to)) +
@@ -5368,6 +5507,8 @@
     document.addEventListener("click", ev => {
       if (pop.hidden) return;
       if (!ev.target.closest("#menu-pop") && !ev.target.closest("#menu-btn")) open(false);
+      /* 但會開對話框的那幾顆要關(2026-10-02):不然選單蓋在「團的設定」上面 */
+      else if (ev.target.closest("#cloud-invite, #cloud-set, #cloud-admin")) open(false);
     });
     document.addEventListener("keydown", ev => { if (ev.key === "Escape" && !pop.hidden) open(false); });
   })();
@@ -5538,7 +5679,9 @@
   el("ef-cat").innerHTML = CATS.map(c => '<option value="' + c.id + '">' + c.name + "</option>").join("");
   function fillPeopleControls() {
     el("ef-payer").innerHTML = '<option value="">— 還不確定 —</option>' +
-      MEMBERS.map(m => '<option value="' + m.id + '">' + esc(nameOf(m.id)) + "</option>").join("");
+      MEMBERS.map(m => '<option value="' + m.id + '">' + esc(nameOf(m.id)) + "</option>").join("") +
+      /* 一包錢:付款人可以是「共同基金」 */
+      (FUND.mode === "pot" ? '<option value="fund">共同基金</option>' : "");
     el("ef-who").innerHTML = MEMBERS.map(m =>
       '<label class="rm-chip"><input type="checkbox" id="who-' + m.id + '" value="' + m.id + '" checked>' + esc(nameOf(m.id)) + "</label>").join("");
   }
@@ -5596,7 +5739,8 @@
 
   function fillExpPeople(payerId, participants) {
     el("xe-payer").innerHTML = '<option value="">— 還不確定 —</option>' +
-      MEMBERS.map(m => '<option value="' + m.id + '"' + (m.id === payerId ? " selected" : "") + ">" + esc(nameOf(m.id)) + "</option>").join("");
+      MEMBERS.map(m => '<option value="' + m.id + '"' + (m.id === payerId ? " selected" : "") + ">" + esc(nameOf(m.id)) + "</option>").join("") +
+      (FUND.mode === "pot" || payerId === "fund" ? '<option value="fund"' + (payerId === "fund" ? " selected" : "") + ">共同基金</option>" : "");
     el("xe-who").innerHTML = MEMBERS.map(m =>
       '<label class="rm-chip"><input type="checkbox" value="' + m.id + '"' + (participants.includes(m.id) ? " checked" : "") + ">" + esc(nameOf(m.id)) + "</label>").join("");
   }
@@ -7012,7 +7156,7 @@
       : "旅程已經開始了:第一天不能改,最後一天只能往後延。沒延長的話,最後一天過完這一團就結束(只能看)。";
     el("st-rate").value = trip.rate || "";
     el("st-rate-fld").hidden = trip.currency === "TWD";
-    el("st-kitty").value = trip.kitty || 0;
+    fillFundSettings();
     /* 副團主:一團 1 位,團主以外的人都可以挑。今天換過了就鎖住,講幾點之後才能再換 */
     const dep = MEMBERS.find(m => m.role === "副團主");
     el("st-deputy").innerHTML = '<option value="">— 沒有 —</option>' + MEMBERS.filter(m => m.role !== "團主").map(m =>
@@ -7032,6 +7176,71 @@
     el("settings-overlay").hidden = false;
   }
   el("st-country").addEventListener("change", () => { el("st-rate-fld").hidden = el("st-country").value === "台灣"; });
+
+  /* ---- 團的設定:共同基金 ----
+     模式 → 誰有出(照這一團的成員)→ 每人一樣(一格)或不一樣(每個勾了的人一格)→ 一包錢才有保管人 */
+  function fillFundSettings() {
+    el("st-fund-mode").value = FUND.mode;
+    const ids0 = Object.keys(FUND.shares);
+    const on = id => FUND.mode === "none" || !ids0.length || ids0.includes(id);
+    el("st-fund-who").innerHTML = MEMBERS.map(m => '<label class="rm-chip"><input type="checkbox" data-fund-who="' + esc(m.id) + '"' +
+      (on(m.id) ? " checked" : "") + ">" + esc(nameOf(m.id)) + "</label>").join("");
+    const vals = ids0.map(id => FUND.shares[id]);
+    const same = !vals.length || vals.every(v => v === vals[0]);
+    el("st-fund-same1").checked = same; el("st-fund-same0").checked = !same;
+    el("st-kitty").value = vals.length ? vals[0] : "";
+    el("st-fund-each").innerHTML = MEMBERS.map(m => '<div class="fld" data-fund-row="' + esc(m.id) + '"><label class="rm-label" for="st-fe-' + esc(m.id) + '">' + esc(nameOf(m.id)) + "</label>" +
+      '<input class="rm-input" type="number" min="0" step="1" id="st-fe-' + esc(m.id) + '" data-fund-amt="' + esc(m.id) + '" value="' + (FUND.shares[m.id] !== undefined ? FUND.shares[m.id] : "") + '"></div>').join("");
+    const boss = MEMBERS.find(m => m.role === "團主");
+    el("st-keeper").innerHTML = '<option value="">— 不指定(轉帳寫「共同基金」)—</option>' + MEMBERS.map(m =>
+      '<option value="' + esc(m.id) + '"' + ((FUND.mode === "pot" ? FUND.keeper : boss && boss.id) === m.id ? " selected" : "") + ">" + esc(nameOf(m.id)) + "</option>").join("");
+    syncFundSettings();
+  }
+  function syncFundSettings() {
+    const mode = el("st-fund-mode").value, same = el("st-fund-same1").checked;
+    el("st-fund-box").hidden = mode === "none";
+    el("st-keeper-fld").hidden = mode !== "pot";
+    el("st-kitty-fld").hidden = !same;
+    el("st-fund-each").hidden = same;
+    const who = [].map.call(document.querySelectorAll("[data-fund-who]:checked"), x => x.dataset.fundWho);
+    document.querySelectorAll("[data-fund-row]").forEach(row => { row.hidden = !who.includes(row.dataset.fundRow); });
+    el("st-fund-note").textContent = mode === "pot"
+      ? "一包錢:記帳時付款人可以選「共同基金」;結算時大家交的錢算進去,剩的退、不夠的補。"
+      : mode === "budget" ? "預算:不影響誰要付誰,只是看每個人分到的花費用了自己的額度多少。" : "";
+  }
+  ["st-fund-mode", "st-fund-same1", "st-fund-same0"].forEach(id => el(id).addEventListener("change", syncFundSettings));
+  el("st-fund-who").addEventListener("change", syncFundSettings);
+  function fundFromSettings() {
+    const mode = el("st-fund-mode").value;
+    if (mode === "none") return { mode, shares: {}, keeper: "" };
+    const who = [].map.call(document.querySelectorAll("[data-fund-who]:checked"), x => x.dataset.fundWho);
+    const same = el("st-fund-same1").checked, shares = {};
+    who.forEach(id => { shares[id] = Math.max(0, Math.round(Number(same ? el("st-kitty").value : (el("st-fe-" + id) || {}).value) || 0)); });
+    return { mode, shares, keeper: mode === "pot" ? el("st-keeper").value : "" };
+  }
+
+  /* ---- 補基金 ---- */
+  function openTopup() {
+    el("ft-who").innerHTML = MEMBERS.filter(m => FUND.shares[m.id] !== undefined).map(m =>
+      '<label class="rm-chip"><input type="checkbox" value="' + esc(m.id) + '" checked>' + esc(nameOf(m.id)) + "</label>").join("");
+    el("ft-amt").value = "";
+    el("ft-err").hidden = true;
+    el("fund-top-overlay").hidden = false;
+  }
+  el("ft-cancel").addEventListener("click", () => { el("fund-top-overlay").hidden = true; });
+  el("fund-top-form").addEventListener("submit", async ev => {
+    ev.preventDefault();
+    const who = [].map.call(el("ft-who").querySelectorAll("input:checked"), x => x.value);
+    const btn = el("ft-save"); btn.disabled = true;
+    try {
+      const r = await api("?resource=fund&t=" + encodeURIComponent(TRIP), { method: "POST", body: JSON.stringify({ who, amount: Number(el("ft-amt").value) }) });
+      if (r && r.fund && trip) { trip.fund = r.fund; applyTrip(); }
+      el("fund-top-overlay").hidden = true;
+      render();
+      flash("記下來了");
+    } catch (e) { const er = el("ft-err"); er.textContent = e.message; er.hidden = false; }
+    btn.disabled = false;
+  });
   el("st-cancel").addEventListener("click", () => { el("settings-overlay").hidden = true; });
   el("settings-form").addEventListener("submit", async ev => {
     ev.preventDefault();
@@ -7042,7 +7251,7 @@
       if (myMember.role === "團主") {
         const body = {
           name: el("st-name").value.trim(), country: el("st-country").value, city: el("st-city").value.trim(),
-          start: el("st-start").value, end: el("st-end").value, kitty: Number(el("st-kitty").value) || 0,
+          start: el("st-start").value, end: el("st-end").value, fund: fundFromSettings(),
           can: { plan: el("st-can-plan").checked, cost: el("st-can-cost").checked, seat: el("st-can-seat").checked },
         };
         /* 副團主有換才送(沒換也送的話,伺服器不會當成換人,但少一次往返) */
@@ -7507,7 +7716,7 @@
     "settings-overlay": ["st-cancel"], "invite-overlay": ["inv-close"], "flight-overlay": ["fl-cancel"],
     "exp-edit-overlay": ["xe-cancel"], "edit-overlay": ["se-cancel"], "stop-add-overlay": ["sf-cancel"],
     "ai-overlay": ["ai-cancel", "ai-cancel2"], "wish-add-overlay": ["wf-cancel"], "wish-edit-overlay": ["we-cancel"],
-    "time-overlay": ["tf-cancel"],
+    "time-overlay": ["tf-cancel"], "fund-top-overlay": ["ft-cancel"],
   };
   const fieldsOf = ov => [].map.call(ov.querySelectorAll("input,select,textarea"),
     f => f.type === "checkbox" || f.type === "radio" ? (f.checked ? "1" : "0") : f.type === "file" ? String(f.files && f.files.length) : f.value).join("\u0001");
