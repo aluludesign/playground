@@ -624,7 +624,7 @@
       background:var(--line); border:1px solid var(--line);}
     /* 選取時整顆是陶土色,那顆點要換成淺色才看得見 —— 只有「全部已排」例外,
        它本來就是中性色,在陶土上照樣分得出來。 */
-    .lay[aria-pressed="true"]::before{background:var(--ds-sys-shared-color-on-primary-container); border-color:var(--ds-sys-shared-color-on-primary-container);}
+    .lay[aria-pressed="true"]::before{background:var(--ds-sys-shared-color-on-secondary-container); border-color:var(--ds-sys-shared-color-on-secondary-container);}
     #lay-plan[aria-pressed="true"]::before{background:var(--dc,var(--ink)); border-color:var(--ds-sys-shared-color-surf-container-lowest);}
     #lay-wish[aria-pressed="true"]::before{background:var(--accent); border-color:var(--ds-sys-shared-color-surf-container-lowest);}
     /* 這一頁的主角那層鎖著開(行程頁鎖行程、許願頁鎖願望),按了不會有反應 ——
@@ -1371,11 +1371,13 @@
 
     /* ---- Chips（.rm-chip）----
        可切換的（誰分攤、成員權限、投票、地圖圖層）＝ Filter chip；花費分類 .cat ＝ Chip / Label。
-       Color 用 Primary：未選取＝primary 字＋outline variant 框；選取＝primary-container 底。 */
+       **Color 用 Secondary**(2026-10-02 照 Figma「Chip / Filter」Color=Secondary, Style=Outlined):
+       未選取＝outline variant 框＋on surface var 字;選取＝secondary container 底＋secondary 框(1px,選了框還在)＋
+       on secondary container 字;hover 8% / pressed 10% 的 state layer 用字的顏色。以前是 Primary、選了框就不見,看起來像別種東西。 */
     .rm-chip{position:relative; isolation:isolate; display:inline-flex; align-items:center; gap:var(--ds-sys-shared-spacing-md);
       min-height:var(--ds-comp-chip-height); padding:0 var(--ds-sys-shared-spacing-xl);
       border:var(--ds-sys-shared-border-xs) solid var(--ds-sys-shared-color-outline-variant); border-radius:var(--ds-comp-chip-radius);
-      background:transparent; color:var(--ds-sys-shared-color-primary); box-shadow:none;
+      background:transparent; color:var(--ds-sys-shared-color-on-surface-var); box-shadow:none;
       font-family:inherit; font-size:14px; font-weight:400; line-height:1.4;}
     .rm-chip .i{width:var(--ds-comp-chip-icon); height:var(--ds-comp-chip-icon);}
     .rm-chip.rm-chip--selectable::after,.who .rm-chip::after{content:""; position:absolute; inset:0; z-index:-1; border-radius:inherit;
@@ -1386,7 +1388,7 @@
     .rm-chip.rm-chip--selectable:focus-visible,.who .rm-chip:has(> input:focus-visible){outline:3px solid var(--ds-comp-focus-ring-color); outline-offset:2px; border-radius:var(--ds-comp-chip-radius);}
     .rm-chip.rm-chip--selectable[aria-pressed="true"],.rm-chip.rm-chip--selectable[aria-pressed="true"]:hover,
     .rm-chip:has(> input:checked),.rm-chip:has(> input:checked):hover{
-      background:var(--ds-sys-shared-color-primary-container); border-color:transparent; color:var(--ds-sys-shared-color-on-primary-container); box-shadow:none;}
+      background:var(--ds-sys-shared-color-secondary-container); border-color:var(--ds-sys-shared-color-secondary); color:var(--ds-sys-shared-color-on-secondary-container); box-shadow:none;}
     .rm-chip.rm-chip--selectable:disabled{color:color-mix(in srgb, var(--ds-sys-shared-color-on-surface) 38%, transparent);
       border-color:color-mix(in srgb, var(--ds-sys-shared-color-on-surface) 12%, transparent);}
     .rm-chip.rm-chip--selectable:disabled::after{opacity:0;}
@@ -1399,6 +1401,8 @@
     .laygroup{border:var(--ds-sys-shared-border-xs) solid var(--ds-sys-shared-color-outline-variant); border-radius:var(--ds-comp-chip-radius);}
     .laygroup .lay.rm-chip{border:0; border-radius:0;}
     .laygroup .lay + .lay{border-left:var(--ds-sys-shared-border-xs) solid var(--ds-sys-shared-color-outline-variant);}
+    .laygroup .lay.rm-chip[aria-pressed="true"]{border:0;}
+    .laygroup .lay.rm-chip + .lay.rm-chip{border-left:var(--ds-sys-shared-border-xs) solid var(--ds-sys-shared-color-outline-variant);}
     /* 花費分類 ＝ Chip / Label：不能點，沒有狀態；底色是各分類自己的顏色（行內 style），所以字維持白色 */
     .rm-chip.cat{border-color:transparent; color:#fff;}
   }
@@ -1495,7 +1499,7 @@
       <div class="col">
       <div class="sec-head">
         <h2 id="day-title">當日行程</h2>
-        <button class="btn btn-sm" id="add-stop-btn" type="button"><svg class="i" aria-hidden="true"><use href="#i-plus"></use></svg>加行程</button>
+        <button class="btn btn-sm btn-main" id="add-stop-btn" type="button"><svg class="i" aria-hidden="true"><use href="#i-plus"></use></svg>加行程</button>
       </div>
       <!-- 送出之後那句話講在這裡,不講在頁尾。表單送出就收起來了,所以槽在表單**外面**
            才活得過那一下。預設 hidden、外層不掛任何有 display 的 class,
@@ -1512,7 +1516,7 @@
           <!-- **跟「＋加行程」同一個位置**:各自區塊的右上角。以前它在清單的最下面,
                願望多的時候要捲到底才按得到 —— 而這是「想到就丟一筆」的東西。
                排在地圖那顆的左邊:先給「加東西」,再給「換個方式看」。 -->
-          <button class="btn btn-sm" id="add-wish-btn" type="button"><svg class="i" aria-hidden="true"><use href="#i-plus"></use></svg>許願</button>
+          <button class="btn btn-sm btn-main" id="add-wish-btn" type="button"><svg class="i" aria-hidden="true"><use href="#i-plus"></use></svg>許願</button>
           <svg class="i wish-caret" aria-hidden="true"><use href="#i-chevron-down"></use></svg>
         </summary>
         <p class="wish-intro">想去哪裡先丟進來,不用等排好。誰都可以許願、可以幫別人的願望 +1。</p>
@@ -7540,7 +7544,10 @@
     }, true);
   })();
 
-  /* ---- 手機／窄桌機:左右滑就換「行程 ⇄ 許願」 ----
+  /* ---- 手機／窄桌機:**行程頁左右滑 = 換天數**(2026-10-02,Lulu 改的;以前是「行程 ⇄ 許願」互換)----
+     往左滑 = 下一天、往右滑 = 前一天,跟點上面那一排日子同一條路(按那一天的按鈕)。
+     第一天再往右、最後一天再往左:不動。**許願頁不滑**(那一頁沒有「天」)。
+     以下是舊的說明,讓路規則照舊有效:
      底下那排分頁還在,這只是另一條路 —— 拇指在清單上滑一下比伸到畫面最下面近。
      只有這兩頁互換:搭機／花費／分帳跟它們不是同一個東西,滑過去只會讓人迷路。
 
@@ -7561,7 +7568,7 @@
     const MAXMS = 700;   /* 慢慢移動不算滑 */
     let x0 = 0, y0 = 0, t0 = 0, from = null, live = false;
 
-    const swipeable = () => !wideCols() && (state.tab === "plan" || state.tab === "wish");
+    const swipeable = () => !wideCols() && state.tab === "plan";
 
     sheet.addEventListener("pointerdown", ev => {
       live = false;
@@ -7580,8 +7587,11 @@
       if (Math.abs(dx) < MIN || Math.abs(dx) < Math.abs(dy) * RATIO) return;
       /* 讓路 2:卡片上的左滑是它的,右滑在它已經露出來的時候也是它的 */
       if (from && (dx < 0 || from.classList.contains("revealed"))) return;
-      const next = dx < 0 ? "wish" : "plan";
-      if (next !== state.tab) switchTab(next);
+      const i = DAYS.findIndex(d => d.date === state.day);
+      const to = DAYS[i + (dx < 0 ? 1 : -1)];
+      if (i < 0 || !to) return;
+      const b = document.querySelector('#days [data-day="' + to.date + '"]');
+      if (b) { b.click(); b.scrollIntoView({ block: "nearest", inline: "nearest" }); }
     }
     sheet.addEventListener("pointerup", end);
     sheet.addEventListener("pointercancel", () => { live = false; });

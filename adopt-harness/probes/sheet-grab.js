@@ -353,7 +353,7 @@ async function drag(dy) {
     d.getElementById("tab-wish").click();
     await sleep(500);
 
-    /* ---- 左右滑換「行程 ⇄ 許願」 ----
+    /* ---- 左右滑(2026-10-02 起:行程頁換天數、許願頁不滑)----
        **每一條讓路規則都要問**,因為它們都是「兩個手勢搶同一塊地」——
        而搶輸的那一個不會報錯,只會安靜地不動作。 */
     /* **這一段以前包在一個沒有被 `await` 的 Promise 鏈裡。**
@@ -371,23 +371,33 @@ async function drag(dy) {
         pointerId: 5, bubbles: true, cancelable: true, pointerType: "touch" }));
       await sleep(350);
     }
+    /* **2026-10-02 起行程頁左右滑 = 換天數**(Lulu):往左下一天、往右前一天;許願頁不滑。 */
+    var dayNow = () => (d.querySelector('#days [aria-pressed="true"]') || {}).dataset ? d.querySelector('#days [aria-pressed="true"]').dataset.day : "";
     d.getElementById("tab-plan").click();
     await sleep(350);
+    var first = d.querySelector("#days [data-day]"); if (dayNow() !== first.dataset.day) { first.click(); await sleep(200); }
+    var day0 = dayNow();
     var midX = Math.round(w.innerWidth / 2);
     var midY = Math.round(sh2.getBoundingClientRect().top + 120);
-    await sw(midX, midY, -120, 4);
-    ok("在清單上往左滑 → 換到「許願」", d.body.dataset.view === "wish", d.body.dataset.view);
     await sw(midX, midY, 120, 4);
-    ok("往右滑 → 換回「行程」", d.body.dataset.view === "plan", d.body.dataset.view);
-    /* 讓路 1:日期那一排自己會橫向捲,在它上面滑不該換頁 */
+    ok("第一天再往右滑 → 不動(沒有前一天)", dayNow() === day0 && d.body.dataset.view === "plan", dayNow());
+    await sw(midX, midY, -120, 4);
+    var day1 = dayNow();
+    ok("在清單上往左滑 → 下一天(還在行程頁)", day1 > day0 && d.body.dataset.view === "plan", { 前: day0, 後: day1, 頁: d.body.dataset.view });
+    await sw(midX, midY, 120, 4);
+    ok("往右滑 → 回前一天", dayNow() === day0, dayNow());
+    /* 讓路 1:日期那一排自己會橫向捲,在它上面滑不該換天 */
     var daysEl2 = d.getElementById("days"), db = daysEl2.getBoundingClientRect();
     await sw(Math.round(db.left + db.width / 2), Math.round(db.top + db.height / 2), -120, 4, daysEl2);
-    ok("**在日期那一排上滑不會換頁**(那是在找日子,不是要換頁)",
-      d.body.dataset.view === "plan", d.body.dataset.view);
+    ok("**在日期那一排上滑不會換天**(那是在捲那一排)", dayNow() === day0, dayNow());
     await sw(midX, midY, 30, 160);
-    ok("**直著滑不會換頁**(那是在捲清單)", d.body.dataset.view === "plan", d.body.dataset.view);
+    ok("**直著滑不會換天**(那是在捲清單)", dayNow() === day0, dayNow());
     await sw(midX, midY, -30, 2);
-    ok("滑一點點不算(要走夠遠才換)", d.body.dataset.view === "plan", d.body.dataset.view);
+    ok("滑一點點不算(要走夠遠才換)", dayNow() === day0, dayNow());
+    d.getElementById("tab-wish").click(); await sleep(300);
+    await sw(midX, midY, 120, 4); await sw(midX, midY, -120, 4);
+    ok("**許願頁左右滑不會換頁**", d.body.dataset.view === "wish", d.body.dataset.view);
+    d.getElementById("tab-plan").click(); await sleep(300);
 
 
     /* **拖放是桌機才有的。** 願望卡長按拖進時間軸那條路,2026-09-17 就是因為
