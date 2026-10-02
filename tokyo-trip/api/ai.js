@@ -135,7 +135,8 @@ function schema(ctx) {
       category:{ type: "STRING", enum: ["交通", "住宿", "餐飲", "景點", "購物", "其他"], description: "expense:分類" },
       legs:    { type: "ARRAY", description: "transport:讀到的每一段交通,照時間先後;文字和圖片講的是不同段就各列一段。不是交通就空陣列", items: LEG },
       items:   { type: "ARRAY", description: "wish/stop/expense:讀到的每一筆(好幾個想去的地方、好幾個行程、好幾筆花費各列一筆,照出現的順序);只有一筆也列一筆。transport 用 legs,這裡空陣列", items: itemSchema(ctx) },
-      message: { type: "STRING", description: "給使用者的一句話:判斷的理由,或還缺什麼資訊。繁體中文,40 字以內" },
+      /* **這時候還沒有存任何東西**(2026-10-02,Lulu 抓到:沒按確定卻看到「已加進許願」)—— 要人看過再按才會存 */
+      message: { type: "STRING", description: "給使用者的一句話:判斷的理由,或還缺什麼資訊。繁體中文,40 字以內。這時候還沒有存任何東西,不要說「已加入」「已新增」「已記下」,要說「讀到…」「看起來是…」" },
     },
     required: ["intent", "title", "day", "time", "note", "amount", "currency", "date", "category", "legs", "items", "message"],
   };
@@ -295,7 +296,8 @@ function clean(f, ctx) {
       const xs = raw.slice(0, 8).map(x => cleanItem(x || {}, ctx, intent)).filter(x => x.title || x.amount);
       return xs.length ? xs : [cleanItem(f, ctx, intent)];
     })(),
-    message: s(f.message, 120),
+    /* 模型偶爾還是會說「已加入許願清單」—— 那時候根本還沒存,這種句子整句不給 */
+    message: /已(經)?.{0,24}?(加入|加進|新增|記下|記好|存好|存進|排進|建立)/.test(s(f.message, 120)) ? "" : s(f.message, 120),
   };
 }
 

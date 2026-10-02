@@ -205,6 +205,13 @@ function ok(name, cond, extra) {
   r = await call({ text: "想去築地市場" }, () => okJson(GOOD), true);
   ok("沒登入 → 401,**而且一次都沒打 Gemini**(額度不會被路人用掉)",
     r.res.code === 401 && r.seen.length === 0, { code: r.res.code, seen: r.seen.length });
+  /* 模型說「已加入」:那時候還沒存,那句不能給使用者看(2026-10-02) */
+  r = await call({ text: "想去淺草寺" }, () => ({ ok: true, status: 200, json: async () => ({ candidates: [{ content: { parts: [{ text: JSON.stringify({
+    intent: "wish", title: "淺草寺", day: 0, time: "", note: "", amount: 0, currency: "unknown", date: "", category: "其他", legs: [], items: [], message: "已將淺草寺加入許願清單" }) }] } }] }) }));
+  ok("AI 說「已將…加入許願清單」→ 那句不給(還沒存)", r.res.code === 200 && r.res.body.result && r.res.body.result.message === "" && r.res.body.result.title === "淺草寺", r.res.body);
+  r = await call({ text: "想去淺草寺" }, () => ({ ok: true, status: 200, json: async () => ({ candidates: [{ content: { parts: [{ text: JSON.stringify({
+    intent: "wish", title: "淺草寺", day: 0, time: "", note: "", amount: 0, currency: "unknown", date: "", category: "其他", legs: [], items: [], message: "看起來是想去的地方" }) }] } }] }) }));
+  ok("正常的那句照給", r.res.body.result && r.res.body.result.message === "看起來是想去的地方", r.res.body);
   console.log(fails ? "\n✗ " + fails + " 項沒過" : "\n全部通過");
   process.exit(fails ? 1 : 0);
 })();

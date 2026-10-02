@@ -1017,8 +1017,9 @@ function pinsOf(k) { return pins()[k]; }
     ok("AI 那個對話框自己關掉了(不會兩個疊在一起)",
       q("#ai-overlay").hidden === true, q("#ai-overlay").hidden);
     ok("讀出來的名字已經填好", (q("#wf-title").value || "").length > 0, q("#wf-title").value);
-    ok("AI 講的那句話也跟著進去(不然他不知道欄位為什麼是這樣填的)",
-      /\S/.test(q("#wish-msg").textContent || ""), q("#wish-msg").textContent);
+    /* 2026-10-02 起那句放在對話框裡(#wf-ai),不放清單上的 #wish-msg —— 放清單上的話按取消它還留著,像已經加進去了 */
+    ok("AI 講的那句話也跟著進去,而且在對話框裡(不然他不知道欄位為什麼是這樣填的)",
+      !q("#wf-ai").hidden && /\S/.test(q("#wf-ai").textContent || "") && !(q("#wish-msg").textContent || "").trim(), { 框裡: q("#wf-ai").textContent, 清單上: q("#wish-msg").textContent });
     /* **按人會按的那顆鈕。** 第一版寫成「找得到就按,找不到就把它藏起來」——
        而那顆的 id 是 `wf-cancel` 不是 `wa-cancel`,所以它每次都走藏起來那條,
        也就是說「關得掉」這件事從來沒被走過一次。 */
