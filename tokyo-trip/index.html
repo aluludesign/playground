@@ -165,6 +165,11 @@
   @layer components {
   *,*::before,*::after{box-sizing:border-box;}
     html{padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);}
+    /* **點下去不要有一塊黑的**(2026-10-02,Lulu:「任何點擊行為都會出現黑色的點擊區域,好醜」)。
+       那是 iOS 自己蓋上去的 tap highlight;按鈕自己有按下的狀態(state layer),不需要它。
+       點完之後留下的那圈 focus 框也只給鍵盤用的人(:focus-visible 照舊有) */
+    *, *::before, *::after{-webkit-tap-highlight-color:transparent;}
+    :focus:not(:focus-visible){outline:none;}
     body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--font-body); font-size:14px; line-height:1.6; -webkit-font-smoothing:antialiased;}
     img{max-width:100%;}
     [hidden]{display:none!important;}
@@ -1266,7 +1271,13 @@
     .signin.wide{max-width:440px; max-height:calc(100vh - 40px); overflow-y:auto; gap:12px;}
     /* ---- 疊起來的卡片(AI 一次讀到好幾段交通,2026-10-02)----
        後面兩張是裝飾,往下錯開、縮一點;存了這張 → 它往左滑走(slide-out),後面那張推到前面(advance)。 */
-    .stack{position:relative; margin:auto; width:100%; max-width:440px;}
+    /* 外框的寬度跟著裡面那張卡:一般的卡 380、寬的卡(.wide)440 —— 包了一層之後不能變寬或變窄 */
+    .stack{position:relative; margin:auto; width:100%; max-width:380px;}
+    .stack:has(> .signin.wide){max-width:440px;}
+    /* **裡面那張卡藏起來的時候,外框也要藏起來**(2026-10-02,Lulu:「第二次點 AI 對話框變形了」)。
+       AI 對話框裡有兩張卡(「AI 幫你加」和「確認一下」),外框只包住第二張;它藏著的時候外框還佔著 width:100%,
+       跟第一張擠在同一排,第一張就被擠歪了。驗收:probes/ai-reopen.js */
+    .stack:has(> .signin[hidden]){display:none;}
     /* **好幾筆的時候,卡片一律是螢幕的 60% 高**(2026-10-02,Lulu):每一張一樣大,換下一張不會忽大忽小;內容多就在卡片裡捲 */
     .stack.multi > .signin{height:60vh; max-height:60vh; overflow-y:auto; align-content:start;}
     /* **景深**(Lulu:前後要有景深、大小的區別):越後面越小、越往下、越暗、影子越淡;最前面那張影子最重 */
@@ -1595,21 +1606,7 @@
           <h2>費用明細</h2>
           <button class="btn btn-sm btn-main" id="add-exp-btn" type="button"><svg class="i" aria-hidden="true"><use href="#i-plus"></use></svg>記一筆</button>
         </div>
-        <form class="form" id="exp-form" hidden>
-          <div class="grid2">
-            <div class="fld"><label class="rm-label" for="ef-date">日期</label><input class="rm-input" type="date" id="ef-date" required></div>
-            <div class="fld"><label class="rm-label" for="ef-title">項目</label><input class="rm-input" type="text" id="ef-title" required></div>
-            <div class="fld"><label class="rm-label" for="ef-cat">分類</label><select class="rm-input" id="ef-cat"></select></div>
-          </div>
-          <div class="grid2">
-            <div class="fld"><label class="rm-label" for="ef-amount">金額</label><input class="rm-input" type="number" id="ef-amount" step="1" min="0" placeholder="0" required></div>
-            <div class="fld"><label class="rm-label" for="ef-cur">幣別</label><select class="rm-input" id="ef-cur"><option value="JPY">JPY 日圓</option><option value="TWD">TWD 台幣</option></select></div>
-            <div class="fld"><label class="rm-label" for="ef-payer">誰付的</label><select class="rm-input" id="ef-payer"></select></div>
-          </div>
-          <div class="fld"><label class="rm-label">誰分攤</label><div class="who" id="ef-who"></div></div>
-          <div class="fld"><label class="rm-label" for="ef-note">備註</label><input class="rm-input" type="text" id="ef-note" placeholder="可留白"></div>
-          <div class="form-ops"><button type="button" class="btn btn-ghost btn-sm" id="ef-cancel">取消</button><button type="submit" class="btn btn-main btn-sm">記下來</button></div>
-        </form>
+        <!-- 「＋記一筆」2026-10-02 起跳出對話框(Lulu:要像其他地方一樣),用的是 #exp-edit-overlay 的新增模式;以前這裡是就地展開的表單 -->
         <div id="exp-list"></div>
       </div>
     </section>
@@ -2288,7 +2285,7 @@
     setTripRegion();
     /* 台灣的團只有台幣:幣別選單收起來,預設台幣 */
     const twdOnly = trip.currency === "TWD";
-    ["ef-cur", "xe-cur"].forEach(id => {
+    ["xe-cur"].forEach(id => {
       const box = el(id); if (!box) return;
       const fld = box.closest(".fld"); if (fld) fld.hidden = twdOnly;
       box.value = twdOnly ? "TWD" : (box.value || "JPY");
@@ -2942,7 +2939,8 @@
        許願每個成員都能許,只有看副本(離線)時才收。 */
     if (!editable("plan")) closeStopAdd();
     if (onSnapshot()) closeWishAdd();
-    if (!editable("cost") && !queueCost()) { const ef = el("exp-form"); if (ef) ef.hidden = true; }
+    /* 新增的那一筆開著、但已經不能記帳了 → 收起來(看標題就知道是不是新增:editingExp 宣告在後面,這裡讀它可能還沒初始化) */
+    if (!editable("cost") && !queueCost() && !el("exp-edit-overlay").hidden && el("xe-h2").textContent === "記一筆") el("xe-cancel").click();
     /* 「改」的判準不是 `editable()`,所以它不能掛在上面那個 `if (!on)` 裡:
        線上唯讀(有連線、沒通行碼)時那張表**該**留著,那正是這條路存在的理由。
        只有切進快照模式才要收。
@@ -5747,48 +5745,37 @@
   });
 
   /* --- 花費 --- */
-  el("ef-cat").innerHTML = CATS.map(c => '<option value="' + c.id + '">' + c.name + "</option>").join("");
-  function fillPeopleControls() {
-    el("ef-payer").innerHTML = '<option value="">— 還不確定 —</option>' +
-      MEMBERS.map(m => '<option value="' + m.id + '">' + esc(nameOf(m.id)) + "</option>").join("") +
-      /* 一包錢:付款人可以是「共同基金」 */
-      (FUND.mode === "pot" ? '<option value="fund">共同基金</option>' : "");
-    el("ef-who").innerHTML = MEMBERS.map(m =>
-      '<label class="rm-chip"><input type="checkbox" id="who-' + m.id + '" value="' + m.id + '" checked>' + esc(nameOf(m.id)) + "</label>").join("");
-  }
+  /* 以前填頁面上那張記帳表的付款人、分攤人;那張表 2026-10-02 拿掉了(改成對話框,開的時候才填)。
+     呼叫它的地方很多(換人、換團、存完設定),留一個空殼不必一處一處拆 */
+  function fillPeopleControls() {}
   function defaultDate() {
     const t = todayISO();
     if (!DAYS.length) return t;
     return t >= DAYS[0].date && t <= OVERNIGHT ? t : DAYS[0].date;
   }
-  el("add-exp-btn").addEventListener("click", () => {
-    fillPeopleControls();
-    if (!el("ef-date").value) el("ef-date").value = defaultDate();
-    toggleForm("exp-form");
-  });
-  el("ef-cancel").addEventListener("click", () => toggleForm("exp-form", false));
-  el("exp-form").addEventListener("submit", ev => {
-    ev.preventDefault();
-    const ps = Array.prototype.map.call(el("ef-who").querySelectorAll("input:checked"), i => i.value);
-    if (!ps.length) { flash("至少要選一個人分攤"); return; }
-    addExpense({
-      id: uid(),
-      date: el("ef-date").value,
-      title: el("ef-title").value.trim(),
-      category: el("ef-cat").value,
-      amount: Math.abs(parseFloat(el("ef-amount").value) || 0),
-      currency: el("ef-cur").value,
-      payerId: el("ef-payer").value || null,
-      participants: ps,
-      note: el("ef-note").value.trim(),
-      createdAt: new Date().toISOString(),
-    });
-    const keep = el("ef-date").value;
-    el("exp-form").reset();
-    el("ef-date").value = keep;
-    fillPeopleControls();
-    toggleForm("exp-form", false);
-  });
+  /* **「＋記一筆」跳出對話框**(2026-10-02,Lulu):跟加行程、許願、AI 記帳同一張(#exp-edit-overlay 的新增模式)。
+     日期預設今天(在旅程裡)或第一天;誰分攤預設全員(加入了的人都在);付款人先空著 */
+  let lastExpDate = "";
+  function openExpenseNew() {
+    if (!editable("cost") && !queueCost()) return;
+    aiItems = []; aiItemTotal = 0;
+    editingExp = "new";
+    el("xe-h2").textContent = "記一筆";
+    el("xe-ai").hidden = true; el("xe-skip").hidden = true;
+    stackPaint("exp-edit-form", 0, 0);
+    el("xe-date").value = lastExpDate || defaultDate();
+    el("xe-title").value = "";
+    el("xe-cat").value = CATS[0].id;
+    el("xe-amount").value = "";
+    el("xe-cur").value = trip && trip.currency === "TWD" ? "TWD" : "JPY";
+    fillExpPeople("", IDS.slice());
+    el("xe-note").value = "";
+    showExpError("");
+    tuckMapForDialog(false);
+    delete el("exp-edit-overlay").dataset.keep;
+    el("exp-edit-overlay").hidden = false;
+  }
+  el("add-exp-btn").addEventListener("click", openExpenseNew);
   el("exp-list").addEventListener("click", ev => {
     const b = ev.target.closest("[data-del-exp]");
     if (b) { removeExpense(b.dataset.delExp); return; }
@@ -5864,6 +5851,7 @@
         createdAt: new Date().toISOString(),
       });
       flash("記下來了:" + title);
+      lastExpDate = el("xe-date").value;   /* 連記好幾筆通常是同一天 */
       if (aiItems.length) { stackSlide("exp-edit-form", openExpenseNextAI); return; }
       closeExpEdit();
       return;

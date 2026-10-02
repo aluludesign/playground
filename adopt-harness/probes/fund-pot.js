@@ -24,7 +24,7 @@ return (async function () {
     ok("出錢的人卡片有「出基金」", out.卡片.filter(t => /出基金/.test(t)).length === 3, out.卡片);
     q("#tab-cost").click(); await wait(80);
     q("#add-exp-btn") && q("#add-exp-btn").click(); await wait(80);
-    out.付款人選項 = qa("#ef-payer option").map(o => o.textContent);
+    out.付款人選項 = qa("#xe-payer option").map(o => o.textContent);
     ok("記帳:付款人多一個「共同基金」", out.付款人選項.indexOf("共同基金") >= 0, out.付款人選項);
     q("#tab-split").click(); await wait(80);
     var btn = q("#fund-top-btn");

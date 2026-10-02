@@ -239,6 +239,12 @@ async function drag(dy) {
         return real(u, init);
       };
     })();
+    /* **畫面縮成 600 高再量(2026-10-02)。** 拿掉「你是誰」和重複地名之後這張表變矮了:
+       六筆候選是 738px,在 900 高的畫面裡整張放得下、本來就不用捲,
+       「捲得動」這條就變成在問一件不存在的事(正式版和分支都一樣沒過)。
+       真的手機扣掉 Safari 的上下列大概 550–750,600 是比較小的那一種 —— 量那個才是這條要守的事。 */
+    var frameH = w.frameElement && w.frameElement.style.height;
+    if (w.frameElement) { w.frameElement.style.height = "600px"; await sleep(200); }
     d.getElementById("add-wish-btn").click();
     await until(function () { return !d.getElementById("wish-add-overlay").hidden; });
     d.getElementById("wf-title").value = "溫泉";
@@ -247,7 +253,7 @@ async function drag(dy) {
     await sleep(300);
     var ovr = d.getElementById("wish-add-overlay");
     ok("六筆候選會讓這張表比畫面高(這一條的前提)",
-      d.getElementById("wish-form").getBoundingClientRect().height > w.innerHeight * 0.8,
+      d.getElementById("wish-form").getBoundingClientRect().height > w.innerHeight,
       Math.round(d.getElementById("wish-form").getBoundingClientRect().height));
     ok("而且那一層捲得動", ovr.scrollHeight > ovr.clientHeight,
       { 內容: ovr.scrollHeight, 可見: ovr.clientHeight });
@@ -273,6 +279,7 @@ async function drag(dy) {
       { 容器: so.className, 內容: so.scrollHeight, 可見: so.clientHeight });
     d.getElementById("wf-cancel").click();
     await sleep(200);
+    if (w.frameElement) { w.frameElement.style.height = frameH; await sleep(300); }
 
     /* ---- 點小卡聚焦,再點一次退出來 ----
        以前只有「選進去」沒有「退出來」:要看回整片願望,得去點別的地方或換分頁,
