@@ -12,7 +12,7 @@
 /* 改了 SHELL 的內容就把版號 +1。舊版的快取會在 activate 時整個丟掉。
    版號不動也不會壞(下面是 network-first,線上永遠拿得到新的),
    +1 只是讓離線的人也早一點換掉手上那份。 */
-const CACHE = "tokyo5-shell-v1";
+const CACHE = "tokyo5-shell-v2";   /* v2(2026-10-02):圖示換成 🗼 */
 
 /* 要離線打得開就得備齊的檔。**這份清單會無聲地爛掉** ——
    檔名改了、新增了一個要載入的檔,這裡沒跟著改,線上完全正常,
@@ -22,6 +22,7 @@ const SHELL = [
   "./",
   "./index.html",
   "./retro-modern.built.css",
+  "./retro-modern.js",
   "./config.js",
   "./manifest.webmanifest",
   "./icon.svg",
