@@ -1923,6 +1923,8 @@
 <div class="overlay" id="wish-add-overlay" hidden>
   <form class="signin" id="wish-form">
     <h2>許一個願望</h2>
+    <!-- AI 讀到的那句話放在這裡(對話框裡),**不放在許願清單上** —— 放清單上的話,按取消之後它還留著,看起來像已經加進去了 -->
+    <p class="note" id="wf-ai" hidden></p>
     <div class="fld"><label class="rm-label" for="wf-title">想去哪</label>
       <div class="seek"><input class="rm-input" type="text" id="wf-title" placeholder="地名/車站/建築物/活動名等" required>
       <button type="button" class="btn btn-sm" data-seek="wf-title">搜尋</button></div>
@@ -6460,7 +6462,9 @@
     el("wish-add-overlay").dataset.keep = "1";   /* AI 填的也算「改過」 */
     el("wf-title").value = r.title || "";
     el("wf-note").value = r.note || "";
-    sayHere("wish-msg", itemSay(pos, total, "筆") || r.message || "");
+    const said = itemSay(pos, total, "筆") || r.message || "";
+    el("wf-ai").textContent = said + (said ? " " : "") + "看一下再按「許下去」。";
+    el("wf-ai").hidden = false;
     el("wf-skip").hidden = !(total > 1);
     stackPaint("wish-form", pos, total);
     /* 有地名就先搜一次 —— **挑哪一個還是人挑**,跟手動加同一條規則。 */
@@ -6735,6 +6739,7 @@
     seekReset("wf-title"); seekClear("wf-title");
     fillWishWho();
     sayHere("wish-msg", "");
+    el("wf-ai").hidden = true; el("wf-ai").textContent = "";   /* 手動許願不帶 AI 那句;AI 那條路在這之後才填 */
     showWishError("");
     el("wish-form").reset();
     fillWishWho();   /* reset() 會把下拉選回第一個,所以要在它後面再填一次 */
@@ -6743,6 +6748,7 @@
     el("wf-title").focus();
   }
   function closeWishAdd() {
+    el("wf-ai").hidden = true; el("wf-ai").textContent = "";
     aiItems = []; aiItemTotal = 0; stackPaint("wish-form", 0, 0); el("wf-skip").hidden = true;
     el("wish-add-overlay").hidden = true;
     seekClear("wf-title");
