@@ -12,7 +12,7 @@ return (async function () {
   out.記一筆 = shown(q("#add-exp-btn"));
   out.花費的改 = qa("[data-edit-exp]").length;
   q("#tab-fly").click(); await wait(80);
-  out.加航班 = !!q("[data-flight-add]");
+  out.加航班 = !!(q("[data-flight-add]") && !q("[data-flight-add]").hidden);
   out.航班的筆 = qa("[data-flight-edit]").length;
   q("#tab-wish").click(); await wait(80);
   out.願望的加入 = qa("[data-add-wish]").length;

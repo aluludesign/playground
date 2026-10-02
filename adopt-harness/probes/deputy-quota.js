@@ -31,7 +31,7 @@ return (async function () {
   if (/strong=5\/8/.test(qs)) ok("選單也寫強力搜還能用幾次", /強力搜:還能用 5／8 次/.test(out.選單), out.選單);
   /* 權限 */
   out.加行程 = shown(q("#add-stop-btn"));
-  q("#tab-fly").click(); await wait(80); out.加交通 = !!q("[data-flight-add]"); q("#tab-plan").click();
+  q("#tab-fly").click(); await wait(80); out.加交通 = !!(q("[data-flight-add]") && !q("[data-flight-add]").hidden); q("#tab-plan").click();
   if (mode === "member" && !deputy) ok("一般成員:沒有加行程、沒有加交通(只能許願)", !out.加行程 && !out.加交通, out);
   if (mode === "member" && deputy) ok("副團主(團主勾了行程):加得了行程、加不了交通", out.加行程 && !out.加交通, out);
   if (mode === "owner") {

@@ -772,12 +772,9 @@
     /* **搬到標頭之後不再是「邀請」,是跟「＋加行程」對等的動作按鈕。**
        原本它在清單底下、無框置中、`margin:0 auto 15px` 那一套 —— 那是給
        「頁面最後一條邀請」用的樣子,擺進一排標頭會整條被 auto 撐歪。 */
-    #add-wish-btn{display:inline-flex; align-items:center; justify-content:center; gap:4px;
-      margin:0; padding:6px 11px; min-height:0;
-      background:none; border:0; border-radius:8px; cursor:pointer;
-      color:var(--accent); font-weight:600; font-size:13px; white-space:nowrap;}
-    #add-wish-btn:hover{background:var(--accent-soft);}
-    #add-wish-btn .i{color:var(--accent);}
+    /* 2026-10-02 起它就是一顆普通的 primary sm 按鈕(Lulu:跟「＋加行程」「＋記一筆」同一顆),
+       以前這裡自己畫成無框的陶土色字,蓋掉了按鈕的樣子 */
+    #add-wish-btn{margin:0; white-space:nowrap;}
     .route.dropzone{outline:2px dashed var(--accent); outline-offset:6px; border-radius:8px;}
     /* DAY 標題那一排最右邊的地圖入口 —— 每天都在同一個位置 */
     .iconbtn{display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px;
@@ -1190,6 +1187,8 @@
     .tl-bits{font-size:12px; color:var(--muted);}
     .tl-empty p{margin:0; color:var(--ink);}
     .tl-add{justify-self:start;}
+    .fly-head{display:flex; justify-content:flex-end; margin:12px 0;}
+    .fly-head:has(> [hidden]:only-child){display:none;}
     .tl-foot{margin-block:4px 16px;}
     .kinds .rm-chip:has(> input:checked)::before{display:none;}
     .tl{display:block;}
@@ -1546,6 +1545,8 @@
          航班、座位、行李額度是整趟不變的東西,壓在每天的行程上面只是把當天的事推下去。
          搬過來之後預設攤開:一整頁只放一張收起來的卡沒有意義。 -->
     <section class="panel" id="panel-fly" role="tabpanel" aria-labelledby="tab-fly" hidden>
+    <!-- 「＋加一段交通」在右上角(2026-10-02,Lulu):跟其他頁的新增鈕同一顆 primary sm,不再排在清單最後面 -->
+    <div class="fly-head"><button type="button" class="btn btn-sm btn-main" id="fly-add" data-flight-add hidden><svg class="i" aria-hidden="true"><use href="#i-plus"></use></svg>加一段交通</button></div>
     <div id="board-wrap"></div>
     </section>
 
@@ -3351,7 +3352,9 @@
     const fl = flightsSorted();
     const S = seatsNow();
     const can = mayFly();
-    const addBtn = can ? '<button type="button" class="btn btn-sm tl-add" data-flight-add><svg class="i" aria-hidden="true"><use href="#i-plus"></use></svg>加一段交通</button>' : "";
+    /* 新增鈕在頁面右上角(#fly-add),這裡只管它出不出現 */
+    el("fly-add").hidden = !can;
+    const addBtn = "";
     if (!fl.length) {
       box.innerHTML = '<div class="tleg tl-empty"><p>還沒有交通。' +
         (can ? "加上去程、回程,或路上的火車、巴士、船、租車 —— 倒數和行程上的出發/抵達就會跟著出現。" : "團主加了之後會出現在這裡。") +
