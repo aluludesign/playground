@@ -1,14 +1,14 @@
 <!-- App 圖示的來源。PNG 是從這裡算出來的,不要手改 PNG ——
      改這支,再跑 ../adopt-harness/make-icons.sh 重出一輪。
 
-     2026-10-02(Lulu):圖形換成 emoji 🗼。底色照舊是航班那張黑底板子的 board-bg #12141A。
+     2026-10-02(Lulu):圖形換成 emoji 🗼。底色是 App 的米色 #FFF7ED(manifest 的 background_color,Lulu 選的)。
      emoji 由系統的彩色字型畫:PNG 在 Mac 上出,所以手機主畫面、分頁上看到的是 Apple 那一款;
      這支 SVG 當分頁小圖示時,各平台會用自己的 emoji 字型(Windows 上長得不一樣是正常的)。
 
      圖形不畫滿:emoji 的字框四周本來就有留白,字級 420 大約佔畫布的 80%。
      Android 的 maskable 版由 make-icons.sh 再縮一圈。 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <rect width="512" height="512" fill="#12141A"/>
+  <rect width="512" height="512" fill="#FFF7ED"/>
   <text x="256" y="262" font-size="420" text-anchor="middle" dominant-baseline="central"
         font-family="Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji, sans-serif">🗼</text>
 </svg>

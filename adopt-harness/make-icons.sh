@@ -39,12 +39,12 @@ trap 'rm -rf "$W"' EXIT INT TERM
 cp "$SVG" "$W/icon.svg"
 
 # <樣式> 那格是套在 <img> 上的 CSS。maskable 版靠它把圖形縮進安全圈,
-# 縮完露出來的四周由 background 補成同一個底色(#12141A),不然會是透明的。
+# 縮完露出來的四周由 background 補成同一個底色(#FFF7ED),不然會是透明的。
 shot () {  # shot <檔名> <邊長> <樣式>
   cat > "$W/_i.html" <<HTML
 <!doctype html><meta charset="utf-8">
 <style>
-  html,body{margin:0;padding:0;background:#12141A}
+  html,body{margin:0;padding:0;background:#FFF7ED}
   body{width:${2}px;height:${2}px;overflow:hidden}
   img{display:block;width:${2}px;height:${2}px;$3}
 </style>
@@ -108,7 +108,7 @@ def pixels(p):
 
 near = lambda v, t: all(abs(v[j] - t[j]) <= 12 for j in range(3))
 # 2026-10-02 起圖形是 emoji 🗼(紅白,不是琥珀色):改數「不是底色」的像素 —— 要擋的一樣是「整張只有底色」
-BG, bad = (0x12, 0x14, 0x1A), False
+BG, bad = (0xFF, 0xF7, 0xED), False
 # 門檻分兩級。maskable 那張的圖形縮到 0.68,面積只剩 0.46 倍,琥珀色自然少一半 ——
 # 拿滿版那張的門檻去套它會誤報。要擋的是「完全沒畫上去」(0%),不是「畫小了」,
 # 所以兩個門檻都離 0 很近就夠,不必貼著實測值。
