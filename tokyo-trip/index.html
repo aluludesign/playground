@@ -165,6 +165,11 @@
   @layer components {
   *,*::before,*::after{box-sizing:border-box;}
     html{padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);}
+    /* **點下去不要有一塊黑的**(2026-10-02,Lulu:「任何點擊行為都會出現黑色的點擊區域,好醜」)。
+       那是 iOS 自己蓋上去的 tap highlight;按鈕自己有按下的狀態(state layer),不需要它。
+       點完之後留下的那圈 focus 框也只給鍵盤用的人(:focus-visible 照舊有) */
+    *, *::before, *::after{-webkit-tap-highlight-color:transparent;}
+    :focus:not(:focus-visible){outline:none;}
     body{margin:0; background:var(--paper); color:var(--ink); font-family:var(--font-body); font-size:14px; line-height:1.6; -webkit-font-smoothing:antialiased;}
     img{max-width:100%;}
     [hidden]{display:none!important;}
@@ -1266,7 +1271,13 @@
     .signin.wide{max-width:440px; max-height:calc(100vh - 40px); overflow-y:auto; gap:12px;}
     /* ---- 疊起來的卡片(AI 一次讀到好幾段交通,2026-10-02)----
        後面兩張是裝飾,往下錯開、縮一點;存了這張 → 它往左滑走(slide-out),後面那張推到前面(advance)。 */
-    .stack{position:relative; margin:auto; width:100%; max-width:440px;}
+    /* 外框的寬度跟著裡面那張卡:一般的卡 380、寬的卡(.wide)440 —— 包了一層之後不能變寬或變窄 */
+    .stack{position:relative; margin:auto; width:100%; max-width:380px;}
+    .stack:has(> .signin.wide){max-width:440px;}
+    /* **裡面那張卡藏起來的時候,外框也要藏起來**(2026-10-02,Lulu:「第二次點 AI 對話框變形了」)。
+       AI 對話框裡有兩張卡(「AI 幫你加」和「確認一下」),外框只包住第二張;它藏著的時候外框還佔著 width:100%,
+       跟第一張擠在同一排,第一張就被擠歪了。驗收:probes/ai-reopen.js */
+    .stack:has(> .signin[hidden]){display:none;}
     /* **好幾筆的時候,卡片一律是螢幕的 60% 高**(2026-10-02,Lulu):每一張一樣大,換下一張不會忽大忽小;內容多就在卡片裡捲 */
     .stack.multi > .signin{height:60vh; max-height:60vh; overflow-y:auto; align-content:start;}
     /* **景深**(Lulu:前後要有景深、大小的區別):越後面越小、越往下、越暗、影子越淡;最前面那張影子最重 */
