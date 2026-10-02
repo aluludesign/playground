@@ -104,7 +104,7 @@ return {
   欄位_彙總: summary(fields),
   who核取方塊_彙總: summary(who),
   // .who 的核取方塊逐個列出來:它們不在這一塊的範圍內,但 `.fld input` 選得到,
-  // 而九張截圖沒有一張打開過 #exp-form / #exp-edit-overlay —— 只有這裡看得到它們變了沒有。
+  // 而九張截圖沒有一張打開過 #exp-edit-form / #exp-edit-overlay —— 只有這裡看得到它們變了沒有。
   who核取方塊_逐個: who.map(function (r) {
     return { id: r.id, w: r.offsetW, h: r.offsetH, bg: r.background,
              fs: r.fontSize, border: r.border, paintable: r.paintable };

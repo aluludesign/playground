@@ -295,12 +295,12 @@ shot 09-edit-dialog      390  900 "d.querySelector('[data-edit-stop]').click();"
 # 理由每次都一樣:「沒有截圖就驗不了」。債堆了兩輪,而驗收規則第 4 點
 # (「清單上有但沒出現也是問題」)在一個沒有畫面的地方根本執行不了。
 #
-# 斷言挑的是 `.who label` 而不是 `#exp-form input`:`ef-who` / `xe-who` 在 markup 裡
+# 斷言挑的是 `.who label` 而不是 `#exp-edit-form input`:`ef-who` / `xe-who` 在 markup 裡
 # 是**空的 <div>**,那五個膠囊是 JS 跑起來才產生的(index.html:2447 / :2496)。
 # 靜態 markup 不算數 —— 那正是 08 / 09 的斷言收緊過的理由。
 # 再加 `:not([hidden])` 確認容器真的開了(`.click()` 丟例外會被 try/catch 吃掉)。
 shot 10-exp-form         390 1700 "d.getElementById('tab-cost').click(); d.getElementById('add-exp-btn').click();" \
-                                  "#exp-form:not([hidden]) .rm-input:7+,#exp-form .who label.rm-chip:4+"
+                                  "#exp-edit-overlay:not([hidden]) .rm-input:7+,#exp-edit-overlay .who label.rm-chip:4+"
 shot 11-exp-edit-dialog  390 1100 "d.getElementById('tab-cost').click(); d.querySelector('[data-edit-exp]').click();" \
                                   "#exp-edit-overlay:not([hidden]) .rm-input:7+,#exp-edit-overlay .who label.rm-chip:4+"
 
@@ -317,7 +317,7 @@ shot 12-place-search     390 1100 "w.fetch=function(u){return String(u).indexOf(
                                   "#stop-form:not([hidden]) .seek-out .hit:3+"
 
 # 13:「改我的願望」。理由跟 10 / 11 同形 —— **沒有截圖的介面等於沒有人看過**,
-# 而 block-05 那一輪一打開 #exp-form 就當場發現十顆膠囊壞了、壞了兩輪。
+# 而 block-05 那一輪一打開 #exp-edit-form 就當場發現十顆膠囊壞了、壞了兩輪。
 #
 # fixture 的 tokyo5-me 是 hsieh_chinhui,而 w2(「橫濱 港灣未來」)正是他許的。
 #

@@ -30,10 +30,10 @@ return (async function () {
   var before = (w.__rows.expenses || []).length;
 
   q("#add-exp-btn").click(); await wait(100);
-  q("#ef-title").value = "地鐵便利商店";
-  q("#ef-amount").value = "480";
-  if (!q("#ef-who input:checked")) q("#ef-who input").checked = true;
-  q("#exp-form").requestSubmit(); await wait(300);
+  q("#xe-title").value = "地鐵便利商店";
+  q("#xe-amount").value = "480";
+  if (!q("#xe-who input:checked")) q("#xe-who input").checked = true;
+  q("#exp-edit-form").requestSubmit(); await wait(300);
 
   out.斷線後 = { 清單有: /地鐵便利商店/.test(txt("#exp-list")), 還沒送出: /還沒送出/.test(txt("#exp-list")),
                狀態列: txt("#cloud-msg"), 排隊: outbox().length, 提示: txt("#sync") };

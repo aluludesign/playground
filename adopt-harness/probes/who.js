@@ -2,7 +2,7 @@
 //
 // 為什麼要有這一支:`.who` 被第三塊(color / letter-spacing)和第四塊
 // (width / background / font-size / line-height)各「刻意凍住」過一次,
-// 兩輪都寫著同一句理由:「九張截圖沒有一張打開過 #exp-form / #exp-edit-overlay,驗不了」。
+// 兩輪都寫著同一句理由:「九張截圖沒有一張打開過 #exp-edit-form / #exp-edit-overlay,驗不了」。
 // block-05 補了第 10 / 11 張截圖,而這一支是它的對照 —— 圖說「看起來一樣」,
 // 這裡說「哪一個值一樣、哪一個不一樣」。
 //
@@ -87,7 +87,7 @@ function group(id) {
 
 // .fld label 現在是什麼(第三塊把它換成 rm-label 了)—— 拿一個真的 .fld > label 來對照,
 // 這樣「.who label 少繼承到什麼」看得出來源。
-var ref = d.querySelector('#exp-form .fld > label');
+var ref = d.querySelector('#exp-edit-form .fld > label');
 var refC = ref ? w.getComputedStyle(ref) : null;
 
 return {
@@ -98,6 +98,6 @@ return {
     fontWeight: refC.fontWeight, fontSize: refC.fontSize,
     marginBottom: refC.marginBottom, display: refC.display, lineHeight: refC.lineHeight
   } : null,
-  ef_who: group('ef-who'),
+  ef_who: group('xe-who'),
   xe_who: group('xe-who')
 };

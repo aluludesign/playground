@@ -14,7 +14,7 @@ return (async function () {
   }
   await tryOpen("加行程", () => q("#add-stop-btn").click(), () => q("#sf-cancel") && q("#sf-cancel").click());
   q("#tab-cost").click(); await wait(80);
-  await tryOpen("記一筆", () => q("#add-exp-btn").click(), () => q("#ef-cancel").click());
+  await tryOpen("記一筆", () => q("#add-exp-btn").click(), () => q("#xe-cancel").click());
   await tryOpen("改花費", () => q("[data-edit-exp]").click(), () => q("#xe-cancel").click());
   q("#tab-fly").click(); await wait(80);
   await tryOpen("加航班", () => q("[data-flight-add]").click(), () => q("#fl-cancel").click());
