@@ -212,20 +212,9 @@ function pinsOf(k) { return pins()[k]; }
       if (d2) d2.click();
     })();
     await sleep(500);
-    var cta = q("#empty-add-stop");
-    ok("沒有行程的那一天,空狀態自己帶一顆按鈕", !!cta, q("#route").textContent.trim().slice(0, 30));
-    if (cta) {
-      var cb = cta.getBoundingClientRect();
-      var chit = d.elementFromPoint(Math.round(cb.left + cb.width / 2), Math.round(cb.top + cb.height / 2));
-      ok("**那顆按鈕碰得到**(不是被別的東西蓋住的裝飾)",
-        !!chit && cta.contains(chit), chit && chit.tagName);
-      cta.click();
-      ok("按了真的開加行程的對話框",
-        await until(function () { return q("#stop-add-overlay").hidden === false; }),
-        q("#stop-add-overlay").hidden);
-      q("#sf-cancel").click();
-      await sleep(150);
-    }
+    /* 2026-10-02(Lulu):空的那一天**不要**「＋加第一筆行程」—— 右上角本來就有「＋加行程」,兩顆是重複的 */
+    ok("沒有行程的那一天:講「這天還沒有行程」,不再自己帶一顆按鈕", !q("#empty-add-stop") && /這天還沒有行程/.test(q("#route").textContent || ""),
+      q("#route").textContent.trim().slice(0, 30));
     ok("地圖一個點都沒有的時候會講一句話(空白分不出「還沒排」和「壞了」)",
       !!q(".map-empty") && /\S/.test(q(".map-empty").textContent || ""),
       q(".map-empty") && q(".map-empty").textContent);
