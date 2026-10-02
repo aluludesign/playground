@@ -16,6 +16,12 @@ return (async function () {
   var cc = chip && getComputedStyle(chip);
   out.誰分攤 = cc && { 框: cc.borderTopWidth + " " + cc.borderTopColor, 底: cc.backgroundColor };
   ok("誰分攤(勾了):一樣是 1px 框", cc && cc.borderTopWidth === "1px" && cc.backgroundColor === "rgb(201, 192, 189)", out.誰分攤);
+  /* 選取 + 停用:許願頁「大家的許願」鎖著開 → #D4D4D4 底和框、#A3A3A3 字(Figma State=Disabled) */
+  q("#tab-wish").click(); await wait(150);
+  var lw = q("#lay-wish"), dc = getComputedStyle(lw), dot = getComputedStyle(lw, "::before");
+  out.許願頁 = { 停用: lw.disabled, 選取: lw.getAttribute("aria-pressed"), 框: dc.borderTopWidth + " " + dc.borderTopColor, 底: dc.backgroundColor, 字: dc.color, 點: dot.backgroundColor };
+  ok("許願頁的「大家的許願」:停用 + 選取的樣子(#D4D4D4 底和 1px 框、#A3A3A3 字,點也是灰的)", lw.disabled && dc.backgroundColor === "rgb(212, 212, 212)" &&
+    dc.borderTopWidth === "1px" && dc.borderTopColor === "rgb(212, 212, 212)" && dc.color === "rgb(163, 163, 163)" && dot.backgroundColor === "rgb(163, 163, 163)", out.許願頁);
   out.結論 = bad.length ? "✗ " + bad.join(" ;; ") : "全部通過"; out.errors = w.__errors || [];
   return out;
 })();

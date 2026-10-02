@@ -632,7 +632,7 @@
     /* 這一頁的主角那層鎖著開(行程頁鎖行程、許願頁鎖願望),按了不會有反應 ——
        游標和 hover 就不該假裝它按得動。 */
     .lay:disabled{cursor:default;}
-    .lay:disabled:hover{background:transparent;}
+    .lay:disabled:not([aria-pressed="true"]):hover{background:transparent;}
     /* 「全部已排」開著時 Day n 讓位:它不是關掉,是被另一個選項取代,所以畫成停用。
        0.45 跟設計系統 `.rm-btn[disabled]` 同一個值。 */
     .lay:disabled[aria-pressed="false"]{opacity:.45; cursor:not-allowed;}
@@ -1409,6 +1409,12 @@
     .rm-chip.rm-chip--selectable:disabled{color:color-mix(in srgb, var(--ds-sys-shared-color-on-surface) 38%, transparent);
       border-color:color-mix(in srgb, var(--ds-sys-shared-color-on-surface) 12%, transparent);}
     .rm-chip.rm-chip--selectable:disabled::after{opacity:0;}
+    /* **選取 + 停用**(Figma Chip / Filter, Selected=true, State=Disabled;2026-10-02):
+       例如在許願頁,「大家的許願」鎖著開。disable container 底和框、on disable container 字,那顆點也一起淡掉 */
+    .rm-chip.rm-chip--selectable[aria-pressed="true"]:disabled,.rm-chip.rm-chip--selectable[aria-pressed="true"]:disabled:hover{
+      background:var(--ds-sys-shared-color-disable-container); border:var(--ds-sys-shared-border-xs) solid var(--ds-sys-shared-color-disable-container);
+      color:var(--ds-sys-shared-color-on-disable-container); cursor:default;}
+    .rm-chip.rm-chip--selectable.lay[aria-pressed="true"]:disabled::before,#lay-wish[aria-pressed="true"]:disabled::before,#lay-plan[aria-pressed="true"]:disabled::before{background:var(--ds-sys-shared-color-on-disable-container); border-color:var(--ds-sys-shared-color-on-disable-container);}
     /* 勾選型的膠囊：原生核取方塊收起來（仍可鍵盤操作），選取時照 Figma 在前面出現 check */
     .who .rm-chip > input{position:absolute; opacity:0; width:1px; height:1px; margin:0; pointer-events:none;}
     .who .rm-chip:has(> input:checked)::before{content:""; width:var(--ds-comp-chip-icon); height:var(--ds-comp-chip-icon); flex:none; background:currentColor;
@@ -5170,9 +5176,8 @@
          給他一顆按不動的按鈕比不給更糟。 */
       route.innerHTML = '<div class="empty empty-cta">' +
         "<p>這天還沒有行程。</p>" +
-        (editable("plan")
-          ? '<button type="button" class="btn btn-main" id="empty-add-stop">＋ 加第一筆行程</button>'
-          : "<p class=\"sub\">等有人排進來,這裡就會有東西。</p>") +
+        /* 2026-10-02(Lulu):不要「＋加第一筆行程」—— 右上角本來就有「＋加行程」 */
+        (editable("plan") ? "" : "<p class=\"sub\">等有人排進來,這裡就會有東西。</p>") +
         "</div>";
       const ea = el("empty-add-stop");
       if (ea) ea.addEventListener("click", openStopAdd);
@@ -5206,6 +5211,9 @@
     (b.votes || []).length - (a.votes || []).length ||
     (a.createdAt || "").localeCompare(b.createdAt || ""));
 
+  /* 標題已經講了那個地點:一模一樣,或標題裡就包著它(不分空白、大小寫) */
+  const placeKey = v => String(v || "").replace(/\s+/g, "").toLowerCase();
+  const samePlace = (title, place) => { const t = placeKey(title), p = placeKey(place); return !!p && (t === p || t.indexOf(p) >= 0); };
   function renderWishes() {
     const list = wishOrder();
     const me = myName();
@@ -5239,7 +5247,8 @@
           '<div class="wt">' + (num[w.id] ? '<span class="wnum">' + num[w.id] + "</span>" : "") +
           linkify(w.title) + pinMark(w) + "</div>" +
           '<div class="wm">' + by +
-          (w.place ? "<span>" + linkify(w.place) + "</span>" : "") +
+          /* 地點跟標題一樣(從搜尋挑的通常就是同一個名字)就不再印一次小字(2026-10-02,Lulu) */
+          (w.place && !samePlace(w.title, w.place) ? "<span>" + linkify(w.place) + "</span>" : "") +
           (w.note ? "<span>" + linkify(w.note) + "</span>" : "") +
           (names.length ? "<span>" + esc(names.join("、")) + " +1</span>" : "") +
           /* **自己許的那一筆,自己改。** 判準是 `mineWish()`,跟上面那個 `.mine` 紫框
