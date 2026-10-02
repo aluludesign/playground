@@ -1216,6 +1216,8 @@
     .menu-ai{display:grid; gap:2px; padding:4px 2px 10px; margin-bottom:10px; border-bottom:1px solid var(--line); font-size:14px; color:var(--ink);}
     .menu-ai small{font-size:12px; color:var(--muted);}
     .ai-left{margin:0 0 12px; font-size:13px; color:var(--muted);}
+    .ai-tip{margin:0; font-size:12.5px; line-height:1.5; color:var(--muted);}
+    .ai-tip b{color:var(--ink); font-weight:600;}
     .ai-left b{color:var(--ink);}
     .strong-left{margin-left:6px; font-size:12px; color:var(--muted);}
     .st-hint{margin:-4px 0 4px; font-size:12px; color:var(--muted);}
@@ -1875,6 +1877,8 @@
     <div id="ai-quota" hidden></div>
     <div class="fld"><label class="rm-label" for="ai-text" id="ai-ask-label">想做什麼</label>
       <textarea class="rm-input" id="ai-text" rows="3" placeholder="例:這家想去許願／加到第 3 天晚上 7 點／這張是車票或訂位確認"></textarea></div>
+    <!-- 省次數的提醒(2026-10-02,Lulu):AI 一次讀到好幾筆會疊成卡片一張一張確認,而次數是「按一次交給 AI」算一次 -->
+    <p class="ai-tip" id="ai-tip">💡 一次把好幾筆寫在一起(例:「想去淺草寺、晴空塔、上野公園」),或一張截圖、收據裡有好幾筆,<b>只算 1 次 AI</b>。</p>
     <div class="fld" id="ai-img-row">
       <!-- 拍照:手機、平板才有(觸控螢幕)。capture 叫系統直接開相機,不先問要從哪裡選 -->
       <button type="button" class="btn btn-sm" id="ai-shoot" hidden>📷 拍照</button>
