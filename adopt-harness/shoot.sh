@@ -445,6 +445,12 @@ shot 21-wish-narrow    1100  900 "d.getElementById('tab-wish').click();" \
 shot 22-landing-mobile    390 1700 "" ".landing:not([hidden]) .landing-feats li:4+,#landing-go:1+" "/index.html?fake=visitor"
 shot 23-landing-desktop  1280  900 "" ".landing:not([hidden]) .landing-feats li:4+,#landing-go:1+" "/index.html?fake=visitor"
 
+# 24 / 25:刪東西前的確認(2026-10-03)。花費那一筆按「刪除」→ 跳 App 自己的確認對話框
+shot 24-confirm-mobile    390  900 "d.getElementById('tab-cost').click(); [].find.call(d.querySelectorAll('[data-del-exp]'),function(b){return b.textContent.trim()==='刪除'}).click();" \
+                                  "#confirm-overlay:not([hidden]) #cf-ok:1+,#confirm-overlay:not([hidden]) #cf-cancel:1+"
+shot 25-confirm-desktop  1440  900 "d.getElementById('tab-cost').click(); [].find.call(d.querySelectorAll('[data-del-exp]'),function(b){return b.textContent.trim()==='刪除'}).click();" \
+                                  "#confirm-overlay:not([hidden]) #cf-ok:1+,#confirm-overlay:not([hidden]) #cf-cancel:1+"
+
 kill $SRV 2>/dev/null || true
 rm -rf "$H/.work"
 echo "→ $OUT"
