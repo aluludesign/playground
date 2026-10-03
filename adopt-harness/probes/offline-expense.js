@@ -50,7 +50,11 @@ return (async function () {
 
   if (offlineBoot) {
     /* 副本那條路:取消不用網路 */
-    row.querySelector("[data-del-exp]").click(); await wait(200);
+    row.querySelector("[data-del-exp]").click(); await wait(100);
+    /* 2026-10-03 起刪東西前要再確認一次;還沒送出的那筆問的是「取消這筆?」 */
+    out.確認 = { 開著: !d.getElementById("confirm-overlay").hidden, 標題: txt("#cf-title"), 按鈕: txt("#cf-ok") + "/" + txt("#cf-cancel") };
+    ok("取消前先問一次「取消這筆?」,按鈕是 取消這筆/留著", out.確認.開著 && out.確認.標題 === "取消這筆?" && out.確認.按鈕 === "取消這筆/留著", out.確認);
+    d.getElementById("cf-ok").click(); await wait(200);
     out.取消後 = { 清單有: /地鐵便利商店/.test(txt("#exp-list")), 排隊: outbox().length, 狀態列: txt("#cloud-msg") };
     ok("取消這筆 → 從畫面和排隊裡拿掉", !out.取消後.清單有 && out.取消後.排隊 === 0 && !/還沒送出/.test(out.取消後.狀態列), out.取消後);
     return fin();

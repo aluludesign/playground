@@ -1103,6 +1103,10 @@
   .overlay{position:fixed; inset:0; z-index:60; display:flex; justify-content:center; padding:20px;
       overflow-y:auto; overscroll-behavior:contain;
       background:color-mix(in srgb, var(--paper) 86%, transparent); backdrop-filter:blur(6px);}
+    /* 刪除前的確認會疊在交通那張對話框上面,要比它高一層(Esc 也是先關最上面那張) */
+    #confirm-overlay{z-index:61;}
+    /* 打開時焦點放在整張卡上(按 Enter 不會誤刪),卡本身不畫焦點框 */
+    #confirm-form:focus{outline:none;}
     .signin{margin:auto; width:100%; max-width:380px; background:var(--surface); border:1px solid var(--line); border-radius:12px;
       padding:24px 22px; box-shadow:var(--shadow); display:grid; gap:12px;}
     /* **對話框裡上下兩格輸入框一律 12px**(2026-10-02,Lulu)。包著好幾格的那一層(例如「團的設定」的 #set-trip、
@@ -1352,6 +1356,9 @@
     /* Filled */
     .btn-main,.btn-main:hover{background:var(--ds-sys-shared-color-primary); border-color:transparent; color:var(--ds-sys-shared-color-on-primary); filter:none;}
     .btn-main:hover{box-shadow:0 1px 3px 1px color-mix(in srgb, var(--ds-sys-shared-color-shadow) 15%, transparent), 0 1px 2px color-mix(in srgb, var(--ds-sys-shared-color-shadow) 30%, transparent);}
+    /* Filled · Color=Error(Figma Button 160993:2481,2026-10-03):刪除前確認的那一顆。
+       只換底色和字色(error / on error);尺寸、圓角、hover 的 state layer、focus ring、disabled 都跟 Filled 共用 */
+    .btn-main.btn-error,.btn-main.btn-error:hover{background:var(--ds-sys-shared-color-error); color:var(--ds-sys-shared-color-on-error);}
     /* Text */
     .btn-ghost,.btn-ghost:hover{border-color:transparent; background:transparent; color:var(--ds-sys-shared-color-primary);}
     /* LINE：品牌色刻意寫死，不跟 Retro/Modern 走（Figma 的 Button/LINE 也是） */
@@ -1736,6 +1743,18 @@
     <div class="ops">
       <button type="submit" class="btn btn-main" id="ft-save">記下來</button>
       <button type="button" class="btn btn-ghost btn-sm" id="ft-cancel">取消</button>
+    </div>
+  </form>
+</div>
+
+<!-- 刪東西之前再問一次(2026-10-03,Lulu)。行程、願望、花費、交通共用這一張;文字由 askConfirm() 填 -->
+<div class="overlay" id="confirm-overlay" hidden>
+  <form class="signin" id="confirm-form" tabindex="-1" role="alertdialog" aria-modal="true" aria-labelledby="cf-title" aria-describedby="cf-body">
+    <h2 id="cf-title"></h2>
+    <p id="cf-body"></p>
+    <div class="ops">
+      <button type="submit" class="btn btn-main btn-error" id="cf-ok">刪除</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="cf-cancel">取消</button>
     </div>
   </form>
 </div>
@@ -3550,7 +3569,7 @@
   });
   el("fl-del").addEventListener("click", async () => {
     const f = flightEditing;
-    if (!f || !confirm("刪掉「" + legName(f) + "」?" + (KIND[kindOf(f)].noSeats ? "" : "這一段的座位也會一起刪掉。"))) return;
+    if (!f || !await askConfirm("刪除這一段交通?", "「" + legName(f) + "」" + (KIND[kindOf(f)].noSeats ? "" : "和這一段的座位") + "會一起刪掉,刪掉後沒辦法復原。")) return;
     try {
       for (const r of (state.seats || []).filter(x => x.flight === legKey(f))) {
         await api("?resource=seats&id=" + encodeURIComponent(r.id), { method: "DELETE" });
@@ -5739,9 +5758,36 @@
     el("stop-form").reset();
     closeStopAdd();
   });
+  /* ---- 刪東西之前再問一次(2026-10-03,Lulu) ----
+     行程、願望、花費、交通都走這裡。用自己的對話框、不用瀏覽器的 confirm():
+     iPhone 上那個會把網址印在最上面,樣子也跟 App 其他對話框不一樣。
+     按取消、點外面、按 Esc 都是「不刪」。一打開焦點放在整張卡上:按 Enter 不會誤刪,
+     也不會在「取消」外面畫一圈焦點框(放在按鈕上的話會畫,很醜)。 */
+  let confirmDone = null;
+  function askConfirm(title, body, ok, no) {
+    if (confirmDone) confirmDone(false);
+    el("cf-title").textContent = title;
+    el("cf-body").textContent = body;
+    el("cf-ok").textContent = ok || "刪除";
+    el("cf-cancel").textContent = no || "取消";
+    el("confirm-overlay").hidden = false;
+    try { el("confirm-form").focus({ preventScroll: true }); } catch (_) {}
+    return new Promise(res => { confirmDone = res; });
+  }
+  function endConfirm(yes) {
+    el("confirm-overlay").hidden = true;
+    const done = confirmDone; confirmDone = null;
+    if (done) done(yes);
+  }
+  el("confirm-form").addEventListener("submit", ev => { ev.preventDefault(); endConfirm(true); });
+  el("cf-cancel").addEventListener("click", () => endConfirm(false));
+
   el("route").addEventListener("click", ev => {
     const b = ev.target.closest("[data-del-stop]");
-    if (b) removeStop(b.dataset.delStop);
+    if (!b) return;
+    const id = b.dataset.delStop, s = state.stops.find(x => x.id === id);
+    askConfirm("刪除這個行程?", "「" + (s ? s.title : "") + "」會從" + (s && s.day ? " " + mmdd(s.day) + " 的" : "") + "行程刪掉,刪掉後沒辦法復原。")
+      .then(yes => { if (yes) removeStop(id); });
   });
 
   /* --- 花費 --- */
@@ -5778,7 +5824,14 @@
   el("add-exp-btn").addEventListener("click", openExpenseNew);
   el("exp-list").addEventListener("click", ev => {
     const b = ev.target.closest("[data-del-exp]");
-    if (b) { removeExpense(b.dataset.delExp); return; }
+    if (b) {
+      const id = b.dataset.delExp, e = state.expenses.find(x => x.id === id), name = "「" + (e ? e.title : "") + "」";
+      (e && e.pending
+        ? askConfirm("取消這筆?", name + "還沒送出,取消了就不會送出、也不會記到帳上。", "取消這筆", "留著")
+        : askConfirm("刪除這筆花費?", name + (e ? twd(toTWD(e)) + " " : "") + "會從帳上刪掉,分帳會重新算。刪掉後沒辦法復原。"))
+        .then(yes => { if (yes) removeExpense(id); });
+      return;
+    }
     const r = ev.target.closest("[data-resend-exp]");
     if (r) {
       const item = outbox.find(x => x.e.id === r.dataset.resendExp);
@@ -6785,7 +6838,11 @@
     const e = ev.target.closest("[data-edit-wish]");
     if (e) { openWishEdit(e.dataset.editWish); return; }
     const d = ev.target.closest("[data-del-wish]");
-    if (d) removeWish(d.dataset.delWish);
+    if (d) {
+      const id = d.dataset.delWish, w = state.wishes.find(x => x.id === id), n = w ? (w.votes || []).length : 0;
+      askConfirm("刪除這個願望?", "「" + (w ? w.title : "") + "」" + (n ? "和大家投的 " + n + " 票" : "") + "會從許願清單刪掉,刪掉後沒辦法復原。")
+        .then(yes => { if (yes) removeWish(id); });
+    }
   });
 
   /* --- 改我的願望 --- */
@@ -7889,7 +7946,7 @@
     "settings-overlay": ["st-cancel"], "invite-overlay": ["inv-close"], "flight-overlay": ["fl-cancel"],
     "exp-edit-overlay": ["xe-cancel"], "edit-overlay": ["se-cancel"], "stop-add-overlay": ["sf-cancel"],
     "ai-overlay": ["ai-cancel", "ai-cancel2"], "wish-add-overlay": ["wf-cancel"], "wish-edit-overlay": ["we-cancel"],
-    "time-overlay": ["tf-cancel"], "fund-top-overlay": ["ft-cancel"],
+    "time-overlay": ["tf-cancel"], "fund-top-overlay": ["ft-cancel"], "confirm-overlay": ["cf-cancel"],
   };
   const fieldsOf = ov => [].map.call(ov.querySelectorAll("input,select,textarea"),
     f => f.type === "checkbox" || f.type === "radio" ? (f.checked ? "1" : "0") : f.type === "file" ? String(f.files && f.files.length) : f.value).join("\u0001");
