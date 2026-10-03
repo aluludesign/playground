@@ -1356,6 +1356,9 @@
     /* Filled */
     .btn-main,.btn-main:hover{background:var(--ds-sys-shared-color-primary); border-color:transparent; color:var(--ds-sys-shared-color-on-primary); filter:none;}
     .btn-main:hover{box-shadow:0 1px 3px 1px color-mix(in srgb, var(--ds-sys-shared-color-shadow) 15%, transparent), 0 1px 2px color-mix(in srgb, var(--ds-sys-shared-color-shadow) 30%, transparent);}
+    /* Filled · Color=Error(Figma Button 160993:2481,2026-10-03):刪除前確認的那一顆。
+       只換底色和字色(error / on error);尺寸、圓角、hover 的 state layer、focus ring、disabled 都跟 Filled 共用 */
+    .btn-main.btn-error,.btn-main.btn-error:hover{background:var(--ds-sys-shared-color-error); color:var(--ds-sys-shared-color-on-error);}
     /* Text */
     .btn-ghost,.btn-ghost:hover{border-color:transparent; background:transparent; color:var(--ds-sys-shared-color-primary);}
     /* LINE：品牌色刻意寫死，不跟 Retro/Modern 走（Figma 的 Button/LINE 也是） */
@@ -1750,7 +1753,7 @@
     <h2 id="cf-title"></h2>
     <p id="cf-body"></p>
     <div class="ops">
-      <button type="submit" class="btn btn-main" id="cf-ok">刪除</button>
+      <button type="submit" class="btn btn-main btn-error" id="cf-ok">刪除</button>
       <button type="button" class="btn btn-ghost btn-sm" id="cf-cancel">取消</button>
     </div>
   </form>

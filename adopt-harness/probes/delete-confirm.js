@@ -84,6 +84,30 @@ return (async function () {
     q("#cf-cancel").click(); await wait(100);
   }
 
+  /* 「刪除」是 Figma 的 Button · Filled · Color=Error(160993:2481):底色 error、字 on error;
+     其他每一項都要跟同一張對話框體系裡的 Filled 主按鈕(補基金的「記下來」)一模一樣 */
+  q("#tab-cost").click(); await wait(150);
+  var eb = qa("#exp-list [data-del-exp]").find(b => b.textContent.trim() === "刪除");
+  if (eb) {
+    eb.click(); await wait(120);
+    var root = w.getComputedStyle(d.documentElement), probe = d.createElement("i");
+    d.body.appendChild(probe);
+    var tok = v => { probe.style.color = "var(" + v + ")"; return w.getComputedStyle(probe).color; };
+    var errBg = tok("--ds-sys-shared-color-error"), onErr = tok("--ds-sys-shared-color-on-error");
+    probe.remove();
+    var cs = w.getComputedStyle(q("#cf-ok"));
+    var ref = q("#ft-save"), fo = q("#fund-top-overlay"), wasHidden = fo.hidden;
+    fo.hidden = false; await wait(50);
+    var rs = w.getComputedStyle(ref);
+    var keys = ["borderTopLeftRadius", "paddingTop", "paddingRight", "paddingBottom", "paddingLeft", "fontSize", "fontWeight", "lineHeight", "height", "borderTopWidth", "borderTopColor"];
+    var diff = keys.filter(k => cs[k] !== rs[k]).map(k => k + ": " + cs[k] + " ≠ " + rs[k]);
+    out.刪除鈕 = { 底色: cs.backgroundColor, 字色: cs.color, 應該: errBg + " / " + onErr, 跟主按鈕不一樣的: diff };
+    fo.hidden = wasHidden;
+    ok("「刪除」是 Error 實心:底色 error、字 on error(#BD2828 / #FAF9F9)", cs.backgroundColor === errBg && cs.color === onErr && errBg === "rgb(189, 40, 40)" && onErr === "rgb(250, 249, 249)", out.刪除鈕);
+    ok("「刪除」其他樣子跟 Filled 主按鈕一模一樣", !diff.length, diff);
+    q("#cf-cancel").click(); await wait(100);
+  }
+
   ok("沒有用到瀏覽器自己的 confirm()", nativeAsked === 0, nativeAsked);
   out.結論 = bad.length ? "✗ " + bad.join(" ;; ") : "全部通過"; out.errors = w.__errors || [];
   return out;
