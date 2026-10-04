@@ -659,7 +659,14 @@ const memberRow = (code, sub) => rowsIn(DB.members).find(p => plain(p.properties
   r = await call(LINE_A, "GET", { resource: "itinerary", t: T1 });
   ok("隱藏的團:讀行程也擋", r.code === 403 && r.body.why === "hidden", r.body);
   r = await call(LINE_A, "GET", { resource: "trips" });
-  ok("「我的團」裡還在,標著 hidden(畫面寫「這一團暫時關閉了」)", r.body.trips.some(t => t.code === T1 && t.hidden === true), r.body.trips);
+  ok("「我的團」裡還在,標著 hidden(畫面寫「這一團暫時關閉了」)和 closed", r.body.trips.some(t => t.code === T1 && t.hidden === true && t.closed === true), r.body.trips);
+  /* 最高權限自己在這一團裡(2026-10-04):點得進去(hidden:false),但 closed:true —— 打開 App 不會自動開它 */
+  process.env.TRIPPPS_ADMIN = LULU + "," + LINE_A;
+  r = await call(LINE_A, "GET", { resource: "trips" });
+  ok("最高權限看自己被隱藏的團:hidden:false(點得進去)、closed:true(不自動開)", r.body.trips.some(t => t.code === T1 && t.hidden === false && t.closed === true), r.body.trips);
+  process.env.TRIPPPS_ADMIN = LULU;
+  r = await call(LINE_C, "GET", { resource: "trips" });
+  ok("沒被隱藏的團 closed:false", r.body.trips.length > 0 && r.body.trips.every(t => t.closed === false), r.body.trips);
   r = await call(LINE_C, "POST", { resource: "join" }, { trip: T1, invite: inviteA });
   ok("隱藏的團:拿邀請碼也加入不了", r.code === 403 && r.body.why === "hidden", r.body);
   r = await call(LULU, "POST", { resource: "admin" }, { code: T1, action: "unhide" });

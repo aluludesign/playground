@@ -242,18 +242,18 @@ FAKE_JS = r"""(function(){
     if (r === "trips") {
       if (method === "POST") return reply({ code: "newtrip1", me: { id: "mnew01", name: body.myName, color: "#E60012", role: "團主" } });
       /* mytrips=now,now2,later,hidnow:「我的團」清單裡有哪幾團。凍住的時鐘是 2026-09-19 ——
-         now / now2 / hidnow 的日期包含那一天(hidnow 被隱藏了),later 就是這一團(10/03 才出發) */
+         now / now2 / hidnow 的日期包含那一天(hidnow 被隱藏了:一般人 hidden+closed,admin=1 只有 closed),later 就是這一團(10/03 才出發) */
       var mt = (/[?&]mytrips=([a-z0-9,]*)/.exec(q) || [])[1];
       if (mt !== undefined) {
         var T = { now: { code: "nowtrip1", name: "大阪三日", city: "大阪", start: "2026-09-18", end: "2026-09-20" },
                   now2: { code: "nowtrip2", name: "沖繩跳島", city: "那霸", start: "2026-09-15", end: "2026-09-19" },
-                  hidnow: { code: "hidtrip1", name: "關掉的團", city: "京都", start: "2026-09-19", end: "2026-09-21", hidden: true },
+                  hidnow: { code: "hidtrip1", name: "關掉的團", city: "京都", start: "2026-09-19", end: "2026-09-21", hidden: !ADMIN, closed: true },
                   later: { code: CODE, name: TRIP.name, city: TRIP.city, start: TRIP.start, end: TRIP.end } };
         return reply({ trips: mt.split(",").filter(function(k){ return T[k]; }).map(function(k){
           return Object.assign({ country: "日本", role: "團主", hidden: false }, T[k]); }), admin: ADMIN });
       }
       return reply({ trips: joined ? [{ code: CODE, name: TRIP.name, country: TRIP.country, city: TRIP.city,
-        start: TRIP.start, end: TRIP.end, role: mine.role, hidden: HID && !ADMIN }] : [], admin: ADMIN });
+        start: TRIP.start, end: TRIP.end, role: mine.role, hidden: HID && !ADMIN, closed: !!HID }] : [], admin: ADMIN });
     }
     if (r === "join") {
       if (method === "GET") return param(s, "code") === "q4wn8t"

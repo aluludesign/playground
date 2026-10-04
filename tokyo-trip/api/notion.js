@@ -560,9 +560,11 @@ module.exports = async (req, res) => {
         const trips = [];
         for (const m of mine) {
           const t = await findTrip(m.trip);
-          /* 團被刪掉、成員那一列還在:不列出來,不要給一個點了會 404 的東西 */
+          /* 團被刪掉、成員那一列還在:不列出來,不要給一個點了會 404 的東西。
+             hidden = 點不進去(最高權限照樣進得去,所以對他是 false);closed = 真的被隱藏了,誰看都一樣 ——
+             打開 App 自動開團(2026-10-04)看的是 closed,不然最高權限隱藏了的團還是會被自動打開 */
           if (t) trips.push({ code: t.code, name: t.name, country: t.country, city: t.city,
-                              start: t.start, end: t.end, role: m.role, hidden: t.hidden && !isAdmin(me.sub) });
+                              start: t.start, end: t.end, role: m.role, hidden: t.hidden && !isAdmin(me.sub), closed: !!t.hidden });
         }
         trips.sort((a, b) => String(b.start || "").localeCompare(String(a.start || "")));
         return res.status(200).json({ trips, admin: isAdmin(me.sub) });
