@@ -868,6 +868,15 @@
     .exp .amt .sub{display:block; font-size:10.5px; font-weight:400; color:var(--muted);}
     .exp .mt{grid-column:1/2; font-size:12px; color:var(--muted); display:flex; gap:6px; flex-wrap:wrap; align-items:center;}
     .exp .mt .nw{white-space:nowrap;}
+    /* AI 讀過的照片(2026-10-04):小縮圖,點了放大 */
+    .ph-thumb{flex:none; width:32px; height:32px; padding:0; border:var(--ds-sys-shared-border-xs) solid var(--line); border-radius:6px;
+      overflow:hidden; background:var(--surface); cursor:zoom-in; display:inline-block; vertical-align:middle;}
+    .ph-thumb img{width:100%; height:100%; object-fit:cover; display:block;}
+    .board .seats.ph-line{display:flex; align-items:center; justify-content:space-between; gap:10px;}
+    #photo-overlay{z-index:62; background:color-mix(in srgb, var(--ds-sys-shared-color-shadow) 88%, transparent); padding:16px; flex-direction:column; align-items:center;}
+    #photo-overlay .ph-box{margin:auto; display:flex; flex-direction:column; align-items:center; gap:12px; max-width:100%;}
+    #ph-img{max-width:100%; max-height:calc(100vh - 110px); object-fit:contain; border-radius:8px; cursor:zoom-in; background:var(--surface);}
+    #photo-overlay.zoom #ph-img{max-height:none; width:100%; cursor:zoom-out;}
     .exp .ops{grid-column:2/3; display:flex; justify-content:flex-end; gap:6px;}
 
     /* ---- forms ---- */
@@ -1749,6 +1758,14 @@
   </form>
 </div>
 
+<!-- AI 讀過的照片放大看(2026-10-04,Lulu)。點縮圖打開;點照片放到原寬(長收據可以往下捲),點外面、按關閉、Esc 都收起來 -->
+<div class="overlay" id="photo-overlay" hidden>
+  <div class="ph-box" role="dialog" aria-modal="true" aria-label="照片">
+    <img id="ph-img" alt="">
+    <button type="button" class="btn btn-main btn-sm" id="ph-close">關閉</button>
+  </div>
+</div>
+
 <!-- 刪東西之前再問一次(2026-10-03,Lulu)。行程、願望、花費、交通共用這一張;文字由 askConfirm() 填 -->
 <div class="overlay" id="confirm-overlay" hidden>
   <form class="signin" id="confirm-form" tabindex="-1" role="alertdialog" aria-modal="true" aria-labelledby="cf-title" aria-describedby="cf-body">
@@ -2361,6 +2378,7 @@
     payerId: r.payer || null,
     participants: (r.participants || []).slice(),
     split: Object.assign({}, r.split || {}),
+    photo: r.photo || "",
     note: r.note || "", createdAt: r.createdAt,
   });
   const expToRow = e => ({
@@ -2369,6 +2387,7 @@
     payer: e.payerId === "fund" ? "fund" : nameById(e.payerId) || "",
     participants: (e.participants || []).map(nameById).filter(Boolean),
     split: Object.keys(e.split || {}).filter(p => nameById(p) && (e.participants || []).includes(p)).reduce((o, p) => (o[p] = e.split[p], o), {}),
+    photo: e.photoId || undefined,   /* 上傳編號,只有建的那一次帶;讀回來的是網址(photo) */
     note: e.note,
   });
   /* by:從願望排進來的那一筆記著是誰許的 —— 有它才退得回願望區 */
@@ -2452,9 +2471,14 @@
      所以程式看起來完全正常。(這份 repo 的 ADOPTION.md 記過同一個形狀四次:
      被當成噪音的 modified 產出檔、永遠在響的落後警告、被 `| grep` 濾掉的錯誤訊息。
      **訊號發了,但沒有人站在那個頻道上。**) */
+  /* 講 2.8 秒再換回頁尾那句。**中間重畫不能把它蓋掉**(2026-10-04 量到的):以前 render() 一跑 renderSync 就換回頁尾,
+     「記下來了」常常在伺服器回應的那一刻(幾百毫秒)就不見了。連講兩句的話,計時從後面那句重算 */
+  let flashUntil = 0, flashTimer = 0;
   function flash(msg) {
     el("sync").textContent = msg;
-    setTimeout(renderSync, 2800);
+    flashUntil = Date.now() + 2800;
+    clearTimeout(flashTimer);
+    flashTimer = setTimeout(() => { flashUntil = 0; renderSync(); }, 2800);
   }
 
   /* 第二套:**講在使用者眼睛所在的地方**。用的是站上已經有的 `.note` 方塊
@@ -2501,9 +2525,10 @@
       return;
     }
     try {
-      const { row } = await postExpense(e);
+      const { row, photoLost } = await postExpense(e);
       const k = state.expenses.indexOf(e);
       if (k > -1) state.expenses[k] = expFromRow(row);
+      if (photoLost) flash("照片沒存到(上傳太久了),這一筆照樣存了");
       render();
     } catch (err) {
       /* **斷線不是失敗。** 以前這裡一律把那一筆拿掉、講一句「沒存進 Notion」——
@@ -3205,6 +3230,8 @@
     return out;
   }
   const hasSplit = e => Object.keys(e.split || {}).some(p => (e.participants || []).includes(p));
+  /* AI 讀過的照片的小縮圖(花費、交通)。網址是 Notion 給的,1 小時後失效 —— 載不出來就重讀一次資料(見下面 error 那段) */
+  const photoThumb = url => url ? '<button type="button" class="ph-thumb" data-photo="' + esc(url) + '" aria-label="看照片"><img src="' + esc(url) + '" alt="" loading="lazy"></button>' : "";
   const inCur = (cur, x) => (cur === "TWD" ? "NT$" : "¥") + Math.round(x).toLocaleString("en-US");
   /* **一包錢的時候怎麼結算**(2026-10-02):每個人交進基金的錢算「已付」,基金付的帳照分攤的人分;
      基金裡剩的錢在保管人手上(沒指定就是「共同基金」本身)—— 所以保管人的淨額要扣掉剩的那一包,
@@ -3404,7 +3431,8 @@
       '<div class="port"><span class="code">' + esc(b.code || "—") + '</span><span class="sub">' + esc(b.sub) + '</span><span class="time">' + esc(hhmm(f.arrive)) + plus + "</span></div>" +
       "</div>" +
       '<div class="seatmap">' + chips + "</div>" +
-      (bits.length ? '<div class="seats">' + bits.join(" · ") + "</div>" : "") + "</div></div>";
+      /* 照片放最下面那一行:放在上面那排會把航空公司擠成直的(2026-10-04 截圖看到的) */
+      (bits.length || f.photo ? '<div class="seats' + (f.photo ? " ph-line" : "") + '">' + (bits.length ? "<span>" + bits.join(" · ") + "</span>" : "") + photoThumb(f.photo) + "</div>" : "") + "</div></div>";
   }
   /* 火車、巴士、船、租車:淺色的卡。一眼要看得到幾點、從哪到哪、坐哪(租車是誰開) */
   function legCard(f, S, can) {
@@ -3430,7 +3458,7 @@
     if (f.note) bits.push(linkify(f.note));
     return '<div class="tleg" data-kind="' + esc(k) + '">' +
       '<div class="tl-hd"><span class="tl-kind">' + kicon(k) + esc(k) + (f.dir && f.dir !== "其他" ? " · " + esc(f.dir) : "") + "</span>" +
-      '<span class="tl-no">' + esc([f.no, f.airline].filter(Boolean).join(" · ")) + "</span>" +
+      '<span class="tl-no">' + esc([f.no, f.airline].filter(Boolean).join(" · ")) + "</span>" + photoThumb(f.photo) +
       (can ? '<button type="button" class="pen" data-flight-edit="' + esc(f.id) + '" aria-label="改這一段"><svg class="i" aria-hidden="true"><use href="#i-pen"></use></svg></button>' : "") + "</div>" +
       '<div class="tl-route">' + pt(K.t0, hhmm(f.depart), f.from) + '<span class="tl-arrow" aria-hidden="true">→</span>' +
       pt(K.t1, later + hhmm(f.arrive), f.to) + "</div>" +
@@ -3485,8 +3513,10 @@
     el("fl-seats").querySelectorAll("input").forEach(i => { i.placeholder = K.seatPh || ""; i.maxLength = K.seatMax || 4; });
     if (!flightEditing) el("fl-title").textContent = "加一段交通";
   }
+  let flFromAI = false;   /* 這張交通表是 AI 讀出來的(存的時候帶 AI 讀過的照片);openFlightFromAI 在 openFlight 之後才設 */
   function openFlight(id) {
     if (!mayFly()) return;
+    flFromAI = false;
     const f = id ? (state.flights || []).find(x => x.id === id) : null;
     flightEditing = f;
     el("fl-title").textContent = f ? "改這一段" : "加一段交通";
@@ -3572,10 +3602,14 @@
     const btn = el("fl-save");
     btn.disabled = true;
     try {
+      const pid = flFromAI ? await aiPhotoId() : "";
+      if (pid) body.photo = pid;
       const was = flightEditing;
-      const { row } = was
+      const saved = was
         ? await api("?resource=flights&id=" + encodeURIComponent(was.id), { method: "PATCH", body: JSON.stringify(body) })
         : await api("?resource=flights", { method: "POST", body: JSON.stringify(body) });
+      const row = saved.row;
+      if (saved.photoLost) flash("照片沒存到(上傳太久了),這一筆照樣存了");
       state.flights = (state.flights || []).filter(f => f.id !== row.id).concat([row]);
       /* 改了班次:舊名字底下的座位跟著搬過去,不然它們會變成對不到任何一段的孤兒 */
       if (was && legKey(was) !== legKey(row)) {
@@ -3590,7 +3624,7 @@
       saveSnap();
       render();
       renderCountdown();
-      flash(was ? "改好了" : "加好了:" + legName(row));
+      flash((was ? "改好了" : "加好了:" + legName(row)) + (flFromAI && aiPhoto && !pid ? "(照片沒存到)" : ""));
       /* AI 一次讀到好幾段:存完這一段,這張往左滑走、接著是下一段;沒有了才關 */
       if (aiQueue.length) await slideToNextAI(); else closeFlight();
     } catch (e) {
@@ -5423,7 +5457,7 @@
         '<div class="ops">' + (e.sendErr ? '<button type="button" class="btn btn-ghost btn-sm" data-resend-exp="' + e.id + '">再送一次</button>' : "") +
         '<button type="button" class="btn btn-ghost btn-sm" data-del-exp="' + e.id + '">取消這筆</button></div>'
       : "";
-    return '<div class="exp"><div class="hd"><span class="ti">' + linkify(e.title) + '</span><span class="rm-chip cat" style="background:' + c.color + '">' + c.name + "</span></div>" +
+    return '<div class="exp"><div class="hd"><span class="ti">' + linkify(e.title) + '</span><span class="rm-chip cat" style="background:' + c.color + '">' + c.name + "</span>" + photoThumb(e.photo) + "</div>" +
       '<div class="amt">' + twd(v) + (e.currency === "JPY" ? '<span class="sub">¥' + Math.round(e.amount).toLocaleString("en-US") + "</span>" : "") + "</div>" +
       '<div class="mt"><span>' + payer + "</span><span>·</span><span>" + whoShared + "</span>" +
       (ps.length && !custom ? '<span>·</span><span class="num">每人 ' + twd(v / ps.length) + "</span>" : "") +
@@ -5523,6 +5557,7 @@
   /* 平常就是那一句;只有一種情況要講:這台瀏覽器連存都存不了(離開就會不見),那是使用者必須知道的 */
   const FOOT = "2026 @ Trippps Beta";
   function renderSync() {
+    if (Date.now() < flashUntil) return;   /* 還在講上一句(flash) */
     el("sync").textContent = !online && !storageOK ? "○ 瀏覽器不讓存檔,離開後會消失" : FOOT;
   }
 
@@ -5796,6 +5831,41 @@
     el("stop-form").reset();
     closeStopAdd();
   });
+  /* ---- AI 讀過的照片(2026-10-04,Lulu:「用 AI 傳照片分析的資料要把圖存起來,可以看到小縮圖,點了再放大」)----
+     **只有花費和交通**(她選的:收據、車票)。AI 讀完、讀到的是帳或交通,就在背景把那張(已經縮過的)圖傳上去,
+     拿到上傳編號;存那一筆的時候帶著它,伺服器掛到 Notion 的「照片」欄。一張收據拆好幾筆 → 每一筆掛同一張。
+     Notion 的上傳 1 小時內要掛上去,存的時候超過 50 分鐘就重傳一次。**傳不上去不擋存檔**,只是沒有照片 ——
+     存好的那句後面加「(照片沒存到)」,不另外講一句(會被「記下來了」蓋掉)。 */
+  let aiPhoto = null;   /* { b64, at, p: Promise<上傳編號,失敗是 ""> } */
+  const photoUpload = b64 => api("?resource=photo", { method: "POST", body: JSON.stringify({ image: b64 }) }).then(r => (r && r.photo) || "").catch(() => "");
+  function keepAIPhoto(b64) { aiPhoto = b64 ? { b64, at: Date.now(), p: photoUpload(b64) } : null; }
+  async function aiPhotoId() {
+    if (!aiPhoto) return "";
+    if (Date.now() - aiPhoto.at > 50 * 60e3) { aiPhoto.at = Date.now(); aiPhoto.p = photoUpload(aiPhoto.b64); }
+    return aiPhoto.p;
+  }
+  function openPhoto(url) {
+    el("ph-img").src = url;
+    el("photo-overlay").classList.remove("zoom");
+    el("photo-overlay").hidden = false;
+  }
+  el("ph-close").addEventListener("click", () => { el("photo-overlay").hidden = true; el("ph-img").removeAttribute("src"); });
+  el("ph-img").addEventListener("click", () => el("photo-overlay").classList.toggle("zoom"));
+  document.addEventListener("click", ev => {
+    const t = ev.target.closest && ev.target.closest("[data-photo]");
+    if (!t) return;
+    ev.preventDefault(); ev.stopPropagation();
+    openPhoto(t.dataset.photo);
+  }, true);
+  /* Notion 的網址 1 小時後失效:縮圖載不出來 → 有網路就重讀一次資料(一分鐘最多一次),沒網路就先藏起來 */
+  let photoRetryAt = 0;
+  document.addEventListener("error", ev => {
+    const img = ev.target;
+    if (!img || img.tagName !== "IMG" || !img.closest(".ph-thumb")) return;
+    if (online && Date.now() - photoRetryAt > 60e3) { photoRetryAt = Date.now(); pull().then(render).catch(() => {}); }
+    else img.closest(".ph-thumb").hidden = true;
+  }, true);
+
   /* ---- 刪東西之前再問一次(2026-10-03,Lulu) ----
      行程、願望、花費、交通都走這裡。用自己的對話框、不用瀏覽器的 confirm():
      iPhone 上那個會把網址印在最上面,樣子也跟 App 其他對話框不一樣。
@@ -5842,6 +5912,7 @@
   let lastExpDate = "";
   function openExpenseNew() {
     if (!editable("cost") && !queueCost()) return;
+    expFromAI = false;
     aiItems = []; aiItemTotal = 0;
     editingExp = "new";
     el("xe-h2").textContent = "記一筆";
@@ -5949,7 +6020,7 @@
   function openExpEdit(id) {
     const e = state.expenses.find(x => x.id === id);
     if (!e) return;
-    editingExp = id;
+    editingExp = id; expFromAI = false;
     el("xe-h2").textContent = "改這一筆"; el("xe-ai").hidden = true; el("xe-skip").hidden = true;
     stackPaint("exp-edit-form", 0, 0);
     el("xe-date").value = e.date || "";
@@ -5972,7 +6043,7 @@
     el("exp-edit-overlay").hidden = true;
   }
   el("xe-cancel").addEventListener("click", closeExpEdit);
-  el("exp-edit-form").addEventListener("submit", ev => {
+  el("exp-edit-form").addEventListener("submit", async ev => {
     ev.preventDefault();
     if (!editingExp) return;
     const title = el("xe-title").value.trim();
@@ -5985,13 +6056,14 @@
     const id = editingExp;
     /* AI 讀到的新的一筆(editingExp === "new"):記進去;後面還有就滑到下一筆 */
     if (id === "new") {
+      const photoId = expFromAI ? await aiPhotoId() : "";
       addExpense({
         id: uid(), date: el("xe-date").value, title, category: el("xe-cat").value,
         amount: Math.abs(parseFloat(el("xe-amount").value) || 0), currency: el("xe-cur").value,
         payerId: el("xe-payer").value || null, participants: ps, split, note: el("xe-note").value.trim(),
-        createdAt: new Date().toISOString(),
+        photoId: photoId || undefined, createdAt: new Date().toISOString(),
       });
-      flash("記下來了:" + title);
+      flash("記下來了:" + title + (expFromAI && aiPhoto && !photoId ? "(照片沒存到)" : ""));
       lastExpDate = el("xe-date").value;   /* 連記好幾筆通常是同一天 */
       if (aiItems.length) { stackSlide("exp-edit-form", openExpenseNextAI); return; }
       closeExpEdit();
@@ -6538,7 +6610,7 @@
     aiLast = r;
     /* 記帳(要排在「只能許願」那條捷徑前面,只勾記帳的副團主才不會被帶去許願表):打開「記一筆」,讀到的填進去(有記帳權限的人);沒有的話留在這裡講清楚 */
     if (r.intent === "expense") {
-      if (editable("cost")) { closeAI(); startItems(r); openExpenseNextAI(); return; }
+      if (editable("cost")) { keepAIPhoto(aiImage); closeAI(); startItems(r); openExpenseNextAI(); return; }
       aiErr("ai-err", "這看起來是一筆花費。記帳只有團主和副團主能用(看團主勾了哪幾塊)。");
       return;
     }
@@ -6555,7 +6627,7 @@
     }
     aiLast = r;
     /* 交通:直接打開「加一段交通」,讀到的都填進去 —— 同一張表、同一份驗證,這裡不長第二套 */
-    if (r.intent === "transport" && mayFly()) { closeAI(); startAIQueue(r); return; }
+    if (r.intent === "transport" && mayFly()) { keepAIPhoto(aiImage); closeAI(); startAIQueue(r); return; }
     el("ai-kind").value = r.intent === "unknown" ? "wish" : r.intent;
     startItems(r);
     fillAIConfirm(aiItems.shift());
@@ -6602,8 +6674,10 @@
     return true;
   }
   /* 記帳:AI 讀到的打開「記一筆」對話框(以前是花費頁上那張內嵌的表;要疊卡片,改成對話框) */
+  let expFromAI = false;   /* 這張「記一筆」是 AI 讀出來的(存的時候帶 AI 讀過的照片) */
   function openExpenseNextAI() {
     const r = aiItems.shift(); if (!r) return false;
+    expFromAI = true;
     const pos = itemPos(), total = aiItemTotal;
     switchTab("cost");
     editingExp = "new";
@@ -6654,6 +6728,7 @@
       f = same.find(x => day && dayOf(x.depart) === day) || (!day && same.length === 1 ? same[0] : null);
     }
     openFlight(f ? f.id : null);
+    flFromAI = true;
     if (!f && KIND[r.kind]) {
       const i = el("fl-kinds").querySelector('input[value="' + r.kind + '"]');
       if (i) { i.checked = true; applyKind(r.kind); }
@@ -8060,7 +8135,7 @@
     "settings-overlay": ["st-cancel"], "invite-overlay": ["inv-close"], "flight-overlay": ["fl-cancel"],
     "exp-edit-overlay": ["xe-cancel"], "edit-overlay": ["se-cancel"], "stop-add-overlay": ["sf-cancel"],
     "ai-overlay": ["ai-cancel", "ai-cancel2"], "wish-add-overlay": ["wf-cancel"], "wish-edit-overlay": ["we-cancel"],
-    "time-overlay": ["tf-cancel"], "fund-top-overlay": ["ft-cancel"], "confirm-overlay": ["cf-cancel"],
+    "time-overlay": ["tf-cancel"], "fund-top-overlay": ["ft-cancel"], "confirm-overlay": ["cf-cancel"], "photo-overlay": ["ph-close"],
   };
   const fieldsOf = ov => [].map.call(ov.querySelectorAll("input,select,textarea"),
     f => f.type === "checkbox" || f.type === "radio" ? (f.checked ? "1" : "0") : f.type === "file" ? String(f.files && f.files.length) : f.value).join("\u0001");
