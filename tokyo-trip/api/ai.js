@@ -135,10 +135,17 @@ function schema(ctx) {
       category:{ type: "STRING", enum: ["交通", "住宿", "餐飲", "景點", "購物", "其他"], description: "expense:分類" },
       legs:    { type: "ARRAY", description: "transport:讀到的每一段交通,照時間先後;文字和圖片講的是不同段就各列一段。不是交通就空陣列", items: LEG },
       items:   { type: "ARRAY", description: "wish/stop/expense:讀到的每一筆(好幾個想去的地方、好幾個行程、好幾筆花費各列一筆,照出現的順序);只有一筆也列一筆。transport 用 legs,這裡空陣列", items: itemSchema(ctx) },
+      /* **複合的內容**(2026-10-04,Lulu):一張車票上有班次座位、也有票價 → 交通 + 花費兩份,App 一張接一張開 */
+      parts:   { type: "ARRAY", description: "同一份內容裡有不只一種資料時才填,每一種一份:車票/機票上有班次座位也有票價 → transport + expense;門票、餐廳訂位有日期也有金額 → stop + expense。只有一種資料就空陣列(用最外層)。",
+                 items: { type: "OBJECT", properties: {
+                   intent: { type: "STRING", enum: ["wish", "stop", "transport", "expense"] },
+                   legs:   { type: "ARRAY", description: "transport 這一份的每一段;其他種類空陣列", items: LEG },
+                   items:  { type: "ARRAY", description: "wish/stop/expense 這一份的每一筆;transport 空陣列", items: itemSchema(ctx) },
+                 }, required: ["intent", "legs", "items"] } },
       /* **這時候還沒有存任何東西**(2026-10-02,Lulu 抓到:沒按確定卻看到「已加進許願」)—— 要人看過再按才會存 */
       message: { type: "STRING", description: "給使用者的一句話:判斷的理由,或還缺什麼資訊。繁體中文,40 字以內。這時候還沒有存任何東西,不要說「已加入」「已新增」「已記下」,要說「讀到…」「看起來是…」" },
     },
-    required: ["intent", "title", "day", "time", "note", "amount", "currency", "date", "category", "legs", "items", "message"],
+    required: ["intent", "title", "day", "time", "note", "amount", "currency", "date", "category", "legs", "items", "parts", "message"],
   };
 }
 
@@ -161,6 +168,8 @@ function prompt(text, ctx) {
     "  時間一律寫票上的當地時間,不要換時區。票上只有時間、看不出日期,就把 depart/arrive 留空。",
     "  **一次可能有好幾段**(去程和回程、轉乘的每一段、文字講一段圖片又是另一段):每一段在 legs 各列一筆。",
     "- **wish/stop/expense 也可能好幾筆**(「想去淺草寺和晴空塔」、一張截圖列了三家店、一張收據要拆兩筆):每一筆在 items 各列一筆,最外層的欄位填第一筆。",
+    "- **同一份內容可能不只一種資料**:車票、機票上有班次和座位,也印了票價 → 交通和花費各一份,列在 parts(transport 那份填 legs,expense 那份填 items:title 寫「高鐵 南港→左營」這種,amount 寫票價,category 交通,date 寫乘車日);",
+    "  門票、餐廳訂位有日期也有金額 → stop + expense。最外層照舊填主要的那一種。只有一種資料 parts 就空陣列。",
     "- 使用者的話優先於圖片的樣子。都看不出來 → unknown,並在 message 說還需要什麼。",
     "- 看不清楚的欄位留空,不要猜。",
     "",
@@ -295,6 +304,16 @@ function clean(f, ctx) {
       const raw = Array.isArray(f.items) && f.items.length ? f.items : [f];
       const xs = raw.slice(0, 8).map(x => cleanItem(x || {}, ctx, intent)).filter(x => x.title || x.amount);
       return xs.length ? xs : [cleanItem(f, ctx, intent)];
+    })(),
+    /* 複合的內容:兩種以上才算(只有一種就是最外層那一份)。排程、交通、許願在前,花費最後 ——
+       車票先填座位,下一張記錢的時候「誰分攤」才能先勾坐那幾個位子的人 */
+    parts: (() => {
+      const ps = (Array.isArray(f.parts) ? f.parts : []).slice(0, 4).map(p => clean(Object.assign({}, p, { parts: [], message: "" }), ctx))
+        .filter(p => p.intent !== "unknown" && (p.intent === "transport" ? p.legs.length : p.items.some(x => x.title || x.amount)))
+        .map(p => ({ intent: p.intent, legs: p.legs, items: p.items }));
+      const seen = new Set(), uniq = ps.filter(p => !seen.has(p.intent) && seen.add(p.intent));
+      uniq.sort((a, b) => (a.intent === "expense") - (b.intent === "expense"));
+      return uniq.length >= 2 ? uniq : [];
     })(),
     /* 模型偶爾還是會說「已加入許願清單」—— 那時候根本還沒存,這種句子整句不給 */
     message: /已(經)?.{0,24}?(加入|加進|新增|記下|記好|存好|存進|排進|建立)/.test(s(f.message, 120)) ? "" : s(f.message, 120),
