@@ -574,6 +574,25 @@ const memberRow = (code, sub) => rowsIn(DB.members).find(p => plain(p.properties
   r = await call(LINE_A, "PATCH", { resource: "flights", t: T1, id: fl }, { depart: "2026-10-03T11:20" });
   r = await call(LINE_A, "POST", { resource: "expenses", t: T1 }, { title: "燒肉", amount: 12000, currency: "JPY", payer: mA.id, participants: [mA.id, mB.id] });
   r = await call(LINE_A, "DELETE", { resource: "itinerary", t: T1, id: sky });
+
+  /* ---------- 每個人自訂分多少(2026-10-04) ---------- */
+  const wSplit = writes;
+  r = await call(LINE_A, "POST", { resource: "expenses", t: T1 }, { title: "太多", amount: 3000, currency: "JPY", payer: mA.id, participants: [mA.id, mB.id], split: { [mA.id]: 2000, [mB.id]: 2000 } });
+  ok("自訂金額加起來比總額多 → 400,講出兩個數字,Notion 一筆都沒寫", r.code === 400 && r.body.why === "split" && /¥4,000.*¥3,000/.test(r.body.error) && writes === wSplit, r.body);
+  r = await call(LINE_A, "POST", { resource: "expenses", t: T1 }, { title: "對不上", amount: 3000, currency: "JPY", payer: mA.id, participants: [mA.id, mB.id], split: { [mA.id]: 1000, [mB.id]: 1500 } });
+  ok("每個人都設了、加起來跟總額不一樣 → 400", r.code === 400 && r.body.why === "split" && /不一樣/.test(r.body.error), r.body);
+  r = await call(LINE_A, "POST", { resource: "expenses", t: T1 }, { title: "居酒屋", amount: 9000, currency: "JPY", payer: mA.id,
+    participants: [mA.id, mB.id, mD.id], split: { [mB.id]: 1000, zzz_not_in: 50 }, note: "" });
+  const izaka = r.body.row;
+  const izRow = rowsIn(DB.expenses).find(p => p.id === izaka.id);
+  ok("自訂金額存進「分攤金額」:只留分攤的人(不在名單上的丟掉)", r.code === 200 && plain(izRow.properties["分攤金額"]) === mB.id + ":1000" &&
+    JSON.stringify(izaka.split) === JSON.stringify({ [mB.id]: 1000 }), { 存的: izRow && plain(izRow.properties["分攤金額"]), 回的: izaka && izaka.split });
+  r = await call(LINE_A, "PATCH", { resource: "expenses", t: T1, id: izaka.id }, { title: "居酒屋", amount: 9000, currency: "JPY", payer: mA.id, participants: [mA.id, mB.id, mD.id], note: "改備註" });
+  ok("改帳沒帶 split(舊版 App)→ 自訂金額不動", r.code === 200 && JSON.stringify(r.body.row.split) === JSON.stringify({ [mB.id]: 1000 }), r.body.row && r.body.row.split);
+  r = await call(LINE_A, "PATCH", { resource: "expenses", t: T1, id: izaka.id }, { title: "居酒屋", amount: 9000, currency: "JPY", payer: mA.id, participants: [mA.id, mB.id, mD.id], note: "改備註", split: {} });
+  ok("改帳帶空的 split → 清掉,回到全部平分", r.code === 200 && JSON.stringify(r.body.row.split) === "{}" && plain(rowsIn(DB.expenses).find(p => p.id === izaka.id).properties["分攤金額"]) === "", r.body.row && r.body.row.split);
+  r = await call(LINE_A, "GET", { resource: "expenses", t: T1 });
+  ok("讀帳:每一筆都有 split(沒設的是空的)", r.code === 200 && r.body.rows.every(x => x.split && typeof x.split === "object"), r.body.rows && r.body.rows.map(x => x.split));
   const fB = await feed(LINE_B), fA = await feed(LINE_A), fD = await feed(LINE_D);
   const tB = fB.map(x => x.text);
   ok("動態寫進「動態」表了", rowsIn(ACT).length - actBefore >= 7, rowsIn(ACT).length - actBefore);
@@ -584,6 +603,8 @@ const memberRow = (code, sub) => rowsIn(DB.members).find(p => plain(p.properties
   ok("交通異動:加了 MM626、改了出發時間", tB.some(t => /加了交通:MM626\(TPE→NRT\)/.test(t)) && tB.some(t => /改了交通 MM626.*出發 10\/03 10:50 → 10\/03 11:20/.test(t)), tB);
   ok("新帳:要分的人(阿輝)看得到「記了一筆「燒肉」¥12,000,2 人分(每人約 ¥6,000)」", tB.some(t => /記了一筆「燒肉」 ¥12,000,2 人分\(每人約 ¥6,000\)/.test(t)), tB);
   ok("新帳:沒分到的人看不到(燒肉只有佳瑜和阿輝分)", !fD.some(x => /燒肉/.test(x.text)), fD.map(x => x.text));
+  ok("自訂金額的帳:不講「每人約」,講「每人金額不一樣」", tB.some(t => /記了一筆「居酒屋」 ¥9,000,3 人分\(每人金額不一樣/.test(t)) && !tB.some(t => /居酒屋.*每人約/.test(t)), tB.filter(t => /居酒屋/.test(t)));
+  ok("把自訂金額清掉:講「每人分的金額改了」", tB.some(t => /改了帳「居酒屋」:.*每人分的金額改了/.test(t)), tB.filter(t => /居酒屋/.test(t)));
   ok("沒分到的人還是看得到行程、交通、許願", fD.some(x => x.kind === "行程") && fD.some(x => x.kind === "交通") && fD.some(x => x.kind === "許願"), fD.map(x => x.kind));
   ok("自己做的不通知自己(團主看不到自己改的行程/交通/帳)", !fA.some(x => x.by === mA.id), fA.map(x => x.text));
   ok("回給瀏覽器的沒有「給誰」(不洩漏誰分了哪筆帳)", fB.every(x => x.to === undefined), fB[0]);
