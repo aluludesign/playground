@@ -867,6 +867,7 @@
     .exp .amt{text-align:right; font-family:var(--font-mono); font-variant-numeric:tabular-nums; font-size:15px; font-weight:600; white-space:nowrap;}
     .exp .amt .sub{display:block; font-size:10.5px; font-weight:400; color:var(--muted);}
     .exp .mt{grid-column:1/2; font-size:12px; color:var(--muted); display:flex; gap:6px; flex-wrap:wrap; align-items:center;}
+    .exp .mt .nw{white-space:nowrap;}
     .exp .ops{grid-column:2/3; display:flex; justify-content:flex-end; gap:6px;}
 
     /* ---- forms ---- */
@@ -1829,6 +1830,14 @@
       <div class="fld"><label class="rm-label" for="xe-payer">誰付的</label><select class="rm-input" id="xe-payer"></select></div>
     </div>
     <div class="fld"><label class="rm-label">誰分攤</label><div class="who" id="xe-who"></div></div>
+    <!-- 每人分多少(2026-10-04,Lulu):預設平分;「各自設定」→ 每個勾了的人一格,沒填的人平分剩下的 -->
+    <div class="fld"><span class="rm-label">每人分多少</span>
+      <div class="who">
+        <label class="rm-chip"><input type="radio" name="xe-split" id="xe-split-same" value="same" checked>平分</label>
+        <label class="rm-chip"><input type="radio" name="xe-split" id="xe-split-diff" value="diff">各自設定</label>
+      </div></div>
+    <div class="grid2" id="xe-split-each" hidden></div>
+    <p class="st-hint" id="xe-split-note" hidden></p>
     <div class="fld"><label class="rm-label" for="xe-note">備註</label><input class="rm-input" type="text" id="xe-note" placeholder="可留白"></div>
     <div class="err" id="xe-err" hidden></div>
     <div class="ops">
@@ -2351,6 +2360,7 @@
     amount: Number(r.amount) || 0, currency: r.currency || "JPY",
     payerId: r.payer || null,
     participants: (r.participants || []).slice(),
+    split: Object.assign({}, r.split || {}),
     note: r.note || "", createdAt: r.createdAt,
   });
   const expToRow = e => ({
@@ -2358,6 +2368,7 @@
     amount: e.amount, currency: e.currency,
     payer: e.payerId === "fund" ? "fund" : nameById(e.payerId) || "",
     participants: (e.participants || []).map(nameById).filter(Boolean),
+    split: Object.keys(e.split || {}).filter(p => nameById(p) && (e.participants || []).includes(p)).reduce((o, p) => (o[p] = e.split[p], o), {}),
     note: e.note,
   });
   /* by:從願望排進來的那一筆記著是誰許的 —— 有它才退得回願望區 */
@@ -3181,6 +3192,20 @@
   }
 
   /* ================= 分帳計算 ================= */
+  /* **每個人分多少**(2026-10-04,Lulu):split 是自訂的金額 { 成員: 金額 }(這筆的幣別),
+     沒設的人平分剩下的;一個都沒設 = 全部平分。回傳每個分攤的人分到的金額(這筆的幣別)。
+     每個人都設了、加起來卻比總額少(存的時候會擋,但事後有人退團就可能)—— 差額大家平分,總數才對得起來 */
+  function shareMap(amount, ps, split) {
+    const sp = {};
+    ps.forEach(p => { const v = split && split[p]; if (v !== undefined && v !== null && v !== "" && isFinite(v)) sp[p] = Math.max(0, +v); });
+    const rest = ps.filter(p => !(p in sp));
+    const left = Math.max(0, amount - Object.keys(sp).reduce((t, k) => t + sp[k], 0));
+    const out = {};
+    ps.forEach(p => { out[p] = p in sp ? sp[p] + (rest.length ? 0 : left / ps.length) : left / rest.length; });
+    return out;
+  }
+  const hasSplit = e => Object.keys(e.split || {}).some(p => (e.participants || []).includes(p));
+  const inCur = (cur, x) => (cur === "TWD" ? "NT$" : "¥") + Math.round(x).toLocaleString("en-US");
   /* **一包錢的時候怎麼結算**(2026-10-02):每個人交進基金的錢算「已付」,基金付的帳照分攤的人分;
      基金裡剩的錢在保管人手上(沒指定就是「共同基金」本身)—— 所以保管人的淨額要扣掉剩的那一包,
      剩的退、不夠的補,跟個人墊款合併成最少轉帳。每個人最後付的剛好是自己分到的那幾筆。 */
@@ -3194,7 +3219,10 @@
       if (e.payerId === "fund" && pot) fundPaid += v;
       else if (e.payerId && book[e.payerId]) book[e.payerId].paid += v; else unassigned++;
       const ps = (e.participants || []).filter(p => book[p]);
-      if (ps.length) { const each = v / ps.length; ps.forEach(p => book[p].owed += each); }
+      if (ps.length) {
+        const amt = Number(e.amount) || 0, sh = shareMap(amt, ps, e.split);
+        ps.forEach(p => book[p].owed += amt ? v * sh[p] / amt : v / ps.length);
+      }
     });
     if (pot) IDS.forEach(id => { book[id].put = FUND.shares[id] || 0; });
     const fundIn = IDS.reduce((s, id) => s + book[id].put, 0);
@@ -5381,7 +5409,11 @@
   function expRow(e) {
     const c = catOf(e.category);
     const ps = (e.participants || []).filter(p => IDS.includes(p));
-    const whoShared = ps.length === IDS.length ? "全員均分" : ps.map(nameOf).join("、") + " 均分";
+    /* 自訂了金額:每個人分多少寫出來(這筆的幣別),就不再寫「每人」 */
+    const custom = hasSplit(e), sh = custom ? shareMap(Number(e.amount) || 0, ps, e.split) : null;
+    /* 自訂的那種:一個人一段,名字和金額不拆開換行 */
+    const whoShared = custom ? ps.map(p => '<span class="nw">' + esc(nameOf(p) + " " + inCur(e.currency, sh[p])) + "</span>").join("、")
+      : esc(ps.length === IDS.length ? "全員均分" : ps.map(nameOf).join("、") + " 均分");
     const payer = e.payerId ? esc(nameOf(e.payerId)) + " 付" : '<span style="color:var(--warn)">未指定付款人</span>';
     const v = toTWD(e);
     /* 還沒送出的:講清楚它還在手機上;送不出去的講原因。按鈕只給「取消這筆」(和再送一次)——
@@ -5393,8 +5425,8 @@
       : "";
     return '<div class="exp"><div class="hd"><span class="ti">' + linkify(e.title) + '</span><span class="rm-chip cat" style="background:' + c.color + '">' + c.name + "</span></div>" +
       '<div class="amt">' + twd(v) + (e.currency === "JPY" ? '<span class="sub">¥' + Math.round(e.amount).toLocaleString("en-US") + "</span>" : "") + "</div>" +
-      '<div class="mt"><span>' + payer + "</span><span>·</span><span>" + esc(whoShared) + "</span>" +
-      (ps.length ? '<span>·</span><span class="num">每人 ' + twd(v / ps.length) + "</span>" : "") +
+      '<div class="mt"><span>' + payer + "</span><span>·</span><span>" + whoShared + "</span>" +
+      (ps.length && !custom ? '<span>·</span><span class="num">每人 ' + twd(v / ps.length) + "</span>" : "") +
       (e.note ? "<span>·</span><span>" + linkify(e.note) + "</span>" : "") + "</div>" + wait +
       (editable("cost") && !e.pending ? '<div class="ops">' +
         '<button type="button" class="btn btn-ghost btn-sm" data-edit-exp="' + e.id + '">' +
@@ -5854,12 +5886,60 @@
   let editingExp = null;
   el("xe-cat").innerHTML = CATS.map(c => '<option value="' + c.id + '">' + c.name + "</option>").join("");
 
-  function fillExpPeople(payerId, participants) {
+  function fillExpPeople(payerId, participants, split) {
     el("xe-payer").innerHTML = '<option value="">— 還不確定 —</option>' +
       MEMBERS.map(m => '<option value="' + m.id + '"' + (m.id === payerId ? " selected" : "") + ">" + esc(nameOf(m.id)) + "</option>").join("") +
       (FUND.mode === "pot" || payerId === "fund" ? '<option value="fund"' + (payerId === "fund" ? " selected" : "") + ">共同基金</option>" : "");
     el("xe-who").innerHTML = MEMBERS.map(m =>
       '<label class="rm-chip"><input type="checkbox" value="' + m.id + '"' + (participants.includes(m.id) ? " checked" : "") + ">" + esc(nameOf(m.id)) + "</label>").join("");
+    const sp = split || {}, custom = participants.some(p => sp[p] !== undefined);
+    el("xe-split-same").checked = !custom; el("xe-split-diff").checked = custom;
+    el("xe-split-each").innerHTML = MEMBERS.map(m => '<div class="fld" data-split-row="' + esc(m.id) + '"><label class="rm-label" for="xe-sp-' + esc(m.id) + '">' + esc(nameOf(m.id)) + "</label>" +
+      '<input class="rm-input" type="number" inputmode="decimal" min="0" step="any" id="xe-sp-' + esc(m.id) + '" data-split-amt="' + esc(m.id) + '" value="' +
+      (custom && sp[m.id] !== undefined && participants.includes(m.id) ? sp[m.id] : "") + '"></div>').join("");
+    syncExpSplit();
+  }
+  /* 「各自設定」的格子:只露勾了的人;淡字是「不填會分到多少」;下面一句講剩多少給幾個人平分 */
+  const expWho = () => Array.prototype.map.call(el("xe-who").querySelectorAll("input:checked"), i => i.value);
+  function expSplitInput() {
+    const out = {};
+    if (!el("xe-split-diff").checked) return out;
+    expWho().forEach(p => { const i = el("xe-sp-" + p), v = i && i.value.trim(); if (v !== "" && v != null && isFinite(v)) out[p] = Math.max(0, +v); });
+    return out;
+  }
+  function syncExpSplit() {
+    const diff = el("xe-split-diff").checked, ps = expWho(), cur = el("xe-cur").value;
+    const amount = Math.abs(parseFloat(el("xe-amount").value) || 0), sp = expSplitInput();
+    el("xe-split-each").hidden = !diff;
+    document.querySelectorAll("[data-split-row]").forEach(r => { r.hidden = !ps.includes(r.dataset.splitRow); });
+    const sh = shareMap(amount, ps, sp);
+    /* 「不填會分多少」寫在標籤上 —— 設計系統的輸入框空著的時候標籤就躺在格子裡,淡字(placeholder)根本看不到 */
+    ps.forEach(p => {
+      const i = el("xe-sp-" + p), lb = i && i.closest(".fld").querySelector("label");
+      if (!i) return;
+      i.placeholder = sh[p] !== undefined ? String(Math.round(sh[p] * 100) / 100) : "";
+      if (lb) lb.textContent = nameOf(p) + (i.value.trim() === "" && sh[p] !== undefined ? " · 平分 " + inCur(cur, sh[p]) : "");
+    });
+    const note = el("xe-split-note");
+    if (!diff || !ps.length) { note.hidden = true; return; }
+    const set = Object.keys(sp), sum = set.reduce((t, k) => t + sp[k], 0), rest = ps.length - set.length;
+    note.textContent = !set.length ? "沒填的人平分;一格都不填就是全部平分。"
+      : sum > amount + 1 ? "設的金額加起來 " + inCur(cur, sum) + ",比這筆 " + inCur(cur, amount) + " 還多。"
+      : rest ? "剩下 " + inCur(cur, amount - sum) + " 給沒填的 " + rest + " 人平分,每人 " + inCur(cur, (amount - sum) / rest) + "。"
+      : Math.abs(sum - amount) > 1 ? "每個人都填了,加起來 " + inCur(cur, sum) + ",跟這筆 " + inCur(cur, amount) + " 不一樣。"
+      : "每個人都填了,加起來剛好 " + inCur(cur, amount) + "。";
+    note.hidden = false;
+  }
+  ["xe-split-same", "xe-split-diff", "xe-cur"].forEach(id => el(id).addEventListener("change", syncExpSplit));
+  el("xe-amount").addEventListener("input", syncExpSplit);
+  el("xe-who").addEventListener("change", syncExpSplit);
+  el("xe-split-each").addEventListener("input", syncExpSplit);
+  /* 存之前跟伺服器同一套規則:超過總額、或每個人都填了卻對不上,就講出來不存 */
+  function expSplitErr(amount, ps, sp, cur) {
+    const set = Object.keys(sp), sum = set.reduce((t, k) => t + sp[k], 0);
+    if (sum > amount + 1) return "每個人設的金額加起來 " + inCur(cur, sum) + ",比這筆 " + inCur(cur, amount) + " 還多。";
+    if (set.length && set.length === ps.length && Math.abs(sum - amount) > 1) return "每個人都設了金額,加起來 " + inCur(cur, sum) + ",跟這筆 " + inCur(cur, amount) + " 不一樣。";
+    return "";
   }
   function showExpError(msg) {
     const box = el("xe-err");
@@ -5877,7 +5957,7 @@
     el("xe-cat").value = e.category || "other";
     el("xe-amount").value = e.amount || 0;
     el("xe-cur").value = e.currency === "TWD" ? "TWD" : "JPY";
-    fillExpPeople(e.payerId, (e.participants || []).filter(p => IDS.includes(p)));
+    fillExpPeople(e.payerId, (e.participants || []).filter(p => IDS.includes(p)), e.split);
     el("xe-note").value = e.note || "";
     showExpError("");
     tuckMapForDialog(false);
@@ -5898,15 +5978,17 @@
     const title = el("xe-title").value.trim();
     if (!title) { showExpError("總要寫個名字。"); return; }
     if (!el("xe-date").value) { showExpError("要有日期。"); return; }
-    const ps = Array.prototype.map.call(el("xe-who").querySelectorAll("input:checked"), i => i.value);
+    const ps = expWho();
     if (!ps.length) { showExpError("至少要選一個人分攤。"); return; }
+    const split = expSplitInput(), spErr = expSplitErr(Math.abs(parseFloat(el("xe-amount").value) || 0), ps, split, el("xe-cur").value);
+    if (spErr) { showExpError(spErr); return; }
     const id = editingExp;
     /* AI 讀到的新的一筆(editingExp === "new"):記進去;後面還有就滑到下一筆 */
     if (id === "new") {
       addExpense({
         id: uid(), date: el("xe-date").value, title, category: el("xe-cat").value,
         amount: Math.abs(parseFloat(el("xe-amount").value) || 0), currency: el("xe-cur").value,
-        payerId: el("xe-payer").value || null, participants: ps, note: el("xe-note").value.trim(),
+        payerId: el("xe-payer").value || null, participants: ps, split, note: el("xe-note").value.trim(),
         createdAt: new Date().toISOString(),
       });
       flash("記下來了:" + title);
@@ -5923,6 +6005,7 @@
       currency: el("xe-cur").value,
       payerId: el("xe-payer").value || null,
       participants: ps,
+      split,
       note: el("xe-note").value.trim(),
     };
     closeExpEdit();

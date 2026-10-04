@@ -95,9 +95,41 @@ function expenseOut(page) {
        三十團各有各的人,選單列不完,也不該由 Notion 的欄位設定決定誰在團裡。 */
     payer: txt(p["付款人"]) || null,
     participants: ids(txt(p["分攤者"])),
+    split: parseSplit(txt(p["分攤金額"])),
     note: txt(p["備註"]),
     createdAt: page.created_time,
   };
+}
+/* **每個人自訂要分的金額**(2026-10-04,Lulu):{ 成員代號: 金額 },用這一筆的幣別。
+   沒寫到的人平分剩下的;一個都沒寫 = 全部平分(就是以前的樣子)。
+   存在「分攤金額」欄,一段「代號:金額」逗號分隔的字 —— 空的就是全部平分 */
+function parseSplit(v) {
+  const out = {};
+  String(v || "").split(",").forEach(x => {
+    const m = /^\s*([a-z0-9_]{1,40})\s*:\s*(\d+(?:\.\d+)?)\s*$/.exec(x);
+    if (m) out[m[1]] = Number(m[2]);
+  });
+  return out;
+}
+/* 只留分攤的人身上的、大於等於 0 的數字 */
+function cleanSplit(split, participants) {
+  const out = {}, ps = ids(participants);
+  if (split && typeof split === "object") Object.keys(split).forEach(k => {
+    const n = Number(split[k]);
+    if (ps.includes(k) && Number.isFinite(n) && n >= 0) out[k] = Math.round(n * 100) / 100;
+  });
+  return out;
+}
+/* 設的金額加起來不能超過總額;每個人都設了的話,加起來要剛好等於總額(差 1 塊以內算對,四捨五入) */
+function splitErr(b) {
+  if (!b || b.split === undefined) return "";
+  const amount = Number(b.amount) || 0, ps = ids(b.participants), sp = cleanSplit(b.split, ps);
+  const set = Object.keys(sp), sum = set.reduce((s, k) => s + sp[k], 0);
+  const cur = b.currency === "TWD" ? "NT$" : "¥", fmt = n => cur + Math.round(n).toLocaleString("en-US");
+  if (sum > amount + 1) return "每個人設的金額加起來 " + fmt(sum) + ",比這筆 " + fmt(amount) + " 還多";
+  if (set.length && set.length === ps.length && Math.abs(sum - amount) > 1)
+    return "每個人都設了金額,加起來 " + fmt(sum) + ",跟這筆 " + fmt(amount) + " 不一樣";
+  return "";
 }
 function expenseIn(b) {
   const props = {
@@ -110,6 +142,11 @@ function expenseIn(b) {
   if (b.date) props["日期"] = { date: { start: b.date } };
   if (b.category) props["分類"] = { select: { name: b.category } };
   if (b.payer !== undefined) props["付款人"] = { rich_text: richText(b.payer) };
+  /* 沒帶 split 就不動這一欄 —— 還沒更新的舊版 App 改帳時不會把別人設好的金額洗掉 */
+  if (b.split !== undefined) {
+    const sp = cleanSplit(b.split, b.participants);
+    props["分攤金額"] = { rich_text: richText(Object.keys(sp).map(k => k + ":" + sp[k]).join(",")) };
+  }
   return props;
 }
 
@@ -1045,6 +1082,10 @@ module.exports = async (req, res) => {
     const b = BUCKET[resource];
     if (!b || !c.can(b)) return res.status(403).json({ error: "這一塊目前只有團主動得了" });
 
+    if (resource === "expenses" && (method === "POST" || method === "PATCH")) {
+      const bad = splitErr(body);
+      if (bad) return res.status(400).json({ error: bad, why: "split" });
+    }
     if (method === "POST") {
       const props = withTrip(shape.in(body));
       /* **手機離線時記的帳,連上網才送**(見 index.html「還沒送出的花費」)。在地鐵裡送到一半斷線,
@@ -1066,8 +1107,9 @@ module.exports = async (req, res) => {
       if (resource === "flights") await log("交通", me2 + " 加了交通:" + legName(row) + (row.depart ? " " + clock(row.depart) : ""));
       if (resource === "seats") await log("交通", me2 + " 填了" + nm(row.passenger) + "在 " + row.flight + " 的座位:" + (row.seat || "空的"));
       if (resource === "expenses" && row.participants && row.participants.length) {
-        const n = row.participants.length;
-        await log("花費", me2 + " 記了一筆" + said(row.title) + " " + money(row.amount, row.currency) + (row.payer === "fund" ? "(共同基金付)" : "") + "," + n + " 人分(每人約 " + money(row.amount / n, row.currency) + ")", { to: row.participants });
+        const n = row.participants.length, custom = Object.keys(row.split || {}).length > 0;
+        await log("花費", me2 + " 記了一筆" + said(row.title) + " " + money(row.amount, row.currency) + (row.payer === "fund" ? "(共同基金付)" : "") + "," + n + " 人分" +
+          (custom ? "(每人金額不一樣,打開看自己分多少)" : "(每人約 " + money(row.amount / n, row.currency) + ")"), { to: row.participants });
       }
       return res.status(200).json({ row });
     }
@@ -1098,6 +1140,7 @@ module.exports = async (req, res) => {
         const who = Array.from(new Set([].concat(was.participants || [], row.participants || [])));
         const moved = JSON.stringify((was.participants || []).slice().sort()) !== JSON.stringify((row.participants || []).slice().sort());
         if (moved) ch.push("分的人改成 " + (row.participants || []).map(nm).join("、"));
+        else if (body.split !== undefined && JSON.stringify(was.split || {}) !== JSON.stringify(row.split || {})) ch.push("每人分的金額改了");
         if (ch.length && who.length) await log("花費", me2 + " 改了帳" + said(was.title) + ":" + ch.join("、"), { to: who });
       }
       return res.status(200).json({ row });
