@@ -41,7 +41,15 @@ let cidColumn = false;
 
 /* 寫進去的格式(`{ rich_text: [{ text: { content } }] }`)換成讀出來的格式
    (`{ rich_text: [{ plain_text }] }`)—— 真的 Notion 就是這樣,兩邊不對稱。 */
+/* 照片(2026-10-04):上傳過的編號才掛得上去;讀回來是 Notion 給的網址 */
+const uploads = new Set();
 function stored(v) {
+  if (v.files) {
+    const bad = v.files.find(f => f.type === "file_upload" && !uploads.has(f.file_upload.id));
+    if (bad) { const e = new Error("file_upload " + bad.file_upload.id + " is expired or not uploaded"); e.notion = 400; throw e; }
+    return { files: v.files.map(f => f.type === "file_upload"
+      ? { type: "file", name: "photo.jpg", file: { url: "https://files.notion.test/" + f.file_upload.id + ".jpg", expiry_time: "2026-10-04T10:00:00.000Z" } } : f) };
+  }
   if (v.title) return { title: v.title.map(t => ({ plain_text: t.text.content })) };
   if (v.rich_text) return { rich_text: v.rich_text.map(t => ({ plain_text: t.text.content })) };
   return v;
@@ -62,8 +70,19 @@ const clone = x => JSON.parse(JSON.stringify(x));
 async function fakeFetch(u, init) {
   const url = String(u);
   const method = (init && init.method) || "GET";
-  const body = init && init.body ? JSON.parse(init.body) : {};
+  const body = init && typeof init.body === "string" ? JSON.parse(init.body) : {};
   if (lost) return reply(404, { message: "Could not find database with ID …", code: "object_not_found" });
+  if (/\/file_uploads$/.test(url) && method === "POST") {
+    if (body.mode !== "single_part" || !/\.jpg$/.test(body.filename || "") || body.content_type !== "image/jpeg") return reply(400, { message: "bad file upload " + JSON.stringify(body) });
+    return reply(200, { id: dash("f" + (++seq).toString(16).padStart(31, "0")), status: "pending" });
+  }
+  const mu = /\/file_uploads\/([0-9a-f-]+)\/send$/.exec(url);
+  if (mu && method === "POST") {
+    const f = init.body && typeof init.body.get === "function" ? init.body.get("file") : null;
+    if (!f || !f.size) return reply(400, { message: "send 沒有 file 欄" });
+    uploads.add(mu[1]);
+    return reply(200, { id: mu[1], status: "uploaded" });
+  }
   let m = /\/databases\/([0-9a-f]+)$/.exec(url);
   if (m && method === "GET") {
     return reply(200, { id: dash(m[1]), properties: cidColumn && m[1] === DB.expenses ? { "送出編號": { type: "rich_text" } } : {} });
@@ -74,9 +93,10 @@ async function fakeFetch(u, init) {
     return reply(200, { results: clone(rows), has_more: false });
   }
   if (/\/pages$/.test(url) && method === "POST") {
-    writes++;
     const props = {};
-    for (const [k, v] of Object.entries(body.properties)) props[k] = stored(v);
+    try { for (const [k, v] of Object.entries(body.properties)) props[k] = stored(v); }
+    catch (e) { if (e.notion) return reply(e.notion, { message: e.message, code: "validation_error" }); throw e; }
+    writes++;
     const id = dash((++seq).toString(16).padStart(32, "0"));
     const page = { id, parent: { database_id: dash(body.parent.database_id) }, archived: false,
                    created_time: new Date().toISOString(), properties: props };
@@ -593,6 +613,27 @@ const memberRow = (code, sub) => rowsIn(DB.members).find(p => plain(p.properties
   ok("改帳帶空的 split → 清掉,回到全部平分", r.code === 200 && JSON.stringify(r.body.row.split) === "{}" && plain(rowsIn(DB.expenses).find(p => p.id === izaka.id).properties["分攤金額"]) === "", r.body.row && r.body.row.split);
   r = await call(LINE_A, "GET", { resource: "expenses", t: T1 });
   ok("讀帳:每一筆都有 split(沒設的是空的)", r.code === 200 && r.body.rows.every(x => x.split && typeof x.split === "object"), r.body.rows && r.body.rows.map(x => x.split));
+
+  /* ---------- AI 讀過的照片存起來(2026-10-04):花費、交通 ---------- */
+  const JPG = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0, 16, 74, 70, 73, 70, 0, 1, 1, 0, 0, 1, 0, 1, 0, 0, 0xff, 0xd9]).toString("base64");
+  r = await call(LINE_D, "POST", { resource: "photo", t: T1 }, { image: JPG });
+  ok("照片:沒有記帳、交通權限的成員不能傳(403)", r.code === 403, r.body);
+  r = await call(LINE_A, "POST", { resource: "photo", t: T1 }, { image: Buffer.from("not a jpeg").toString("base64") });
+  ok("照片:不是 JPEG → 400", r.code === 400, r.body);
+  r = await call(LINE_A, "POST", { resource: "photo", t: T1 }, { image: JPG });
+  const pid = r.body && r.body.photo;
+  ok("照片:團主傳 JPEG → 拿到上傳編號(建上傳 + send multipart 都走了)", r.code === 200 && /^[0-9a-f-]{36}$/.test(pid || "") , r.body);
+  r = await call(LINE_A, "POST", { resource: "expenses", t: T1 }, { title: "收據那筆", amount: 1200, currency: "JPY", payer: mA.id, participants: [mA.id, mB.id], photo: pid });
+  ok("記帳帶 photo → 「照片」欄掛上去、回來的 row 有照片網址", r.code === 200 && /files\.notion\.test\//.test(r.body.row.photo) && !r.body.photoLost, r.body);
+  r = await call(LINE_A, "POST", { resource: "expenses", t: T1 }, { title: "同一張的第二筆", amount: 800, currency: "JPY", payer: mA.id, participants: [mA.id], photo: pid });
+  ok("同一張照片掛第二筆也可以(一張收據拆好幾筆)", r.code === 200 && /files\.notion\.test\//.test(r.body.row.photo), r.body.row && r.body.row.photo);
+  r = await call(LINE_A, "POST", { resource: "flights", t: T1 }, { kind: "火車", no: "のぞみ 1", dir: "其他", from: "東京", to: "新大阪", depart: "2026-10-05T08:00", photo: pid });
+  ok("交通帶 photo → 也掛得上去", r.code === 200 && /files\.notion\.test\//.test(r.body.row.photo), r.body);
+  r = await call(LINE_A, "POST", { resource: "expenses", t: T1 }, { title: "照片過期那筆", amount: 500, currency: "JPY", payer: mA.id, participants: [mA.id], photo: "0".repeat(8) + "-0000-0000-0000-" + "0".repeat(12) });
+  ok("照片掛不上去(過期)→ 帳照樣存進去(沒照片),回 photoLost 讓 App 講一聲", r.code === 200 && r.body.photoLost === true && !r.body.row.photo &&
+    rowsIn(DB.expenses).filter(p => plain(p.properties["項目"]) === "照片過期那筆").length === 1, r.body);
+  r = await call(LINE_A, "GET", { resource: "expenses", t: T1 });
+  ok("讀帳:沒照片的那幾筆 photo 是空字串", r.body.rows.filter(x => !x.photo).length >= 1 && r.body.rows.every(x => typeof x.photo === "string"), r.body.rows.map(x => x.photo));
   const fB = await feed(LINE_B), fA = await feed(LINE_A), fD = await feed(LINE_D);
   const tB = fB.map(x => x.text);
   ok("動態寫進「動態」表了", rowsIn(ACT).length - actBefore >= 7, rowsIn(ACT).length - actBefore);

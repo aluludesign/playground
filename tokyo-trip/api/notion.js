@@ -82,6 +82,16 @@ const ids = v => Array.from(new Set((Array.isArray(v) ? v : String(v || "").spli
   .map(x => String(x).trim()).filter(x => /^[a-z0-9_]{1,40}$/.test(x))));
 const richText = v => (v ? [{ type: "text", text: { content: String(v).slice(0, 1900) } }] : []);
 
+/* **照片**(2026-10-04,Lulu):AI 讀過的收據、車票存在「花費」「交通」表的「照片」欄。
+   讀:第一張的網址 —— Notion 給的網址 1 小時後就失效,重新讀一次就有新的(App 圖片載不出來會重讀)。
+   寫:App 先用 resource=photo 把圖上傳,拿到上傳編號,建這一筆的時候帶 photo,這裡掛上去。 */
+const photoOut = p => {
+  const f = p && Array.isArray(p.files) && p.files[0];
+  return f ? String((f.file && f.file.url) || (f.external && f.external.url) || "") : "";
+};
+const photoId = v => (/^[0-9a-f-]{32,36}$/i.test(String(v || "")) ? String(v) : "");
+const photoIn = id => ({ files: [{ type: "file_upload", file_upload: { id } }] });
+
 function expenseOut(page) {
   const p = page.properties;
   return {
@@ -96,6 +106,7 @@ function expenseOut(page) {
     payer: txt(p["付款人"]) || null,
     participants: ids(txt(p["分攤者"])),
     split: parseSplit(txt(p["分攤金額"])),
+    photo: photoOut(p["照片"]),
     note: txt(p["備註"]),
     createdAt: page.created_time,
   };
@@ -142,6 +153,7 @@ function expenseIn(b) {
   if (b.date) props["日期"] = { date: { start: b.date } };
   if (b.category) props["分類"] = { select: { name: b.category } };
   if (b.payer !== undefined) props["付款人"] = { rich_text: richText(b.payer) };
+  if (photoId(b.photo)) props["照片"] = photoIn(photoId(b.photo));
   /* 沒帶 split 就不動這一欄 —— 還沒更新的舊版 App 改帳時不會把別人設好的金額洗掉 */
   if (b.split !== undefined) {
     const sp = cleanSplit(b.split, b.participants);
@@ -264,6 +276,7 @@ function flightOut(page) {
     note: txt(p["備註"]),
     code: p["訂位代號"] ? txt(p["訂位代號"]) : "",
     drivers: p["駕駛"] ? ids(txt(p["駕駛"]).split(",")) : [],
+    photo: photoOut(p["照片"]),
   };
 }
 function flightIn(b) {
@@ -281,6 +294,7 @@ function flightIn(b) {
   /* 不帶時區的字串照原樣存:Notion 看到沒有時區的 datetime 就當成「浮動時間」 */
   if (b.depart !== undefined) props["起飛"] = localTime(b.depart) ? { date: { start: b.depart } } : { date: null };
   if (b.arrive !== undefined) props["抵達"] = localTime(b.arrive) ? { date: { start: b.arrive } } : { date: null };
+  if (photoId(b.photo)) props["照片"] = photoIn(photoId(b.photo));
   return props;
 }
 
@@ -779,6 +793,36 @@ module.exports = async (req, res) => {
   /* ---------- 補基金(2026-10-02) ----------
      POST { who: [成員編號], amount } → 每個人的出資加 amount(台幣)。
      一包錢模式才有;保管人、團主、有記帳權限的副團主能記。 */
+  /* ---------- 上傳一張照片(2026-10-04) ----------
+     POST { image: 縮過的 JPEG(base64) } → { photo: Notion 的上傳編號 }。之後建花費/交通時帶 photo 就掛上去。
+     同一張可以掛好幾筆(一張收據拆成好幾筆帳),但要在 1 小時內掛,不然 Notion 會把它收掉。
+     能記帳或能動交通的人才能傳(就是能把它掛上去的那些人)。 */
+  if (resource === "photo") {
+    if (!allow("POST")) return;
+    try {
+      const c = await context(q.t);
+      if (c.stop) return stop(c.stop);
+      if (!c.can("cost") && !c.can("seat")) return res.status(403).json({ error: "這一塊目前只有團主動得了" });
+      const b64 = typeof body.image === "string" ? body.image : "";
+      if (!b64) return res.status(400).json({ error: "沒有照片" });
+      if (b64.length > 3_000_000) return res.status(413).json({ error: "照片太大" });
+      const buf = Buffer.from(b64, "base64");
+      if (buf.length < 4 || buf[0] !== 0xff || buf[1] !== 0xd8) return res.status(400).json({ error: "照片格式不對(要 JPEG)" });
+      const up = await notion("/file_uploads", { method: "POST", body: JSON.stringify({
+        mode: "single_part", filename: "trippps-" + c.code + "-" + Date.now() + ".jpg", content_type: "image/jpeg" }) });
+      const fd = new FormData();
+      fd.append("file", new Blob([buf], { type: "image/jpeg" }), "photo.jpg");
+      /* 這一支是 multipart,不能用上面那個一律送 JSON 的 notion() */
+      const r = await fetch(NOTION + "/file_uploads/" + up.id + "/send", { method: "POST",
+        headers: { Authorization: "Bearer " + process.env.NOTION_TOKEN, "Notion-Version": VERSION }, body: fd });
+      const sent = await r.json().catch(() => ({}));
+      if (!r.ok || sent.status !== "uploaded") throw new Error(sent.message || "Notion 回應 " + r.status);
+      return res.status(200).json({ photo: up.id });
+    } catch (e) {
+      return res.status(502).json({ error: "照片存不起來:" + String(e.message || e) });
+    }
+  }
+
   if (resource === "fund") {
     if (!allow("POST")) return;
     try {
@@ -1100,8 +1144,16 @@ module.exports = async (req, res) => {
         if (hit.results[0]) return res.status(200).json({ row: shape.out(hit.results[0]), again: true });
         props["送出編號"] = { rich_text: richText(cid) };
       }
-      const page = await notion("/pages", { method: "POST",
-        body: JSON.stringify({ parent: { database_id: shape.db }, properties: props }) });
+      /* 照片掛不上去(上傳超過 1 小時被收掉、Notion 不收)不能讓這一筆存不進去 —— 拿掉照片再建一次,
+         回 photoLost 讓 App 講一聲「照片沒存到」 */
+      let page, photoLost = false;
+      try {
+        page = await notion("/pages", { method: "POST", body: JSON.stringify({ parent: { database_id: shape.db }, properties: props }) });
+      } catch (e) {
+        if (!props["照片"] || e.status >= 500) throw e;
+        delete props["照片"]; photoLost = true;
+        page = await notion("/pages", { method: "POST", body: JSON.stringify({ parent: { database_id: shape.db }, properties: props }) });
+      }
       const row = shape.out(page);
       if (resource === "itinerary") await log("行程", me2 + " 在 " + dayOf(row.day) + " 加了" + said(row.title) + (row.time ? " " + row.time : ""), { day: row.day });
       if (resource === "flights") await log("交通", me2 + " 加了交通:" + legName(row) + (row.depart ? " " + clock(row.depart) : ""));
@@ -1111,14 +1163,22 @@ module.exports = async (req, res) => {
         await log("花費", me2 + " 記了一筆" + said(row.title) + " " + money(row.amount, row.currency) + (row.payer === "fund" ? "(共同基金付)" : "") + "," + n + " 人分" +
           (custom ? "(每人金額不一樣,打開看自己分多少)" : "(每人約 " + money(row.amount / n, row.currency) + ")"), { to: row.participants });
       }
-      return res.status(200).json({ row });
+      return res.status(200).json(photoLost ? { row, photoLost } : { row });
     }
     if (method === "PATCH") {
       const page = await rowOf(q.id);
       if (!page) return gone();
       const was = shape.out(page);
-      const saved = await notion("/pages/" + page.id, { method: "PATCH",
-        body: JSON.stringify({ properties: shape.in(body) }) });
+      /* 照片掛不上去一樣不擋(AI 讀到一段已經有的交通,改它的時候帶著照片) */
+      const props = shape.in(body);
+      let saved, photoLost = false;
+      try {
+        saved = await notion("/pages/" + page.id, { method: "PATCH", body: JSON.stringify({ properties: props }) });
+      } catch (e) {
+        if (!props["照片"] || e.status >= 500) throw e;
+        delete props["照片"]; photoLost = true;
+        saved = await notion("/pages/" + page.id, { method: "PATCH", body: JSON.stringify({ properties: props }) });
+      }
       const row = shape.out(saved);
       if (resource === "itinerary") {
         if (!was.day && row.day) await log("行程", me2 + " 把願望" + said(row.title) + "排進 " + dayOf(row.day) + (row.time ? " " + row.time : ""), { day: row.day });
@@ -1143,7 +1203,7 @@ module.exports = async (req, res) => {
         else if (body.split !== undefined && JSON.stringify(was.split || {}) !== JSON.stringify(row.split || {})) ch.push("每人分的金額改了");
         if (ch.length && who.length) await log("花費", me2 + " 改了帳" + said(was.title) + ":" + ch.join("、"), { to: who });
       }
-      return res.status(200).json({ row });
+      return res.status(200).json(photoLost ? { row, photoLost } : { row });
     }
     if (method === "DELETE") {
       const page = await rowOf(q.id);
