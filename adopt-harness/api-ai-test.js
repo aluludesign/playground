@@ -212,6 +212,25 @@ function ok(name, cond, extra) {
   r = await call({ text: "想去淺草寺" }, () => ({ ok: true, status: 200, json: async () => ({ candidates: [{ content: { parts: [{ text: JSON.stringify({
     intent: "wish", title: "淺草寺", day: 0, time: "", note: "", amount: 0, currency: "unknown", date: "", category: "其他", legs: [], items: [], message: "看起來是想去的地方" }) }] } }] }) }));
   ok("正常的那句照給", r.res.body.result && r.res.body.result.message === "看起來是想去的地方", r.res.body);
+  /* 複合的內容(2026-10-04):一張高鐵票有班次座位也有票價 → 交通 + 花費兩份,交通在前、花費在後 */
+  const LEG1 = { kind: "火車", no: "125", company: "台灣高鐵", depart: "2026-11-02T11:20", from: "南港", arrive: "2026-11-02T13:05", to: "左營", code: "", dir: "其他", match: "none", note: "", seats: [{ member: "m-aaa", seat: "5車 2C" }] };
+  const EXP1 = { title: "高鐵 南港→左營", day: 0, time: "", note: "", amount: 1530, currency: "TWD", date: "2026-11-02", category: "交通" };
+  r = await call({ text: "這張", context: CTX }, () => okJson(JSON.stringify({ intent: "transport", title: "", day: 0, time: "", note: "", amount: 0, currency: "unknown", date: "", category: "交通",
+    legs: [LEG1], items: [], message: "高鐵票", parts: [{ intent: "expense", legs: [], items: [EXP1] }, { intent: "transport", legs: [LEG1], items: [] }] })));
+  const cp = r.res.body.result;
+  ok("複合:parts 兩份,交通在前、花費在後(模型先給花費也排回來)", cp.parts.length === 2 && cp.parts[0].intent === "transport" && cp.parts[1].intent === "expense", cp.parts);
+  ok("複合:交通那份有座位,花費那份有票價和日期", cp.parts[0].legs[0].seats[0].seat === "5車 2C" && cp.parts[1].items[0].amount === 1530 &&
+    cp.parts[1].items[0].currency === "TWD" && cp.parts[1].items[0].date === "2026-11-02" && cp.parts[1].items[0].category === "交通", cp.parts);
+  ok("複合:最外層照舊(舊的前端只看最外層也接得住)", cp.intent === "transport" && cp.legs.length === 1, cp);
+  r = await call({ text: "x", context: CTX }, () => okJson(JSON.stringify({ intent: "expense", title: "x", amount: 100, currency: "JPY", date: "", category: "其他", legs: [], items: [], message: "",
+    parts: [{ intent: "expense", legs: [], items: [EXP1] }] })));
+  ok("只有一種資料 → parts 空的(走原本的路)", r.res.body.result.parts.length === 0, r.res.body.result.parts);
+  r = await call({ text: "x", context: CTX }, () => okJson(JSON.stringify({ intent: "transport", legs: [LEG1], items: [], message: "",
+    parts: [{ intent: "transport", legs: [LEG1], items: [] }, { intent: "transport", legs: [LEG1], items: [] }, { intent: "expense", legs: [], items: [] }] })));
+  ok("同一種重複、空的那份丟掉 → 剩一種就不算複合", r.res.body.result.parts.length === 0, r.res.body.result.parts);
+  r = await call({ text: "x", context: CTX }, () => okJson(GOOD));
+  ok("回應的格式有 parts(schema 裡要有它,模型才會填)", !!sent(r.seen).generationConfig.responseSchema.properties.parts && Array.isArray(r.res.body.result.parts), "");
+
   console.log(fails ? "\n✗ " + fails + " 項沒過" : "\n全部通過");
   process.exit(fails ? 1 : 0);
 })();
