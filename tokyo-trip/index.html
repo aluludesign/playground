@@ -7123,7 +7123,8 @@
       }
       /* **一團都沒有就直接開團** —— 空的清單配一顆「開新的一團」,多一步沒有意義 */
       if (!trips.length) return openHome("create", { first: true });
-      const tripLink = t => '<a class="home-trip" href="?t=' + encodeURIComponent(t.code) + '"><b>' + esc(t.name) + "</b>" +
+      /* 最高權限看自己被隱藏的團:點得進去,但標「隱藏中」(一般人那邊是點不進去的「這一團暫時關閉了」) */
+      const tripLink = t => '<a class="home-trip" href="?t=' + encodeURIComponent(t.code) + '"><b>' + esc(t.name) + (t.closed ? " · 隱藏中" : "") + "</b>" +
         "<small>" + esc(t.city || t.country) + " · " + fmtRange(t.start, t.end) + "</small>" +
         '<span class="role">' + esc(t.role) + "</span></a>";
       /* **沒帶網址打開、今天在旅程日期裡的團就直接進去**(2026-10-04,Lulu)。
@@ -7133,7 +7134,9 @@
          「今天」是這支手機的日期。從「我的團」回來的(網址帶 home=1)不自動開,不然回不到清單。 */
       if (o.auto) {
         const today = todayISO();
-        const now = trips.filter(t => !t.hidden && t.start && t.end && t.start <= today && today <= t.end);
+        /* 隱藏的團不算 —— 看 closed(真的被隱藏),不是 hidden(點不進去):最高權限進得去被隱藏的團,
+           但隱藏了就是不要它跑出來(2026-10-04,Lulu:「我已經隱藏一團,進入時怎麼還會看到」) */
+        const now = trips.filter(t => !t.hidden && !t.closed && t.start && t.end && t.start <= today && today <= t.end);
         if (now.length === 1) {
           c.innerHTML = '<h2 id="home-title">' + esc(now[0].name) + "</h2><p>打開中…</p>";
           location.replace("?t=" + encodeURIComponent(now[0].code));

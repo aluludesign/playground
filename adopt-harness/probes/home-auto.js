@@ -4,6 +4,8 @@
  *   PAGE='/index.html?bare=1&mytrips=now,now2,later'   兩團同時進行 → 先問「要開哪一團?」,只列那兩團;「看全部的團」列三團
  *   PAGE='/index.html?bare=1&mytrips=later'            沒有進行中的 → 照舊「我的團」清單
  *   PAGE='/index.html?bare=1&mytrips=hidnow,later'     進行中的那團被隱藏了 → 不自動開,照舊清單
+ *   PAGE='/index.html?bare=1&admin=1&mytrips=now,hidnow,later'  最高權限:進行中的兩團有一團被他隱藏了 → 只剩一團,直接打開它
+ *   PAGE='/index.html?home=1&admin=1&mytrips=now,hidnow,later'  最高權限的「我的團」:被隱藏的那團點得進去,標「隱藏中」
  *   PAGE='/index.html?home=1&mytrips=now,later'        從「我的團」回來(home=1)→ 不自動開,回得到清單
  *   PAGE='/index.html'                                 團裡面:選單的「我的團」帶 home=1 */
 var wait = ms => new Promise(r => w.setTimeout(r, ms));
@@ -19,7 +21,14 @@ return (async function () {
   var tripOpen = () => q("#home-overlay").hidden;
   var arrived = /[?&]t=/.test(w.location.search);   /* 已經被自動開進某一團了(探針在跳頁之後才跑) */
   var mt = (/[?&]mytrips=([a-z0-9,]*)/.exec(src) || [])[1];
-  if (/[?&]bare=1/.test(src) && mt === "now,later") {
+  var admin = /[?&]admin=1/.test(src);
+  if (admin && /[?&]bare=1/.test(src) && mt === "now,hidnow,later") {
+    out.結果 = arrived ? "開了 " + w.location.search : txt("#home-title") + " " + codes().join();
+    ok("最高權限:進行中的另一團被隱藏了 → 只剩一團,直接打開它(?t=nowtrip1)", /[?&]t=nowtrip1(&|$)/.test(w.location.search), out.結果);
+  } else if (admin && /[?&]home=1/.test(src) && mt === "now,hidnow,later") {
+    out.列 = qa("#home-overlay .home-trip").map(a => a.querySelector("b").textContent.replace(/\s+/g, " ").trim() + (a.getAttribute("href") ? "" : "(點不進去)"));
+    ok("最高權限的「我的團」:被隱藏的那團點得進去、標「隱藏中」,其他的不標", out.列.join() === "大阪三日,關掉的團 · 隱藏中,東京五人行", out.列);
+  } else if (/[?&]bare=1/.test(src) && mt === "now,later") {
     out.結果 = arrived ? "開了 " + w.location.search : txt("#home-title");
     ok("一團進行中 → 直接打開那一團(?t=nowtrip1)", /[?&]t=nowtrip1(&|$)/.test(w.location.search), out.結果);
   } else if (/[?&]bare=1/.test(src) && mt === "now,now2,later") {
