@@ -156,7 +156,8 @@ FAKE_JS = r"""(function(){
   /* 沒帶團代號就補上 —— 截圖和大部分探針要的是「打開這一團」那個畫面。
      new(一團都沒有)要的是首頁,不補。 */
   /* visitor:沒登入、直接打開首頁(沒帶團代號)的人 —— 介紹頁就是給他看的 */
-  if (mode !== "new" && mode !== "visitor" && !/[?&]t=/.test(q)) {
+  /* bare=1:從主畫面重新打開的 App —— 網址沒有團代號(2026-10-04 起今天在旅程中的團會自動打開) */
+  if (mode !== "new" && mode !== "visitor" && !/[?&]bare=1/.test(q) && !/[?&]home=1/.test(q) && !/[?&]t=/.test(q)) {
     history.replaceState(null, "", location.pathname + (q ? q + "&" : "?") + "t=" + CODE);
   }
   var real = window.fetch.bind(window), seq = 0;
@@ -240,6 +241,17 @@ FAKE_JS = r"""(function(){
     }
     if (r === "trips") {
       if (method === "POST") return reply({ code: "newtrip1", me: { id: "mnew01", name: body.myName, color: "#E60012", role: "團主" } });
+      /* mytrips=now,now2,later,hidnow:「我的團」清單裡有哪幾團。凍住的時鐘是 2026-09-19 ——
+         now / now2 / hidnow 的日期包含那一天(hidnow 被隱藏了),later 就是這一團(10/03 才出發) */
+      var mt = (/[?&]mytrips=([a-z0-9,]*)/.exec(q) || [])[1];
+      if (mt !== undefined) {
+        var T = { now: { code: "nowtrip1", name: "大阪三日", city: "大阪", start: "2026-09-18", end: "2026-09-20" },
+                  now2: { code: "nowtrip2", name: "沖繩跳島", city: "那霸", start: "2026-09-15", end: "2026-09-19" },
+                  hidnow: { code: "hidtrip1", name: "關掉的團", city: "京都", start: "2026-09-19", end: "2026-09-21", hidden: true },
+                  later: { code: CODE, name: TRIP.name, city: TRIP.city, start: TRIP.start, end: TRIP.end } };
+        return reply({ trips: mt.split(",").filter(function(k){ return T[k]; }).map(function(k){
+          return Object.assign({ country: "日本", role: "團主", hidden: false }, T[k]); }), admin: ADMIN });
+      }
       return reply({ trips: joined ? [{ code: CODE, name: TRIP.name, country: TRIP.country, city: TRIP.city,
         start: TRIP.start, end: TRIP.end, role: mine.role, hidden: HID && !ADMIN }] : [], admin: ADMIN });
     }
