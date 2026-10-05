@@ -101,7 +101,9 @@ const LEG = {
   required: ["kind", "no", "company", "depart", "from", "arrive", "to", "code", "dir", "match", "note", "seats"],
 };
 /* **一次可能好幾筆**(2026-10-02,Lulu:「只要是能用 AI 的功能都要一樣」):好幾個想去的地方、好幾個行程、
-   一張收據兩筆帳……每一筆列在 items。最外層那幾欄照舊放第一筆(舊的前端只看最外層,也接得住)。 */
+   兩張收據、「晚餐 6000、計程車 2000」……每一筆列在 items。最外層那幾欄照舊放第一筆(舊的前端只看最外層,也接得住)。
+   **一張收據是一筆**(2026-10-05,Lulu 拿 HANDS 的收據問「為什麼拆成兩筆」):以前這裡的例子寫「一張收據兩筆帳」,
+   模型就照品項一行拆一筆。現在一張收據 = 一筆、金額是合計、品項寫進備註;使用者明說「分開記」才拆。 */
 function itemSchema(ctx) {
   return {
     type: "OBJECT",
@@ -134,7 +136,7 @@ function schema(ctx) {
       date:    { type: "STRING", description: "expense:消費日期 YYYY-MM-DD;看不出來就空字串" },
       category:{ type: "STRING", enum: ["交通", "住宿", "餐飲", "景點", "購物", "其他"], description: "expense:分類" },
       legs:    { type: "ARRAY", description: "transport:讀到的每一段交通,照時間先後;文字和圖片講的是不同段就各列一段。不是交通就空陣列", items: LEG },
-      items:   { type: "ARRAY", description: "wish/stop/expense:讀到的每一筆(好幾個想去的地方、好幾個行程、好幾筆花費各列一筆,照出現的順序);只有一筆也列一筆。transport 用 legs,這裡空陣列", items: itemSchema(ctx) },
+      items:   { type: "ARRAY", description: "wish/stop/expense:讀到的每一筆(好幾個想去的地方、好幾個行程、好幾次不同的花費各列一筆,照出現的順序);**一張收據只算一筆**(合計,品項寫 note),使用者說要分開才拆。只有一筆也列一筆。transport 用 legs,這裡空陣列", items: itemSchema(ctx) },
       /* **複合的內容**(2026-10-04,Lulu):一張車票上有班次座位、也有票價 → 交通 + 花費兩份,App 一張接一張開 */
       parts:   { type: "ARRAY", description: "同一份內容裡有不只一種資料時才填,每一種一份:車票/機票上有班次座位也有票價 → transport + expense;門票、餐廳訂位有日期也有金額 → stop + expense。只有一種資料就空陣列(用最外層)。",
                  items: { type: "OBJECT", properties: {
@@ -164,10 +166,12 @@ function prompt(text, ctx) {
     "- 使用者說「加到第幾天」「排進行程」「幾號去」→ stop。餐廳、門票的訂位確認上有日期,也算 stop,用日期換算第幾天。",
     "- 機票、登機證、車票(新幹線、JR、高鐵、台鐵)、巴士票、船票、租車確認、座位表、選位畫面 → transport。",
     "- 收據、帳單、發票、刷卡紀錄,或「晚餐花了 6000 日幣」這種花了多少錢的話 → expense。title 寫店名或買了什麼(15 字以內),amount 寫合計。",
+    "  **一張收據就是一筆**:amount 寫這張的合計(含稅、折扣後),title 寫店名(看得到就寫,例如 HANDS),買了哪些品項寫在 note(例「ナゴミハーフクッション ¥2,376、フロスペン ¥880」),不要一個品項拆一筆。",
+    "  只有使用者明說要分開(「分開記」「拆成兩筆」「各算各的」),或圖裡是好幾張不同的收據、一段話講了好幾次不同的花費,才在 items 列好幾筆。",
     "  kind:航班 → 飛機;新幹線、JR、鐵路、高鐵、台鐵、地鐵特急 → 火車;高速巴士、客運 → 巴士;渡輪、船 → 船;租車 → 租車。",
     "  時間一律寫票上的當地時間,不要換時區。票上只有時間、看不出日期,就把 depart/arrive 留空。",
     "  **一次可能有好幾段**(去程和回程、轉乘的每一段、文字講一段圖片又是另一段):每一段在 legs 各列一筆。",
-    "- **wish/stop/expense 也可能好幾筆**(「想去淺草寺和晴空塔」、一張截圖列了三家店、一張收據要拆兩筆):每一筆在 items 各列一筆,最外層的欄位填第一筆。",
+    "- **wish/stop/expense 也可能好幾筆**(「想去淺草寺和晴空塔」、一張截圖列了三家店、兩張收據、「晚餐 6000、計程車 2000」):每一筆在 items 各列一筆,最外層的欄位填第一筆。",
     "- **同一份內容可能不只一種資料**:車票、機票上有班次和座位,也印了票價 → 交通和花費各一份,列在 parts(transport 那份填 legs,expense 那份填 items:title 寫「高鐵 南港→左營」這種,amount 寫票價,category 交通,date 寫乘車日);",
     "  門票、餐廳訂位有日期也有金額 → stop + expense。最外層照舊填主要的那一種。只有一種資料 parts 就空陣列。",
     "- 使用者的話優先於圖片的樣子。都看不出來 → unknown,並在 message 說還需要什麼。",

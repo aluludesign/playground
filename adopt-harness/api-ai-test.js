@@ -231,6 +231,11 @@ function ok(name, cond, extra) {
   r = await call({ text: "x", context: CTX }, () => okJson(GOOD));
   ok("回應的格式有 parts(schema 裡要有它,模型才會填)", !!sent(r.seen).generationConfig.responseSchema.properties.parts && Array.isArray(r.res.body.result.parts), "");
 
+  /* 一張收據是一筆(2026-10-05,Lulu 拿 HANDS 的收據問「為什麼拆成兩筆」):要寫在給模型的話裡,「一張收據要拆兩筆」那個例子不能再出現 */
+  r = await call({ text: "這張收據", context: CTX }, () => okJson(GOOD));
+  const said = JSON.stringify(sent(r.seen));
+  ok("給模型的話:一張收據就是一筆、合計、品項寫 note;說要分開才拆", /一張收據就是一筆/.test(said) && /品項寫在 note/.test(said) && /分開記/.test(said) && !/一張收據要拆兩筆/.test(said), "");
+
   console.log(fails ? "\n✗ " + fails + " 項沒過" : "\n全部通過");
   process.exit(fails ? 1 : 0);
 })();

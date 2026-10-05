@@ -1920,7 +1920,8 @@
     <div class="fld"><label class="rm-label" for="ai-text" id="ai-ask-label">想做什麼</label>
       <textarea class="rm-input" id="ai-text" rows="3" placeholder="例:這家想去許願／加到第 3 天晚上 7 點／這張是車票或訂位確認"></textarea></div>
     <!-- 省次數的提醒(2026-10-02,Lulu):AI 一次讀到好幾筆會疊成卡片一張一張確認,而次數是「按一次交給 AI」算一次 -->
-    <p class="ai-tip" id="ai-tip">💡 一次把好幾筆寫在一起(例:「想去淺草寺、晴空塔、上野公園」),或一張截圖、收據裡有好幾筆,<b>只算 1 次 AI</b>。</p>
+    <!-- 2026-10-05:一張收據記成一筆(合計,品項寫在備註),不再暗示「收據裡有好幾筆」會拆開;要分開就叫它分開 -->
+    <p class="ai-tip" id="ai-tip">💡 一次把好幾筆寫在一起(例:「想去淺草寺、晴空塔、上野公園」),或一張截圖裡有好幾個地方,<b>只算 1 次 AI</b>。一張收據會記成一筆(合計),要分開記就打「分開記」。</p>
     <div class="fld" id="ai-img-row">
       <!-- 拍照:手機、平板才有(觸控螢幕)。capture 叫系統直接開相機,不先問要從哪裡選 -->
       <button type="button" class="btn btn-sm" id="ai-shoot" hidden>📷 拍照</button>
