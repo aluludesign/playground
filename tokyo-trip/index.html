@@ -1328,6 +1328,8 @@
     .overlay:has(> .stack.batching){padding-bottom:110px;}
     /* 換筆的動畫:飛走/退後的是複製出來的那張(飛完就拿掉),真的那張已經換成下一筆 */
     .stack > .deck-fly{position:absolute; margin:0; pointer-events:none; z-index:3;}
+    /* 一批的卡片可以左右拖(上下照樣捲) */
+    .stack.batching > .signin{touch-action:pan-y;}
     /* 一批裡有問題的那一筆(2026-10-12):編號用 error 色 */
     .batch-tabs{margin:-4px 0 0;}
     .batch-tabs .rm-chip.bt-bad{border-color:var(--ds-sys-shared-color-error); color:var(--ds-sys-shared-color-error);}
@@ -6815,12 +6817,14 @@
     return bar;
   }
   /* **換筆像翻一疊牌**(2026-10-12,Lulu:「左滑右滑會有前後交換的效果,第一張會跑到最後一張,後面一張會往前推」)。
-     往後(dir 1):最上面那張往左飛出去、再繞到最後面;後面那張往前推上來。
-     往前(dir -1):反過來 —— 最後面那張從左邊繞回最前面,原本那張往後退一格。
+     最上面那張往手指的方向飛出去(往後 dir 1 → 左、往前 dir -1 → 右),到邊上那一刻換到最後面、縮著退下去;
+     後面那張(新的那一筆)往前推上來。from:放手那一刻卡片的位置(拖著換的時候從那裡接著飛;點編號就是從中間)。
      飛的是複製出來的那張(飛完拿掉),真的那張馬上換成新的那一筆,所以換筆不用等動畫。 */
-  function deckMove(formId, dir, fill, was) {
+  function deckMove(formId, dir, fill, was, from) {
     const k = stackOf(formId);
-    if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches || !k.form.animate) { fill(); return; }
+    if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches || !k.form.animate) { k.form.style.transform = ""; fill(); return; }
+    /* 量位置要用「沒有拖著」的那個框(拖著的時候有位移、旋轉,外框會變) */
+    k.form.style.transform = ""; k.form.style.transition = "";
     const fr = k.form.getBoundingClientRect(), sr = k.st.getBoundingClientRect(), top = k.form.scrollTop;
     const fly = k.form.cloneNode(true);
     /* 複製不會帶走程式填進去的值(那只在 .value 上,不在 HTML 裡)—— 一格一格抄過去,飛出去的那張才跟剛剛看到的一樣 */
@@ -6835,32 +6839,24 @@
     fly.inert = true;
     fly.querySelectorAll("input, select, textarea, button, a").forEach(x => { x.tabIndex = -1; });
     fly.classList.add("deck-fly"); fly.classList.remove("slide-out");
-    Object.assign(fly.style, { top: (fr.top - sr.top) + "px", left: (fr.left - sr.left) + "px", width: fr.width + "px", height: fr.height + "px" });
+    Object.assign(fly.style, { top: (fr.top - sr.top) + "px", left: (fr.left - sr.left) + "px", width: fr.width + "px", height: fr.height + "px", transform: from || "none" });
     k.st.appendChild(fly);
     fly.scrollTop = top;
     fill();
     k.form.scrollTop = 0;
     const T = 420, ease = "cubic-bezier(.3,.7,.3,1)", done = () => fly.remove();
-    if (dir > 0) {
-      /* 飛到左邊那一刻**一下子換到後面**(z 3 → 0),再縮著退到最後一張的位置、淡掉 —— 不會跟前面那張半透明疊在一起 */
-      fly.animate([{ transform: "none", zIndex: 3, opacity: 1, easing: ease }, { transform: "translateX(-78%) rotate(-7deg)", zIndex: 3, opacity: 1, offset: .45 },
-        { transform: "translateX(-78%) rotate(-7deg)", zIndex: 0, opacity: 1, offset: .46, easing: "ease-in-out" },
-        { transform: "translateY(30px) scale(.86)", zIndex: 0, opacity: 0 }], { duration: T, easing: "linear" }).onfinish = done;
-      k.form.animate([{ transform: "translateY(16px) scale(.93)", filter: "brightness(.95)" }, { transform: "none", filter: "none" }],
-        { duration: T * .75, delay: T * .25, easing: ease, fill: "backwards" });
-    } else {
-      /* 原本那張往後退一格:**不變透明**,退到「後面第一張」那個位置、變暗一點 —— 到了就跟後面那張疊在一起,拿掉看不出來 */
-      fly.style.zIndex = 1;
-      fly.animate([{ transform: "none", filter: "none" }, { transform: "translateY(16px) scale(.93)", filter: "brightness(.95)" }], { duration: T, easing: ease }).onfinish = done;
-      /* 反過來:從最後面(看不到)先繞到左邊、**到左邊那一刻才換到最前面**,再推回中間 */
-      k.form.animate([{ transform: "translateY(30px) scale(.86)", zIndex: 0, opacity: 0, easing: "ease-in-out" }, { transform: "translateX(-78%) rotate(-7deg)", zIndex: 0, opacity: 1, offset: .5 },
-        { transform: "translateX(-78%) rotate(-7deg)", zIndex: 3, opacity: 1, offset: .51, easing: ease }, { transform: "none", zIndex: 2, opacity: 1 }], { duration: T, easing: "linear" });
-    }
+    const out = dir > 0 ? "translateX(-78%) rotate(-7deg)" : "translateX(78%) rotate(7deg)";
+    /* 飛到邊上那一刻**一下子換到後面**(z 3 → 0),再縮著退到最後一張的位置、淡掉 —— 不會跟前面那張半透明疊在一起 */
+    fly.animate([{ transform: from || "none", zIndex: 3, opacity: 1, easing: ease }, { transform: out, zIndex: 3, opacity: 1, offset: .45 },
+      { transform: out, zIndex: 0, opacity: 1, offset: .46, easing: "ease-in-out" },
+      { transform: "translateY(30px) scale(.86)", zIndex: 0, opacity: 0 }], { duration: T, easing: "linear" }).onfinish = done;
+    k.form.animate([{ transform: "translateY(16px) scale(.93)", filter: "brightness(.95)" }, { transform: "none", filter: "none" }],
+      { duration: T * .75, delay: T * .25, easing: ease, fill: "backwards" });
     setTimeout(done, T + 200);   /* 保險:動畫被打斷也要拿掉 */
   }
   /* 換到第 i 筆:先把這一筆的表存成草稿;種類不一樣就換對話框;再把那一筆倒進表。
      dir:1 往後、-1 往前(有翻牌動畫);0 沒有動畫(檢查、存的時候一筆一筆跑) */
-  function batchShow(i, dir) {
+  function batchShow(i, dir, from) {
     const b = batch;
     if (!b || i < 0 || i >= b.items.length) return;
     const cur = b.items[b.at];
@@ -6870,6 +6866,7 @@
     }
     const nx = b.items[i], K = BATCH[nx.kind];
     const same = b.shown && cur && BATCH[cur.kind].ov === K.ov;
+    if (b.shown && cur) el(BATCH[cur.kind].form).style.transform = "";   /* 拖到一半換別種對話框:那張先歸位 */
     if (b.shown && cur && !same) { el(BATCH[cur.kind].ov).hidden = true; stackOf(BATCH[cur.kind].form).st.classList.remove("batching"); }
     const fill = () => {
       b.at = i; b.shown = true;
@@ -6879,14 +6876,14 @@
       if (nx.draft) { restoreForm(K.form, nx.draft); K.resync(); }
       paintBatch();
     };
-    if (dir && same && i !== b.at) deckMove(K.form, dir, fill, b.at);
+    if (dir && same && i !== b.at) deckMove(K.form, dir, fill, b.at, from);
     else fill();
   }
   /* 左右滑:一疊會循環的牌,最後一筆再往後就回到第一筆 */
-  function batchStep(dir) {
+  function batchStep(dir, from) {
     if (!batch || batch.items.length < 2) return;
     const n = batch.items.length;
-    batchShow((batch.at + dir + n) % n, dir);
+    batchShow((batch.at + dir + n) % n, dir, from);
   }
   /* 「不要這筆」:從這一批拿掉;拿光了就關 */
   function batchDrop() {
@@ -6952,22 +6949,58 @@
     if (lastTab) switchTab(lastTab);
     flash("存好了 " + n + " 筆" + (lost ? "(有照片沒存到)" : ""));
   }
-  /* 左右滑換筆(卡片上,不是在欄位裡) */
+  /* **按著拖,卡片跟著手指走**(2026-10-12,Lulu:「手指按著時往左,卡片就往左,右邊反之;不是滑掉才動,這樣看不出可以滑」)。
+     放手時拖得夠遠(70px)或甩得夠快,就從那個位置接著翻到下一張/上一張;不然彈回中間。
+     從打字的格子(文字、數字、日期、下拉)開始拖不算 —— 那裡要選字、移游標。上下捲照常(touch-action: pan-y)。 */
+  const dragTf = dx => "translateX(" + dx + "px) rotate(" + (dx / 22).toFixed(2) + "deg)";
+  function eatNextClick(form) {
+    const stop = e => { e.stopPropagation(); e.preventDefault(); };
+    form.addEventListener("click", stop, { capture: true, once: true });
+    setTimeout(() => form.removeEventListener("click", stop, { capture: true }), 400);
+  }
   Object.values(BATCH).forEach(k => {
     const form = el(k.form);
     if (form.dataset.swipe) return;
     form.dataset.swipe = "1";
-    let x0 = null, y0 = 0;
+    let g = null;   /* 這一次按下去:{ x0, y0, t0, id, dragging } */
+    const typing = t => t.closest('input:not([type="checkbox"]):not([type="radio"]), select, textarea, .seek-out');
     form.addEventListener("pointerdown", ev => {
-      if (!batch || ev.target.closest("input, select, textarea, button, label, .seek-out")) { x0 = null; return; }
-      x0 = ev.clientX; y0 = ev.clientY;
+      if (!batch || batch.items.length < 2 || batch.saving || typing(ev.target)) { g = null; return; }
+      g = { x0: ev.clientX, y0: ev.clientY, t0: performance.now(), id: ev.pointerId, dragging: false };
     });
-    form.addEventListener("pointerup", ev => {
-      if (x0 === null || !batch) return;
-      const dx = ev.clientX - x0, dy = ev.clientY - y0;
-      x0 = null;
-      if (Math.abs(dx) > 60 && Math.abs(dy) < 50) batchStep(dx < 0 ? 1 : -1);
+    form.addEventListener("pointermove", ev => {
+      if (!g || ev.pointerId !== g.id) return;
+      const dx = ev.clientX - g.x0, dy = ev.clientY - g.y0;
+      if (!g.dragging) {
+        if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) { g = null; return; }   /* 是要上下捲 */
+        if (Math.abs(dx) < 8) return;
+        g.dragging = true;
+        try { form.setPointerCapture(ev.pointerId); } catch (_) {}
+        form.getAnimations().forEach(a => a.finish());
+        form.style.userSelect = "none";
+      }
+      form.style.transition = "none";
+      form.style.transform = dragTf(dx);
     });
+    const end = ev => {
+      if (!g || ev.pointerId !== g.id) return;
+      const dx = ev.clientX - g.x0, dy = ev.clientY - g.y0, v = Math.abs(dx) / Math.max(1, performance.now() - g.t0), was = g;
+      g = null;
+      form.style.userSelect = "";
+      if (!was.dragging) {
+        /* 沒拖(很快的一下):照放手的位置判斷,跟以前一樣 */
+        if (ev.type === "pointerup" && Math.abs(dx) > 60 && Math.abs(dy) < 50) batchStep(dx < 0 ? 1 : -1);
+        return;
+      }
+      eatNextClick(form);   /* 拖完放手不要順便按到底下的選項 */
+      if (ev.type === "pointerup" && (Math.abs(dx) > 70 || (Math.abs(dx) > 30 && v > .5))) { batchStep(dx < 0 ? 1 : -1, dragTf(dx)); return; }
+      /* 不夠遠:彈回中間 */
+      const from = form.style.transform;
+      form.style.transform = ""; form.style.transition = "";
+      if (form.animate && from) form.animate([{ transform: from }, { transform: "none" }], { duration: 220, easing: "cubic-bezier(.3,.7,.3,1)" });
+    };
+    form.addEventListener("pointerup", end);
+    form.addEventListener("pointercancel", end);
   });
 
   /* 哪一種資料要哪幾欄。類型選單可以改 —— AI 看錯了,人換一下就好,不必重來。 */

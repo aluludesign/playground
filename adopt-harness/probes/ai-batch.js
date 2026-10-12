@@ -29,6 +29,17 @@ function swipe(form, dx) {
   var pe = (t, xx) => new w.PointerEvent(t, { clientX: xx, clientY: y, bubbles: true, pointerId: 3, pointerType: "touch" });
   f.querySelector("h2").dispatchEvent(pe("pointerdown", x)); f.querySelector("h2").dispatchEvent(pe("pointerup", x + dx));
 }
+/* 按著拖(2026-10-12,Lulu:「手指按著時往左,卡片就往左」):down → 幾次 move → up;slow = 拖完停一下再放(不算甩) */
+async function drag(form, from, dxs, slow) {
+  var f = q("#" + form), r = (from || f.querySelector("h2")).getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
+  var pe = (t, xx) => new w.PointerEvent(t, { clientX: xx, clientY: y, bubbles: true, pointerId: 7, pointerType: "touch" });
+  (from || f.querySelector("h2")).dispatchEvent(pe("pointerdown", x));
+  var tf = [];
+  for (var dx of dxs) { f.dispatchEvent(pe("pointermove", x + dx)); tf.push(f.style.transform); await wait(16); }
+  if (slow) await wait(400);
+  f.dispatchEvent(pe("pointerup", x + dxs[dxs.length - 1]));
+  return tf;
+}
 return (async function () {
   await wait(300);
   var out = {}, fails = [];
@@ -78,6 +89,22 @@ return (async function () {
     swipe("flight-form", 120); await wait(120);
     ok("往右滑 → 上一筆(第 1 段)", q("#fl-from").value === "竹芝碼頭", q("#fl-from").value);
     await wait(500);
+    /* 按著拖:卡片跟著手指走;不夠遠慢慢放 → 彈回、不換;夠遠 → 換;從打字的格子開始拖不算 */
+    await clickTab("flight-form", 0); await wait(500);
+    var tfs = await drag("flight-form", null, [-12, -30, -50], true); await wait(300);
+    out.拖 = { 跟著走: tfs, 放手後: q("#flight-form").style.transform, 還是: q("#fl-from").value };
+    ok("按著往左拖 50px:卡片跟著往左(translateX 負的、有一點轉);慢慢放 → 彈回中間、不換筆", /translateX\(-50px\)/.test(tfs[2]) && /rotate\(-/.test(tfs[2]) &&
+      out.拖.放手後 === "" && out.拖.還是 === "竹芝碼頭", out.拖);
+    var tfs2 = await drag("flight-form", null, [-20, -70, -130]); await wait(80);
+    out.拖過 = { 跟著走: tfs2[2], 換到: q("#fl-from").value, 飛的那張: !!q("#flight-form").parentElement.querySelector(".deck-fly"), 真的那張歸位: q("#flight-form").style.transform };
+    ok("往左拖 130px 放手 → 翻到下一筆(第 2 段),飛出去的那張從放手的位置接著飛,真的那張歸位", /translateX\(-130px\)/.test(out.拖過.跟著走) && out.拖過.換到 === "大島" &&
+      out.拖過.飛的那張 && out.拖過.真的那張歸位 === "", out.拖過);
+    await wait(700);
+    var tfs3 = await drag("flight-form", null, [20, 70, 130]); await wait(700);
+    ok("往右拖 130px → 卡片往右跟著走、放手翻回上一筆(第 1 段)", /translateX\(130px\)/.test(tfs3[2]) && /rotate\(\d/.test(tfs3[2]) && q("#fl-from").value === "竹芝碼頭", { 跟著走: tfs3[2], 換到: q("#fl-from").value });
+    var tfs4 = await drag("flight-form", q("#fl-from"), [-30, -80, -130]); await wait(300);
+    ok("從打字的格子開始拖:卡片不動、不換筆", !tfs4[2] && q("#fl-from").value === "竹芝碼頭", { 跟著走: tfs4[2], 還是: q("#fl-from").value });
+
     await clickTab("flight-form", 1);
     q("#fl-skip").click(); await wait(150);
     out.拿掉 = { 編號: tabs("flight-form"), 按鈕: barTxt("flight-overlay"), 從: q("#fl-from").value };
