@@ -136,6 +136,27 @@ return (async function () {
   ok("全部存起來:交通 1 段、花費 2 筆(票價、收據);兩張各傳一次", mf.length === 1 && out.混合存了.花費.join() === "高鐵 南港→左營,HANDS 收據" && out.混合存了.上傳 === 2, out.混合存了);
   ok("照片各掛各的:交通和票價掛車票那張、收據掛收據那張", tkt && rcp && tkt !== rcp && me[0].body.photos.join() === tkt && me[1].body.photos.length === 1, out.混合存了);
 
+  /* Klook＋收據＋車票(2026-10-12,Lulu:「行程/許願那張不見」):伺服器把許願補進 parts 之後,App 開 4 張:交通、許願、花費 ×2,一起存 */
+  q("#ai-btn").click(); await wait(120);
+  await give([A, B, C]);
+  var fl3 = calls(/resource=flights/, "POST").length, ex3 = calls(/resource=expenses/, "POST").length, wi3 = (w.__rows.wishes || []).length;
+  next = Object.assign({}, base, { intent: "wish", title: "北海道一日遊", items: [Object.assign({}, base, { title: "北海道一日遊", note: "Klook NT$1,590", photos: [1] })],
+    parts: [{ intent: "transport", legs: [Object.assign({}, TLEG, { no: "127", depart: "2026-10-07T09:00", arrive: "2026-10-07T10:45", photos: [3] })], items: [] },   /* 跟上面那段不同班,不然會被當成同一班去更新 */
+      { intent: "wish", legs: [], items: [Object.assign({}, base, { title: "北海道一日遊", note: "Klook NT$1,590", photos: [1] })] },
+      { intent: "expense", legs: [], items: [Object.assign({}, base, { title: "高鐵 南港→左營", amount: 1530, currency: "TWD", date: "2026-10-06", category: "交通", photos: [3] }),
+        Object.assign({}, base, { title: "渋谷本店", amount: 21035, currency: "JPY", date: "2026-10-05", category: "購物", photos: [2] })] }] });
+  q("#ai-text").value = ""; q("#ai-form").requestSubmit();
+  for (var m3 = 0; m3 < 60 && q("#flight-overlay").hidden; m3++) await wait(100);
+  out.四張 = qa("#flight-form .batch-tabs:not([hidden]) .rm-chip").map(c => c.textContent.trim());
+  ok("Klook＋收據＋車票 → 一批 4 張:交通、許願、花費、花費", out.四張.length === 4 && /交通/.test(out.四張[0]) && /許願/.test(out.四張[1]) && /花費/.test(out.四張[3]), out.四張);
+  q("#flight-overlay [data-batch-save]").click();
+  for (var m4 = 0; m4 < 80 && calls(/resource=expenses/, "POST").length - ex3 < 2; m4++) await wait(100);
+  await wait(400);
+  out.四張存了 = { 交通: calls(/resource=flights/, "POST").length - fl3, 許願: (w.__rows.wishes || []).slice(wi3).map(x => x.title + "/" + (x.note || "")),
+    花費: calls(/resource=expenses/, "POST").slice(ex3).map(c => c.body.title), 全關: q("#flight-overlay").hidden && q("#wish-add-overlay").hidden && q("#exp-edit-overlay").hidden };
+  ok("全部存起來:交通 1、許願 1(價錢在備註)、花費 2,都關掉", out.四張存了.交通 === 1 && out.四張存了.許願.join() === "北海道一日遊/Klook NT$1,590" &&
+    out.四張存了.花費.join() === "高鐵 南港→左營,渋谷本店" && out.四張存了.全關, out.四張存了);
+
   out.結論 = bad.length ? "✗ " + bad.join(" ;; ") : "全部通過"; out.errors = w.__errors || [];
   return out;
 })();

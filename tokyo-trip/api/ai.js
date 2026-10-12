@@ -142,7 +142,7 @@ function schema(ctx) {
       legs:    { type: "ARRAY", description: "transport:讀到的每一段交通,照時間先後;文字和圖片講的是不同段就各列一段。不是交通就空陣列", items: LEG },
       items:   { type: "ARRAY", description: "wish/stop/expense:讀到的每一筆(好幾個想去的地方、好幾個行程、好幾次不同的花費各列一筆,照出現的順序);**一張收據只算一筆**(合計,品項寫 note),使用者說要分開才拆。只有一筆也列一筆。transport 用 legs,這裡空陣列", items: itemSchema(ctx) },
       /* **複合的內容**(2026-10-04,Lulu):一張車票上有班次座位、也有票價 → 交通 + 花費兩份,App 一張接一張開 */
-      parts:   { type: "ARRAY", description: "讀到的資料不只一種時才填,每一種一份、同一種的全部放進那一份:車票/機票上有班次座位也有票價 → transport + expense;門票、餐廳訂位有日期也有金額 → stop + expense;好幾張圖是不同種類(收據＋車票)→ 每一張讀到的都要放進來,收據和票價都在 expense 那份。只有一種資料就空陣列(用最外層)。",
+      parts:   { type: "ARRAY", description: "讀到的資料不只一種時才填,每一種一份、同一種的全部放進那一份,**最外層那一種也要列進來**:車票/機票上有班次座位也有票價 → transport + expense;門票、餐廳訂位有日期也有金額 → stop + expense;好幾張圖是不同種類(收據＋車票)→ 每一張讀到的都要放進來,收據和票價都在 expense 那份。只有一種資料就空陣列(用最外層)。",
                  items: { type: "OBJECT", properties: {
                    intent: { type: "STRING", enum: ["wish", "stop", "transport", "expense"] },
                    legs:   { type: "ARRAY", description: "transport 這一份的每一段;其他種類空陣列", items: LEG },
@@ -184,8 +184,9 @@ function prompt(text, ctx) {
     "  門票、餐廳訂位有日期也有金額 → stop + expense。最外層照舊填主要的那一種。只有一種資料 parts 就空陣列。",
     "- **一次可能好幾張圖**(圖 1、圖 2、圖 3):同一張收據/票拍成好幾段 → 只算一筆,photos 列那幾張;好幾張不同的收據、票 → 各一筆,photos 各列自己那張。",
     "  每一筆、每一段都要在 photos 寫它是從哪幾張圖讀到的(只有一張圖就寫 [1];沒有圖就空陣列)。",
-    "- **好幾張圖是不同種類**(例:圖 1 是購物收據、圖 2 是印了票價的高鐵票):**每一張都要讀,不能只讀其中一種**。這時候一定要用 parts:",
-    "  transport 那份放車票的每一段;expense 那份放**全部**的花費 —— 車票的票價一筆、每張收據各一筆,photos 各寫自己那張。同一種只列一份,同一種的都放進那一份。",
+    "- **好幾張圖是不同種類**(例:圖 1 是 Klook 行程頁、圖 2 是購物收據、圖 3 是印了票價的高鐵票):**每一張都要讀,不能只讀其中幾種**。這時候一定要用 parts,",
+    "  **讀到的每一種都要有一份,最外層那一種也要列進 parts**:wish/stop 那份放想去的地方或行程;transport 那份放車票的每一段;",
+    "  expense 那份放**全部**的花費 —— 車票的票價一筆、每張收據各一筆。photos 各寫自己那張。同一種只列一份,同一種的都放進那一份。",
     "- 使用者的話優先於圖片的樣子。都看不出來 → unknown,並在 message 說還需要什麼。",
     "- 看不清楚的欄位留空,不要猜。",
     "",
@@ -342,8 +343,10 @@ function clean(f, ctx) {
         p.items.forEach(x => add(m.items, x, "I" + [x.title, x.amount, x.currency, x.date, x.day, x.time].join("|")));
       });
       const uniq = [...byKind.values()].map(m => ({ intent: m.intent, legs: m.legs.slice(0, 6), items: m.items.slice(0, 8) }));
-      /* parts 只剩一種、跟最外層不是同一種 → 最外層那份也是讀到的(例:最外層是車票,parts 只列了花費),補回來 */
-      if (uniq.length === 1 && uniq[0].intent !== intent && has({ intent, legs, items: top })) uniq.push({ intent, legs, items: top });
+      /* **最外層那一種不在 parts 裡 → 它也是讀到的,補回來**。模型常把「主要的那一種」只放最外層、parts 只列其他種:
+         收據＋車票時最外層是車票、parts 只列花費;Klook＋收據＋車票(2026-10-12,Lulu:「行程/許願那張不見」)時
+         最外層是許願、parts 只列交通和花費 —— App 照 parts 開卡,許願那張就沒了 */
+      if (uniq.length && !uniq.some(p => p.intent === intent) && has({ intent, legs, items: top })) uniq.push({ intent, legs, items: top });
       uniq.sort((a, b) => (a.intent === "expense") - (b.intent === "expense"));
       return uniq.length >= 2 ? uniq : [];
     })(),
