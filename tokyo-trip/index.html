@@ -1323,8 +1323,13 @@
     .stack.advance .stack-ghost.g2{transform:translateY(16px) scale(.93); filter:brightness(.95); box-shadow:0 6px 16px rgba(60,30,15,.14);}
     .stack > .signin.slide-out{transform:translateX(-120%) rotate(-6deg); opacity:0; transition:transform .32s ease-in, opacity .32s ease-in;}
     /* 一批(2026-10-12,Lulu):「全部存起來」放在整疊卡片**外面、下面**;卡片往上讓一點位置給它 */
-    .stack > .batch-bar{position:absolute; left:0; right:0; top:calc(100% + 44px); z-index:3; display:flex;}
-    .stack > .batch-bar .btn{flex:1;}
+    .stack > .batch-bar{position:absolute; left:0; right:0; top:calc(100% + 44px); z-index:3; display:flex; gap:8px; align-items:stretch;}
+    .stack > .batch-bar .btn-main{flex:1;}
+    /* 左右兩顆:往左滑、往右滑(2026-10-12,Lulu)。設計系統的 Outlined 按鈕只放圖示,四邊一樣的間距、跟「全部存起來」一樣高 → 方的;
+       箭頭用現有的 chevron-down 轉 90 度,不另外畫 */
+    .btn.btn-sq{flex:none; aspect-ratio:1 / 1; padding:var(--ds-sys-shared-spacing-md);}
+    .btn.btn-sq .i.to-left{transform:rotate(90deg);}
+    .btn.btn-sq .i.to-right{transform:rotate(-90deg);}
     .overlay:has(> .stack.batching){padding-bottom:110px;}
     /* 換筆的動畫:飛走/退後的是複製出來的那張(飛完就拿掉),真的那張已經換成下一筆 */
     .stack > .deck-fly{position:absolute; margin:0; pointer-events:none; z-index:3;}
@@ -6788,9 +6793,10 @@
       (i + 1) + (mixed ? " " + KIND_NAME[x.kind] : "") + "</label>").join("");
     t.hidden = false;
     /* 「全部存起來」在卡片外面(下面);卡片裡原本那顆藏起來 */
-    const bar = batchBar(K.form), go = bar.querySelector("button");
+    const bar = batchBar(K.form), go = bar.querySelector("[data-batch-save]");
     go.textContent = batch.saving ? batch.saving : "全部存起來(" + n + " 筆)";
     go.disabled = !!batch.saving;
+    bar.querySelectorAll(".btn-sq").forEach(x => { x.hidden = n < 2; x.disabled = !!batch.saving; });
     bar.hidden = false;
     el(K.ok).hidden = true;
     el(K.skip).textContent = "不要這筆"; el(K.skip).hidden = false;
@@ -6810,8 +6816,13 @@
     let bar = st.querySelector(":scope > .batch-bar");
     if (!bar) {
       bar = document.createElement("div"); bar.className = "batch-bar"; bar.hidden = true;
-      bar.innerHTML = '<button type="button" class="btn btn-main" data-batch-save></button>';
-      bar.querySelector("button").addEventListener("click", () => batchSaveAll());
+      /* ← 往左滑(卡片往左飛、下一筆)、→ 往右滑(往右飛、上一筆)—— 跟手指拖的方向一樣 */
+      bar.innerHTML = '<button type="button" class="btn btn-sq" data-batch-left aria-label="往左滑(下一筆)"><svg class="i to-left" aria-hidden="true"><use href="#i-chevron-down"></use></svg></button>' +
+        '<button type="button" class="btn btn-main" data-batch-save></button>' +
+        '<button type="button" class="btn btn-sq" data-batch-right aria-label="往右滑(上一筆)"><svg class="i to-right" aria-hidden="true"><use href="#i-chevron-down"></use></svg></button>';
+      bar.querySelector("[data-batch-save]").addEventListener("click", () => batchSaveAll());
+      bar.querySelector("[data-batch-left]").addEventListener("click", () => batchStep(1));
+      bar.querySelector("[data-batch-right]").addEventListener("click", () => batchStep(-1));
       st.appendChild(bar);
     }
     return bar;

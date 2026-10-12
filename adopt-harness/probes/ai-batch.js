@@ -19,7 +19,7 @@ var tabs = form => qa("#" + form + " .batch-tabs:not([hidden]) .rm-chip").map(c 
 var tabOn = form => { var c = qa("#" + form + " .batch-tabs .rm-chip").findIndex(c => c.querySelector("input").checked); return c; };
 var bad = form => qa("#" + form + " .batch-tabs .rm-chip.bt-bad").map(c => c.textContent.trim());
 /* 「全部存起來」在卡片外面(整疊下面),卡片裡原本那顆藏起來(2026-10-12,Lulu) */
-var barBtn = ov => q("#" + ov + " .batch-bar:not([hidden]) button");
+var barBtn = ov => q("#" + ov + " .batch-bar:not([hidden]) [data-batch-save]");
 var barTxt = ov => { var b = barBtn(ov); return b ? b.textContent.trim() : ""; };
 var clickTab = async (form, i) => { var inp = qa("#" + form + " .batch-tabs input")[i]; inp.click(); await wait(120); };
 async function ask(result) { next = result; q("#ai-btn").click(); await wait(100); q("#ai-text").value = "好幾筆"; q("#ai-form").requestSubmit(); await wait(450); }
@@ -104,6 +104,23 @@ return (async function () {
     ok("往右拖 130px → 卡片往右跟著走、放手翻回上一筆(第 1 段)", /translateX\(130px\)/.test(tfs3[2]) && /rotate\(\d/.test(tfs3[2]) && q("#fl-from").value === "竹芝碼頭", { 跟著走: tfs3[2], 換到: q("#fl-from").value });
     var tfs4 = await drag("flight-form", q("#fl-from"), [-30, -80, -130]); await wait(300);
     ok("從打字的格子開始拖:卡片不動、不換筆", !tfs4[2] && q("#fl-from").value === "竹芝碼頭", { 跟著走: tfs4[2], 還是: q("#fl-from").value });
+
+    /* 「全部存起來」左右各一顆:← 往左滑(下一筆)、→ 往右滑(上一筆);中間那顆變短。兩顆是 Outlined、方的、跟中間一樣高 */
+    var bL = q("#flight-overlay [data-batch-left]"), bR = q("#flight-overlay [data-batch-right]"), bM = barBtn("flight-overlay");
+    var lr = bL.getBoundingClientRect(), mr = bM.getBoundingClientRect(), rr = bR.getBoundingClientRect(), barR = bM.parentElement.getBoundingClientRect(), ls = w.getComputedStyle(bL), ms = w.getComputedStyle(bM);
+    var tok = v => { var i = d.createElement("i"); d.body.appendChild(i); i.style.color = "var(" + v + ")"; var c = w.getComputedStyle(i).color; i.remove(); return c; };
+    out.左右鈕 = { 順序: lr.right <= mr.left && mr.right <= rr.left, 方的: Math.abs(lr.width - lr.height) <= 1 && Math.abs(rr.width - rr.height) <= 1, 一樣高: Math.abs(lr.height - mr.height) <= 1 && Math.abs(rr.height - mr.height) <= 1,
+      中間變短: mr.width < barR.width - lr.width - rr.width, 框: ls.borderTopColor === tok("--ds-sys-shared-color-outline") && parseFloat(ls.borderTopWidth) > 0, 圖示色: ls.color === tok("--ds-sys-shared-color-primary"),
+      圓角一樣: ls.borderTopLeftRadius === ms.borderTopLeftRadius, 有說明: !!bL.getAttribute("aria-label") && !!bR.getAttribute("aria-label") };
+    ok("「全部存起來」左右各一顆圖示鈕:← 中 →、方的、跟中間一樣高、中間變短;Outlined 的框和字色、圓角跟中間一樣", Object.values(out.左右鈕).every(Boolean), out.左右鈕);
+    await clickTab("flight-form", 0); await wait(500);
+    bL.click(); await wait(80);
+    ok("按 ← → 卡片往左翻、到下一筆(第 2 段)", q("#fl-from").value === "大島" && !!q("#flight-form").parentElement.querySelector(".deck-fly"), q("#fl-from").value);
+    await wait(700);
+    bR.click(); await wait(700);
+    ok("按 → → 回到上一筆(第 1 段)", q("#fl-from").value === "竹芝碼頭", q("#fl-from").value);
+    bR.click(); await wait(700);
+    ok("在第 1 段按 → → 繞到最後一段(循環)", q("#fl-from").value === "神津島", q("#fl-from").value);
 
     await clickTab("flight-form", 1);
     q("#fl-skip").click(); await wait(150);
