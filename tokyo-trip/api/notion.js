@@ -256,11 +256,15 @@ const DIRS = ["去程", "回程", "其他"];
 /* **交通不是只有飛機**(Lulu,2026-09-28)。同一張表、同一套欄位,多一欄「種類」:
    航班號 = 班次/車次、航空公司 = 哪一家、起飛/抵達 = 出發/抵達(租車是取車/還車)、
    起飛機場/抵達機場 = 從哪裡/到哪裡。舊的列沒有種類,一律當飛機 —— 不用重填。 */
-const KINDS = ["飛機", "火車", "巴士", "船", "租車"];
+/* **通票**(2026-10-12,Lulu 拿青春18きっぷ問「這種車票沒辦法加到交通嗎」):幾天內隨便搭、沒有班次和起訖站的票。
+   航班號 = 票名、航空公司 = 哪一家、起飛/抵達 = 第一天/最後一天(**只有日期**)、駕駛 = 誰有這張(可不勾);起訖站留空 */
+const KINDS = ["飛機", "火車", "巴士", "船", "租車", "通票"];
 const kindOf = v => (KINDS.indexOf(v) >= 0 ? v : "飛機");
 /* 飛機的航班號照舊收成 MM626;其他種類的班次是人話(のぞみ 21號),只去頭尾空白 */
 const legNo = (v, kind) => (kind === "飛機" ? String(v || "").toUpperCase().replace(/\s+/g, "") : String(v || "").trim());
 const localTime = v => (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(String(v || "")) ? v : null);
+/* 通票只有日期(2026-03-20);其他種類是日期＋時間。兩種都收 */
+const legWhen = v => localTime(v) || (/^\d{4}-\d{2}-\d{2}$/.test(String(v || "")) ? v : null);
 function flightOut(page) {
   const p = page.properties;
   const t = x => (x && x.date && x.date.start ? String(x.date.start).slice(0, 16) : null);
@@ -295,8 +299,8 @@ function flightIn(b) {
   if (b.to !== undefined) props["抵達機場"] = { rich_text: richText(b.to) };
   if (b.note !== undefined) props["備註"] = { rich_text: richText(b.note) };
   /* 不帶時區的字串照原樣存:Notion 看到沒有時區的 datetime 就當成「浮動時間」 */
-  if (b.depart !== undefined) props["起飛"] = localTime(b.depart) ? { date: { start: b.depart } } : { date: null };
-  if (b.arrive !== undefined) props["抵達"] = localTime(b.arrive) ? { date: { start: b.arrive } } : { date: null };
+  if (b.depart !== undefined) props["起飛"] = legWhen(b.depart) ? { date: { start: b.depart } } : { date: null };
+  if (b.arrive !== undefined) props["抵達"] = legWhen(b.arrive) ? { date: { start: b.arrive } } : { date: null };
   if (photoIds(b).length) props["照片"] = photoIn(photoIds(b));
   return props;
 }

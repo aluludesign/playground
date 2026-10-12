@@ -1217,6 +1217,7 @@
     .tl-no{flex:1; min-width:0; font-size:13px; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
     .tleg .pen{margin-left:auto;}
     .tl-route{display:grid; grid-template-columns:1fr auto 1fr; align-items:end; gap:10px;}
+    #flight-form.is-pass .grid2:has(#fl-depart),#flight-form.is-pass .grid2:has(#fl-arrive){grid-template-columns:1fr;}
     .tl-pt{display:flex; flex-direction:column; gap:1px; min-width:0;}
     .tl-pt small{font-size:11px; color:var(--muted);}
     .tl-pt b{font-family:var(--font-mono); font-size:20px; font-weight:600; color:var(--ink); line-height:1.15;}
@@ -1545,6 +1546,7 @@
   <symbol id="i-train" viewBox="0 0 448 512"><path d="M96 0C43 0 0 43 0 96V352c0 48 35.2 87.7 81.1 94.9l-46 46C28.1 499.9 33.1 512 43 512H82.7c8.5 0 16.6-3.4 22.6-9.4L160 448H288l54.6 54.6c6 6 14.1 9.4 22.6 9.4H405c10 0 15-12.1 7.9-19.1l-46-46c46-7.1 81.1-46.9 81.1-94.9V96c0-53-43-96-96-96H96zM64 128c0-17.7 14.3-32 32-32h80c17.7 0 32 14.3 32 32v96c0 17.7-14.3 32-32 32H96c-17.7 0-32-14.3-32-32V128zM272 96h80c17.7 0 32 14.3 32 32v96c0 17.7-14.3 32-32 32H272c-17.7 0-32-14.3-32-32V128c0-17.7 14.3-32 32-32zM64 352a32 32 0 1 1 64 0 32 32 0 1 1 -64 0zm288-32a32 32 0 1 1 0 64 32 32 0 1 1 0-64z"/></symbol>
   <symbol id="i-bus" viewBox="0 0 576 512"><path d="M288 0C422.4 0 512 35.2 512 80V96l0 32c17.7 0 32 14.3 32 32v64c0 17.7-14.3 32-32 32l0 160c0 17.7-14.3 32-32 32v32c0 17.7-14.3 32-32 32H416c-17.7 0-32-14.3-32-32V448H192v32c0 17.7-14.3 32-32 32H128c-17.7 0-32-14.3-32-32l0-32c-17.7 0-32-14.3-32-32l0-160c-17.7 0-32-14.3-32-32V160c0-17.7 14.3-32 32-32h0V96h0V80C64 35.2 153.6 0 288 0zM128 160v96c0 17.7 14.3 32 32 32H272V128H160c-17.7 0-32 14.3-32 32zM304 288H416c17.7 0 32-14.3 32-32V160c0-17.7-14.3-32-32-32H304V288zM144 400a32 32 0 1 0 0-64 32 32 0 1 0 0 64zm288 0a32 32 0 1 0 0-64 32 32 0 1 0 0 64zM384 80c0-8.8-7.2-16-16-16H208c-8.8 0-16 7.2-16 16s7.2 16 16 16H368c8.8 0 16-7.2 16-16z"/></symbol>
   <symbol id="i-ship" viewBox="0 0 576 512"><path d="M192 32c0-17.7 14.3-32 32-32H352c17.7 0 32 14.3 32 32V64h48c26.5 0 48 21.5 48 48V240l44.4 14.8c23.1 7.7 29.5 37.5 11.5 53.9l-101 92.6c-16.2 9.4-34.7 15.1-50.9 15.1c-19.6 0-40.8-7.7-59.2-20.3c-22.1-15.5-51.6-15.5-73.7 0c-17.1 11.8-38 20.3-59.2 20.3c-16.2 0-34.7-5.7-50.9-15.1l-101-92.6c-18-16.5-11.6-46.2 11.5-53.9L96 240V112c0-26.5 21.5-48 48-48h48V32zM160 218.7l107.8-35.9c13.1-4.4 27.3-4.4 40.5 0L416 218.7V128H160v90.7zM306.5 421.9C329 437.4 356.5 448 384 448c26.9 0 55.4-10.8 77.4-26.1l0 0c11.9-8.5 28.1-7.8 39.2 1.7c14.4 11.9 32.5 21 50.6 25.2c17.2 4 27.9 21.2 23.9 38.4s-21.2 27.9-38.4 23.9c-24.5-5.7-44.9-16.5-58.2-25C449.5 501.7 417 512 384 512c-31.9 0-60.6-9.9-80.4-18.9c-5.8-2.7-11.1-5.3-15.6-7.7c-4.5 2.4-9.7 5.1-15.6 7.7c-19.8 9-48.5 18.9-80.4 18.9c-33 0-65.5-10.3-94.5-25.8c-13.4 8.4-33.7 19.3-58.2 25c-17.2 4-34.4-6.7-38.4-23.9s6.7-34.4 23.9-38.4c18.1-4.2 36.2-13.3 50.6-25.2c11.1-9.4 27.3-10.1 39.2-1.7l0 0C136.7 437.2 165.1 448 192 448c27.5 0 55-10.6 77.5-26.1c11.1-7.9 25.9-7.9 37 0z"/></symbol>
+  <symbol id="i-ticket" viewBox="0 0 576 512"><path d="M0 128C0 92.7 28.7 64 64 64H512c35.3 0 64 28.7 64 64v64c0 8.8-7.4 15.7-15.7 18.6C541.5 217.1 528 235 528 256s13.5 38.9 32.3 45.4c8.3 2.9 15.7 9.8 15.7 18.6v64c0 35.3-28.7 64-64 64H64c-35.3 0-64-28.7-64-64V320c0-8.8 7.4-15.7 15.7-18.6C34.5 294.9 48 277 48 256s-13.5-38.9-32.3-45.4C7.4 207.7 0 200.8 0 192V128z"/></symbol>
   <symbol id="i-car" viewBox="0 0 640 512"><path d="M171.3 96H224v96H111.3l30.4-75.9C146.5 104 158.2 96 171.3 96zM272 192V96h81.2c9.7 0 18.9 4.4 25 12l67.2 84H272zm256.2 1L428.2 68c-18.2-22.8-45.8-36-75-36H171.3c-39.3 0-74.6 23.9-89.1 60.3L40.6 196.4C16.8 205.8 0 228.9 0 256V368c0 17.7 14.3 32 32 32H65.3c7.6 45.4 47.1 80 94.7 80s87.1-34.6 94.7-80H385.3c7.6 45.4 47.1 80 94.7 80s87.1-34.6 94.7-80H608c17.7 0 32-14.3 32-32V320c0-65.2-48.8-119-111.8-127zM434.7 368a48 48 0 1 1 90.5 32 48 48 0 1 1 -90.5-32zM160 336a48 48 0 1 1 0 96 48 48 0 1 1 0-96z"/></symbol>
   <symbol id="i-chevron-down" viewBox="0 0 512 512"><path d="M233.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L256 338.7 86.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z"/></symbol>
   <symbol id="i-plus" viewBox="0 0 448 512"><path d="M256 80c0-17.7-14.3-32-32-32s-32 14.3-32 32l0 144L48 224c-17.7 0-32 14.3-32 32s14.3 32 32 32l144 0 0 144c0 17.7 14.3 32 32 32s32-14.3 32-32l0-144 144 0c17.7 0 32-14.3 32-32s-14.3-32-32-32l-144 0 0-144z"/></symbol>
@@ -1884,7 +1886,7 @@
     <div class="fld"><label class="rm-label" for="fl-code">訂位代號</label><input class="rm-input" type="text" id="fl-code" maxlength="30" autocapitalize="characters" placeholder="可留白"></div>
     <div class="fld"><label class="rm-label" for="fl-note">備註</label><input class="rm-input" type="text" id="fl-note" maxlength="120"></div>
     <div class="seatfld" id="fl-f-seats"><span class="rm-label">座位(不知道就空著)</span><div class="seatform" id="fl-seats"></div></div>
-    <div class="fld" id="fl-f-drivers" hidden><span class="rm-label">誰開車</span><div class="who" id="fl-drivers"></div></div>
+    <div class="fld" id="fl-f-drivers" hidden><span class="rm-label" id="fl-drivers-l">誰開車</span><div class="who" id="fl-drivers"></div></div>
     <div class="err" id="fl-err" hidden></div>
     <div class="ops">
       <button type="submit" class="btn btn-main" id="fl-save">存起來</button>
@@ -3411,7 +3413,12 @@
              seatPh: "例如 2等 B12", seatMax: 12, notePh: "例如 開船前 30 分鐘報到" },
     "租車": { icon: "i-car", co: "租車公司", coPh: "TOYOTA 租車",
              t0: "取車", t1: "還車", p0: "取車地點", p0Ph: "新千歲機場店", p1: "還車地點", p1Ph: "札幌站前店",
-             notePh: "例如 含 ETC 卡 · 還車前加滿油", noSeats: true },
+             notePh: "例如 含 ETC 卡 · 還車前加滿油", noSeats: true, who: "誰開車", whoTag: "開車" },
+    /* **通票**(2026-10-12,Lulu 拿青春18きっぷ問「這種車票沒辦法加到交通嗎」):幾天內隨便搭、沒有班次和起訖站。
+       只有日期(第一天～最後一天)、不寫起訖站;誰有這張用勾的(她選的,**可以不勾**);**只出現在交通頁**(她選的:行程上不加節點) */
+    "通票": { icon: "i-ticket", no: "票名", noPh: "青春18きっぷ", co: "哪一家", coPh: "JR",
+             t0: "第一天", t1: "最後一天", notePh: "例如 JR 全線普通・快速 · 新幹線、特急不能搭",
+             noSeats: true, pass: true, who: "誰有這張(可以不勾)", whoTag: "有票" },
   };
   const KINDS = Object.keys(KIND);
   const kindOf = f => (f && KIND[f.kind] ? f.kind : "飛機");
@@ -3438,6 +3445,7 @@
     const out = [];
     flightsSorted().forEach(f => {
       const k = kindOf(f), K = KIND[k];
+      if (K.pass) return;   /* 通票只在交通頁(Lulu 選的),行程上不加節點 */
       const d0 = dayOf(f.depart), d1 = dayOf(f.arrive);
       if (k === "飛機" && d0 === day && f.dir !== "其他") {
         const t = toMin(hhmm(f.depart));
@@ -3522,7 +3530,7 @@
     let who = "";
     if (K.noSeats) {
       const ds = (f.drivers || []).filter(id => MEMBERS.some(m => m.id === id));
-      if (ds.length) who = '<div class="tl-who"><small>開車</small>' + ds.map(id => {
+      if (ds.length) who = '<div class="tl-who"><small>' + esc(K.whoTag) + "</small>" + ds.map(id => {
         const m = MEMBERS.find(x => x.id === id);
         return '<span class="tl-seat" style="--sc:' + m.color + '">' + esc(nameOf(id)) + "</span>";
       }).join("") + "</div>";
@@ -3533,14 +3541,19 @@
         '<span class="tl-seat" style="--sc:' + m.color + '"><b>' + esc(seats[m.id]) + "</b>" + esc(nameOf(m.id)) + "</span>").join("") + "</div>";
     }
     const bits = [];
+    /* 通票:第一天到最後一天共幾天(含頭尾) */
+    const nDays = K.pass && d0 && d1 && d1 >= d0 ? Math.round((localDate(d1) - localDate(d0)) / 864e5) + 1 : 0;
+    if (nDays) bits.push("共 " + nDays + " 天");
     if (f.code) bits.push("訂位 " + esc(f.code));
     if (f.note) bits.push(linkify(f.note));
+    const route = K.pass
+      ? pt(K.t0, mmdd(d0), enWeek(d0)) + '<span class="tl-arrow" aria-hidden="true">→</span>' + pt(K.t1, mmdd(d1), enWeek(d1))
+      : pt(K.t0, hhmm(f.depart), f.from) + '<span class="tl-arrow" aria-hidden="true">→</span>' + pt(K.t1, later + hhmm(f.arrive), f.to);
     return '<div class="tleg" data-kind="' + esc(k) + '">' +
       '<div class="tl-hd"><span class="tl-kind">' + kicon(k) + esc(k) + (f.dir && f.dir !== "其他" ? " · " + esc(f.dir) : "") + "</span>" +
       '<span class="tl-no">' + esc([f.no, f.airline].filter(Boolean).join(" · ")) + "</span>" + photoThumb(f.photos && f.photos.length ? f.photos : f.photo) +
       (can ? '<button type="button" class="pen" data-flight-edit="' + esc(f.id) + '" aria-label="改這一段"><svg class="i" aria-hidden="true"><use href="#i-pen"></use></svg></button>' : "") + "</div>" +
-      '<div class="tl-route">' + pt(K.t0, hhmm(f.depart), f.from) + '<span class="tl-arrow" aria-hidden="true">→</span>' +
-      pt(K.t1, later + hhmm(f.arrive), f.to) + "</div>" +
+      '<div class="tl-route">' + route + "</div>" +
       who + (bits.length ? '<div class="tl-bits">' + bits.join(" · ") + "</div>" : "") + "</div>";
   }
 
@@ -3555,7 +3568,7 @@
     const addBtn = "";
     if (!fl.length) {
       box.innerHTML = '<div class="tleg tl-empty"><p>還沒有交通。' +
-        (can ? "加上去程、回程,或路上的火車、巴士、船、租車 —— 倒數和行程上的出發/抵達就會跟著出現。" : "團主加了之後會出現在這裡。") +
+        (can ? "加上去程、回程,或路上的火車、巴士、船、租車、通票 —— 倒數和行程上的出發/抵達就會跟著出現。" : "團主加了之後會出現在這裡。") +
         "</p>" + addBtn + "</div>";
       return;
     }
@@ -3575,20 +3588,33 @@
   function showFlightErr(msg) { const b = el("fl-err"); b.textContent = msg || ""; b.hidden = !msg; }
   const flKind = () => { const c = el("fl-kinds").querySelector("input:checked"); return c ? c.value : "飛機"; };
   /* 換種類:欄位的名字、提示字、座位還是駕駛,全部跟著換。**填過的字不清掉** —— 選錯了切回來還在 */
+  /* 通票只有日期(第一天～最後一天),其他種類是日期＋時間:換種類時兩格的型別跟著換,填過的日期留著 */
+  function whenMode(pass) {
+    ["fl-depart", "fl-arrive"].forEach(id => {
+      const i = el(id), want = pass ? "date" : "datetime-local";
+      if (i.type === want) return;
+      const v = i.value;
+      i.type = want;
+      i.value = !v ? "" : pass ? v.slice(0, 10) : v.slice(0, 10) + "T10:00";
+    });
+  }
   function applyKind(k) {
     const K = KIND[k];
     el("fl-f-no").hidden = !K.no;
     if (K.no) { el("fl-no-l").textContent = K.no; el("fl-no").placeholder = K.noPh; }
     el("fl-no").autocapitalize = k === "飛機" ? "characters" : "off";
-    el("fl-f-dir").hidden = k === "租車";
+    el("fl-f-dir").hidden = k === "租車" || !!K.pass;
     el("fl-airline-l").textContent = K.co; el("fl-airline").placeholder = K.coPh;
-    el("fl-depart-l").textContent = K.t0 + "(當地時間)";
-    el("fl-arrive-l").textContent = K.t1 + "(當地時間)";
-    el("fl-from-l").textContent = K.p0; el("fl-from").placeholder = K.p0Ph;
-    el("fl-to-l").textContent = K.p1; el("fl-to").placeholder = K.p1Ph;
+    whenMode(!!K.pass);
+    el("flight-form").classList.toggle("is-pass", !!K.pass);
+    el("fl-depart-l").textContent = K.t0 + (K.pass ? "" : "(當地時間)");
+    el("fl-arrive-l").textContent = K.t1 + (K.pass ? "" : "(當地時間)");
+    el("fl-from").closest(".fld").hidden = el("fl-to").closest(".fld").hidden = !!K.pass;
+    if (!K.pass) { el("fl-from-l").textContent = K.p0; el("fl-from").placeholder = K.p0Ph; el("fl-to-l").textContent = K.p1; el("fl-to").placeholder = K.p1Ph; }
     el("fl-note").placeholder = K.notePh;
     el("fl-f-seats").hidden = !!K.noSeats;
     el("fl-f-drivers").hidden = !K.noSeats;
+    if (K.who) el("fl-drivers-l").textContent = K.who;
     el("fl-seats").querySelectorAll("input").forEach(i => { i.placeholder = K.seatPh || ""; i.maxLength = K.seatMax || 4; });
     if (!flightEditing) el("fl-title").textContent = "加一段交通";
   }
@@ -3606,6 +3632,7 @@
     el("fl-dir").value = f ? f.dir : (!fl.some(x => x.dir === "去程") ? "去程" : !fl.some(x => x.dir === "回程") ? "回程" : "其他");
     el("fl-airline").value = f ? f.airline : "";
     el("fl-no").value = f ? f.no : "";
+    whenMode(!!KIND[kind].pass);
     el("fl-depart").value = f && f.depart ? f.depart : (DAYS.length ? (el("fl-dir").value === "回程" ? LAST_DAY : DAYS[0].date) + "T10:00" : "");
     el("fl-from").value = f ? f.from : "";
     el("fl-arrive").value = f && f.arrive ? f.arrive : "";
@@ -3625,7 +3652,7 @@
     el("fl-skip").hidden = true;
     showFlightErr("");
     el("flight-overlay").hidden = false;
-    if (kind === "租車") el("fl-airline").focus(); else el("fl-no").focus();
+    if (kind === "租車") el("fl-airline").focus(); else el("fl-no").focus();   /* 通票也從票名開始 */
   }
   function closeFlight() { el("flight-overlay").hidden = true; flightEditing = null; delete el("flight-overlay").dataset.keep; paintStack(0, 0); }
   function paintStack(pos, total) { stackPaint("flight-form", pos, total); }
@@ -3659,8 +3686,8 @@
     const no = K.no ? el("fl-no").value.trim() : "";
     if (kind === "飛機" && !/^[A-Z0-9]{2,8}$/.test(no.toUpperCase().replace(/\s+/g, ""))) return "航班號要像 MM626、BR198";
     const depart = el("fl-depart").value, arrive = el("fl-arrive").value;
-    if (!depart) return K.t0 + "時間要填";
-    if (arrive && arrive < depart) return K.t1 + "時間比" + K.t0 + "早,是不是日期填錯了?";
+    if (!depart) return K.t0 + (K.pass ? "要填" : "時間要填");
+    if (arrive && arrive < depart) return K.t1 + (K.pass ? "比" : "時間比") + K.t0 + "早,是不是日期填錯了?";
     return "";
   }
   /* 照表單現在的樣子存這一段。photoNums:AI 說這一段來自第幾張圖(手動加的是 null,不帶照片)。回 { row, was, lost } */
@@ -3677,8 +3704,8 @@
     }
     const drivers = K.noSeats ? [].map.call(el("fl-drivers").querySelectorAll("input:checked"), i => i.value) : [];
     const body = {
-      kind, no, dir: kind === "租車" ? "其他" : el("fl-dir").value, airline: el("fl-airline").value.trim(),
-      depart, from: el("fl-from").value.trim(), arrive, to: el("fl-to").value.trim(),
+      kind, no, dir: kind === "租車" || K.pass ? "其他" : el("fl-dir").value, airline: el("fl-airline").value.trim(),
+      depart, from: K.pass ? "" : el("fl-from").value.trim(), arrive, to: K.pass ? "" : el("fl-to").value.trim(),
       code: el("fl-code").value.trim(), note: el("fl-note").value.trim(), drivers,
     };
     const pids = photoNums ? await aiPhotoIds(photoNums) : [];
@@ -6716,7 +6743,7 @@
   let quietSeek = false;   /* 換回已經看過的那一筆:不要再幫他搜一次地名(草稿裡已經是他挑好的) */
   const BATCH = {
     transport: { ov: "flight-overlay", form: "flight-form", note: "fl-ai", ok: "fl-save", skip: "fl-skip", err: m => showFlightErr(m),
-      open: it => openFlightFromAI(it.r, 1, 1), resync: () => applyKind(flKind()), check: () => flightCheck(),
+      open: it => openFlightFromAI(it.r, 1, 1), resync: () => applyKind(flKind()), mid: () => whenMode(!!KIND[flKind()].pass), check: () => flightCheck(),
       save: async it => { const x = await flightSave(it.r.photos || []); return x.lost; }, tab: "fly" },
     expense: { ov: "exp-edit-overlay", form: "exp-edit-form", note: "xe-ai", ok: "xe-save", skip: "xe-skip", err: m => showExpError(m),
       open: it => openExpenseFromAI(it.r, batchSeated()), resync: () => syncExpSplit(), check: () => expCheck(),
@@ -6765,12 +6792,12 @@
     formFields(id).forEach((f, i) => { out[fieldKey(f, i)] = f.type === "checkbox" || f.type === "radio" ? f.checked : f.value; });
     return out;
   }
-  function restoreForm(id, snap) {
-    formFields(id).forEach((f, i) => {
-      const k = fieldKey(f, i);
-      if (!(k in snap)) return;
-      if (f.type === "checkbox" || f.type === "radio") f.checked = !!snap[k]; else f.value = snap[k];
-    });
+  /* mid:勾選的(種類)倒完、值還沒倒之前要做的事 —— 交通表單的日期格要先換成那一種的型別(通票只有日期),不然倒進去的值會被清掉 */
+  function restoreForm(id, snap, mid) {
+    const all = formFields(id).map((f, i) => [f, fieldKey(f, i)]).filter(x => x[1] in snap);
+    all.forEach(([f, k]) => { if (f.type === "checkbox" || f.type === "radio") f.checked = !!snap[k]; });
+    if (mid) mid();
+    all.forEach(([f, k]) => { if (f.type !== "checkbox" && f.type !== "radio") f.value = snap[k]; });
   }
   /* 記錢那筆的「誰分攤」:交通那幾筆有座位的人(看過、改過的照草稿,沒看過的照 AI 讀到的) */
   function batchSeated() {
@@ -6779,6 +6806,8 @@
     batch.items.forEach(it => {
       if (it.kind !== "transport") return;
       if (it.draft) MEMBERS.forEach(m => { const v = it.draft["fl-seat-" + m.id]; if (v && String(v).trim()) ids.add(m.id); });
+      /* 通票:勾了「誰有這張」的人(2026-10-12) */
+      if (it.draft && it.draft["fl-kind=通票"]) MEMBERS.forEach(m => { if (it.draft["fl-drivers#" + m.id]) ids.add(m.id); });
       else (it.r.seats || []).forEach(x => { if (x.member && x.seat) ids.add(x.member); });
     });
     return IDS.filter(id => ids.has(id));
@@ -6901,7 +6930,7 @@
       quietSeek = !!nx.draft;
       K.open(nx);
       quietSeek = false;
-      if (nx.draft) { restoreForm(K.form, nx.draft); K.resync(); }
+      if (nx.draft) { restoreForm(K.form, nx.draft, K.mid); K.resync(); }
       paintBatch();
     };
     if (dir && same && i !== b.at) deckMove(K.form, dir, fill, b.at, from);
@@ -7218,7 +7247,7 @@
     if (KIND[flKind()].no) put("fl-no", r.no);
     put("fl-airline", r.company); put("fl-depart", r.depart); put("fl-arrive", r.arrive);
     put("fl-from", r.from); put("fl-to", r.to); put("fl-code", r.code); put("fl-note", r.note);
-    if (r.dir && flKind() !== "租車") el("fl-dir").value = r.dir;
+    if (r.dir && flKind() !== "租車" && !KIND[flKind()].pass) el("fl-dir").value = r.dir;
     (r.seats || []).forEach(x => { const i = el("fl-seat-" + x.member); if (i && x.seat) i.value = x.seat; });
     const n = (r.seats || []).filter(x => el("fl-seat-" + x.member)).length;
     const which = "";
