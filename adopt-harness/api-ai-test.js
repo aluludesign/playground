@@ -242,9 +242,20 @@ function ok(name, cond, extra) {
   const mx2 = r.res.body.result.parts;
   ok("parts 只列了花費、最外層是車票 → 車票補回來;重複的票價只留一筆", mx2.length === 2 && mx2[0].intent === "transport" && mx2[0].legs.length === 1 &&
     mx2[1].items.length === 2, mx2);
+  /* Klook＋收據＋車票(2026-10-12,Lulu:「行程/許願那張不見」):最外層是許願,parts 只列交通和花費 → 許願也要補進 parts */
+  const KLOOK = { title: "北海道一日遊:旭山動物園・美瑛青池", day: 0, time: "", note: "Klook NT$1,590", amount: 0, currency: "unknown", date: "", category: "其他", photos: [1] };
+  r = await call({ text: "x", images: [IMG, IMG, IMG], context: CTX }, () => okJson(JSON.stringify({ intent: "wish", title: KLOOK.title, items: [KLOOK], legs: [], message: "",
+    parts: [{ intent: "transport", legs: [LEG2], items: [] }, { intent: "expense", legs: [], items: [FARE2, HANDS] }] })));
+  const mx3 = r.res.body.result.parts;
+  ok("最外層是許願、parts 只列交通和花費 → 許願補進 parts:交通、許願、花費 2 筆(花費最後)", mx3.length === 3 && mx3.map(p => p.intent).join() === "transport,wish,expense" &&
+    mx3[1].items[0].title === KLOOK.title && JSON.stringify(mx3[1].items[0].photos) === "[1]" && mx3[2].items.length === 2, mx3.map(p => p.intent + ":" + (p.legs.length || p.items.length)));
+  r = await call({ text: "x", images: [IMG, IMG], context: CTX }, () => okJson(JSON.stringify({ intent: "transport", legs: [LEG2], items: [], message: "",
+    parts: [{ intent: "transport", legs: [LEG2], items: [] }, { intent: "expense", legs: [], items: [FARE2] }] })));
+  ok("最外層那種已經在 parts 裡 → 不重複加(交通還是 1 段)", r.res.body.result.parts.length === 2 && r.res.body.result.parts[0].legs.length === 1, r.res.body.result.parts);
   r = await call({ text: "x", images: [IMG, IMG], context: CTX }, () => okJson(GOOD));
   const said2 = JSON.stringify(sent(r.seen));
-  ok("給模型的話:好幾張圖不同種類 → 每一張都要讀、收據和票價都放進 expense 那份", /好幾張圖是不同種類/.test(said2) && /每一張都要讀/.test(said2) && /每張收據各一筆/.test(said2), "");
+  ok("給模型的話:好幾張圖不同種類 → 每一張都要讀、收據和票價都放進 expense 那份、最外層那種也列進 parts", /好幾張圖是不同種類/.test(said2) && /每一張都要讀/.test(said2) && /每張收據各一筆/.test(said2) &&
+    /最外層那一種也要列進 parts/.test(said2) && /wish\/stop 那份/.test(said2), "");
   r = await call({ text: "x", context: CTX }, () => okJson(GOOD));
   ok("回應的格式有 parts(schema 裡要有它,模型才會填)", !!sent(r.seen).generationConfig.responseSchema.properties.parts && Array.isArray(r.res.body.result.parts), "");
 
