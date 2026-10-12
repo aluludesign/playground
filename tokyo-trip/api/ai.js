@@ -36,6 +36,8 @@ const MODELS = [
 ];
 
 const MAX_B64 = 3_000_000;   /* 前端送來的是縮過的 JPEG,正常 1MB 以內;這是防呆 */
+/* **一次最多 3 張**(2026-10-12 定案)。Vercel 一個請求約 4.5MB 上限,幾張加起來壓在這以下(前端多張時縮到長邊 1200px) */
+const MAX_IMAGES = 3, MAX_TOTAL_B64 = 4_200_000;
 
 /* **等多久就放棄。** 沒有上限的話,Google 那邊不回應,畫面就一直停在
    「AI 讀取中…」,直到 Vercel 在 30 秒把整個函式砍掉 —— 使用者看到的是
@@ -92,13 +94,14 @@ const LEG = {
        改成一般字串,clean() 只收名單上有的。 */
     match:   { type: "STRING", description: "如果這一段已經在「已經有的交通」裡(同一班、同一天),填它的 id;否則 none" },
     note:    { type: "STRING", description: "這一段值得記下的細節(行李額度、要先換票等),100 字以內;沒有就空字串" },
+    photos:  { type: "ARRAY", items: { type: "INTEGER" }, description: "這一段是從第幾張圖讀到的(圖 1、圖 2…的號碼,可以好幾張:同一張收據拍成好幾段就列那幾張);沒有圖就空陣列" },
     seats:   { type: "ARRAY", description: "每個人的座位(看得到才填)",
                items: { type: "OBJECT", properties: {
                  member: { type: "STRING", description: "旅客代號(照「旅客」那一行);對不上就 unknown" },
                  seat:   { type: "STRING", description: "座位,照票上寫的,例如 27A、7車 12A" },
                }, required: ["member", "seat"] } },
   },
-  required: ["kind", "no", "company", "depart", "from", "arrive", "to", "code", "dir", "match", "note", "seats"],
+  required: ["kind", "no", "company", "depart", "from", "arrive", "to", "code", "dir", "match", "note", "seats", "photos"],
 };
 /* **一次可能好幾筆**(2026-10-02,Lulu:「只要是能用 AI 的功能都要一樣」):好幾個想去的地方、好幾個行程、
    兩張收據、「晚餐 6000、計程車 2000」……每一筆列在 items。最外層那幾欄照舊放第一筆(舊的前端只看最外層,也接得住)。
@@ -116,8 +119,9 @@ function itemSchema(ctx) {
       currency:{ type: "STRING", enum: ["JPY", "TWD", "unknown"] },
       date:    { type: "STRING", description: "expense:YYYY-MM-DD;看不出來空字串" },
       category:{ type: "STRING", enum: ["交通", "住宿", "餐飲", "景點", "購物", "其他"] },
+      photos:  { type: "ARRAY", items: { type: "INTEGER" }, description: "這一筆是從第幾張圖讀到的(圖 1、圖 2…的號碼,可以好幾張:同一張收據拍成好幾段就列那幾張);沒有圖就空陣列" },
     },
-    required: ["title", "day", "time", "note", "amount", "currency", "date", "category"],
+    required: ["title", "day", "time", "note", "amount", "currency", "date", "category", "photos"],
   };
 }
 function schema(ctx) {
@@ -158,7 +162,7 @@ function prompt(text, ctx) {
   const where = [ctx.trip.country, ctx.trip.city].filter(Boolean).join(" ");
   return [
     "你是旅行網站 Trippps 的助手。這一團是「" + (ctx.trip.name || "未命名") + "」" + (where ? ",去 " + where : "") + "。",
-    "使用者丟給你一段話和/或一張圖(常見的是 Google 地圖截圖、訂位確認、票券、登機證、座位表、租車確認信),",
+    "使用者丟給你一段話和/或一到三張圖(常見的是 Google 地圖截圖、訂位確認、票券、登機證、座位表、租車確認信、收據),",
     "請判斷他要建立哪一種資料,並讀出欄位。",
     "",
     "判斷規則:",
@@ -174,6 +178,8 @@ function prompt(text, ctx) {
     "- **wish/stop/expense 也可能好幾筆**(「想去淺草寺和晴空塔」、一張截圖列了三家店、兩張收據、「晚餐 6000、計程車 2000」):每一筆在 items 各列一筆,最外層的欄位填第一筆。",
     "- **同一份內容可能不只一種資料**:車票、機票上有班次和座位,也印了票價 → 交通和花費各一份,列在 parts(transport 那份填 legs,expense 那份填 items:title 寫「高鐵 南港→左營」這種,amount 寫票價,category 交通,date 寫乘車日);",
     "  門票、餐廳訂位有日期也有金額 → stop + expense。最外層照舊填主要的那一種。只有一種資料 parts 就空陣列。",
+    "- **一次可能好幾張圖**(圖 1、圖 2、圖 3):同一張收據/票拍成好幾段 → 只算一筆,photos 列那幾張;好幾張不同的收據、票 → 各一筆,photos 各列自己那張。",
+    "  每一筆、每一段都要在 photos 寫它是從哪幾張圖讀到的(只有一張圖就寫 [1];沒有圖就空陣列)。",
     "- 使用者的話優先於圖片的樣子。都看不出來 → unknown,並在 message 說還需要什麼。",
     "- 看不清楚的欄位留空,不要猜。",
     "",
@@ -262,10 +268,13 @@ function cleanLeg(f, ctx) {
     code: s(f.code, 30),
     dir: DIRS.indexOf(f.dir) >= 0 ? f.dir : "",
     match, note: s(f.note, 300), seats, others,
+    photos: cleanPhotos(f.photos, ctx),
   };
 }
 /* 模型回什麼都不直接信:型別、格式、範圍在這裡再過一次,
    前端拿到的一定是確認卡、交通表單填得進去的值。 */
+/* 這一筆來自第幾張圖:只收真的有的號碼(1..這次幾張),去重、照順序 */
+const cleanPhotos = (v, ctx) => Array.from(new Set((Array.isArray(v) ? v : []).filter(n => Number.isInteger(n) && n >= 1 && n <= (ctx.nImages || 0)))).sort((a, b) => a - b);
 function cleanItem(f, ctx, intent) {
   const s = str;
   const day = Number.isInteger(f.day) && f.day >= 1 && f.day <= ctx.days.length ? f.day : 0;
@@ -279,6 +288,7 @@ function cleanItem(f, ctx, intent) {
     currency: ["JPY", "TWD"].includes(f.currency) ? f.currency : "",
     date: intent === "expense" && /^\d{4}-\d{2}-\d{2}$/.test(s(f.date, 10)) ? s(f.date, 10) : "",
     category: ["交通", "住宿", "餐飲", "景點", "購物", "其他"].includes(f.category) ? f.category : "",
+    photos: cleanPhotos(f.photos, ctx),
   };
 }
 function clean(f, ctx) {
@@ -362,10 +372,14 @@ module.exports = async (req, res) => {
 
   const b = (typeof req.body === "string" ? JSON.parse(req.body || "{}") : req.body) || {};
   const text = typeof b.text === "string" ? b.text.trim().slice(0, MAX_TEXT) : "";
-  const image = typeof b.image === "string" ? b.image : "";
-  if (!text && !image) return res.status(400).json({ error: "打一段話或放一張圖" });
-  if (image.length > MAX_B64) return res.status(413).json({ error: "圖片太大" });
+  /* 一次最多 3 張(images);舊版 App 送的是一張(image),也接 */
+  const images = Array.isArray(b.images) ? b.images.filter(x => typeof x === "string" && x) : (typeof b.image === "string" && b.image ? [b.image] : []);
+  if (!text && !images.length) return res.status(400).json({ error: "打一段話或放一張圖" });
+  if (images.length > MAX_IMAGES) return res.status(400).json({ error: "一次最多 " + MAX_IMAGES + " 張圖" });
+  if (images.some(x => x.length > MAX_B64) || images.reduce((n, x) => n + x.length, 0) > MAX_TOTAL_B64)
+    return res.status(413).json({ error: "圖片太大,少放一張或換小一點的再試" });
   const ctx = tripCtx(b.context);
+  ctx.nImages = images.length;
   const SCHEMA = schema(ctx);
 
   /* **每個人每天固定次數**(一般 20、團主和副團主 25,各團共用)。用完就不去問 Google。
@@ -388,7 +402,8 @@ module.exports = async (req, res) => {
   }
 
   const parts = [];
-  if (image) parts.push({ inline_data: { mime_type: "image/jpeg", data: image } });
+  /* 每張前面標「圖 N」,模型才講得出每一筆是從哪幾張讀到的 */
+  images.forEach((x, i) => { if (images.length > 1) parts.push({ text: "圖 " + (i + 1) + ":" }); parts.push({ inline_data: { mime_type: "image/jpeg", data: x } }); });
   parts.push({ text: prompt(text, ctx) });
 
   let last;

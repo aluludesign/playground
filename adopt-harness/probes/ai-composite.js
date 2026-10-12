@@ -67,7 +67,7 @@ return (async function () {
     q("#xe-payer").value = "chang_chiayu";
     q("#exp-edit-form").requestSubmit(); await wait(700);
     var fp = calls(/resource=flights/, "POST").slice(fl0), ep = calls(/resource=expenses/, "POST").slice(ex0);
-    out.存了 = { 交通: fp.length, 花費: ep.length, 上傳: (w.__photoUploads || 0) - up0, 交通照片: fp[0] && fp[0].body.photo, 花費照片: ep[0] && ep[0].body.photo, 關了: q("#exp-edit-overlay").hidden };
+    out.存了 = { 交通: fp.length, 花費: ep.length, 上傳: (w.__photoUploads || 0) - up0, 交通照片: fp[0] && (fp[0].body.photos || [])[0], 花費照片: ep[0] && (ep[0].body.photos || [])[0], 關了: q("#exp-edit-overlay").hidden };
     ok("交通、花費各存一筆;照片只傳一次、兩邊帶同一個編號;最後一張存了就關", out.存了.交通 === 1 && out.存了.花費 === 1 && out.存了.上傳 === 1 &&
       out.存了.交通照片 && out.存了.交通照片 === out.存了.花費照片 && out.存了.關了, out.存了);
 

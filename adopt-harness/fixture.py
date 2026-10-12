@@ -179,8 +179,11 @@ FAKE_JS = r"""(function(){
   /* 假收據:一張直的、畫了幾行字的圖(縮圖和放大都看得出是「一張紙」) */
   var PHOTO_URL = "data:image/svg+xml;charset=utf-8," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="300" height="600" viewBox="0 0 300 600"><rect width="300" height="600" fill="#fdfcf7"/><text x="150" y="60" font-size="28" text-anchor="middle" font-family="sans-serif">一蘭 上野店</text>' +
     [0,1,2,3,4,5,6,7].map(function(i){ return '<rect x="30" y="' + (110 + i * 50) + '" width="' + (240 - (i %% 3) * 40) + '" height="14" fill="#c9c4b5"/>'; }).join("") + '<text x="270" y="560" font-size="32" text-anchor="end" font-family="monospace">¥2,980</text></svg>');
-  /* photo=1:第一筆花費和第一段交通已經有照片(截圖用) */
-  if (/[?&]photo=1/.test(q)) { if (ROWS.expenses[0]) ROWS.expenses[0].photo = PHOTO_URL; if (ROWS.flights[0]) ROWS.flights[0].photo = PHOTO_URL; }
+  /* 第二張假照片(一筆掛好幾張時看得出換了一張):橫的、藍色的票 */
+  var PHOTO_URL2 = "data:image/svg+xml;charset=utf-8," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="600" height="360" viewBox="0 0 600 360"><rect width="600" height="360" fill="#e8f1fb"/><text x="300" y="190" font-size="48" text-anchor="middle" font-family="sans-serif">第二張</text></svg>');
+  /* photo=1:第一筆花費和第一段交通已經有照片(截圖用);photo=2:第一筆花費掛兩張 */
+  if (/[?&]photo=[12]/.test(q)) { if (ROWS.expenses[0]) { ROWS.expenses[0].photo = PHOTO_URL; ROWS.expenses[0].photos = /photo=2/.test(q) ? [PHOTO_URL, PHOTO_URL2] : [PHOTO_URL]; }
+    if (ROWS.flights[0]) { ROWS.flights[0].photo = PHOTO_URL; ROWS.flights[0].photos = [PHOTO_URL]; } }
   var SEEN = { at: %(seen)s };
   var canQ = (/[?&]can=([a-z,]*)/.exec(q) || [])[1];
   if (canQ !== undefined) canQ.split(",").forEach(function(k){ if (k in TRIP.can) TRIP.can[k] = true; });
@@ -314,7 +317,10 @@ FAKE_JS = r"""(function(){
       return reply({ photo: "f0000000-0000-0000-0000-00000000000" + window.__photoUploads });
     }
     /* 換成網址的是存下去的那一份,不要改到 __calls 記著的原件(探針要看「送出去的是上傳編號」) */
-    if ((r === "expenses" || r === "flights") && method !== "GET" && body.photo) body = Object.assign({}, body, { photo: PHOTO_URL });
+    if ((r === "expenses" || r === "flights") && method !== "GET" && (body.photo || (body.photos && body.photos.length))) {
+      var nPh = body.photos && body.photos.length ? body.photos.length : 1;
+      body = Object.assign({}, body, { photo: PHOTO_URL, photos: [PHOTO_URL, PHOTO_URL2, PHOTO_URL].slice(0, nPh) });
+    }
     var rows = ROWS[r];
     if (!rows) return reply({ error: "不認識的資料表:" + r }, 400);
     var id = param(s, "id");

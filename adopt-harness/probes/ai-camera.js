@@ -1,4 +1,4 @@
-/* AI 的圖片兩條路(Lulu,2026-09-30):手機、平板多一顆「拍照」直接開相機;電腦只有「選一張圖」。
+/* AI 的圖片兩條路(Lulu,2026-09-30):手機、平板多一顆「拍照」直接開相機;電腦只有「選圖」。
  *   WIDTH=390 TOUCH:網址帶 touch=1 扮觸控 ;  不帶 = 電腦 */
 var q = s => d.querySelector(s), wait = ms => new Promise(r => w.setTimeout(r, ms));
 var shown = e => !!e && !e.hidden && e.getBoundingClientRect().width > 0;
@@ -23,7 +23,9 @@ return (async function () {
     var dt = new w.DataTransfer(); dt.items.add(new w.File([blob], "image.jpg", { type: "image/png" }));
     cam.files = dt.files; cam.dispatchEvent(new w.Event("change", { bubbles: true })); await wait(300);
     out.收到 = (q("#ai-img-name").textContent || "").trim();
-    ok("拍完的照片收進來,講「剛拍的照片」", /剛拍的照片/.test(out.收到), out.收到);
+    /* 2026-10-12 起一次可以放 3 張:拍到的那張排成一個小縮圖,講「已加入 1 張」(不再寫「剛拍的照片」這種檔名替代字) */
+    out.縮圖 = d.querySelectorAll("#ai-imgs .ai-im img").length;
+    ok("拍完的照片收進來:一個小縮圖、講「已加入 1 張」", out.縮圖 === 1 && /已加入 1 張/.test(out.收到), out);
     q("#ai-overlay").dispatchEvent(new w.MouseEvent("click", { bubbles: true })); await wait(60);
     ok("拍了照片就算改過,點外面不會關掉", !q("#ai-overlay").hidden, "");
   }

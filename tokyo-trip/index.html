@@ -872,6 +872,11 @@
     .ph-thumb{flex:none; width:32px; height:32px; padding:0; border:var(--ds-sys-shared-border-xs) solid var(--line); border-radius:6px;
       overflow:hidden; background:var(--surface); cursor:zoom-in; display:inline-block; vertical-align:middle;}
     .ph-thumb img{width:100%; height:100%; object-fit:cover; display:block;}
+    .ph-thumb{position:relative;}
+    .ph-thumb .ph-more{position:absolute; right:0; bottom:0; padding:0 3px; border-top-left-radius:4px; font-size:10px; font-weight:700; line-height:14px;
+      background:color-mix(in srgb, var(--ds-sys-shared-color-shadow) 70%, transparent); color:#fff;}
+    #photo-overlay .ph-nav{display:flex; align-items:center; gap:12px;}
+    #photo-overlay .ph-n{color:#fff; font-size:13px; min-width:44px; text-align:center;}
     .board .seats.ph-line{display:flex; align-items:center; justify-content:space-between; gap:10px;}
     #photo-overlay{z-index:62; background:color-mix(in srgb, var(--ds-sys-shared-color-shadow) 88%, transparent); padding:16px; flex-direction:column; align-items:center;}
     #photo-overlay .ph-box{margin:auto; display:flex; flex-direction:column; align-items:center; gap:12px; max-width:100%;}
@@ -1078,6 +1083,11 @@
        margin-left:auto 把它和選單一起推到右邊,倒數留在標題旁。 */
     #ai-btn{margin-left:auto; flex:0 0 auto; height:38px;}
     #ai-img-row{display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
+    .ai-imgs{display:flex; gap:8px; flex-wrap:wrap;}
+    .ai-imgs .ai-im{position:relative; width:56px; height:56px; border-radius:8px; overflow:hidden; border:var(--ds-sys-shared-border-xs) solid var(--line); background:var(--surface);}
+    .ai-imgs .ai-im img{width:100%; height:100%; object-fit:cover; display:block;}
+    .ai-imgs .ai-im button{position:absolute; top:2px; right:2px; width:20px; height:20px; padding:0; border:0; border-radius:50%;
+      background:color-mix(in srgb, var(--ds-sys-shared-color-shadow) 70%, transparent); color:#fff; font-size:12px; line-height:20px; cursor:pointer;}
     #ai-img-name, #ai-say{font-size:.8125rem; line-height:1.5; color:var(--color-ink-muted);}
     #ai-say{margin:0 0 12px;}
     .hamb span{display:block; height:2px; border-radius:1px; background:var(--ink);}
@@ -1762,6 +1772,11 @@
 <div class="overlay" id="photo-overlay" hidden>
   <div class="ph-box" role="dialog" aria-modal="true" aria-label="照片">
     <img id="ph-img" alt="">
+    <div class="ph-nav">
+      <button type="button" class="btn btn-main btn-sm" id="ph-prev" aria-label="上一張" hidden>‹</button>
+      <span class="ph-n" id="ph-n" hidden></span>
+      <button type="button" class="btn btn-main btn-sm" id="ph-next" aria-label="下一張" hidden>›</button>
+    </div>
     <button type="button" class="btn btn-main btn-sm" id="ph-close">關閉</button>
   </div>
 </div>
@@ -1926,10 +1941,12 @@
       <!-- 拍照:手機、平板才有(觸控螢幕)。capture 叫系統直接開相機,不先問要從哪裡選 -->
       <button type="button" class="btn btn-sm" id="ai-shoot" hidden>📷 拍照</button>
       <input type="file" accept="image/*" capture="environment" id="ai-cam" hidden>
-      <button type="button" class="btn btn-sm" id="ai-pick">🖼️ 選一張圖</button>
-      <input type="file" accept="image/*" id="ai-file" hidden>
+      <button type="button" class="btn btn-sm" id="ai-pick">🖼️ 選圖</button>
+      <input type="file" accept="image/*" id="ai-file" multiple hidden>
       <span id="ai-img-name"></span>
     </div>
+    <!-- 一次最多 3 張(2026-10-12 定案):選好的排成一排小縮圖,每張可以拿掉 -->
+    <div class="ai-imgs" id="ai-imgs" hidden></div>
     <div class="err" id="ai-err" hidden></div>
     <div class="ops">
       <button type="submit" class="btn btn-main" id="ai-go">交給 AI</button>
@@ -2380,6 +2397,7 @@
     participants: (r.participants || []).slice(),
     split: Object.assign({}, r.split || {}),
     photo: r.photo || "",
+    photos: (r.photos && r.photos.length ? r.photos : r.photo ? [r.photo] : []).slice(),
     note: r.note || "", createdAt: r.createdAt,
   });
   const expToRow = e => ({
@@ -2388,7 +2406,7 @@
     payer: e.payerId === "fund" ? "fund" : nameById(e.payerId) || "",
     participants: (e.participants || []).map(nameById).filter(Boolean),
     split: Object.keys(e.split || {}).filter(p => nameById(p) && (e.participants || []).includes(p)).reduce((o, p) => (o[p] = e.split[p], o), {}),
-    photo: e.photoId || undefined,   /* 上傳編號,只有建的那一次帶;讀回來的是網址(photo) */
+    photos: e.photoIds && e.photoIds.length ? e.photoIds : undefined,   /* 上傳編號,只有建的那一次帶;讀回來的是網址(photo、photos) */
     note: e.note,
   });
   /* by:從願望排進來的那一筆記著是誰許的 —— 有它才退得回願望區 */
@@ -3232,7 +3250,13 @@
   }
   const hasSplit = e => Object.keys(e.split || {}).some(p => (e.participants || []).includes(p));
   /* AI 讀過的照片的小縮圖(花費、交通)。網址是 Notion 給的,1 小時後失效 —— 載不出來就重讀一次資料(見下面 error 那段) */
-  const photoThumb = url => url ? '<button type="button" class="ph-thumb" data-photo="' + esc(url) + '" aria-label="看照片"><img src="' + esc(url) + '" alt="" loading="lazy"></button>' : "";
+  /* 好幾張(2026-10-12):縮圖是第一張,角落寫「+2」;點開可以左右換。urls 可以是一個網址或一串 */
+  const photoThumb = urls => {
+    const list = (Array.isArray(urls) ? urls : [urls]).filter(Boolean);
+    if (!list.length) return "";
+    return '<button type="button" class="ph-thumb" data-photo="' + esc(list.join(" ")) + '" aria-label="看照片' + (list.length > 1 ? "(" + list.length + " 張)" : "") + '"><img src="' + esc(list[0]) + '" alt="" loading="lazy">' +
+      (list.length > 1 ? '<span class="ph-more">+' + (list.length - 1) + "</span>" : "") + "</button>";
+  };
   const inCur = (cur, x) => (cur === "TWD" ? "NT$" : "¥") + Math.round(x).toLocaleString("en-US");
   /* **一包錢的時候怎麼結算**(2026-10-02):每個人交進基金的錢算「已付」,基金付的帳照分攤的人分;
      基金裡剩的錢在保管人手上(沒指定就是「共同基金」本身)—— 所以保管人的淨額要扣掉剩的那一包,
@@ -3433,7 +3457,7 @@
       "</div>" +
       '<div class="seatmap">' + chips + "</div>" +
       /* 照片放最下面那一行:放在上面那排會把航空公司擠成直的(2026-10-04 截圖看到的) */
-      (bits.length || f.photo ? '<div class="seats' + (f.photo ? " ph-line" : "") + '">' + (bits.length ? "<span>" + bits.join(" · ") + "</span>" : "") + photoThumb(f.photo) + "</div>" : "") + "</div></div>";
+      (bits.length || f.photo ? '<div class="seats' + (f.photo ? " ph-line" : "") + '">' + (bits.length ? "<span>" + bits.join(" · ") + "</span>" : "") + photoThumb(f.photos && f.photos.length ? f.photos : f.photo) + "</div>" : "") + "</div></div>";
   }
   /* 火車、巴士、船、租車:淺色的卡。一眼要看得到幾點、從哪到哪、坐哪(租車是誰開) */
   function legCard(f, S, can) {
@@ -3459,7 +3483,7 @@
     if (f.note) bits.push(linkify(f.note));
     return '<div class="tleg" data-kind="' + esc(k) + '">' +
       '<div class="tl-hd"><span class="tl-kind">' + kicon(k) + esc(k) + (f.dir && f.dir !== "其他" ? " · " + esc(f.dir) : "") + "</span>" +
-      '<span class="tl-no">' + esc([f.no, f.airline].filter(Boolean).join(" · ")) + "</span>" + photoThumb(f.photo) +
+      '<span class="tl-no">' + esc([f.no, f.airline].filter(Boolean).join(" · ")) + "</span>" + photoThumb(f.photos && f.photos.length ? f.photos : f.photo) +
       (can ? '<button type="button" class="pen" data-flight-edit="' + esc(f.id) + '" aria-label="改這一段"><svg class="i" aria-hidden="true"><use href="#i-pen"></use></svg></button>' : "") + "</div>" +
       '<div class="tl-route">' + pt(K.t0, hhmm(f.depart), f.from) + '<span class="tl-arrow" aria-hidden="true">→</span>' +
       pt(K.t1, later + hhmm(f.arrive), f.to) + "</div>" +
@@ -3514,7 +3538,7 @@
     el("fl-seats").querySelectorAll("input").forEach(i => { i.placeholder = K.seatPh || ""; i.maxLength = K.seatMax || 4; });
     if (!flightEditing) el("fl-title").textContent = "加一段交通";
   }
-  let flFromAI = false;   /* 這張交通表是 AI 讀出來的(存的時候帶 AI 讀過的照片);openFlightFromAI 在 openFlight 之後才設 */
+  let flFromAI = false, flPhotoNums = [];   /* 這張交通表是 AI 讀出來的(存的時候帶 AI 讀過的照片);openFlightFromAI 在 openFlight 之後才設 */
   function openFlight(id) {
     if (!mayFly()) return;
     flFromAI = false;
@@ -3603,8 +3627,8 @@
     const btn = el("fl-save");
     btn.disabled = true;
     try {
-      const pid = flFromAI ? await aiPhotoId() : "";
-      if (pid) body.photo = pid;
+      const pids = flFromAI ? await aiPhotoIds(flPhotoNums) : [];
+      if (pids.length) body.photos = pids;
       const was = flightEditing;
       const saved = was
         ? await api("?resource=flights&id=" + encodeURIComponent(was.id), { method: "PATCH", body: JSON.stringify(body) })
@@ -3627,7 +3651,7 @@
       saveSnap();
       render();
       renderCountdown();
-      flash((was ? "改好了" : "加好了:" + legName(row)) + (flFromAI && aiPhoto && !pid ? "(照片沒存到)" : ""));
+      flash((was ? "改好了" : "加好了:" + legName(row)) + (flFromAI && aiPhotos && !pids.length ? "(照片沒存到)" : ""));
       /* AI 一次讀到好幾段:存完這一段,這張往左滑走、接著是下一段;沒有了才關 */
       if (aiQueue.length) await slideToNextAI();
       else if (!(await chainHop("flight-form", closeFlight))) closeFlight();
@@ -5461,7 +5485,7 @@
         '<div class="ops">' + (e.sendErr ? '<button type="button" class="btn btn-ghost btn-sm" data-resend-exp="' + e.id + '">再送一次</button>' : "") +
         '<button type="button" class="btn btn-ghost btn-sm" data-del-exp="' + e.id + '">取消這筆</button></div>'
       : "";
-    return '<div class="exp"><div class="hd"><span class="ti">' + linkify(e.title) + '</span><span class="rm-chip cat" style="background:' + c.color + '">' + c.name + "</span>" + photoThumb(e.photo) + "</div>" +
+    return '<div class="exp"><div class="hd"><span class="ti">' + linkify(e.title) + '</span><span class="rm-chip cat" style="background:' + c.color + '">' + c.name + "</span>" + photoThumb(e.photos && e.photos.length ? e.photos : e.photo) + "</div>" +
       '<div class="amt">' + twd(v) + (e.currency === "JPY" ? '<span class="sub">¥' + Math.round(e.amount).toLocaleString("en-US") + "</span>" : "") + "</div>" +
       '<div class="mt"><span>' + payer + "</span><span>·</span><span>" + whoShared + "</span>" +
       (ps.length && !custom ? '<span>·</span><span class="num">每人 ' + twd(v / ps.length) + "</span>" : "") +
@@ -5840,19 +5864,39 @@
      拿到上傳編號;存那一筆的時候帶著它,伺服器掛到 Notion 的「照片」欄。一張收據拆好幾筆 → 每一筆掛同一張。
      Notion 的上傳 1 小時內要掛上去,存的時候超過 50 分鐘就重傳一次。**傳不上去不擋存檔**,只是沒有照片 ——
      存好的那句後面加「(照片沒存到)」,不另外講一句(會被「記下來了」蓋掉)。 */
-  let aiPhoto = null;   /* { b64, at, p: Promise<上傳編號,失敗是 ""> } */
+  /* **一次好幾張**(2026-10-12):每張各傳一次;AI 說每一筆來自哪幾張(圖 1、圖 2…),存的時候只帶那幾張的編號(Lulu 選的:只掛它自己的)。
+     AI 沒講(舊的回法、只有一張)就掛全部。 */
+  let aiPhotos = null;   /* [{ b64, at, p: Promise<上傳編號,失敗是 ""> }] —— 第幾張就是第幾個 */
   const photoUpload = b64 => api("?resource=photo", { method: "POST", body: JSON.stringify({ image: b64 }) }).then(r => (r && r.photo) || "").catch(() => "");
-  function keepAIPhoto(b64) { aiPhoto = b64 ? { b64, at: Date.now(), p: photoUpload(b64) } : null; }
-  async function aiPhotoId() {
-    if (!aiPhoto) return "";
-    if (Date.now() - aiPhoto.at > 50 * 60e3) { aiPhoto.at = Date.now(); aiPhoto.p = photoUpload(aiPhoto.b64); }
-    return aiPhoto.p;
+  function keepAIPhotos(list) { aiPhotos = list && list.length ? list.map(b64 => ({ b64, at: Date.now(), p: photoUpload(b64) })) : null; }
+  async function aiPhotoIds(nums) {
+    if (!aiPhotos) return [];
+    const pick = (nums && nums.length ? nums : aiPhotos.map((_, i) => i + 1)).map(n => aiPhotos[n - 1]).filter(Boolean);
+    pick.forEach(x => { if (Date.now() - x.at > 50 * 60e3) { x.at = Date.now(); x.p = photoUpload(x.b64); } });
+    return (await Promise.all(pick.map(x => x.p))).filter(Boolean);
   }
-  function openPhoto(url) {
-    el("ph-img").src = url;
+  let phList = [], phAt = 0;
+  function showPhoto(i) {
+    phAt = (i + phList.length) % phList.length;
+    el("ph-img").src = phList[phAt];
     el("photo-overlay").classList.remove("zoom");
+    const many = phList.length > 1;
+    el("ph-prev").hidden = el("ph-next").hidden = el("ph-n").hidden = !many;
+    el("ph-n").textContent = many ? (phAt + 1) + " / " + phList.length : "";
+  }
+  function openPhoto(urls) {
+    phList = String(urls || "").split(" ").filter(Boolean);
+    if (!phList.length) return;
+    showPhoto(0);
     el("photo-overlay").hidden = false;
   }
+  el("ph-prev").addEventListener("click", () => showPhoto(phAt - 1));
+  el("ph-next").addEventListener("click", () => showPhoto(phAt + 1));
+  document.addEventListener("keydown", ev => {
+    if (el("photo-overlay").hidden || phList.length < 2) return;
+    if (ev.key === "ArrowLeft") showPhoto(phAt - 1);
+    if (ev.key === "ArrowRight") showPhoto(phAt + 1);
+  });
   el("ph-close").addEventListener("click", () => { el("photo-overlay").hidden = true; el("ph-img").removeAttribute("src"); });
   el("ph-img").addEventListener("click", () => el("photo-overlay").classList.toggle("zoom"));
   document.addEventListener("click", ev => {
@@ -6060,14 +6104,14 @@
     const id = editingExp;
     /* AI 讀到的新的一筆(editingExp === "new"):記進去;後面還有就滑到下一筆 */
     if (id === "new") {
-      const photoId = expFromAI ? await aiPhotoId() : "";
+      const photoIds = expFromAI ? await aiPhotoIds(expPhotoNums) : [];
       addExpense({
         id: uid(), date: el("xe-date").value, title, category: el("xe-cat").value,
         amount: Math.abs(parseFloat(el("xe-amount").value) || 0), currency: el("xe-cur").value,
         payerId: el("xe-payer").value || null, participants: ps, split, note: el("xe-note").value.trim(),
-        photoId: photoId || undefined, createdAt: new Date().toISOString(),
+        photoIds, createdAt: new Date().toISOString(),
       });
-      flash("記下來了:" + title + (expFromAI && aiPhoto && !photoId ? "(照片沒存到)" : ""));
+      flash("記下來了:" + title + (expFromAI && aiPhotos && !photoIds.length ? "(照片沒存到)" : ""));
       lastExpDate = el("xe-date").value;   /* 連記好幾筆通常是同一天 */
       if (aiItems.length) { stackSlide("exp-edit-form", openExpenseNextAI); return; }
       if (await chainHop("exp-edit-form", closeExpEdit)) return;
@@ -6456,20 +6500,23 @@
      人按「確定」才走 addWish / addStop / 交通表單 —— 權限跟手動加一模一樣:
      許願誰都能加,行程和座位要通行碼。 */
   const AI_API = (CFG.apiBase || "").replace(/\/$/, "") + "/api/ai";
-  let aiImage = "";   /* 縮過的 JPEG,base64,沒有 data: 前綴 */
+  /* **一次最多 3 張**(2026-10-12 定案,只算 1 次 AI):先收原檔,按「交給 AI」才縮 —— 幾張要縮多小看張數 */
+  const AI_MAX_IMGS = 3;
+  let aiFiles = [];     /* [{ file, url(縮圖用的 objectURL), name }] */
+  let aiSent = [];      /* 這次真的送出去的那幾張(縮過的 JPEG,base64,沒有 data: 前綴);照片存 Notion 用 */
 
   /* 手機原圖動輒 5MB,超過 Vercel 函式的請求上限;長邊 1600px 的字已經夠讀。 */
-  function shrinkImage(file) {
+  function shrinkImage(file, edge, quality) {
     return new Promise((ok, no) => {
       const img = new Image();
       const url = URL.createObjectURL(file);
       img.onload = () => {
-        const k = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight));
+        const k = Math.min(1, (edge || 1600) / Math.max(img.naturalWidth, img.naturalHeight));
         const c = document.createElement("canvas");
         c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
         c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
         URL.revokeObjectURL(url);
-        ok(c.toDataURL("image/jpeg", 0.85).split(",")[1]);
+        ok(c.toDataURL("image/jpeg", quality || 0.85).split(",")[1]);
       };
       img.onerror = () => { URL.revokeObjectURL(url); no(new Error("這張圖片讀不出來")); };
       img.src = url;
@@ -6479,7 +6526,7 @@
 
   function openAI() {
     tuckMapForDialog(false);
-    el("ai-form").reset(); aiImage = "";
+    el("ai-form").reset(); clearAIFiles();
     /* **沒有通行碼的人只能做一件事:許願。** 所以問法也只問那一件 ——
        「想做什麼」配上三種例子,是問給管理員聽的;對其他四個人來說,
        那是三個選項裡有兩個他按不下去。 */
@@ -6612,7 +6659,7 @@
       return true;
     }
     chain = { parts: ok, i: 0, offset: 0, total: ok.reduce((t, p) => t + partCount(p), 0), seats: new Set(), skipped };
-    if (ok.some(p => p.intent === "transport" || p.intent === "expense")) keepAIPhoto(aiImage);
+    if (ok.some(p => p.intent === "transport" || p.intent === "expense")) keepAIPhotos(aiSent);
     closeAI();
     openPart();
     return true;
@@ -6680,7 +6727,7 @@
     if (r.parts && r.parts.length && startChain(r)) return;
     /* 記帳(要排在「只能許願」那條捷徑前面,只勾記帳的副團主才不會被帶去許願表):打開「記一筆」,讀到的填進去(有記帳權限的人);沒有的話留在這裡講清楚 */
     if (r.intent === "expense") {
-      if (editable("cost")) { keepAIPhoto(aiImage); closeAI(); startItems(r); openExpenseNextAI(); return; }
+      if (editable("cost")) { keepAIPhotos(aiSent); closeAI(); startItems(r); openExpenseNextAI(); return; }
       aiErr("ai-err", "這看起來是一筆花費。記帳只有團主和副團主能用(看團主勾了哪幾塊)。");
       return;
     }
@@ -6697,7 +6744,7 @@
     }
     aiLast = r;
     /* 交通:直接打開「加一段交通」,讀到的都填進去 —— 同一張表、同一份驗證,這裡不長第二套 */
-    if (r.intent === "transport" && mayFly()) { keepAIPhoto(aiImage); closeAI(); startAIQueue(r); return; }
+    if (r.intent === "transport" && mayFly()) { keepAIPhotos(aiSent); closeAI(); startAIQueue(r); return; }
     el("ai-kind").value = r.intent === "unknown" ? "wish" : r.intent;
     startItems(r);
     fillAIConfirm(aiItems.shift());
@@ -6747,9 +6794,10 @@
   }
   /* 記帳:AI 讀到的打開「記一筆」對話框(以前是花費頁上那張內嵌的表;要疊卡片,改成對話框) */
   let expFromAI = false;   /* 這張「記一筆」是 AI 讀出來的(存的時候帶 AI 讀過的照片) */
+  let expPhotoNums = [];   /* 這一筆來自第幾張圖(AI 說的) */
   function openExpenseNextAI() {
     const r = aiItems.shift(); if (!r) return false;
-    expFromAI = true;
+    expFromAI = true; expPhotoNums = r.photos || [];
     const pos = itemPos(), total = aiItemTotal;
     switchTab("cost");
     editingExp = "new";
@@ -6803,7 +6851,7 @@
       f = same.find(x => day && dayOf(x.depart) === day) || (!day && same.length === 1 ? same[0] : null);
     }
     openFlight(f ? f.id : null);
-    flFromAI = true;
+    flFromAI = true; flPhotoNums = r.photos || [];
     if (!f && KIND[r.kind]) {
       const i = el("fl-kinds").querySelector('input[value="' + r.kind + '"]');
       if (i) { i.checked = true; applyKind(r.kind); }
@@ -6872,15 +6920,38 @@
   el("ai-shoot").hidden = !(window.matchMedia && window.matchMedia("(pointer: coarse)").matches);
   el("ai-shoot").addEventListener("click", () => el("ai-cam").click());
   el("ai-pick").addEventListener("click", () => el("ai-file").click());
-  async function takeAIImage(ev, fromCam) {
-    const file = ev.target.files && ev.target.files[0];
+  function paintAIFiles(extra) {
+    const box = el("ai-imgs");
+    box.innerHTML = aiFiles.map((x, i) => '<span class="ai-im"><img src="' + x.url + '" alt=""><button type="button" data-ai-rm="' + i + '" aria-label="拿掉這張">✕</button></span>').join("");
+    box.hidden = !aiFiles.length;
+    el("ai-img-name").textContent = extra || (aiFiles.length ? "已加入 " + aiFiles.length + " 張(最多 " + AI_MAX_IMGS + " 張)" : "");
+    el("ai-pick").disabled = el("ai-shoot").disabled = aiFiles.length >= AI_MAX_IMGS;
+  }
+  function clearAIFiles() { aiFiles.forEach(x => URL.revokeObjectURL(x.url)); aiFiles = []; aiSent = []; paintAIFiles(); }
+  function takeAIImage(ev) {
+    const files = Array.from((ev.target.files) || []).filter(f => /^image\//.test(f.type) || !f.type);
     ev.target.value = "";
-    if (file) el("ai-overlay").dataset.picked = "1";
-    if (!file) return;
-    el("ai-img-name").textContent = "處理圖片中…";
-    /* 相機拍的檔名是 image.jpg 這種,講出來沒意義 */
-    try { aiImage = await shrinkImage(file); el("ai-img-name").textContent = "已加入:" + (fromCam ? "剛拍的照片" : file.name); }
-    catch (e) { aiImage = ""; el("ai-img-name").textContent = e.message; }
+    if (!files.length) return;
+    el("ai-overlay").dataset.picked = "1";
+    const room = AI_MAX_IMGS - aiFiles.length, take = files.slice(0, Math.max(0, room));
+    take.forEach(f => aiFiles.push({ file: f, url: URL.createObjectURL(f), name: f.name }));
+    paintAIFiles(files.length > take.length ? "一次最多 " + AI_MAX_IMGS + " 張,多的那 " + (files.length - take.length) + " 張沒放進來" : "");
+  }
+  el("ai-imgs").addEventListener("click", ev => {
+    const b = ev.target.closest("[data-ai-rm]");
+    if (!b) return;
+    const [x] = aiFiles.splice(+b.dataset.aiRm, 1);
+    if (x) URL.revokeObjectURL(x.url);
+    paintAIFiles();
+  });
+  /* 縮:一張 1600px;好幾張 1200px(Vercel 一個請求約 4.5MB,幾張加起來要壓在下面);還是太大就再縮一次,再不行就講 */
+  const AI_MAX_TOTAL = 4_000_000;
+  async function shrinkAIFiles() {
+    const many = aiFiles.length > 1;
+    let out = await Promise.all(aiFiles.map(x => shrinkImage(x.file, many ? 1200 : 1600, many ? 0.8 : 0.85)));
+    if (out.reduce((n, x) => n + x.length, 0) > AI_MAX_TOTAL) out = await Promise.all(aiFiles.map(x => shrinkImage(x.file, 1000, 0.7)));
+    if (out.reduce((n, x) => n + x.length, 0) > AI_MAX_TOTAL) throw new Error("照片加起來太大了,少放一張或換小一點的再試。");
+    return out;
   }
   el("ai-file").addEventListener("change", ev => takeAIImage(ev, false));
   el("ai-cam").addEventListener("change", ev => takeAIImage(ev, true));
@@ -6899,17 +6970,19 @@
   el("ai-form").addEventListener("submit", async ev => {
     ev.preventDefault();
     const text = el("ai-text").value.trim();
-    if (!text && !aiImage) { aiErr("ai-err", "打一段話,或加一張圖。"); return; }
+    if (!text && !aiFiles.length) { aiErr("ai-err", "打一段話,或加一張圖。"); return; }
     if (!online) { aiErr("ai-err", "AI 要連上網才能用。"); return; }
     aiErr("ai-err", "");
     const go = el("ai-go");
     go.disabled = true; go.textContent = "AI 讀取中…";
     try {
+      try { aiSent = aiFiles.length ? await shrinkAIFiles() : []; }
+      catch (e) { throw Object.assign(new Error(e.message || "這張圖片讀不出來"), { said: true }); }
       const res = await fetch(AI_API, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         /* 這一團的事實跟著送:AI 那支不再寫死任何一團(第幾天、誰是誰、已經有哪幾段交通) */
-        body: JSON.stringify({ text, image: aiImage, context: {
+        body: JSON.stringify({ text, images: aiSent, context: {
           today: todayISO(), day: state.day,
           days: DAYS.map(d => d.date),
           members: MEMBERS.map(m => ({ id: m.id, name: nameOf(m.id) })),
