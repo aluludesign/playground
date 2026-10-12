@@ -52,7 +52,7 @@ return (async function () {
     await ask({ intent: "transport", legs: [
       { kind: "船", company: "東海汽船", depart: "2026-10-04T08:00", from: "竹芝碼頭", to: "大島 岡田港" },
       { kind: "船", company: "東海汽船", depart: "2026-10-04T16:00", from: "大島 岡田港", to: "竹芝碼頭" }] });
-    out.兩段 = { 說: txt("#fl-ai"), 從: q("#fl-from").value, 編號: Array.prototype.map.call(d.querySelectorAll("#flight-form .batch-tabs .rm-chip"), c => c.textContent.trim()), 按鈕: txt("#fl-save") };
+    out.兩段 = { 說: txt("#fl-ai"), 從: q("#fl-from").value, 編號: Array.prototype.map.call(d.querySelectorAll("#flight-form .batch-tabs .rm-chip"), c => c.textContent.trim()), 按鈕: (q("#flight-overlay .batch-bar:not([hidden]) button") || {}).textContent };
     ok("兩段:一批,先看第 1 段、上面 1 2、按鈕「全部存起來(2 筆)」", /AI 讀到 2 筆/.test(out.兩段.說) && out.兩段.從 === "竹芝碼頭" && out.兩段.編號.join() === "1,2" && out.兩段.按鈕 === "全部存起來(2 筆)", out.兩段);
     d.querySelectorAll("#flight-form .batch-tabs input")[1].click(); await wait(120);
     ok("點 2 → 第 2 段", q("#fl-from").value === "大島 岡田港", q("#fl-from").value);

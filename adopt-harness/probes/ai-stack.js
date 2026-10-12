@@ -31,10 +31,10 @@ return (async function () {
   ok("點 2:換第 2 段,「2 / 5」,這張在中間(不滑走)", out.第2.數 === "2 / 5" && out.第2.從 === "大島" && !q("#flight-form").classList.contains("slide-out") && out.第2.後二, out.第2);
   await tab(3);
   out.第4 = st();
-  ok("點 4(4 / 5):後面只剩一張", out.第4.數 === "4 / 5" && out.第4.後一 && !out.第4.後二, out.第4);
+  ok("點 4(4 / 5):後面照樣疊兩張(一疊會循環的牌,2026-10-12)", out.第4.數 === "4 / 5" && out.第4.後一 && out.第4.後二, out.第4);
   await tab(4);
   out.第5 = st();
-  ok("點 5(5 / 5):後面沒有卡了", out.第5.數 === "5 / 5" && !out.第5.後一 && !out.第5.後二, out.第5);
+  ok("點 5(5 / 5):後面照樣疊兩張", out.第5.數 === "5 / 5" && out.第5.後一 && out.第5.後二, out.第5);
   await tab(2);
   q("#fl-skip").click(); await wait(120);
   ok("第 3 段「不要這筆」→ 剩 4 筆", q("#fl-stack-n").textContent.trim().endsWith("/ 4"), st());

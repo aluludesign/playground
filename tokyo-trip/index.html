@@ -1322,6 +1322,12 @@
     .stack.advance .stack-ghost.g1{transform:none; filter:none; box-shadow:0 10px 28px rgba(60,30,15,.22), 0 2px 6px rgba(60,30,15,.12);}
     .stack.advance .stack-ghost.g2{transform:translateY(16px) scale(.93); filter:brightness(.95); box-shadow:0 6px 16px rgba(60,30,15,.14);}
     .stack > .signin.slide-out{transform:translateX(-120%) rotate(-6deg); opacity:0; transition:transform .32s ease-in, opacity .32s ease-in;}
+    /* 一批(2026-10-12,Lulu):「全部存起來」放在整疊卡片**外面、下面**;卡片往上讓一點位置給它 */
+    .stack > .batch-bar{position:absolute; left:0; right:0; top:calc(100% + 44px); z-index:3; display:flex;}
+    .stack > .batch-bar .btn{flex:1;}
+    .overlay:has(> .stack.batching){padding-bottom:110px;}
+    /* 換筆的動畫:飛走/退後的是複製出來的那張(飛完就拿掉),真的那張已經換成下一筆 */
+    .stack > .deck-fly{position:absolute; margin:0; pointer-events:none; z-index:3;}
     /* 一批裡有問題的那一筆(2026-10-12):編號用 error 色 */
     .batch-tabs{margin:-4px 0 0;}
     .batch-tabs .rm-chip.bt-bad{border-color:var(--ds-sys-shared-color-error); color:var(--ds-sys-shared-color-error);}
@@ -6641,8 +6647,9 @@
     if (!n) { n = document.createElement("span"); n.className = "stack-n"; n.hidden = true; form.insertBefore(n, form.firstChild); }
     return { st, form, g1: st.querySelector(".g1"), g2: st.querySelector(".g2"), n };
   }
-  function stackPaint(formId, pos, total) {
-    const k = stackOf(formId), left = total > 1 ? total - pos : 0;
+  /* ghosts:後面要畫幾張;沒給就照「後面還有幾筆」。一批是一疊會循環的牌,後面一直疊著(總數 - 1,最多畫兩張) */
+  function stackPaint(formId, pos, total, ghosts) {
+    const k = stackOf(formId), left = ghosts !== undefined ? ghosts : total > 1 ? total - pos : 0;
     k.g1.hidden = left < 1; k.g2.hidden = left < 2;
     k.n.hidden = !(total > 1); k.n.textContent = total > 1 ? pos + " / " + total : "";
     k.st.classList.toggle("multi", total > 1);
@@ -6767,7 +6774,7 @@
       t = document.createElement("div"); t.className = "batch-tabs who"; t.setAttribute("role", "tablist");
       const h = form.querySelector(":scope > h2");
       form.insertBefore(t, h ? h.nextSibling : form.firstChild);
-      t.addEventListener("change", ev => { const i = ev.target.closest("[data-bt]"); if (i && batch) batchShow(+i.dataset.bt); });
+      t.addEventListener("change", ev => { const i = ev.target.closest("[data-bt]"); if (i && batch) batchShow(+i.dataset.bt, +i.dataset.bt > batch.at ? 1 : -1); });
     }
     return t;
   }
@@ -6778,10 +6785,15 @@
     t.innerHTML = batch.items.map((x, i) => '<label class="rm-chip' + (x.err ? " bt-bad" : "") + '"><input type="radio" name="bt-' + K.form + '" data-bt="' + i + '"' + (i === batch.at ? " checked" : "") + ">" +
       (i + 1) + (mixed ? " " + KIND_NAME[x.kind] : "") + "</label>").join("");
     t.hidden = false;
-    el(K.ok).textContent = batch.saving ? batch.saving : "全部存起來(" + n + " 筆)";
-    el(K.ok).disabled = !!batch.saving;
+    /* 「全部存起來」在卡片外面(下面);卡片裡原本那顆藏起來 */
+    const bar = batchBar(K.form), go = bar.querySelector("button");
+    go.textContent = batch.saving ? batch.saving : "全部存起來(" + n + " 筆)";
+    go.disabled = !!batch.saving;
+    bar.hidden = false;
+    el(K.ok).hidden = true;
     el(K.skip).textContent = "不要這筆"; el(K.skip).hidden = false;
-    stackPaint(K.form, batch.at + 1, n);
+    stackPaint(K.form, batch.at + 1, n, n - 1);
+    stackOf(K.form).st.classList.add("batching");
     el(K.ov).dataset.keep = "1";
     const note = el(K.note);
     note.textContent = batchSay() + (note.textContent ? " " + note.textContent : "");
@@ -6790,8 +6802,65 @@
     /* 確認卡在一批裡只換行程/許願:換成交通、記帳要開別的表,一批裡不做 */
     ["transport", "expense"].forEach(v => { const o = el("ai-kind").querySelector('option[value="' + v + '"]'); if (o) o.disabled = true; });
   }
-  /* 換到第 i 筆:先把這一筆的表存成草稿;種類不一樣就換對話框;再把那一筆倒進表 */
-  function batchShow(i) {
+  /* 卡片外面那顆「全部存起來」(每一疊各一顆,放在整疊下面) */
+  function batchBar(formId) {
+    const st = stackOf(formId).st;
+    let bar = st.querySelector(":scope > .batch-bar");
+    if (!bar) {
+      bar = document.createElement("div"); bar.className = "batch-bar"; bar.hidden = true;
+      bar.innerHTML = '<button type="button" class="btn btn-main" data-batch-save></button>';
+      bar.querySelector("button").addEventListener("click", () => batchSaveAll());
+      st.appendChild(bar);
+    }
+    return bar;
+  }
+  /* **換筆像翻一疊牌**(2026-10-12,Lulu:「左滑右滑會有前後交換的效果,第一張會跑到最後一張,後面一張會往前推」)。
+     往後(dir 1):最上面那張往左飛出去、再繞到最後面;後面那張往前推上來。
+     往前(dir -1):反過來 —— 最後面那張從左邊繞回最前面,原本那張往後退一格。
+     飛的是複製出來的那張(飛完拿掉),真的那張馬上換成新的那一筆,所以換筆不用等動畫。 */
+  function deckMove(formId, dir, fill, was) {
+    const k = stackOf(formId);
+    if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches || !k.form.animate) { fill(); return; }
+    const fr = k.form.getBoundingClientRect(), sr = k.st.getBoundingClientRect(), top = k.form.scrollTop;
+    const fly = k.form.cloneNode(true);
+    /* 複製不會帶走程式填進去的值(那只在 .value 上,不在 HTML 裡)—— 一格一格抄過去,飛出去的那張才跟剛剛看到的一樣 */
+    const src = k.form.querySelectorAll("input, select, textarea"), dst = fly.querySelectorAll("input, select, textarea");
+    src.forEach((x, i) => { const y = dst[i]; if (!y) return; if (x.type === "checkbox" || x.type === "radio") y.checked = x.checked; else y.value = x.value; });
+    /* 點編號的那一下,編號已經先勾到新的那一筆了 —— 飛走的那張要勾回它自己 */
+    if (was !== undefined) fly.querySelectorAll(".batch-tabs input").forEach((x, j) => { x.checked = j === was; });
+    fly.removeAttribute("id"); fly.setAttribute("aria-hidden", "true");
+    fly.querySelectorAll("[id]").forEach(x => x.removeAttribute("id"));
+    fly.querySelectorAll("[name]").forEach(x => x.removeAttribute("name"));
+    /* 不能點、不能 focus,但**樣子不變**(用 disabled 的話欄位會變灰,飛出去的那張看起來跟原本不一樣) */
+    fly.inert = true;
+    fly.querySelectorAll("input, select, textarea, button, a").forEach(x => { x.tabIndex = -1; });
+    fly.classList.add("deck-fly"); fly.classList.remove("slide-out");
+    Object.assign(fly.style, { top: (fr.top - sr.top) + "px", left: (fr.left - sr.left) + "px", width: fr.width + "px", height: fr.height + "px" });
+    k.st.appendChild(fly);
+    fly.scrollTop = top;
+    fill();
+    k.form.scrollTop = 0;
+    const T = 420, ease = "cubic-bezier(.3,.7,.3,1)", done = () => fly.remove();
+    if (dir > 0) {
+      /* 飛到左邊那一刻**一下子換到後面**(z 3 → 0),再縮著退到最後一張的位置、淡掉 —— 不會跟前面那張半透明疊在一起 */
+      fly.animate([{ transform: "none", zIndex: 3, opacity: 1, easing: ease }, { transform: "translateX(-78%) rotate(-7deg)", zIndex: 3, opacity: 1, offset: .45 },
+        { transform: "translateX(-78%) rotate(-7deg)", zIndex: 0, opacity: 1, offset: .46, easing: "ease-in-out" },
+        { transform: "translateY(30px) scale(.86)", zIndex: 0, opacity: 0 }], { duration: T, easing: "linear" }).onfinish = done;
+      k.form.animate([{ transform: "translateY(16px) scale(.93)", filter: "brightness(.95)" }, { transform: "none", filter: "none" }],
+        { duration: T * .75, delay: T * .25, easing: ease, fill: "backwards" });
+    } else {
+      /* 原本那張往後退一格:**不變透明**,退到「後面第一張」那個位置、變暗一點 —— 到了就跟後面那張疊在一起,拿掉看不出來 */
+      fly.style.zIndex = 1;
+      fly.animate([{ transform: "none", filter: "none" }, { transform: "translateY(16px) scale(.93)", filter: "brightness(.95)" }], { duration: T, easing: ease }).onfinish = done;
+      /* 反過來:從最後面(看不到)先繞到左邊、**到左邊那一刻才換到最前面**,再推回中間 */
+      k.form.animate([{ transform: "translateY(30px) scale(.86)", zIndex: 0, opacity: 0, easing: "ease-in-out" }, { transform: "translateX(-78%) rotate(-7deg)", zIndex: 0, opacity: 1, offset: .5 },
+        { transform: "translateX(-78%) rotate(-7deg)", zIndex: 3, opacity: 1, offset: .51, easing: ease }, { transform: "none", zIndex: 2, opacity: 1 }], { duration: T, easing: "linear" });
+    }
+    setTimeout(done, T + 200);   /* 保險:動畫被打斷也要拿掉 */
+  }
+  /* 換到第 i 筆:先把這一筆的表存成草稿;種類不一樣就換對話框;再把那一筆倒進表。
+     dir:1 往後、-1 往前(有翻牌動畫);0 沒有動畫(檢查、存的時候一筆一筆跑) */
+  function batchShow(i, dir) {
     const b = batch;
     if (!b || i < 0 || i >= b.items.length) return;
     const cur = b.items[b.at];
@@ -6800,13 +6869,24 @@
       if (cur.kind === "stop" || cur.kind === "wish") cur.kind = el("ai-kind").value === "stop" ? "stop" : "wish";
     }
     const nx = b.items[i], K = BATCH[nx.kind];
-    if (b.shown && cur && BATCH[cur.kind].ov !== K.ov) el(BATCH[cur.kind].ov).hidden = true;
-    b.at = i; b.shown = true;
-    quietSeek = !!nx.draft;
-    K.open(nx);
-    quietSeek = false;
-    if (nx.draft) { restoreForm(K.form, nx.draft); K.resync(); }
-    paintBatch();
+    const same = b.shown && cur && BATCH[cur.kind].ov === K.ov;
+    if (b.shown && cur && !same) { el(BATCH[cur.kind].ov).hidden = true; stackOf(BATCH[cur.kind].form).st.classList.remove("batching"); }
+    const fill = () => {
+      b.at = i; b.shown = true;
+      quietSeek = !!nx.draft;
+      K.open(nx);
+      quietSeek = false;
+      if (nx.draft) { restoreForm(K.form, nx.draft); K.resync(); }
+      paintBatch();
+    };
+    if (dir && same && i !== b.at) deckMove(K.form, dir, fill, b.at);
+    else fill();
+  }
+  /* 左右滑:一疊會循環的牌,最後一筆再往後就回到第一筆 */
+  function batchStep(dir) {
+    if (!batch || batch.items.length < 2) return;
+    const n = batch.items.length;
+    batchShow((batch.at + dir + n) % n, dir);
   }
   /* 「不要這筆」:從這一批拿掉;拿光了就關 */
   function batchDrop() {
@@ -6826,7 +6906,10 @@
     if (!batch) return;
     batch = null;
     Object.values(BATCH).forEach(k => {
-      el(k.ok).textContent = BATCH_LABEL[k.ok]; el(k.ok).disabled = false;
+      el(k.ok).textContent = BATCH_LABEL[k.ok]; el(k.ok).disabled = false; el(k.ok).hidden = false;
+      const st = stackOf(k.form).st, bar = st.querySelector(":scope > .batch-bar");
+      if (bar) bar.hidden = true;
+      st.classList.remove("batching");
       el(k.skip).textContent = BATCH_LABEL[k.skip]; el(k.skip).hidden = true;
       const t = el(k.form).querySelector(":scope > .batch-tabs"); if (t) { t.hidden = true; t.innerHTML = ""; }
       stackPaint(k.form, 0, 0);
@@ -6883,7 +6966,7 @@
       if (x0 === null || !batch) return;
       const dx = ev.clientX - x0, dy = ev.clientY - y0;
       x0 = null;
-      if (Math.abs(dx) > 60 && Math.abs(dy) < 50) batchShow(batch.at + (dx < 0 ? 1 : -1));
+      if (Math.abs(dx) > 60 && Math.abs(dy) < 50) batchStep(dx < 0 ? 1 : -1);
     });
   });
 

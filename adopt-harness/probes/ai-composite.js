@@ -61,7 +61,7 @@ return (async function () {
     await tab("flight-form", 1);
     out.第二張 = { 交通關了: q("#flight-overlay").hidden, 記一筆開了: !q("#exp-edit-overlay").hidden, 計數: nOf("exp-edit-form"), 後面: ghosts("exp-edit-form"),
       項目: q("#xe-title").value, 金額: q("#xe-amount").value, 幣別: q("#xe-cur").value, 日期: q("#xe-date").value, 分類: q("#xe-cat").value, 誰付: q("#xe-payer").value, 誰分攤: who(), 說: txt("#xe-ai") };
-    ok("點「2 花費」→ 換成「記一筆」:2 / 2、後面沒了;票價、幣別、日期、分類都填好", out.第二張.交通關了 && out.第二張.記一筆開了 && out.第二張.計數 === "2 / 2" && !out.第二張.後面[0] &&
+    ok("點「2 花費」→ 換成「記一筆」:2 / 2、後面疊一張(會循環);票價、幣別、日期、分類都填好", out.第二張.交通關了 && out.第二張.記一筆開了 && out.第二張.計數 === "2 / 2" && out.第二張.後面[0] && !out.第二張.後面[1] &&
       out.第二張.項目 === "高鐵 南港→左營" && out.第二張.金額 === "1530" && out.第二張.幣別 === "TWD" && out.第二張.日期 === "2026-10-06" && out.第二張.分類 === "transport", out.第二張);
     ok("誰分攤只勾坐 2C 的佳瑜、誰付的空著,說明講「先勾了交通那筆有座位的人」", JSON.stringify(out.第二張.誰分攤) === '["chang_chiayu"]' && out.第二張.誰付 === "" && /有座位的人/.test(out.第二張.說), out.第二張);
     q("#xe-payer").value = "chang_chiayu";

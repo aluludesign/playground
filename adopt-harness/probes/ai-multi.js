@@ -33,7 +33,7 @@ return (async function () {
     ok("一般成員許願 3 筆:許願表、1 / 3、後面兩張、60% 高、上面 1 2 3", !q("#wish-add-overlay").hidden && out.許願1.數 === "1 / 3" && out.許願1.後一 && out.許願1.後二 &&
       Math.abs(out.許願1.高 - out.許願1.六成) <= 2 && q("#wf-title").value === "淺草寺" && tabs("wish-form").join() === "1,2,3", out.許願1);
     await tab("wish-form", 2);
-    ok("點 3:3 / 3、上野公園、後面沒卡了", look("wish-form").數 === "3 / 3" && q("#wf-title").value === "上野公園" && !look("wish-form").後一, look("wish-form"));
+    ok("點 3:3 / 3、上野公園、後面照樣疊(一疊會循環的牌)", look("wish-form").數 === "3 / 3" && q("#wf-title").value === "上野公園" && look("wish-form").後一, look("wish-form"));
     await tab("wish-form", 1);
     q("#wf-skip").click(); await wait(120);
     ok("晴空塔「不要這筆」→ 剩 2 筆", tabs("wish-form").join() === "1,2", tabs("wish-form"));
