@@ -252,6 +252,11 @@ function ok(name, cond, extra) {
   r = await call({ text: "這張收據", context: CTX }, () => okJson(GOOD));
   const said = JSON.stringify(sent(r.seen));
   ok("給模型的話:一張收據就是一筆、合計、品項寫 note;說要分開才拆", /一張收據就是一筆/.test(said) && /品項寫在 note/.test(said) && /分開記/.test(said) && !/一張收據要拆兩筆/.test(said), "");
+  /* 還沒買 ≠ 記帳(2026-10-12,Lulu:「Klook 的行程販售截圖有價錢,我只是想許願,AI 判成購物」) */
+  ok("給模型的話:販售頁(Klook、KKday…)還沒買 → wish、價錢寫 note;付過錢的證明才是 expense;看不出來當 wish",
+    /還沒買的不是 expense/.test(said) && /Klook/.test(said) && /販售頁/.test(said) && /價錢寫進 note/.test(said) && /付過錢的證明\*\*才是 expense/.test(said) && /看不出來付了沒 → 當 wish/.test(said), "");
+  ok("schema 的 intent 說明:expense 是已經付了錢的、販售頁算 wish",
+    /已經付了錢/.test(JSON.stringify(sent(r.seen).generationConfig.responseSchema.properties.intent)) && /販售頁/.test(JSON.stringify(sent(r.seen).generationConfig.responseSchema.properties.intent)), "");
 
   /* 一次好幾張圖(2026-10-12 定案:最多 3 張,只問 Google 一次;每一筆標出來自哪幾張) */
   r = await call({ text: "x", images: [IMG, IMG, IMG, IMG], context: CTX }, () => okJson(GOOD));
