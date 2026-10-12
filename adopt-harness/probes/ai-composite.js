@@ -1,7 +1,7 @@
 /* 複合的內容(2026-10-04,Lulu:「複合式的車票加座位…第一張對話框是填座位,第二張就是帶入填費用的」)。
- * 一張高鐵票 → AI 回 交通 + 花費 兩份:先開「加一段交通」(座位填好,1 / 2),存了往左滑走,再開「記一筆」(票價填好,2 / 2);
+ * 一張高鐵票 → AI 回 交通 + 花費 兩份。2026-10-12 起是「一批」:編號「1 交通」「2 花費」換著看、改,最後「全部存起來」一起存;
  * 記錢那張「誰分攤」只勾交通那張填了座位的人、「誰付的」空著;照片只傳一次、兩邊都掛。
- * 取消 = 後面不要了;跳過 = 直接下一份;沒有某一份的權限 → 跳過那份、講一聲;行程 + 花費也一樣。
+ * 取消 = 整批不要;「不要這筆」= 拿掉那一份;沒有某一份的權限 → 跳過那份、講一聲;行程 + 花費也一樣。
  *   WIDTH=390 ./probe.sh probes/ai-composite.js
  *   PAGE='/index.html?fake=member&can=cost' WIDTH=390 ./probe.sh probes/ai-composite.js   只有記帳權限的副團主 */
 var q = s => d.querySelector(s), qa = s => Array.prototype.slice.call(d.querySelectorAll(s));
@@ -49,50 +49,51 @@ return (async function () {
       !out.只能記帳.交通開了 && out.只能記帳.記一筆開了 && !out.只能記帳.計數 && out.只能記帳.金額 === "1530" && /交通那部分要團主/.test(out.只能記帳.說), out.只能記帳);
     q("#xe-cancel").click();
   } else {
-    /* 1. 交通 → 花費 */
+    /* 1. 交通 + 花費 = 一批(2026-10-12 起:上面編號「1 交通」「2 花費」換著看,最後一起存) */
     var up0 = w.__photoUploads || 0, fl0 = calls(/resource=flights/, "POST").length, ex0 = calls(/resource=expenses/, "POST").length;
     await ask(TICKET, true);
-    out.第一張 = { 交通開了: !q("#flight-overlay").hidden, 計數: nOf("flight-form"), 後面: ghosts("flight-form"), 座位: (q("#fl-seat-chang_chiayu") || {}).value, 班次: q("#fl-no").value, 說: txt("#fl-ai"), 跳過鈕: !q("#fl-skip").hidden };
-    ok("第一張是「加一段交通」:1 / 2、後面疊一張、座位 5車 2C 填好、講「下一張是花費」",
+    var tabs = form => qa("#" + form + " .batch-tabs:not([hidden]) .rm-chip").map(c => c.textContent.trim());
+    var tab = async (form, i) => { qa("#" + form + " .batch-tabs input")[i].click(); await wait(150); };
+    out.第一張 = { 交通開了: !q("#flight-overlay").hidden, 計數: nOf("flight-form"), 後面: ghosts("flight-form"), 座位: (q("#fl-seat-chang_chiayu") || {}).value, 班次: q("#fl-no").value, 說: txt("#fl-ai"), 編號: tabs("flight-form") };
+    ok("先開「加一段交通」:1 / 2、後面疊一張、座位 5車 2C 填好、編號「1 交通」「2 花費」",
       out.第一張.交通開了 && out.第一張.計數 === "1 / 2" && out.第一張.後面[0] && !out.第一張.後面[1] && out.第一張.座位 === "5車 2C" &&
-      out.第一張.班次 === "125" && /交通和花費/.test(out.第一張.說) && /下一張是花費/.test(out.第一張.說), out.第一張);
-    q("#flight-form").requestSubmit(); await wait(120);
-    ok("存了交通 → 這張往左滑走", q("#flight-form").classList.contains("slide-out"), "");
-    await wait(700);
+      out.第一張.班次 === "125" && out.第一張.編號.join() === "1 交通,2 花費" && /交通 1、花費 1/.test(out.第一張.說), out.第一張);
+    await tab("flight-form", 1);
     out.第二張 = { 交通關了: q("#flight-overlay").hidden, 記一筆開了: !q("#exp-edit-overlay").hidden, 計數: nOf("exp-edit-form"), 後面: ghosts("exp-edit-form"),
       項目: q("#xe-title").value, 金額: q("#xe-amount").value, 幣別: q("#xe-cur").value, 日期: q("#xe-date").value, 分類: q("#xe-cat").value, 誰付: q("#xe-payer").value, 誰分攤: who(), 說: txt("#xe-ai") };
-    ok("第二張是「記一筆」:2 / 2、後面沒了;票價、幣別、日期、分類都填好", out.第二張.交通關了 && out.第二張.記一筆開了 && out.第二張.計數 === "2 / 2" && !out.第二張.後面[0] &&
+    ok("點「2 花費」→ 換成「記一筆」:2 / 2、後面疊一張(會循環);票價、幣別、日期、分類都填好", out.第二張.交通關了 && out.第二張.記一筆開了 && out.第二張.計數 === "2 / 2" && out.第二張.後面[0] && !out.第二張.後面[1] &&
       out.第二張.項目 === "高鐵 南港→左營" && out.第二張.金額 === "1530" && out.第二張.幣別 === "TWD" && out.第二張.日期 === "2026-10-06" && out.第二張.分類 === "transport", out.第二張);
-    ok("誰分攤只勾坐 2C 的佳瑜、誰付的空著,說明講「先勾了交通那張有座位的人」", JSON.stringify(out.第二張.誰分攤) === '["chang_chiayu"]' && out.第二張.誰付 === "" && /有座位的人/.test(out.第二張.說), out.第二張);
+    ok("誰分攤只勾坐 2C 的佳瑜、誰付的空著,說明講「先勾了交通那筆有座位的人」", JSON.stringify(out.第二張.誰分攤) === '["chang_chiayu"]' && out.第二張.誰付 === "" && /有座位的人/.test(out.第二張.說), out.第二張);
     q("#xe-payer").value = "chang_chiayu";
-    q("#exp-edit-form").requestSubmit(); await wait(700);
+    q("#exp-edit-form").requestSubmit(); await wait(1200);
     var fp = calls(/resource=flights/, "POST").slice(fl0), ep = calls(/resource=expenses/, "POST").slice(ex0);
-    out.存了 = { 交通: fp.length, 花費: ep.length, 上傳: (w.__photoUploads || 0) - up0, 交通照片: fp[0] && (fp[0].body.photos || [])[0], 花費照片: ep[0] && (ep[0].body.photos || [])[0], 關了: q("#exp-edit-overlay").hidden };
-    ok("交通、花費各存一筆;照片只傳一次、兩邊帶同一個編號;最後一張存了就關", out.存了.交通 === 1 && out.存了.花費 === 1 && out.存了.上傳 === 1 &&
+    out.存了 = { 交通: fp.length, 花費: ep.length, 上傳: (w.__photoUploads || 0) - up0, 交通照片: fp[0] && (fp[0].body.photos || [])[0], 花費照片: ep[0] && (ep[0].body.photos || [])[0], 誰付: ep[0] && ep[0].body.payer, 關了: q("#exp-edit-overlay").hidden && q("#flight-overlay").hidden };
+    ok("在記一筆按「全部存起來」:交通、花費各存一筆;照片只傳一次、兩邊帶同一個編號;都關", out.存了.交通 === 1 && out.存了.花費 === 1 && out.存了.上傳 === 1 &&
       out.存了.交通照片 && out.存了.交通照片 === out.存了.花費照片 && out.存了.關了, out.存了);
 
-    /* 2. 取消 = 後面不要了 */
-    var ex1 = calls(/resource=expenses/, "POST").length;
+    /* 2. 取消 = 整批不要 */
+    var ex1 = calls(/resource=expenses/, "POST").length, fl1 = calls(/resource=flights/, "POST").length;
     await ask(TICKET, false);
     q("#fl-cancel").click(); await wait(500);
-    ok("第一張按取消 → 全部關掉,記一筆不會跳出來", q("#flight-overlay").hidden && q("#exp-edit-overlay").hidden && calls(/resource=expenses/, "POST").length === ex1, "");
+    ok("按取消 → 全部關掉,什麼都沒存", q("#flight-overlay").hidden && q("#exp-edit-overlay").hidden && calls(/resource=expenses/, "POST").length === ex1 && calls(/resource=flights/, "POST").length === fl1, "");
 
-    /* 3. 跳過 = 直接下一份(沒存交通 → 沒有座位 → 全員) */
+    /* 3. 「不要這筆」拿掉交通 → 剩記一筆(交通沒存、草稿也沒看過座位 → AI 讀到的座位還是算:佳瑜) */
     await ask(TICKET, false);
     q("#fl-skip").click(); await wait(300);
-    out.跳過 = { 記一筆開了: !q("#exp-edit-overlay").hidden, 計數: nOf("exp-edit-form"), 誰分攤: who().length };
-    ok("第一張按跳過 → 直接到記一筆 2 / 2;交通沒存所以誰分攤是全員", q("#flight-overlay").hidden && out.跳過.記一筆開了 && out.跳過.計數 === "2 / 2" && out.跳過.誰分攤 === 5, out.跳過);
+    out.拿掉 = { 記一筆開了: !q("#exp-edit-overlay").hidden, 交通關了: q("#flight-overlay").hidden, 編號: tabs("exp-edit-form") };
+    ok("交通按「不要這筆」→ 換到記一筆、只剩一個編號", out.拿掉.記一筆開了 && out.拿掉.交通關了 && out.拿掉.編號.join() === "1", out.拿掉);   /* 只剩一種就不寫種類 */
     q("#xe-cancel").click(); await wait(100);
 
     /* 4. 行程 + 花費(門票訂位) */
     var STOP = { title: "teamLab Planets", day: "2026-10-05", time: "10:00", note: "", amount: 0, currency: "", date: "", category: "" };
     var EXP2 = { title: "teamLab 門票", day: "", time: "", note: "", amount: 3800, currency: "JPY", date: "2026-10-05", category: "景點" };
     await ask(Object.assign({}, base, { intent: "stop", items: [STOP], parts: [{ intent: "stop", legs: [], items: [STOP] }, { intent: "expense", legs: [], items: [EXP2] }] }), false);
-    out.門票 = { 確認卡: !q("#ai-overlay").hidden && !q("#ai-confirm").hidden, 種類: q("#ai-kind").value, 計數: nOf("ai-confirm"), 名稱: q("#ai-title").value, 時間: q("#ai-time").value };
-    ok("行程 + 花費:第一張是行程確認卡 1 / 2", out.門票.確認卡 && out.門票.種類 === "stop" && out.門票.計數 === "1 / 2" && out.門票.名稱 === "teamLab Planets" && out.門票.時間 === "10:00", out.門票);
-    q("#ai-confirm").requestSubmit(); await wait(800);
-    out.門票2 = { 記一筆開了: !q("#exp-edit-overlay").hidden, 計數: nOf("exp-edit-form"), 金額: q("#xe-amount").value, 誰分攤: who().length };
-    ok("存了行程 → 記一筆 2 / 2、¥3800、全員(沒有座位)", out.門票2.記一筆開了 && out.門票2.計數 === "2 / 2" && out.門票2.金額 === "3800" && out.門票2.誰分攤 === 5, out.門票2);
+    out.門票 = { 確認卡: !q("#ai-overlay").hidden && !q("#ai-confirm").hidden, 種類: q("#ai-kind").value, 計數: nOf("ai-confirm"), 名稱: q("#ai-title").value, 時間: q("#ai-time").value, 編號: tabs("ai-confirm") };
+    ok("行程 + 花費:先開行程確認卡 1 / 2、編號「1 行程」「2 花費」", out.門票.確認卡 && out.門票.種類 === "stop" && out.門票.計數 === "1 / 2" && out.門票.名稱 === "teamLab Planets" &&
+      out.門票.時間 === "10:00" && out.門票.編號.join() === "1 行程,2 花費", out.門票);
+    await tab("ai-confirm", 1);
+    out.門票2 = { 記一筆開了: !q("#exp-edit-overlay").hidden, 確認卡關了: q("#ai-overlay").hidden, 計數: nOf("exp-edit-form"), 金額: q("#xe-amount").value, 誰分攤: who().length };
+    ok("點「2 花費」→ 記一筆 2 / 2、¥3800、全員(沒有座位)", out.門票2.記一筆開了 && out.門票2.確認卡關了 && out.門票2.計數 === "2 / 2" && out.門票2.金額 === "3800" && out.門票2.誰分攤 === 5, out.門票2);
     q("#xe-cancel").click(); await wait(100);
 
     /* 5. 只有一種資料:照舊,不疊 */

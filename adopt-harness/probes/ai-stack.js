@@ -1,5 +1,6 @@
 /* AI 一次讀到好幾段交通:卡片疊起來(2026-10-02,Lulu)。
- * 最多畫三張(前面一張 + 後面兩張),右上角寫「第幾 / 共幾」;存了這張才往左滑走、後面那張推上來;最後一張存了才關。
+ * 最多畫三張(前面一張 + 後面兩張),右上角寫「第幾 / 共幾」。
+ * 2026-10-12 起是「一批」:不再存一張滑走一張 —— 點上面編號換筆(疊的張數照「後面還有幾筆」畫),最後「全部存起來」一次存、關掉。
  *   WIDTH=390 ./probe.sh probes/ai-stack.js */
 var q = s => d.querySelector(s), wait = ms => new Promise(r => w.setTimeout(r, ms));
 var vis = id => !q("#" + id).hidden;
@@ -24,24 +25,23 @@ return (async function () {
   out.大小 = { 前: Math.round(rf.width), 後一: Math.round(r1.width), 後二: Math.round(r2.width), 前底: Math.round(rf.bottom), 後一底: Math.round(r1.bottom), 後二底: Math.round(r2.bottom) };
   ok("好幾段:卡片一律螢幕 60% 高", Math.abs(rf.height - w.innerHeight * 0.6) <= 2, { 高: Math.round(rf.height), 六成: Math.round(w.innerHeight * 0.6) });
   ok("景深:越後面越窄、底邊越往下露出來", rf.width > r1.width && r1.width > r2.width && r1.bottom > rf.bottom && r2.bottom > r1.bottom, out.大小);
-  q("#flight-form").requestSubmit(); await wait(120);
-  out.滑 = { 往左: q("#flight-form").classList.contains("slide-out"), 推上來: q("#fl-stack").classList.contains("advance") };
-  ok("存了 → 這張往左滑走、後面那張推上來", out.滑.往左 && out.滑.推上來, out.滑);
-  await wait(450);
+  var tab = async i => { d.querySelectorAll("#flight-form .batch-tabs input")[i].click(); await wait(120); };
+  await tab(1);
   out.第2 = st();
-  ok("滑完:換第 2 段,「2 / 5」,這張回到中間(不是停在左邊)", out.第2.數 === "2 / 5" && out.第2.從 === "大島" && !q("#flight-form").classList.contains("slide-out") && out.第2.後二, out.第2);
-  q("#fl-skip").click(); await wait(100);
-  ok("跳過不滑:直接換第 3 段", q("#fl-stack-n").textContent === "3 / 5" && !q("#flight-form").classList.contains("slide-out"), st());
-  q("#flight-form").requestSubmit(); await wait(600);
-  out.第4 = st(); out.第4.錯 = q("#fl-err").textContent; out.第4.滑中 = q("#flight-form").classList.contains("slide-out");
-  ok("剩兩段(4 / 5):後面只剩一張", out.第4.數 === "4 / 5" && out.第4.後一 && !out.第4.後二, out.第4);
-  q("#flight-form").requestSubmit(); await wait(600);
+  ok("點 2:換第 2 段,「2 / 5」,這張在中間(不滑走)", out.第2.數 === "2 / 5" && out.第2.從 === "大島" && !q("#flight-form").classList.contains("slide-out") && out.第2.後二, out.第2);
+  await tab(3);
+  out.第4 = st();
+  ok("點 4(4 / 5):後面照樣疊兩張(一疊會循環的牌,2026-10-12)", out.第4.數 === "4 / 5" && out.第4.後一 && out.第4.後二, out.第4);
+  await tab(4);
   out.第5 = st();
-  ok("最後一段(5 / 5):後面沒有卡了", out.第5.數 === "5 / 5" && !out.第5.後一 && !out.第5.後二, out.第5);
-  q("#flight-form").requestSubmit(); await wait(600);
-  ok("最後一張存了 → 關掉", !vis("flight-overlay"), st());
+  ok("點 5(5 / 5):後面照樣疊兩張", out.第5.數 === "5 / 5" && out.第5.後一 && out.第5.後二, out.第5);
+  await tab(2);
+  q("#fl-skip").click(); await wait(120);
+  ok("第 3 段「不要這筆」→ 剩 4 筆", q("#fl-stack-n").textContent.trim().endsWith("/ 4"), st());
+  q("#flight-form").requestSubmit(); await wait(1500);
+  ok("全部存起來 → 關掉", !vis("flight-overlay"), st());
   var ships = (w.__rows.flights || []).filter(f => f.kind === "船").length;
-  ok("存了 4 段(跳過的那一段沒存)", ships === 4, ships);
+  ok("存了 4 段(不要的那一段沒存)", ships === 4, ships);
   q("[data-flight-add]") && (q("#tab-fly").click(), await wait(60), q("#fly-add").click(), await wait(100));
   ok("自己按「加一段交通」:不疊卡片、不寫幾分之幾", !vis("fl-g1") && !vis("fl-stack-n"), st());
   out.結論 = bad.length ? "✗ " + bad.join(" ;; ") : "全部通過"; out.errors = w.__errors || [];

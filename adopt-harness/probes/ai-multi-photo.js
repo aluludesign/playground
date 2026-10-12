@@ -35,18 +35,32 @@ return (async function () {
   var A = await file("a.jpg", 2400, 1800, "#fff"), B = await file("b.jpg", 1800, 2400, "#eee"), C = await file("c.jpg", 2000, 1500, "#ddd"), D = await file("d.jpg", 800, 600, "#ccc");
 
   q("#ai-btn").click(); await wait(120);
-  ok("選圖那一格可以一次選好幾張(multiple)", q("#ai-file").multiple, "");
+  ok("選圖那一格可以一次選好幾張(multiple)、按鈕先講「最多 3 張」", q("#ai-file").multiple && /最多 3 張/.test(txt("#ai-pick")), txt("#ai-pick"));
   await give([A, B]);
   out.兩張 = { 縮圖: thumbs(), 說: txt("#ai-img-name") };
   ok("選兩張 → 兩個小縮圖、講「已加入 2 張(最多 3 張)」", out.兩張.縮圖 === 2 && out.兩張.說 === "已加入 2 張(最多 3 張)", out.兩張);
+  /* 再選兩張(加起來 4 張)→ 系統相簿限制不了張數,回到 App 挑:勾滿 3 張其他的變灰,取消勾一張才能改勾別的(2026-10-12,Lulu) */
   await give([C, D]);
-  out.超過 = { 縮圖: thumbs(), 說: txt("#ai-img-name"), 選圖鈕停用: q("#ai-pick").disabled };
-  ok("再選兩張 → 只放得進 1 張(滿 3 張)、講多的沒放進來、選圖鈕停用", out.超過.縮圖 === 3 && /多的那 1 張沒放進來/.test(out.超過.說) && out.超過.選圖鈕停用, out.超過);
+  var tiles = () => qa("#pk-grid [data-pk]");
+  out.挑 = { 開著: !q("#pick-overlay").hidden, 張數: tiles().length, 勾: tiles().map(b => b.checked), 灰: tiles().map(b => b.disabled), 說: txt("#pk-say"), 縮圖還是: thumbs() };
+  ok("加起來 4 張 → 跳出挑選:4 張、前 3 張勾著、第 4 張變灰、講「已勾 3 / 3」", out.挑.開著 && out.挑.張數 === 4 && out.挑.勾.join() === "true,true,true,false" &&
+    out.挑.灰.join() === "false,false,false,true" && /已勾 3 \/ 3/.test(out.挑.說) && out.挑.縮圖還是 === 2, out.挑);
+  tiles()[1].click(); await wait(50);
+  ok("取消勾第 2 張 → 第 4 張可以勾了", !tiles()[3].disabled && /已勾 2 \/ 3/.test(txt("#pk-say")), txt("#pk-say"));
+  tiles()[3].click(); await wait(50);
+  ok("勾第 4 張 → 又滿 3 張,第 2 張變灰", tiles()[1].disabled && tiles()[3].checked, tiles().map(b => b.disabled));
+  q("#pick-form").requestSubmit(); await wait(80);
+  out.挑完 = { 關了: q("#pick-overlay").hidden, 縮圖: thumbs(), 說: txt("#ai-img-name"), 選圖鈕停用: q("#ai-pick").disabled };
+  ok("用這幾張 → 3 個縮圖(A、C、D)、選圖鈕停用", out.挑完.關了 && out.挑完.縮圖 === 3 && out.挑完.說 === "已加入 3 張(最多 3 張)" && out.挑完.選圖鈕停用, out.挑完);
+  await give([B]);
+  ok("滿 3 張再選 → 跳挑選;按取消 → 照舊 3 張", !q("#pick-overlay").hidden && tiles().length === 4, tiles().length);
+  q("#pk-cancel").click(); await wait(60);
+  ok("取消後還是原本那 3 張", q("#pick-overlay").hidden && thumbs() === 3, thumbs());
   q('#ai-imgs [data-ai-rm="1"]').click(); await wait(60);
   out.拿掉 = { 縮圖: thumbs(), 說: txt("#ai-img-name"), 選圖鈕停用: q("#ai-pick").disabled };
   ok("按 ✕ 拿掉一張 → 剩 2 張、選圖鈕又能按", out.拿掉.縮圖 === 2 && out.拿掉.說 === "已加入 2 張(最多 3 張)" && !out.拿掉.選圖鈕停用, out.拿掉);
   await give([B]);
-  ok("再補一張 → 3 張", thumbs() === 3, thumbs());
+  ok("再補一張 → 3 張(沒超過就不跳挑選)", thumbs() === 3 && q("#pick-overlay").hidden, thumbs());
 
   /* 送出:3 張、各自縮到 1200,AI 只問一次;回兩筆:第一筆來自圖 1、2(同一張收據拍兩段),第二筆來自圖 3 */
   var up0 = w.__photoUploads || 0, ex0 = calls(/resource=expenses/, "POST").length;
@@ -61,8 +75,7 @@ return (async function () {
   ok("送出:3 張一起、只問 AI 一次、不再送單張的 image 欄", out.送出.AI次數 === 1 && out.送出.張數 === 3 && !out.送出.舊欄位, out.送出);
   ok("好幾張時縮到長邊 1200px,加起來壓在 4MB 以下", out.第一張尺寸 && Math.max(out.第一張尺寸[0], out.第一張尺寸[1]) === 1200 && out.總長度 < 4000000, { 尺寸: out.第一張尺寸, 總長度: out.總長度 });
   ok("讀到帳 → 三張各傳一次", (w.__photoUploads || 0) - up0 === 3, (w.__photoUploads || 0) - up0);
-  q("#exp-edit-form").requestSubmit(); await wait(700);
-  q("#exp-edit-form").requestSubmit(); await wait(700);
+  q("#exp-edit-form").requestSubmit(); await wait(1200);   /* 一批:一次存兩筆 */
   var ep = calls(/resource=expenses/, "POST").slice(ex0).map(c => c.body.photos || []);
   out.各掛幾張 = ep.map(x => x.length);
   ok("每一筆只掛自己的:HANDS 帶圖 1、2 的編號,一蘭帶圖 3 的", ep.length === 2 && ep[0].length === 2 && ep[1].length === 1 && ep[0].indexOf(ep[1][0]) < 0, ep);

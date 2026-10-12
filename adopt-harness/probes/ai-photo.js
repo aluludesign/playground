@@ -40,15 +40,14 @@ return (async function () {
   await ask({ intent: "expense", items: items.map(x => Object.assign({}, base, x)), title: "收據第一筆", amount: 2980 }, true);
   out.上傳次數_讀完 = (w.__photoUploads || 0) - up0;
   ok("AI 讀到帳(有照片)→ 背景先傳一次照片", out.上傳次數_讀完 === 1, out.上傳次數_讀完);
-  q("#exp-edit-form").requestSubmit(); await wait(600);
-  q("#exp-edit-form").requestSubmit(); await wait(250);
+  /* 2026-10-12 起兩筆是「一批」:按一次「全部存起來」 */
+  q("#exp-edit-form").requestSubmit(); await wait(900);
   out.說 = txt("#sync");
-  await wait(450);
   var posts = calls(/resource=expenses/, "POST").slice(-2).map(c => (c.body.photos || [])[0] || "");
   out.兩筆帶的 = posts;
   out.上傳次數_存完 = (w.__photoUploads || 0) - up0;
   if (!fail) {
-    ok("上傳成功:存好那句不提照片", out.說 === "記下來了:收據第二筆", out.說);
+    ok("上傳成功:存好那句不提照片", out.說 === "存好了 2 筆", out.說);
     ok("兩筆都帶同一個上傳編號,照片只傳了一次", posts.length === 2 && posts[0] && posts[0] === posts[1] && out.上傳次數_存完 === 1, out);
     var rows = qa("#exp-list .exp").filter(r => /收據第一筆|收據第二筆/.test(r.textContent));
     out.縮圖 = rows.map(r => !!r.querySelector(".ph-thumb img"));
@@ -74,7 +73,7 @@ return (async function () {
       ok("點照片外面 → 收起來", q("#photo-overlay").hidden, "");
     }
   } else {
-    ok("上傳失敗:兩筆照樣記下來、不帶照片,講「照片沒存到」", posts.length === 2 && !posts[0] && !posts[1] && /記下來了:收據第二筆\(照片沒存到\)/.test(out.說) &&
+    ok("上傳失敗:兩筆照樣記下來、不帶照片,講「照片沒存到」", posts.length === 2 && !posts[0] && !posts[1] && /存好了 2 筆\(有照片沒存到\)/.test(out.說) &&
       qa("#exp-list .exp").filter(r => /收據第一筆|收據第二筆/.test(r.textContent)).length === 2, out);
   }
 
