@@ -86,11 +86,18 @@ function ok(name, cond, extra) {
   ok("每個模型都試過才放棄(換一個有機會成功)", r.seen.length === MODELS.length, { 試了: r.seen.length, 共有: MODELS.length });
 
   /* ---- 上游卡住 ---- */
-  const t0 = Date.now();
+  let t0 = Date.now();
   r = await call({ text: "想去築地市場" }, () => "hang");
   const took = Date.now() - t0;
-  ok("上游不回應 → 有等待上限,不會一直掛著", took < 40000, took + "ms");
+  ok("上游不回應 → 有等待上限,不會一直掛著(在函式的 60 秒上限之內)", took < 55000, took + "ms");
   ok("而且講的是人話", /太久沒回應/.test((r.res.body || {}).error || ""), r.res.body);
+  /* 2026-10-12(Lulu:「常說 AI 太久沒回應」):好幾張照片一趟要十幾秒 —— 15 秒才回的那一趟要等到,不能 10 秒就砍掉換人 */
+  t0 = Date.now();
+  r = await call({ text: "x" }, (n, init) => new Promise((ok2, no) => {
+    const tm = setTimeout(() => ok2(okJson(GOOD)), 15000);
+    if (init && init.signal) init.signal.addEventListener("abort", () => { clearTimeout(tm); const e = new Error("aborted"); e.name = "AbortError"; no(e); });
+  }));
+  ok("慢的那一趟(15 秒)等到它回來:成功、只問了 1 次(沒有中途砍掉換下一個模型)", r.res.code === 200 && r.seen.length === 1 && Date.now() - t0 >= 14000, { code: r.res.code, 問了: r.seen.length, 花了: Date.now() - t0 });
 
   /* ---- 上游說「太忙」 ----
      **這一段是被線上一句真的錯誤訊息逼出來的**(2026-09-24):
@@ -129,8 +136,8 @@ function ok(name, cond, extra) {
   /* 模型多了之後(2026-09-30 起九個),全部都忙時不保證每個都問兩次 —— 時間到就停。
      要守的是:時間在上限內、每個模型至少問過一次、主力(第一個)有等一下再問第二次。 */
   const asked = new Set(r.seen.map(x => x.url));
-  ok("全部都忙:每個模型至少問過一次,主力等一下再問了第二次,總時間在函式的 30 秒上限之內",
-    asked.size === MODELS.length && r.seen[0].url === r.seen[1].url && took2 < 25000,
+  ok("全部都忙:每個模型至少問過一次,主力等一下再問了第二次,總時間在函式的 60 秒上限之內",
+    asked.size === MODELS.length && r.seen[0].url === r.seen[1].url && took2 < 55000,
     { 次數: r.seen.length, 問過幾個: asked.size, 共有: MODELS.length, 花了: took2 });
   ok("失敗的訊息附上 Google 的代碼(數字,不是英文原話)", /\(Google 503\)/.test(r.res.body.error) && !/high demand/.test(r.res.body.error), r.res.body.error);
 

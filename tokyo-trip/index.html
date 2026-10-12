@@ -7368,6 +7368,8 @@
     aiErr("ai-err", "");
     const go = el("ai-go");
     go.disabled = true; go.textContent = "AI 讀取中…";
+    /* 伺服器最多等 50 秒(2026-10-12 從 22 秒放寬,好幾張照片一趟要十幾秒)。超過 10 秒先講一聲,不然看起來像卡住 */
+    const slow = setTimeout(() => { if (go.disabled) go.textContent = "還在讀…照片多會久一點"; }, 10000);
     try {
       try { aiSent = aiFiles.length ? await shrinkAIFiles() : []; }
       catch (e) { throw Object.assign(new Error(e.message || "這張圖片讀不出來"), { said: true }); }
@@ -7397,6 +7399,7 @@
          只有 fetch 自己丟的(真的連不上)才換成這一句。 */
       aiErr("ai-err", e.said ? e.message : "連不上 AI,檢查一下網路");
     } finally {
+      clearTimeout(slow);
       go.disabled = false; go.textContent = "交給 AI";
     }
   });
