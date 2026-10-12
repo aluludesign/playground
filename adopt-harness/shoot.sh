@@ -451,6 +451,11 @@ shot 24-confirm-mobile    390  900 "d.getElementById('tab-cost').click(); [].fin
 shot 25-confirm-desktop  1440  900 "d.getElementById('tab-cost').click(); [].find.call(d.querySelectorAll('[data-del-exp]'),function(b){return b.textContent.trim()==='刪除'}).click();" \
                                   "#confirm-overlay:not([hidden]) #cf-ok:1+,#confirm-overlay:not([hidden]) #cf-cancel:1+"
 
+# AI 對話框(2026-10-12,Lulu):打字、兩張縮圖、拍照選圖都在「想做什麼」同一個框裡,拍照選圖在最底下。
+# 斷言不數縮圖:斷言那一輪的 toBlob 在 --dump-dom 的虛擬時間裡來不及(截圖那一輪有);縮圖由 probes/ai-composer.js 驗
+shot 26-ai-composer       390  900 "(async function(){d.getElementById('ai-btn').click();var mk=function(c){var cv=d.createElement('canvas');cv.width=300;cv.height=200;var g=cv.getContext('2d');g.fillStyle=c;g.fillRect(0,0,300,200);return new Promise(function(r){cv.toBlob(function(b){r(new w.File([b],'a.jpg',{type:'image/jpeg'}))},'image/jpeg',.9)})};var dt=new w.DataTransfer();dt.items.add(await mk('#c9a07a'));dt.items.add(await mk('#7a9bc9'));var i=d.getElementById('ai-file');i.files=dt.files;i.dispatchEvent(new Event('change',{bubbles:true}));d.getElementById('ai-text').value='收據和車票';})();" \
+                                  "#ai-overlay:not([hidden]) #ai-box #ai-pick:1+,#ai-box #ai-text:1+" "/index.html?touch=1"
+
 kill $SRV 2>/dev/null || true
 rm -rf "$H/.work"
 echo "→ $OUT"

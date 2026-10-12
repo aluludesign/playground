@@ -1082,7 +1082,6 @@
     /* AI 按鈕。用 id 不用 class:走鐘防護只掃 class。
        margin-left:auto 把它和選單一起推到右邊,倒數留在標題旁。 */
     #ai-btn{margin-left:auto; flex:0 0 auto; height:38px;}
-    #ai-img-row{display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
     .ai-imgs{display:flex; gap:8px; flex-wrap:wrap;}
     .ai-imgs .ai-im{position:relative; width:56px; height:56px; border-radius:8px; overflow:hidden; border:var(--ds-sys-shared-border-xs) solid var(--line); background:var(--surface);}
     .ai-imgs .ai-im img{width:100%; height:100%; object-fit:cover; display:block;}
@@ -1459,6 +1458,19 @@
     .fld:has(.rm-input:focus) > .rm-label{color:var(--ds-sys-shared-color-primary);}
     .fld:has(.rm-input[aria-invalid="true"]) > .rm-label{color:var(--ds-sys-shared-color-error);}
     .fld:has(.rm-input:disabled) > .rm-label{color:color-mix(in srgb, var(--ds-sys-shared-color-on-surface) 38%, transparent);}
+    /* AI 對話框:打字、照片、拍照選圖同一個框(2026-10-12,Lulu)。框線畫在 .ai-box,跟上面 .rm-input 同一套
+       (1px 外框、滑過變深、打字時主色＋內陰影補到 3px);裡面的 textarea 不畫框、不能拉大小(框整個一起長)。
+       浮動標題看的還是 .fld 裡的 .rm-input,所以照樣浮在 .ai-box 的框線上,底色(notch)也一樣 */
+    .ai-box{border:var(--ds-sys-shared-border-xs) solid var(--ds-sys-shared-color-outline); border-radius:var(--ds-comp-field-radius);
+      background:var(--ds-sys-shared-color-surf-container-lowest); transition:border-color .15s, box-shadow .15s; cursor:text;}
+    .ai-box:hover{border-color:var(--ds-sys-shared-color-on-surface);}
+    .ai-box:has(> .rm-input:focus){border-color:var(--ds-sys-shared-color-primary);
+      box-shadow:inset 0 0 0 calc(var(--ds-comp-field-focus-outline-width) - var(--ds-sys-shared-border-xs)) var(--ds-sys-shared-color-primary);}
+    .ai-box > .rm-input,.ai-box > .rm-input:hover,.ai-box > .rm-input:focus,.ai-box > .rm-input:focus-visible{display:block; width:100%;
+      min-height:160px; border:0; box-shadow:none; background:transparent; resize:none;}
+    .ai-box > .ai-imgs{padding:0 var(--ds-sys-shared-spacing-2xl);}
+    .ai-box > .ai-tools{display:flex; align-items:center; gap:var(--ds-sys-shared-spacing-md); flex-wrap:wrap; cursor:default;
+      padding:var(--ds-sys-shared-spacing-xl) var(--ds-sys-shared-spacing-2xl) var(--ds-sys-shared-spacing-2xl);}
     /* Dropdown：原生箭頭換成 Figma 的 arrow_drop_down（形狀用 mask，顏色吃變數）；對焦＝選單打開，箭頭朝上 */
     .fld select.rm-input{appearance:none; -webkit-appearance:none; padding-right:calc(var(--ds-sys-shared-spacing-2xl) * 2 + var(--ds-comp-field-icon));}
     .fld:has(> select.rm-input)::after,.fld:has(> .seek select.rm-input)::after{content:""; position:absolute; right:var(--ds-sys-shared-spacing-2xl); top:calc(var(--ds-comp-field-height) / 2);
@@ -1969,21 +1981,26 @@
     <h2>AI 幫你加</h2>
     <!-- 你今天還能用幾次(見 api/_usage.js)。外層不掛 class:裡面那個 .note 是 display:flex,掛在同一層會蓋掉 [hidden] -->
     <div id="ai-quota" hidden></div>
+    <!-- **打字、照片、拍照選圖都在同一個框裡**(2026-10-12,Lulu:「拍照、選圖移到想做什麼的框內(放最底下),讀進來的照片也一起移進去,框可以大一點」)。
+         框線畫在 .ai-box 上(長得跟 .rm-input 一樣,打字時一樣變色加粗),裡面的 textarea 拿掉自己的框;
+         浮動標題還是看 .fld 裡的 .rm-input,所以標題照樣浮在 .ai-box 的框線上 -->
     <div class="fld"><label class="rm-label" for="ai-text" id="ai-ask-label">想做什麼</label>
-      <textarea class="rm-input" id="ai-text" rows="3" placeholder="例:這家想去許願／加到第 3 天晚上 7 點／這張是車票或訂位確認"></textarea></div>
+      <div class="ai-box" id="ai-box">
+        <textarea class="rm-input" id="ai-text" rows="5" placeholder="例:這家想去許願／加到第 3 天晚上 7 點／這張是車票或訂位確認"></textarea>
+        <!-- 一次最多 3 張(2026-10-12 定案):選好的排成一排小縮圖,每張可以拿掉 -->
+        <div class="ai-imgs" id="ai-imgs" hidden></div>
+        <div class="ai-tools" id="ai-img-row">
+          <!-- 拍照:手機、平板才有(觸控螢幕)。capture 叫系統直接開相機,不先問要從哪裡選 -->
+          <button type="button" class="btn btn-sm" id="ai-shoot" hidden>📷 拍照</button>
+          <input type="file" accept="image/*" capture="environment" id="ai-cam" hidden>
+          <button type="button" class="btn btn-sm" id="ai-pick">🖼️ 選圖(最多 3 張)</button>
+          <input type="file" accept="image/*" id="ai-file" multiple hidden>
+          <span id="ai-img-name"></span>
+        </div>
+      </div></div>
     <!-- 省次數的提醒(2026-10-02,Lulu):AI 一次讀到好幾筆會疊成卡片一張一張確認,而次數是「按一次交給 AI」算一次 -->
     <!-- 2026-10-05:一張收據記成一筆(合計,品項寫在備註),不再暗示「收據裡有好幾筆」會拆開;要分開就叫它分開 -->
     <p class="ai-tip" id="ai-tip">💡 一次把好幾筆寫在一起(例:「想去淺草寺、晴空塔、上野公園」),或一張截圖裡有好幾個地方,<b>只算 1 次 AI</b>。一張收據會記成一筆(合計),要分開記就打「分開記」。</p>
-    <div class="fld" id="ai-img-row">
-      <!-- 拍照:手機、平板才有(觸控螢幕)。capture 叫系統直接開相機,不先問要從哪裡選 -->
-      <button type="button" class="btn btn-sm" id="ai-shoot" hidden>📷 拍照</button>
-      <input type="file" accept="image/*" capture="environment" id="ai-cam" hidden>
-      <button type="button" class="btn btn-sm" id="ai-pick">🖼️ 選圖(最多 3 張)</button>
-      <input type="file" accept="image/*" id="ai-file" multiple hidden>
-      <span id="ai-img-name"></span>
-    </div>
-    <!-- 一次最多 3 張(2026-10-12 定案):選好的排成一排小縮圖,每張可以拿掉 -->
-    <div class="ai-imgs" id="ai-imgs" hidden></div>
     <div class="err" id="ai-err" hidden></div>
     <div class="ops">
       <button type="submit" class="btn btn-main" id="ai-go">交給 AI</button>
@@ -7260,6 +7277,8 @@
   el("ai-shoot").hidden = !(window.matchMedia && window.matchMedia("(pointer: coarse)").matches);
   el("ai-shoot").addEventListener("click", () => el("ai-cam").click());
   el("ai-pick").addEventListener("click", () => el("ai-file").click());
+  /* 框裡空白的地方(縮圖、按鈕以外)點下去 → 進去打字,跟一般的輸入框一樣 */
+  el("ai-box").addEventListener("click", ev => { if (!ev.target.closest("button, input, .ai-im")) el("ai-text").focus(); });
   function paintAIFiles(extra) {
     const box = el("ai-imgs");
     box.innerHTML = aiFiles.map((x, i) => '<span class="ai-im"><img src="' + x.url + '" alt=""><button type="button" data-ai-rm="' + i + '" aria-label="拿掉這張">✕</button></span>').join("");
