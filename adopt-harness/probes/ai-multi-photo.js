@@ -113,6 +113,29 @@ return (async function () {
   var last = calls(/resource=expenses/, "POST").slice(ex1)[0];
   ok("AI 沒講來自哪幾張 → 兩張都掛", last && (last.body.photos || []).length === 2, last && last.body.photos);
 
+  /* 收據＋高鐵票一起丟(2026-10-12,Lulu:「AI 只讀了車票」):交通 1 段 + 花費 2 筆(票價、收據)= 一批 3 張;
+     交通和票價掛圖 2(車票),收據只掛圖 1 */
+  q("#ai-btn").click(); await wait(120);
+  await give([A, B]);
+  var up2 = w.__photoUploads || 0, fl2 = calls(/resource=flights/, "POST").length, ex2 = calls(/resource=expenses/, "POST").length;
+  var TLEG = { kind: "火車", no: "125", company: "台灣高鐵", from: "南港", to: "左營", depart: "2026-10-06T11:20", arrive: "2026-10-06T13:05", code: "", dir: "其他", match: "", note: "", seats: [], photos: [2] };
+  next = Object.assign({}, base, { intent: "transport", legs: [TLEG], parts: [{ intent: "transport", legs: [TLEG], items: [] }, { intent: "expense", legs: [], items: [
+    Object.assign({}, base, { title: "高鐵 南港→左營", amount: 1530, currency: "TWD", date: "2026-10-06", category: "交通", photos: [2] }),
+    Object.assign({}, base, { title: "HANDS 收據", amount: 3256, currency: "JPY", date: "2026-10-05", category: "購物", photos: [1] })] }] });
+  q("#ai-text").value = "收據和車票"; q("#ai-form").requestSubmit();
+  for (var m = 0; m < 60 && q("#flight-overlay").hidden; m++) await wait(100);
+  out.混合 = { 交通開了: !q("#flight-overlay").hidden, 編號: qa("#flight-form .batch-tabs:not([hidden]) .rm-chip").map(c => c.textContent.trim()) };
+  ok("收據＋車票 → 一批 3 張:1 交通、2 花費、3 花費", out.混合.交通開了 && out.混合.編號.length === 3 && /交通/.test(out.混合.編號[0]) && /花費/.test(out.混合.編號[2]), out.混合);
+  q("#flight-overlay [data-batch-save]").click();
+  for (var m2 = 0; m2 < 60 && calls(/resource=expenses/, "POST").length - ex2 < 2; m2++) await wait(100);
+  await wait(300);
+  var mf = calls(/resource=flights/, "POST").slice(fl2), me = calls(/resource=expenses/, "POST").slice(ex2);
+  out.混合存了 = { 交通: mf.length, 花費: me.map(c => c.body.title), 上傳: (w.__photoUploads || 0) - up2,
+    交通照片: mf[0] && mf[0].body.photos, 花費照片: me.map(c => c.body.photos) };
+  var tkt = mf[0] && (mf[0].body.photos || [])[0], rcp = me[1] && (me[1].body.photos || [])[0];
+  ok("全部存起來:交通 1 段、花費 2 筆(票價、收據);兩張各傳一次", mf.length === 1 && out.混合存了.花費.join() === "高鐵 南港→左營,HANDS 收據" && out.混合存了.上傳 === 2, out.混合存了);
+  ok("照片各掛各的:交通和票價掛車票那張、收據掛收據那張", tkt && rcp && tkt !== rcp && me[0].body.photos.join() === tkt && me[1].body.photos.length === 1, out.混合存了);
+
   out.結論 = bad.length ? "✗ " + bad.join(" ;; ") : "全部通過"; out.errors = w.__errors || [];
   return out;
 })();
