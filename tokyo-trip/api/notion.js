@@ -85,12 +85,13 @@ const richText = v => (v ? [{ type: "text", text: { content: String(v).slice(0, 
 /* **照片**(2026-10-04,Lulu):AI 讀過的收據、車票存在「花費」「交通」表的「照片」欄。
    讀:第一張的網址 —— Notion 給的網址 1 小時後就失效,重新讀一次就有新的(App 圖片載不出來會重讀)。
    寫:App 先用 resource=photo 把圖上傳,拿到上傳編號,建這一筆的時候帶 photo,這裡掛上去。 */
-const photoOut = p => {
-  const f = p && Array.isArray(p.files) && p.files[0];
-  return f ? String((f.file && f.file.url) || (f.external && f.external.url) || "") : "";
-};
+/* 一筆可以掛好幾張(2026-10-12:AI 一次最多 3 張,每一筆只掛它自己那幾張)。photo = 第一張(舊版 App 只看它),photos = 全部 */
+const photosOut = p => (p && Array.isArray(p.files) ? p.files : []).map(f => String((f.file && f.file.url) || (f.external && f.external.url) || "")).filter(Boolean);
+const photoOut = p => photosOut(p)[0] || "";
 const photoId = v => (/^[0-9a-f-]{32,36}$/i.test(String(v || "")) ? String(v) : "");
-const photoIn = id => ({ files: [{ type: "file_upload", file_upload: { id } }] });
+/* 帶 photos(陣列)或 photo(一個,舊版)都收;最多 3 張 */
+const photoIds = b => Array.from(new Set((Array.isArray(b.photos) ? b.photos : [b.photo]).map(photoId).filter(Boolean))).slice(0, 3);
+const photoIn = list => ({ files: list.map(id => ({ type: "file_upload", file_upload: { id } })) });
 
 function expenseOut(page) {
   const p = page.properties;
@@ -107,6 +108,7 @@ function expenseOut(page) {
     participants: ids(txt(p["分攤者"])),
     split: parseSplit(txt(p["分攤金額"])),
     photo: photoOut(p["照片"]),
+    photos: photosOut(p["照片"]),
     note: txt(p["備註"]),
     createdAt: page.created_time,
   };
@@ -153,7 +155,7 @@ function expenseIn(b) {
   if (b.date) props["日期"] = { date: { start: b.date } };
   if (b.category) props["分類"] = { select: { name: b.category } };
   if (b.payer !== undefined) props["付款人"] = { rich_text: richText(b.payer) };
-  if (photoId(b.photo)) props["照片"] = photoIn(photoId(b.photo));
+  if (photoIds(b).length) props["照片"] = photoIn(photoIds(b));
   /* 沒帶 split 就不動這一欄 —— 還沒更新的舊版 App 改帳時不會把別人設好的金額洗掉 */
   if (b.split !== undefined) {
     const sp = cleanSplit(b.split, b.participants);
@@ -277,6 +279,7 @@ function flightOut(page) {
     code: p["訂位代號"] ? txt(p["訂位代號"]) : "",
     drivers: p["駕駛"] ? ids(txt(p["駕駛"]).split(",")) : [],
     photo: photoOut(p["照片"]),
+    photos: photosOut(p["照片"]),
   };
 }
 function flightIn(b) {
@@ -294,7 +297,7 @@ function flightIn(b) {
   /* 不帶時區的字串照原樣存:Notion 看到沒有時區的 datetime 就當成「浮動時間」 */
   if (b.depart !== undefined) props["起飛"] = localTime(b.depart) ? { date: { start: b.depart } } : { date: null };
   if (b.arrive !== undefined) props["抵達"] = localTime(b.arrive) ? { date: { start: b.arrive } } : { date: null };
-  if (photoId(b.photo)) props["照片"] = photoIn(photoId(b.photo));
+  if (photoIds(b).length) props["照片"] = photoIn(photoIds(b));
   return props;
 }
 

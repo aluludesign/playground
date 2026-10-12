@@ -14,6 +14,16 @@
  *   4. 「誰許的願」「誰按的 +1」由伺服器認人,前端送什麼都不算數。
  */
 const path = require("path");
+/* **時鐘凍在 2026-09-20**(2026-10-12 加):下面的團寫死 10/03–10/08,日子一過那團就「結束了」,
+   改日期、加行程那幾條就開始被「團結束」擋 —— 測的東西沒變,只是日曆翻過去了。
+   相對的日子(twDay(-2) 這種)也跟著凍住的時鐘算,所以照樣對 */
+{
+  const RealDate = Date, FROZEN = new RealDate("2026-09-20T03:00:00Z").getTime();
+  global.Date = class extends RealDate {
+    constructor(...a) { super(...(a.length ? a : [FROZEN])); }
+    static now() { return FROZEN; }
+  };
+}
 const SRC = process.env.SRC || path.join(__dirname, "..", "tokyo-trip", "api", "notion.js");
 const SECRET = "test-channel-secret";
 
@@ -627,6 +637,10 @@ const memberRow = (code, sub) => rowsIn(DB.members).find(p => plain(p.properties
   ok("記帳帶 photo → 「照片」欄掛上去、回來的 row 有照片網址", r.code === 200 && /files\.notion\.test\//.test(r.body.row.photo) && !r.body.photoLost, r.body);
   r = await call(LINE_A, "POST", { resource: "expenses", t: T1 }, { title: "同一張的第二筆", amount: 800, currency: "JPY", payer: mA.id, participants: [mA.id], photo: pid });
   ok("同一張照片掛第二筆也可以(一張收據拆好幾筆)", r.code === 200 && /files\.notion\.test\//.test(r.body.row.photo), r.body.row && r.body.row.photo);
+  r = await call(LINE_A, "POST", { resource: "photo", t: T1 }, { image: JPG });
+  const pid2 = r.body && r.body.photo;
+  r = await call(LINE_A, "POST", { resource: "expenses", t: T1 }, { title: "拍成兩段的收據", amount: 3256, currency: "JPY", payer: mA.id, participants: [mA.id], photos: [pid, pid2, "壞的"] });
+  ok("一筆掛兩張(photos 陣列;壞的編號丟掉):photos 兩個網址、photo 是第一張", r.code === 200 && r.body.row.photos.length === 2 && r.body.row.photo === r.body.row.photos[0], r.body.row && r.body.row.photos);
   r = await call(LINE_A, "POST", { resource: "flights", t: T1 }, { kind: "火車", no: "のぞみ 1", dir: "其他", from: "東京", to: "新大阪", depart: "2026-10-05T08:00", photo: pid });
   ok("交通帶 photo → 也掛得上去", r.code === 200 && /files\.notion\.test\//.test(r.body.row.photo), r.body);
   r = await call(LINE_A, "POST", { resource: "expenses", t: T1 }, { title: "照片過期那筆", amount: 500, currency: "JPY", payer: mA.id, participants: [mA.id], photo: "0".repeat(8) + "-0000-0000-0000-" + "0".repeat(12) });

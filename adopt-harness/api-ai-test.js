@@ -236,6 +236,26 @@ function ok(name, cond, extra) {
   const said = JSON.stringify(sent(r.seen));
   ok("給模型的話:一張收據就是一筆、合計、品項寫 note;說要分開才拆", /一張收據就是一筆/.test(said) && /品項寫在 note/.test(said) && /分開記/.test(said) && !/一張收據要拆兩筆/.test(said), "");
 
+  /* 一次好幾張圖(2026-10-12 定案:最多 3 張,只問 Google 一次;每一筆標出來自哪幾張) */
+  const IMG = Buffer.from([0xff, 0xd8, 0xff, 0xd9]).toString("base64");
+  r = await call({ text: "x", images: [IMG, IMG, IMG, IMG], context: CTX }, () => okJson(GOOD));
+  ok("好幾張圖:超過 3 張 → 400,一次都沒問 Google", r.res.code === 400 && /最多 3 張/.test(r.res.body.error) && r.seen.length === 0, r.res.body);
+  r = await call({ text: "x", images: ["a".repeat(1_500_000), "a".repeat(1_500_000), "a".repeat(1_500_000)], context: CTX }, () => okJson(GOOD));
+  ok("好幾張圖:加起來太大 → 413,講「少放一張」,沒問 Google", r.res.code === 413 && /少放一張/.test(r.res.body.error) && r.seen.length === 0, r.res.body);
+  const TWO = JSON.stringify({ intent: "expense", title: "", day: 0, time: "", note: "", amount: 0, currency: "unknown", date: "", category: "其他", legs: [], parts: [], message: "",
+    items: [{ title: "HANDS", day: 0, time: "", note: "", amount: 3256, currency: "JPY", date: "2026-10-05", category: "購物", photos: [2, 1, 1, 7, 0] },
+            { title: "一蘭", day: 0, time: "", note: "", amount: 2980, currency: "JPY", date: "2026-10-05", category: "餐飲", photos: [] }] });
+  r = await call({ text: "這兩張", images: [IMG, IMG], context: CTX }, () => okJson(TWO));
+  const gm = sent(r.seen), gp = (gm.contents && gm.contents[0] && gm.contents[0].parts) || [];
+  ok("兩張圖:只問 Google 一次,兩張都送、各標「圖 1」「圖 2」", r.seen.length === 1 && gp.filter(x => x.inline_data).length === 2 &&
+    gp.some(x => x.text === "圖 1:") && gp.some(x => x.text === "圖 2:"), gp.map(x => x.text || "[img]"));
+  const its = r.res.body.result.items;
+  ok("每一筆來自哪幾張:只收真的有的號碼、去重、照順序;沒寫就空的", JSON.stringify(its[0].photos) === "[1,2]" && JSON.stringify(its[1].photos) === "[]", its.map(x => x.photos));
+  ok("schema 裡每一筆、每一段都有 photos", !!gm.generationConfig.responseSchema.properties.items.items.properties.photos && !!gm.generationConfig.responseSchema.properties.legs.items.properties.photos, "");
+  r = await call({ text: "這張", image: IMG, context: CTX }, () => okJson(GOOD));
+  const gp1 = (sent(r.seen).contents[0].parts) || [];
+  ok("舊版 App 送一張(image)照樣接,不標「圖 1」", r.res.code === 200 && gp1.filter(x => x.inline_data).length === 1 && !gp1.some(x => /^圖 \d/.test(x.text || "")), gp1.map(x => x.text || "[img]"));
+
   console.log(fails ? "\n✗ " + fails + " 項沒過" : "\n全部通過");
   process.exit(fails ? 1 : 0);
 })();

@@ -44,7 +44,7 @@ return (async function () {
   q("#exp-edit-form").requestSubmit(); await wait(250);
   out.說 = txt("#sync");
   await wait(450);
-  var posts = calls(/resource=expenses/, "POST").slice(-2).map(c => c.body.photo || "");
+  var posts = calls(/resource=expenses/, "POST").slice(-2).map(c => (c.body.photos || [])[0] || "");
   out.兩筆帶的 = posts;
   out.上傳次數_存完 = (w.__photoUploads || 0) - up0;
   if (!fail) {
@@ -85,13 +85,13 @@ return (async function () {
     q("#xe-title").value = "手動的那筆"; q("#xe-amount").value = "300";
     q("#exp-edit-form").requestSubmit(); await wait(500);
     var man = calls(/resource=expenses/, "POST").slice(-1)[0];
-    ok("手動記一筆:不傳照片、不帶 photo", (w.__photoUploads || 0) === upA && man && !man.body.photo && man.body.title === "手動的那筆", man && man.body);
+    ok("手動記一筆:不傳照片、不帶 photo", (w.__photoUploads || 0) === upA && man && !man.body.photos && man.body.title === "手動的那筆", man && man.body);
 
     /* 3. AI 只打字(沒照片)讀到帳:不傳 */
     await ask({ intent: "expense", items: [Object.assign({}, base, { title: "便利商店", amount: 600, currency: "JPY", date: "2026-10-05", category: "餐飲" })], title: "便利商店", amount: 600 }, false);
     q("#exp-edit-form").requestSubmit(); await wait(500);
     var txtOnly = calls(/resource=expenses/, "POST").slice(-1)[0];
-    ok("AI 沒放照片:不傳、不帶 photo", (w.__photoUploads || 0) === upA && txtOnly && !txtOnly.body.photo && txtOnly.body.title === "便利商店", txtOnly && txtOnly.body);
+    ok("AI 沒放照片:不傳、不帶 photo", (w.__photoUploads || 0) === upA && txtOnly && !txtOnly.body.photos && txtOnly.body.title === "便利商店", txtOnly && txtOnly.body);
 
     /* 4. 車票 → 交通 */
     var upB = w.__photoUploads || 0;
@@ -99,7 +99,7 @@ return (async function () {
     ok("AI 讀到交通(有照片)→ 傳一次", (w.__photoUploads || 0) - upB === 1, (w.__photoUploads || 0) - upB);
     q("#flight-form").requestSubmit(); await wait(700);
     var fpost = calls(/resource=flights/, "POST").slice(-1)[0];
-    ok("存那一段交通:帶 photo", fpost && /^f0000000/.test(fpost.body.photo || ""), fpost && fpost.body);
+    ok("存那一段交通:帶 photo", fpost && /^f0000000/.test((fpost.body.photos || [])[0] || ""), fpost && fpost.body);
     q("#tab-fly").click(); await wait(200);
     var card = qa(".tleg").find(c => /のぞみ/.test(c.textContent));
     ok("交通卡上有小縮圖,點了放大", !!(card && card.querySelector(".ph-thumb img")), card && card.innerHTML.slice(0, 200));
@@ -110,7 +110,7 @@ return (async function () {
     if (pen) {
       pen.click(); await wait(150); q("#flight-form").requestSubmit(); await wait(600);
       var fpatch = calls(/resource=flights/, "PATCH").slice(-1)[0];
-      ok("自己改這一段:不帶 photo(不會把照片換掉)", fpatch && !fpatch.body.photo, fpatch && fpatch.body);
+      ok("自己改這一段:不帶 photo(不會把照片換掉)", fpatch && !fpatch.body.photos, fpatch && fpatch.body);
     }
   }
   out.結論 = bad.length ? "✗ " + bad.join(" ;; ") : "全部通過"; out.errors = w.__errors || [];
