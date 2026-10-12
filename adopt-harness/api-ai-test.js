@@ -259,6 +259,15 @@ function ok(name, cond, extra) {
   r = await call({ text: "x", context: CTX }, () => okJson(GOOD));
   ok("回應的格式有 parts(schema 裡要有它,模型才會填)", !!sent(r.seen).generationConfig.responseSchema.properties.parts && Array.isArray(r.res.body.result.parts), "");
 
+  /* 通票(2026-10-12,Lulu 拿青春18きっぷ問):kind 通票、depart/arrive 只留日期;其他種類只有日期就不收 */
+  const PASS = { kind: "通票", no: "青春18きっぷ", company: "JR", depart: "2026-03-20T00:00", from: "", arrive: "2026-03-22", to: "", code: "", dir: "unknown", match: "none", note: "JR 全線普通・快速", seats: [], photos: [1] };
+  r = await call({ text: "x", context: CTX }, () => okJson(JSON.stringify({ intent: "transport", legs: [PASS, Object.assign({}, LEG1, { depart: "2026-11-02", arrive: "" })], items: [], parts: [], message: "" })));
+  const passLegs = r.res.body.result.legs;
+  ok("通票:種類留著、第一天/最後一天只留日期(模型多給了時間也砍掉)", passLegs[0].kind === "通票" && passLegs[0].no === "青春18きっぷ" && passLegs[0].depart === "2026-03-20" && passLegs[0].arrive === "2026-03-22", passLegs[0]);
+  ok("火車只有日期沒有時間 → 不收(要日期＋時間)", passLegs[1].kind === "火車" && passLegs[1].depart === "", passLegs[1]);
+  const said3 = JSON.stringify(sent(r.seen));
+  ok("給模型的話和格式:有通票這一種、只要日期、價錢另外一份花費", /\*\*通票\*\*/.test(said3) && /青春18きっぷ/.test(said3) && /只要日期 YYYY-MM-DD/.test(said3) &&
+    JSON.stringify(sent(r.seen).generationConfig.responseSchema.properties.legs.items.properties.kind.enum).indexOf("通票") >= 0, "");
   /* 一張收據是一筆(2026-10-05,Lulu 拿 HANDS 的收據問「為什麼拆成兩筆」):要寫在給模型的話裡,「一張收據要拆兩筆」那個例子不能再出現 */
   r = await call({ text: "這張收據", context: CTX }, () => okJson(GOOD));
   const said = JSON.stringify(sent(r.seen));

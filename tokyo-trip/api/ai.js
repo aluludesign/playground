@@ -55,7 +55,8 @@ const nap = ms => new Promise(r => setTimeout(r, ms));
 /* **這一團的事實由前端帶來**(日期、成員、已經有的交通)。以前這裡寫死東京五人行的
    六天、五個人、兩班樂桃 —— 第 2 期一團一個網址之後,別團用 AI 時「第 3 天」和座位上的人
    全部對錯(2026-09-28 串交通時發現)。前端送什麼都不直接信:格式、數量在 tripCtx 再過一次。 */
-const KINDS = ["飛機", "火車", "巴士", "船", "租車"];
+/* 通票(2026-10-12,Lulu):青春18きっぷ、JR Pass 這種幾天內隨便搭的票 —— 沒有班次和起訖站,depart/arrive 只有日期 */
+const KINDS = ["飛機", "火車", "巴士", "船", "租車", "通票"];
 const DIRS = ["去程", "回程", "其他"];
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 const ISO_MIN = /^\d{4}-\d{2}-\d{2}T([01]\d|2[0-3]):[0-5]\d$/;
@@ -82,11 +83,11 @@ const LEG = {
   type: "OBJECT",
   properties: {
     kind:    { type: "STRING", enum: KINDS.concat(["unknown"]), description: "哪一種交通;看不出來就 unknown" },
-    no:      { type: "STRING", description: "航班號/車次/班次,照票上寫的(例如 MM626、のぞみ 21號);租車或看不到就空字串" },
+    no:      { type: "STRING", description: "航班號/車次/班次,照票上寫的(例如 MM626、のぞみ 21號);通票寫票名(例如 青春18きっぷ、JR Pass 全國版 7 日);租車或看不到就空字串" },
     company: { type: "STRING", description: "航空公司、鐵路公司、客運、船公司或租車公司" },
-    depart:  { type: "STRING", description: "出發(租車是取車)的當地日期時間 YYYY-MM-DDTHH:MM;日期或時間看不到就空字串" },
+    depart:  { type: "STRING", description: "出發(租車是取車)的當地日期時間 YYYY-MM-DDTHH:MM;通票寫可以用的第一天 YYYY-MM-DD(只要日期);看不到就空字串" },
     from:    { type: "STRING", description: "從哪裡(機場寫成「TPE 桃園 T1」這種三碼開頭的寫法;車站、碼頭、取車店名)" },
-    arrive:  { type: "STRING", description: "抵達(租車是還車)的當地日期時間 YYYY-MM-DDTHH:MM;看不到就空字串" },
+    arrive:  { type: "STRING", description: "抵達(租車是還車)的當地日期時間 YYYY-MM-DDTHH:MM;通票寫可以用的最後一天 YYYY-MM-DD(只要日期);看不到就空字串" },
     to:      { type: "STRING", description: "到哪裡(寫法同 from)" },
     code:    { type: "STRING", description: "訂位代號、訂單編號;沒有就空字串" },
     dir:     { type: "STRING", enum: DIRS.concat(["unknown"]), description: "去程=從家出發往目的地的第一段,回程=回家的那一段,其他=路上的一段;不確定就 unknown" },
@@ -177,6 +178,9 @@ function prompt(text, ctx) {
     "  **一張收據就是一筆**:amount 寫這張的合計(含稅、折扣後),title 寫店名(看得到就寫,例如 HANDS),買了哪些品項寫在 note(例「ナゴミハーフクッション ¥2,376、フロスペン ¥880」),不要一個品項拆一筆。",
     "  只有使用者明說要分開(「分開記」「拆成兩筆」「各算各的」),或圖裡是好幾張不同的收據、一段話講了好幾次不同的花費,才在 items 列好幾筆。",
     "  kind:航班 → 飛機;新幹線、JR、鐵路、高鐵、台鐵、地鐵特急 → 火車;高速巴士、客運 → 巴士;渡輪、船 → 船;租車 → 租車。",
+    "  **通票**:青春18きっぷ、JR Pass、各種周遊券、地鐵/巴士一日券這種「幾天內隨便搭、沒有固定班次」的票 → kind 通票:",
+    "  no 寫票名、company 寫哪一家(JR、東京地鐵…)、depart 寫可以用的第一天、arrive 寫最後一天(**只要日期 YYYY-MM-DD,不要時間**)、",
+    "  from/to 留空、note 寫可以搭什麼(例「JR 全線普通・快速列車,新幹線、特急不能搭」)。票上有價錢就跟車票一樣,parts 多一份 expense(title 寫票名,date 寫購買日)。",
     "  時間一律寫票上的當地時間,不要換時區。票上只有時間、看不出日期,就把 depart/arrive 留空。",
     "  **一次可能有好幾段**(去程和回程、轉乘的每一段、文字講一段圖片又是另一段):每一段在 legs 各列一筆。",
     "- **wish/stop/expense 也可能好幾筆**(「想去淺草寺和晴空塔」、一張截圖列了三家店、兩張收據、「晚餐 6000、計程車 2000」):每一筆在 items 各列一筆,最外層的欄位填第一筆。",
@@ -258,7 +262,9 @@ function cleanLeg(f, ctx) {
   const seats = all.filter(x => x.member);
   /* 票上有、團裡還沒有的乘客(Lulu:不記,等他加入後團主自己填)—— 只回個數,讓畫面講一聲 */
   const others = all.length - seats.length;
-  const depart = ISO_MIN.test(s(f.depart, 16)) ? s(f.depart, 16) : "";
+  /* 通票只有日期:收 YYYY-MM-DD(模型多給了時間就只留日期);其他種類要日期＋時間 */
+  const when = v => kind === "通票" ? (/^\d{4}-\d{2}-\d{2}/.test(s(v, 16)) ? s(v, 10) : "") : ISO_MIN.test(s(v, 16)) ? s(v, 16) : "";
+  const depart = when(f.depart);
   const no = s(f.no, 30);
   /* 「這一段已經有了」:模型說的 id 要真的在名單上;模型沒說,就用種類 + 班次 + 日期自己對一次 */
   let match = ctx.legs.some(l => l.id === f.match) ? f.match : "";
@@ -270,7 +276,7 @@ function cleanLeg(f, ctx) {
   return {
     kind, no, company: s(f.company, 40), depart,
     from: s(f.from, 40),
-    arrive: ISO_MIN.test(s(f.arrive, 16)) ? s(f.arrive, 16) : "",
+    arrive: when(f.arrive),
     to: s(f.to, 40),
     code: s(f.code, 30),
     dir: DIRS.indexOf(f.dir) >= 0 ? f.dir : "",

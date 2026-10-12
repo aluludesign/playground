@@ -372,6 +372,14 @@ const memberRow = (code, sub) => rowsIn(DB.members).find(p => plain(p.properties
     { kind: "租車", no: "", airline: "TOYOTA 租車", depart: "2026-10-06T09:00", drivers: [B_ID, D_ID, B_ID] });
   ok("租車:駕駛存成去重的成員代號", r.code === 200 && r.body.row.kind === "租車" &&
     JSON.stringify(r.body.row.drivers) === JSON.stringify([B_ID, D_ID]), r.body);
+  /* 通票(2026-10-12,Lulu 拿青春18きっぷ問):只有日期(第一天～最後一天)、誰有這張存在駕駛欄、沒有起訖站 */
+  /* 用有交通權限的成員 B 加:自己做的事不會出現在自己的動態裡,團主 A 才看得到 */
+  r = await call(LINE_B, "POST", { resource: "flights", t: T1 },
+    { kind: "通票", no: "青春18きっぷ", airline: "JR", depart: "2026-10-04", arrive: "2026-10-06", from: "", to: "", dir: "其他", drivers: [B_ID], note: "JR 全線普通・快速" });
+  ok("通票:種類、票名、只有日期的第一天/最後一天、誰有這張都存得下", r.code === 200 && r.body.row.kind === "通票" && r.body.row.no === "青春18きっぷ" &&
+    r.body.row.depart === "2026-10-04" && r.body.row.arrive === "2026-10-06" && JSON.stringify(r.body.row.drivers) === JSON.stringify([B_ID]), r.body);
+  const passFeed = ((await call(LINE_A, "GET", { resource: "activity", t: T1 })).body.rows || []).map(x => x.text);
+  ok("通票:團主的動態寫「加了交通:通票 青春18きっぷ 10/04」", passFeed.some(x => /加了交通:通票 青春18きっぷ 10\/04/.test(x)), passFeed.slice(0, 3));
   r = await call(LINE_A, "POST", { resource: "flights", t: T1 }, { kind: "火箭", no: "x1", depart: "2026-10-06T09:00" });
   ok("不認得的種類當飛機", r.code === 200 && r.body.row.kind === "飛機" && r.body.row.no === "X1", r.body);
 
