@@ -48,18 +48,18 @@ return (async function () {
     var n0 = (w.__rows.flights || []).length;
     q("#flight-form").requestSubmit(); await wait(400);
     ok("存了沒有多一筆", (w.__rows.flights || []).length === n0, (w.__rows.flights || []).length);
-    /* 2b. 文字講去程、圖是回程:一次兩段 → 一張一張開,存了開下一張,跳過就關 */
+    /* 2b. 文字講去程、圖是回程:一次兩段 → 一批(2026-10-12 起:上面編號換著看、改,最後一起存;「不要這筆」拿掉一段) */
     await ask({ intent: "transport", legs: [
       { kind: "船", company: "東海汽船", depart: "2026-10-04T08:00", from: "竹芝碼頭", to: "大島 岡田港" },
       { kind: "船", company: "東海汽船", depart: "2026-10-04T16:00", from: "大島 岡田港", to: "竹芝碼頭" }] });
-    out.兩段 = { 第一張: txt("#fl-ai"), 從: q("#fl-from").value, 跳過鈕: !q("#fl-skip").hidden };
-    q("#flight-form").requestSubmit(); await wait(400);
-    out.兩段.第二張 = { 開著: !q("#flight-overlay").hidden, 說: txt("#fl-ai"), 從: q("#fl-from").value };
-    ok("兩段:先開第 1 段,存了自動開第 2 段", /AI 讀到 2 段,這是第 1 段/.test(out.兩段.第一張) && out.兩段.從 === "竹芝碼頭" && out.兩段.跳過鈕 &&
-      out.兩段.第二張.開著 && /第 2 段/.test(out.兩段.第二張.說) && out.兩段.第二張.從 === "大島 岡田港", out.兩段);
-    q("#fl-skip").click(); await wait(100);
+    out.兩段 = { 說: txt("#fl-ai"), 從: q("#fl-from").value, 編號: Array.prototype.map.call(d.querySelectorAll("#flight-form .batch-tabs .rm-chip"), c => c.textContent.trim()), 按鈕: txt("#fl-save") };
+    ok("兩段:一批,先看第 1 段、上面 1 2、按鈕「全部存起來(2 筆)」", /AI 讀到 2 筆/.test(out.兩段.說) && out.兩段.從 === "竹芝碼頭" && out.兩段.編號.join() === "1,2" && out.兩段.按鈕 === "全部存起來(2 筆)", out.兩段);
+    d.querySelectorAll("#flight-form .batch-tabs input")[1].click(); await wait(120);
+    ok("點 2 → 第 2 段", q("#fl-from").value === "大島 岡田港", q("#fl-from").value);
+    q("#fl-skip").click(); await wait(120);
+    q("#flight-form").requestSubmit(); await wait(800);
     var ships = (w.__rows.flights || []).filter(f => f.kind === "船").length;
-    ok("第 2 段按跳過:表單關掉,只存了第 1 段", q("#flight-overlay").hidden && ships === 1, { 開著: !q("#flight-overlay").hidden, 船: ships });
+    ok("第 2 段按「不要這筆」、全部存起來:表單關掉,只存了第 1 段", q("#flight-overlay").hidden && ships === 1, { 開著: !q("#flight-overlay").hidden, 船: ships });
     /* 3. AI 看成許願,人自己換成交通 → 打開一張空的交通表 */
     await ask({ intent: "wish", title: "某個地方", message: "" });
     q("#ai-kind").value = "transport"; q("#ai-kind").dispatchEvent(new w.Event("change", { bubbles: true }));
