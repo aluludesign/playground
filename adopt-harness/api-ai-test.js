@@ -228,6 +228,23 @@ function ok(name, cond, extra) {
   r = await call({ text: "x", context: CTX }, () => okJson(JSON.stringify({ intent: "transport", legs: [LEG1], items: [], message: "",
     parts: [{ intent: "transport", legs: [LEG1], items: [] }, { intent: "transport", legs: [LEG1], items: [] }, { intent: "expense", legs: [], items: [] }] })));
   ok("同一種重複、空的那份丟掉 → 剩一種就不算複合", r.res.body.result.parts.length === 0, r.res.body.result.parts);
+  const IMG = Buffer.from([0xff, 0xd8, 0xff, 0xd9]).toString("base64");
+  /* 收據＋車票一起丟(2026-10-12,Lulu:「AI 只讀了車票」):模型把票價、收據分成兩份花費 → 併成一份,不能丟掉第二份 */
+  const HANDS = { title: "HANDS", day: 0, time: "", note: "クッション ¥2,376、フロスペン ¥880", amount: 3256, currency: "JPY", date: "2026-10-05", category: "購物", photos: [1] };
+  const LEG2 = Object.assign({}, LEG1, { photos: [2] }), FARE2 = Object.assign({}, EXP1, { photos: [2] });
+  r = await call({ text: "x", images: [IMG, IMG], context: CTX }, () => okJson(JSON.stringify({ intent: "transport", legs: [LEG2], items: [], message: "",
+    parts: [{ intent: "transport", legs: [LEG2], items: [] }, { intent: "expense", legs: [], items: [FARE2] }, { intent: "expense", legs: [], items: [HANDS] }] })));
+  const mx = r.res.body.result.parts;
+  ok("收據＋車票:兩份花費併成一份 → 交通 1 段、花費 2 筆(票價、HANDS),各帶自己那張", mx.length === 2 && mx[0].intent === "transport" && mx[0].legs.length === 1 &&
+    mx[1].intent === "expense" && mx[1].items.map(x => x.title).join() === "高鐵 南港→左營,HANDS" && JSON.stringify(mx[1].items.map(x => x.photos)) === "[[2],[1]]", mx);
+  r = await call({ text: "x", images: [IMG, IMG], context: CTX }, () => okJson(JSON.stringify({ intent: "transport", legs: [LEG2], items: [], message: "",
+    parts: [{ intent: "expense", legs: [], items: [FARE2, HANDS] }, { intent: "expense", legs: [], items: [FARE2] }] })));
+  const mx2 = r.res.body.result.parts;
+  ok("parts 只列了花費、最外層是車票 → 車票補回來;重複的票價只留一筆", mx2.length === 2 && mx2[0].intent === "transport" && mx2[0].legs.length === 1 &&
+    mx2[1].items.length === 2, mx2);
+  r = await call({ text: "x", images: [IMG, IMG], context: CTX }, () => okJson(GOOD));
+  const said2 = JSON.stringify(sent(r.seen));
+  ok("給模型的話:好幾張圖不同種類 → 每一張都要讀、收據和票價都放進 expense 那份", /好幾張圖是不同種類/.test(said2) && /每一張都要讀/.test(said2) && /每張收據各一筆/.test(said2), "");
   r = await call({ text: "x", context: CTX }, () => okJson(GOOD));
   ok("回應的格式有 parts(schema 裡要有它,模型才會填)", !!sent(r.seen).generationConfig.responseSchema.properties.parts && Array.isArray(r.res.body.result.parts), "");
 
@@ -237,7 +254,6 @@ function ok(name, cond, extra) {
   ok("給模型的話:一張收據就是一筆、合計、品項寫 note;說要分開才拆", /一張收據就是一筆/.test(said) && /品項寫在 note/.test(said) && /分開記/.test(said) && !/一張收據要拆兩筆/.test(said), "");
 
   /* 一次好幾張圖(2026-10-12 定案:最多 3 張,只問 Google 一次;每一筆標出來自哪幾張) */
-  const IMG = Buffer.from([0xff, 0xd8, 0xff, 0xd9]).toString("base64");
   r = await call({ text: "x", images: [IMG, IMG, IMG, IMG], context: CTX }, () => okJson(GOOD));
   ok("好幾張圖:超過 3 張 → 400,一次都沒問 Google", r.res.code === 400 && /最多 3 張/.test(r.res.body.error) && r.seen.length === 0, r.res.body);
   r = await call({ text: "x", images: ["a".repeat(1_500_000), "a".repeat(1_500_000), "a".repeat(1_500_000)], context: CTX }, () => okJson(GOOD));
