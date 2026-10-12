@@ -78,16 +78,17 @@ return (async function () {
     await wait(800);
     ok("動畫完 → 飛的那張拿掉、停在第 3 段、後面照樣疊兩張(一疊會循環的牌)", !q("#flight-form").parentElement.querySelector(".deck-fly") && tabOn("flight-form") === 2 &&
       !!q("#flight-form").parentElement.querySelector(".g2:not([hidden])"), tabOn("flight-form"));
-    swipe("flight-form", -120); await wait(700);
-    ok("在最後一段往左滑 → 回到第 1 段(循環)", q("#fl-from").value === "竹芝碼頭" && tabOn("flight-form") === 0, q("#fl-from").value);
+    /* 往右滑 = 下一筆(1 → 2 → 3)、往左滑 = 上一筆(2026-10-12,Lulu 糾正:之前做反了) */
     swipe("flight-form", 120); await wait(700);
-    ok("在第 1 段往右滑 → 繞到最後一段", q("#fl-from").value === "神津島" && tabOn("flight-form") === 2, q("#fl-from").value);
+    ok("在最後一段往右滑 → 回到第 1 段(循環)", q("#fl-from").value === "竹芝碼頭" && tabOn("flight-form") === 0, q("#fl-from").value);
+    swipe("flight-form", -120); await wait(700);
+    ok("在第 1 段往左滑 → 繞到最後一段", q("#fl-from").value === "神津島" && tabOn("flight-form") === 2, q("#fl-from").value);
     await clickTab("flight-form", 0);
     ok("點回 1 → 剛剛改的還在(草稿)", q("#fl-note").value === "第一段改過" && q("#fl-from").value === "竹芝碼頭", q("#fl-note").value);
-    swipe("flight-form", -120); await wait(120);
-    ok("往左滑 → 下一筆(第 2 段)", q("#fl-from").value === "大島" && tabOn("flight-form") === 1, q("#fl-from").value);
     swipe("flight-form", 120); await wait(120);
-    ok("往右滑 → 上一筆(第 1 段)", q("#fl-from").value === "竹芝碼頭", q("#fl-from").value);
+    ok("往右滑 → 下一筆(第 2 段)", q("#fl-from").value === "大島" && tabOn("flight-form") === 1, q("#fl-from").value);
+    swipe("flight-form", -120); await wait(120);
+    ok("往左滑 → 上一筆(第 1 段)", q("#fl-from").value === "竹芝碼頭", q("#fl-from").value);
     await wait(500);
     /* 按著拖:卡片跟著手指走;不夠遠慢慢放 → 彈回、不換;夠遠 → 換;從打字的格子開始拖不算 */
     await clickTab("flight-form", 0); await wait(500);
@@ -95,17 +96,17 @@ return (async function () {
     out.拖 = { 跟著走: tfs, 放手後: q("#flight-form").style.transform, 還是: q("#fl-from").value };
     ok("按著往左拖 50px:卡片跟著往左(translateX 負的、有一點轉);慢慢放 → 彈回中間、不換筆", /translateX\(-50px\)/.test(tfs[2]) && /rotate\(-/.test(tfs[2]) &&
       out.拖.放手後 === "" && out.拖.還是 === "竹芝碼頭", out.拖);
-    var tfs2 = await drag("flight-form", null, [-20, -70, -130]); await wait(80);
+    var tfs2 = await drag("flight-form", null, [20, 70, 130]); await wait(80);
     out.拖過 = { 跟著走: tfs2[2], 換到: q("#fl-from").value, 飛的那張: !!q("#flight-form").parentElement.querySelector(".deck-fly"), 真的那張歸位: q("#flight-form").style.transform };
-    ok("往左拖 130px 放手 → 翻到下一筆(第 2 段),飛出去的那張從放手的位置接著飛,真的那張歸位", /translateX\(-130px\)/.test(out.拖過.跟著走) && out.拖過.換到 === "大島" &&
+    ok("往右拖 130px 放手 → 翻到下一筆(第 2 段),飛出去的那張從放手的位置接著飛,真的那張歸位", /translateX\(130px\)/.test(out.拖過.跟著走) && out.拖過.換到 === "大島" &&
       out.拖過.飛的那張 && out.拖過.真的那張歸位 === "", out.拖過);
     await wait(700);
-    var tfs3 = await drag("flight-form", null, [20, 70, 130]); await wait(700);
-    ok("往右拖 130px → 卡片往右跟著走、放手翻回上一筆(第 1 段)", /translateX\(130px\)/.test(tfs3[2]) && /rotate\(\d/.test(tfs3[2]) && q("#fl-from").value === "竹芝碼頭", { 跟著走: tfs3[2], 換到: q("#fl-from").value });
+    var tfs3 = await drag("flight-form", null, [-20, -70, -130]); await wait(700);
+    ok("往左拖 130px → 卡片往左跟著走、放手翻回上一筆(第 1 段)", /translateX\(-130px\)/.test(tfs3[2]) && /rotate\(-/.test(tfs3[2]) && q("#fl-from").value === "竹芝碼頭", { 跟著走: tfs3[2], 換到: q("#fl-from").value });
     var tfs4 = await drag("flight-form", q("#fl-from"), [-30, -80, -130]); await wait(300);
     ok("從打字的格子開始拖:卡片不動、不換筆", !tfs4[2] && q("#fl-from").value === "竹芝碼頭", { 跟著走: tfs4[2], 還是: q("#fl-from").value });
 
-    /* 「全部存起來」左右各一顆:← 往左滑(下一筆)、→ 往右滑(上一筆);中間那顆變短。兩顆是 Outlined、方的、跟中間一樣高 */
+    /* 「全部存起來」左右各一顆:‹ 往左滑(上一筆)、› 往右滑(下一筆);中間那顆變短。兩顆是 Outlined、方的、跟中間一樣高 */
     var bL = q("#flight-overlay [data-batch-left]"), bR = q("#flight-overlay [data-batch-right]"), bM = barBtn("flight-overlay");
     var lr = bL.getBoundingClientRect(), mr = bM.getBoundingClientRect(), rr = bR.getBoundingClientRect(), barR = bM.parentElement.getBoundingClientRect(), ls = w.getComputedStyle(bL), ms = w.getComputedStyle(bM);
     var tok = v => { var i = d.createElement("i"); d.body.appendChild(i); i.style.color = "var(" + v + ")"; var c = w.getComputedStyle(i).color; i.remove(); return c; };
@@ -114,13 +115,13 @@ return (async function () {
       圓角一樣: ls.borderTopLeftRadius === ms.borderTopLeftRadius, 有說明: !!bL.getAttribute("aria-label") && !!bR.getAttribute("aria-label") };
     ok("「全部存起來」左右各一顆圖示鈕:← 中 →、方的、跟中間一樣高、中間變短;Outlined 的框和字色、圓角跟中間一樣", Object.values(out.左右鈕).every(Boolean), out.左右鈕);
     await clickTab("flight-form", 0); await wait(500);
-    bL.click(); await wait(80);
-    ok("按 ← → 卡片往左翻、到下一筆(第 2 段)", q("#fl-from").value === "大島" && !!q("#flight-form").parentElement.querySelector(".deck-fly"), q("#fl-from").value);
+    bR.click(); await wait(80);
+    ok("按 › → 卡片往右翻、到下一筆(第 2 段)", q("#fl-from").value === "大島" && !!q("#flight-form").parentElement.querySelector(".deck-fly"), q("#fl-from").value);
     await wait(700);
-    bR.click(); await wait(700);
-    ok("按 → → 回到上一筆(第 1 段)", q("#fl-from").value === "竹芝碼頭", q("#fl-from").value);
-    bR.click(); await wait(700);
-    ok("在第 1 段按 → → 繞到最後一段(循環)", q("#fl-from").value === "神津島", q("#fl-from").value);
+    bL.click(); await wait(700);
+    ok("按 ‹ → 回到上一筆(第 1 段)", q("#fl-from").value === "竹芝碼頭", q("#fl-from").value);
+    bL.click(); await wait(700);
+    ok("在第 1 段按 ‹ → 繞到最後一段(循環)", q("#fl-from").value === "神津島", q("#fl-from").value);
 
     await clickTab("flight-form", 1);
     q("#fl-skip").click(); await wait(150);

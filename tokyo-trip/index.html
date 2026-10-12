@@ -6816,19 +6816,19 @@
     let bar = st.querySelector(":scope > .batch-bar");
     if (!bar) {
       bar = document.createElement("div"); bar.className = "batch-bar"; bar.hidden = true;
-      /* ← 往左滑(卡片往左飛、下一筆)、→ 往右滑(往右飛、上一筆)—— 跟手指拖的方向一樣 */
-      bar.innerHTML = '<button type="button" class="btn btn-sq" data-batch-left aria-label="往左滑(下一筆)"><svg class="i to-left" aria-hidden="true"><use href="#i-chevron-down"></use></svg></button>' +
+      /* ‹ 往左滑(卡片往左飛、上一筆)、› 往右滑(往右飛、下一筆)—— 跟手指拖的方向一樣 */
+      bar.innerHTML = '<button type="button" class="btn btn-sq" data-batch-left aria-label="往左滑(上一筆)"><svg class="i to-left" aria-hidden="true"><use href="#i-chevron-down"></use></svg></button>' +
         '<button type="button" class="btn btn-main" data-batch-save></button>' +
-        '<button type="button" class="btn btn-sq" data-batch-right aria-label="往右滑(上一筆)"><svg class="i to-right" aria-hidden="true"><use href="#i-chevron-down"></use></svg></button>';
+        '<button type="button" class="btn btn-sq" data-batch-right aria-label="往右滑(下一筆)"><svg class="i to-right" aria-hidden="true"><use href="#i-chevron-down"></use></svg></button>';
       bar.querySelector("[data-batch-save]").addEventListener("click", () => batchSaveAll());
-      bar.querySelector("[data-batch-left]").addEventListener("click", () => batchStep(1));
-      bar.querySelector("[data-batch-right]").addEventListener("click", () => batchStep(-1));
+      bar.querySelector("[data-batch-left]").addEventListener("click", () => batchStep(-1));
+      bar.querySelector("[data-batch-right]").addEventListener("click", () => batchStep(1));
       st.appendChild(bar);
     }
     return bar;
   }
   /* **換筆像翻一疊牌**(2026-10-12,Lulu:「左滑右滑會有前後交換的效果,第一張會跑到最後一張,後面一張會往前推」)。
-     最上面那張往手指的方向飛出去(往後 dir 1 → 左、往前 dir -1 → 右),到邊上那一刻換到最後面、縮著退下去;
+     最上面那張往手指的方向飛出去(往後 dir 1 → 右、往前 dir -1 → 左;Lulu:「往右滑 1 2 3,往左滑反過來」),到邊上那一刻換到最後面、縮著退下去;
      後面那張(新的那一筆)往前推上來。from:放手那一刻卡片的位置(拖著換的時候從那裡接著飛;點編號就是從中間)。
      飛的是複製出來的那張(飛完拿掉),真的那張馬上換成新的那一筆,所以換筆不用等動畫。 */
   function deckMove(formId, dir, fill, was, from) {
@@ -6856,7 +6856,7 @@
     fill();
     k.form.scrollTop = 0;
     const T = 420, ease = "cubic-bezier(.3,.7,.3,1)", done = () => fly.remove();
-    const out = dir > 0 ? "translateX(-78%) rotate(-7deg)" : "translateX(78%) rotate(7deg)";
+    const out = dir > 0 ? "translateX(78%) rotate(7deg)" : "translateX(-78%) rotate(-7deg)";
     /* 飛到邊上那一刻**一下子換到後面**(z 3 → 0),再縮著退到最後一張的位置、淡掉 —— 不會跟前面那張半透明疊在一起 */
     fly.animate([{ transform: from || "none", zIndex: 3, opacity: 1, easing: ease }, { transform: out, zIndex: 3, opacity: 1, offset: .45 },
       { transform: out, zIndex: 0, opacity: 1, offset: .46, easing: "ease-in-out" },
@@ -6890,7 +6890,7 @@
     if (dir && same && i !== b.at) deckMove(K.form, dir, fill, b.at, from);
     else fill();
   }
-  /* 左右滑:一疊會循環的牌,最後一筆再往後就回到第一筆 */
+  /* 左右滑:一疊會循環的牌,最後一筆再往右滑就回到第一筆 */
   function batchStep(dir, from) {
     if (!batch || batch.items.length < 2) return;
     const n = batch.items.length;
@@ -7000,11 +7000,12 @@
       form.style.userSelect = "";
       if (!was.dragging) {
         /* 沒拖(很快的一下):照放手的位置判斷,跟以前一樣 */
-        if (ev.type === "pointerup" && Math.abs(dx) > 60 && Math.abs(dy) < 50) batchStep(dx < 0 ? 1 : -1);
+        if (ev.type === "pointerup" && Math.abs(dx) > 60 && Math.abs(dy) < 50) batchStep(dx > 0 ? 1 : -1);
         return;
       }
       eatNextClick(form);   /* 拖完放手不要順便按到底下的選項 */
-      if (ev.type === "pointerup" && (Math.abs(dx) > 70 || (Math.abs(dx) > 30 && v > .5))) { batchStep(dx < 0 ? 1 : -1, dragTf(dx)); return; }
+      /* 往右 = 下一筆(1 → 2 → 3)、往左 = 上一筆(2026-10-12,Lulu 糾正:之前做反了) */
+      if (ev.type === "pointerup" && (Math.abs(dx) > 70 || (Math.abs(dx) > 30 && v > .5))) { batchStep(dx > 0 ? 1 : -1, dragTf(dx)); return; }
       /* 不夠遠:彈回中間 */
       const from = form.style.transform;
       form.style.transform = ""; form.style.transition = "";
