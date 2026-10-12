@@ -28,6 +28,19 @@ return (async function () {
     ok("拍完的照片收進來:一個小縮圖、講「已加入 1 張」", out.縮圖 === 1 && /已加入 1 張/.test(out.收到), out);
     q("#ai-overlay").dispatchEvent(new w.MouseEvent("click", { bubbles: true })); await wait(60);
     ok("拍了照片就算改過,點外面不會關掉", !q("#ai-overlay").hidden, "");
+    /* 2026-10-12(Lulu):拍照也可以拍三次,每次拍的跟選的照片放在同一排縮圖;拍、選可以混著,加起來 3 張 */
+    var shoot = async () => { var dt2 = new w.DataTransfer(); dt2.items.add(new w.File([blob], "image.jpg", { type: "image/png" })); cam.files = dt2.files; cam.dispatchEvent(new w.Event("change", { bubbles: true })); await wait(150); };
+    var thumbs = () => d.querySelectorAll("#ai-imgs .ai-im").length;
+    await shoot();
+    ok("再拍一張 → 同一排變 2 張", thumbs() === 2 && /已加入 2 張/.test(q("#ai-img-name").textContent), thumbs());
+    var dt3 = new w.DataTransfer(); dt3.items.add(new w.File([blob], "pick.png", { type: "image/png" }));
+    file.files = dt3.files; file.dispatchEvent(new w.Event("change", { bubbles: true })); await wait(150);
+    out.滿 = { 縮圖: thumbs(), 拍照鈕停用: q("#ai-shoot").disabled, 選圖鈕停用: q("#ai-pick").disabled, 說: (q("#ai-img-name").textContent || "").trim() };
+    ok("拍兩張 + 選一張 → 同一排 3 張、拍照和選圖都停用", out.滿.縮圖 === 3 && out.滿.拍照鈕停用 && out.滿.選圖鈕停用 && /已加入 3 張/.test(out.滿.說), out.滿);
+    q('#ai-imgs [data-ai-rm="0"]').click(); await wait(60);
+    ok("拿掉一張 → 剩 2 張、拍照又能按", thumbs() === 2 && !q("#ai-shoot").disabled, thumbs());
+    await shoot();
+    ok("再拍一張 → 又是 3 張(第三次拍的也放進同一排)", thumbs() === 3 && q("#ai-shoot").disabled, thumbs());
   }
   q("#ai-cancel").click();
   out.結論 = bad.length ? "✗ " + bad.join(" ;; ") : "全部通過";
