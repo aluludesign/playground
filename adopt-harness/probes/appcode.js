@@ -11,6 +11,10 @@ return (async function () {
   out.登入碼欄一開始看得到 = !q("#h-code-form").hidden;
   out.有我有登入碼 = !!q("#h-has-code");
   if (q("#h-has-code")) { q("#h-has-code").click(); await wait(30); out.按了之後看得到 = !q("#h-code-form").hidden; }
+  /* 2026-10-14(Lulu):App 裡寫成兩步;輸入框一直能打字,「登入」鈕湊滿 8 碼(不算 - 和空白、大小寫都行)才亮 */
+  out.步驟 = Array.prototype.map.call(d.querySelectorAll("#home-card .ls-h"), e => e.textContent.trim());
+  var type = v => { var i = q("#h-login-code"); i.value = v; i.dispatchEvent(new Event("input", { bubbles: true })); return q("#h-code-go").disabled; };
+  out.登入鈕 = { 一開始灰的: q("#h-code-go").disabled, 輸入框能打字: !q("#h-login-code").disabled, 七碼: type("abcd-123"), 八碼含減號: type("abcd-1234"), 八碼小寫: type("ab12cd34"), 九碼: type("abcd12345"), 清空: type("") };
   if (out.角色 === "app") {
     q("#h-line").click(); await wait(120);
     /* 以前是 window.open 另開一個視窗 —— iPhone 把 LINE 交給瀏覽器之後,那個視窗留在 App 裡一頁空白。

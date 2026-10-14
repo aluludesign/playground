@@ -1159,6 +1159,10 @@
     .home-trip.adm.off b{color:var(--muted);}
     .home-trip .adm-ops{grid-row:1 / span 2; grid-column:2; display:flex; gap:6px;}
     .home-card-form{display:grid; gap:12px;}
+    /* App 裡的登入卡:兩個步驟(① 用 LINE 登入 ② 回來貼上登入碼),每一步一個小標＋一行說明＋那一步的按鈕/欄位 */
+    .login-step{display:grid; gap:8px; margin-top:16px;}
+    .login-step .ls-h{font-size:15px; font-weight:700; color:var(--ink);}
+    .login-step .ls-p{margin:0; font-size:13px; line-height:1.5; color:var(--muted);}
     .set-sep{border:0; border-top:1px solid var(--line); margin:4px 0;}
     .inv-row{display:flex; gap:8px; align-items:center;}
     .inv-row code{flex:1 1 auto; min-width:0; overflow-wrap:anywhere; font-family:var(--font-mono); font-size:12px;
@@ -7807,15 +7811,19 @@
         (TRIP && INVITE
           ? "<p>朋友邀請你加入一團。先用 LINE 登入,回來就能加入。</p>"
           : "<p>跟朋友一起排行程、許願、分帳。用 LINE 登入就能開始。</p>") +
-        (IN_APP ? "<p>在主畫面的 App 裡登入要兩步:按下去會開瀏覽器登入 LINE,那邊會給你一組登入碼,複製後回到這裡貼在下面。" +
-          "如果回來看到一頁空白,把它關掉(或往下滑關閉),就會看到這張卡。</p>" : "") +
+        /* **App 裡寫成兩個步驟**(2026-10-14,Lulu 問「還沒登入時登入碼欄和登入鈕 disable 會怎樣」):
+           不能 disable —— App 看不到你在瀏覽器那邊登入了沒(兩邊的登入是分開存的),關掉就永遠打不開。
+           改成把順序寫清楚:① 用 LINE 登入 ② 回來貼上登入碼;輸入框一直能打字,只有「登入」鈕在湊滿 8 碼前是灰的 */
+        (IN_APP ? '<div class="login-step"><b class="ls-h">① 用 LINE 登入</b><p class="ls-p">會開瀏覽器登入 LINE,那邊會給你一組登入碼,複製起來。</p>' : "") +
         '<div class="ops"><button type="button" class="btn btn-line" id="h-line">用 LINE 登入</button>' +
         (IN_APP ? "" : '<button type="button" class="btn btn-ghost btn-sm" id="h-has-code">我有登入碼(主畫面 App 用)</button>') + "</div>" +
-        '<form class="home-card-form" id="h-code-form"' + (IN_APP ? "" : " hidden") + ">" +
+        (IN_APP ? "</div>" : "") +
+        '<form class="home-card-form' + (IN_APP ? " login-step" : "") + '" id="h-code-form"' + (IN_APP ? "" : " hidden") + ">" +
+        (IN_APP ? '<b class="ls-h">② 回來貼上登入碼</b><p class="ls-p">回來看到一頁空白的話,把它關掉(或往下滑關閉),就會看到這裡。</p>' : "") +
         '<div class="fld"><label class="rm-label" for="h-login-code">登入碼</label>' +
-        '<input class="rm-input" type="text" id="h-login-code" maxlength="9" autocapitalize="characters" autocomplete="one-time-code" spellcheck="false" placeholder="XXXX-XXXX" required></div>' +
+        '<input class="rm-input" type="text" id="h-login-code" maxlength="20" autocapitalize="characters" autocomplete="one-time-code" spellcheck="false" placeholder="XXXX-XXXX" required></div>' +
         '<div class="err" id="home-err" hidden></div>' +
-        '<div class="ops"><button type="submit" class="btn btn-main" id="h-code-go">登入</button></div></form>';
+        '<div class="ops"><button type="submit" class="btn btn-main" id="h-code-go" disabled>登入</button></div></form>';
       el("h-line").addEventListener("click", async () => {
         if (!IN_APP) { goLine(); return; }
         /* **不要另開視窗。** 以前是 window.open:那個新視窗一要去 LINE,iPhone 就把 LINE 交給瀏覽器,
@@ -7847,9 +7855,15 @@
         el("h-code-form").hidden = false;
         el("h-login-code").focus();
       });
+      /* 「登入」鈕:湊滿 8 個英文或數字才亮(中間的 - 和空白不算;大小寫都行,伺服器會轉大寫)。
+         輸入框的 maxlength 放寬到 20:手動選取複製常會多帶空白,9 的話貼上會被切掉一碼,按鈕就一直灰著 */
+      const codeOK = () => el("h-login-code").value.replace(/[^A-Za-z0-9]/g, "").length === 8;
+      const syncCodeBtn = () => { el("h-code-go").disabled = !codeOK(); };
+      el("h-login-code").addEventListener("input", syncCodeBtn);
       el("h-code-form").addEventListener("submit", async ev => {
         ev.preventDefault();
         homeErr("");
+        if (!codeOK()) { homeErr("登入碼是 8 個英文或數字"); return; }
         const btn = el("h-code-go");
         btn.disabled = true;
         try {
@@ -7861,7 +7875,7 @@
           location.reload();
         } catch (e) {
           homeErr(e.message);
-          btn.disabled = false;
+          syncCodeBtn();
         }
       });
       return;
