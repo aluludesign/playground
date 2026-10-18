@@ -478,6 +478,14 @@ const memberRow = (code, sub) => rowsIn(DB.members).find(p => plain(p.properties
   const wid = r.body.row.id;
   r = await call(LINE_B, "PATCH", { resource: "wishes", t: T1, id: wid }, { note: "只改備註" });
   ok("只改備註不會把地點編號清掉", r.body.row.placeId === "ChIJ_wish", r.body.row);
+  /* 維基照片(2026-10-18):「照片」欄只收 Commons 照片頁網址,別的網址一律存成空的 */
+  const CPH = "https://commons.wikimedia.org/wiki/File:Sensoji_2023.jpg";
+  r = await call(LINE_A, "POST", { resource: "itinerary", t: T1 }, { title: "淺草寺", day: "2026-10-05", place: "淺草寺", photo: CPH });
+  ok("行程帶著維基照片存進去、讀得回來", r.code === 200 && r.body.row.photo === CPH, r.body);
+  r = await call(LINE_B, "POST", { resource: "wishes", t: T1 }, { title: "晴空塔", place: "晴空塔", photo: "https://evil.example.com/x.jpg" });
+  ok("不是 Commons 照片頁的網址 → 存成空的", r.code === 200 && r.body.row.photo === "", r.body);
+  r = await call(LINE_B, "POST", { resource: "wishes", t: T1 }, { title: "東京鐵塔", place: "東京鐵塔", photo: CPH + '" onerror="x' });
+  ok("網址裡夾引號(想塞進 <img>)→ 存成空的", r.code === 200 && r.body.row.photo === "", r.body);
   await call(LINE_B, "DELETE", { resource: "wishes", t: T1, id: wid });
   process.env.GOOGLE_MAPS_BROWSER_KEY = "AIza-test";
   r = await call(null, "GET", { resource: "mapskey" });
