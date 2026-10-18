@@ -164,6 +164,12 @@ function expenseIn(b) {
   return props;
 }
 
+/* 維基照片(2026-10-18,Lulu):「照片」欄存 Commons 的照片頁網址。只收這種網址 —— 前端拿它當 <img> 的來源,
+   亂寫的網址不能進來。沒有這一欄的舊表:讀出來是空的,寫的時候不送 */
+const COMMONS = /^https:\/\/commons\.wikimedia\.org\/wiki\/File:[^\s"'<>]{1,400}$/;
+const photoUrl = p => (p && p.url && COMMONS.test(p.url) ? p.url : "");
+const photoProp = v => ({ url: COMMONS.test(String(v || "")) ? String(v) : null });
+
 function stopOut(page) {
   const p = page.properties;
   return {
@@ -178,6 +184,7 @@ function stopOut(page) {
     by: p["許願人"] ? txt(p["許願人"]) : "",
     /* Google 的地點編號(2026-10-02,Places UI Kit):從 Google 清單挑的才有。可以永久存 —— 座標不行(只能 30 天,手機自己記) */
     placeId: p["地點編號"] ? txt(p["地點編號"]) : "",
+    photo: photoUrl(p["照片"]),
   };
 }
 function stopIn(b) {
@@ -188,6 +195,7 @@ function stopIn(b) {
     "備註": { rich_text: richText(b.note) },
   };
   if (b.placeId !== undefined) props["地點編號"] = { rich_text: richText(String(b.placeId || "").slice(0, 200)) };
+  if (b.photo !== undefined) props["照片"] = photoProp(b.photo);
   if (b.day) props["日期"] = { date: { start: b.day } };
   /* **退回願望區 = 把日期清掉**(2026-09-30):沒有日期的那一列就是願望,許願人和票都還在 */
   else if (b.day === null) props["日期"] = { date: null };
@@ -209,6 +217,7 @@ function wishOut(page) {
     votes: ids(txt(p["票"])),
     by: txt(p["許願人"]),
     placeId: p["地點編號"] ? txt(p["地點編號"]) : "",
+    photo: photoUrl(p["照片"]),
     createdAt: page.created_time,
   };
 }
@@ -220,6 +229,7 @@ function wishIn(b) {
     "備註": { rich_text: richText(b.note) },
     "許願人": { rich_text: richText(b.by) },
     ...(b.placeId !== undefined ? { "地點編號": { rich_text: richText(String(b.placeId || "").slice(0, 200)) } } : {}),
+    ...(b.photo !== undefined ? { "照片": photoProp(b.photo) } : {}),
     "票": { rich_text: richText(ids(b.votes).join(",")) },
   };
 }

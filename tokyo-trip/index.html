@@ -987,6 +987,11 @@
     .seek-out .hit .thumb img{position:absolute; width:256px; height:256px; max-width:none;}
     /* 照片跟圖磚不一樣:它**填滿**這一格,不是一張大圖挪進觀景窗。
        `object-fit:cover` 讓長寬比不同的照片不變形 —— 裁掉邊比拉扁好。 */
+    .wiki-ph{display:grid; gap:4px; width:min(100%, 280px); margin-top:8px; text-decoration:none;}
+    .wiki-ph img{display:block; width:100%; aspect-ratio:16 / 10; object-fit:cover; border-radius:var(--ds-comp-btn-normal-sm-radius);
+      border:var(--ds-sys-shared-border-xs) solid var(--line); background:var(--surface);}
+    .wiki-ph small{font-size:11px; color:var(--muted);}
+    .wish .wiki-ph{grid-column:1/2;}
     .seek-out .hit .thumb img.shot{inset:0; width:100%; height:100%; object-fit:cover;}
     /* 那個點畫在它**真正**的位置上。框挪到邊界會被夾住,所以點不一定在正中央 ——
        寧可偏一點也不要為了置中而指到錯的地方。 */
@@ -2470,8 +2475,9 @@
     note: e.note,
   });
   /* by:從願望排進來的那一筆記著是誰許的 —— 有它才退得回願望區 */
-  const stopFromRow = r => ({ id: r.id, day: r.day, time: r.time || "", title: r.title, place: r.place || "", note: r.note || "", by: r.by || "", placeId: r.placeId || "" });
-  const stopToRow = s => ({ title: s.title, day: s.day, time: s.time, place: s.place, note: s.note, kind: "其他", placeId: pidOf(s.place) || s.placeId || "" });
+  const stopFromRow = r => ({ id: r.id, day: r.day, time: r.time || "", title: r.title, place: r.place || "", note: r.note || "", by: r.by || "", placeId: r.placeId || "",
+    photo: r.photo || "", photoAt: r.place || "" });
+  const stopToRow = s => ({ title: s.title, day: s.day, time: s.time, place: s.place, note: s.note, kind: "其他", placeId: pidOf(s.place) || s.placeId || "", photo: photoOf(s) });
 
   /* --- 本機 --- */
   function loadLocal() {
@@ -2859,7 +2865,7 @@
     state.wishes.push(w); renderWishes();
     if (!online) { saveLocal(); return; }
     try {
-      const { row } = await api("?resource=wishes", { method: "POST", body: JSON.stringify(Object.assign({}, w, { placeId: pidOf(w.place) })) });
+      const { row } = await api("?resource=wishes", { method: "POST", body: JSON.stringify(Object.assign({}, w, { placeId: pidOf(w.place), photo: photoOf(w, "") })) });
       const k = state.wishes.indexOf(w);
       if (k > -1) state.wishes[k] = row;
       renderWishes();
@@ -2921,7 +2927,7 @@
     try {
       const { row } = await api("?resource=wishes&id=" + encodeURIComponent(id), {
         method: "PATCH",
-        body: JSON.stringify({ title: w.title, place: w.place, note: w.note, by: w.by, votes: w.votes || [], placeId: pidOf(w.place) || w.placeId || "" }),
+        body: JSON.stringify({ title: w.title, place: w.place, note: w.note, by: w.by, votes: w.votes || [], placeId: pidOf(w.place) || w.placeId || "", photo: photoOf(w, before.place) }),
       });
       const k = state.wishes.findIndex(x => x.id === id);
       if (k > -1) state.wishes[k] = row;
@@ -2949,7 +2955,7 @@
     const k = state.wishes.findIndex(x => x.id === id);
     if (k < 0) return;
     const w = state.wishes.splice(k, 1)[0];
-    const stop = { id: w.id, day: day, time: time, title: w.title, place: w.place || "", note: w.note || "", by: w.by || "" };
+    const stop = { id: w.id, day: day, time: time, title: w.title, place: w.place || "", note: w.note || "", by: w.by || "", placeId: w.placeId || "", photo: w.photo || "", photoAt: w.place || "" };
     state.stops.push(stop);
     renderWishes(); render();
     if (!online) { saveLocal(); checkPlace(stop, "wish-msg"); return; }
@@ -4390,14 +4396,14 @@
     const rg = regionFor(q);
     if (rg === TRIP_REGION && !outsideHit(q) && CITY && isFinite(CITY.lat)) {
       const near = await queued(() => fetch("https://nominatim.openstreetmap.org/search?format=json" +
-        "&limit=40&accept-language=zh-TW&countrycodes=" + rg.cc + "&bounded=1&viewbox=" + cityView() +
+        "&limit=40&extratags=1&accept-language=zh-TW&countrycodes=" + rg.cc + "&bounded=1&viewbox=" + cityView() +
         "&q=" + encodeURIComponent(q)).then(r => r.json()).catch(() => null));
       if (near && near.length) return near;
     }
     /* **免費搜不限 6 筆**(2026-10-01,Lulu):40 是 Nominatim 自己的上限。清單本來就會捲(露四則半),
        縮圖是捲到才載(loading="lazy"),筆數多了不會一次全載 */
     return queued(() => fetch("https://nominatim.openstreetmap.org/search?format=json" +
-      "&limit=40&accept-language=zh-TW&countrycodes=" + rg.cc + "&viewbox=" + rg.view +
+      "&limit=40&extratags=1&accept-language=zh-TW&countrycodes=" + rg.cc + "&viewbox=" + rg.view +
       "&q=" + encodeURIComponent(q)).then(r => r.json()).catch(() => null));
   }
 
@@ -4430,7 +4436,57 @@
 
      (2026-10-02 起只有免費那兩段用這個槽;強力搜改成 Google 的 UI Kit 清單,照片是它自己的。) */
   const THUMB = 56, THUMB_Z = 13;
+  /* ---- 維基照片(2026-10-18,Lulu:「維基有搜到就放維基的圖,沒有就保持小地圖;確定列進許願或行程時,有圖就在備註下一排出現」)----
+     上面那段 09-22 的結論(不放照片)是「分辨同名的店」那件事;店家幾乎沒有維基照片,所以照樣是小地圖,分得出來。
+     有照片的多半是景點,不太會撞名。照片一律是維基共享資源(Commons)上的,可以合法存、照著標「維基共享資源」。
+     兩條路:
+       一般搜:OSM 物件身上標了 wikidata(人工連好的,是同一個東西)→ 直接拿那個條目的照片(P18)。
+               **不量距離**:實測淺草寺 163m、晴空塔 183m、明治神宮 147m、上野公園 324m —— 維基記的是整個區域的中心點,
+               量了就全被刷掉,而它們本來就是同一個地方。
+       強力搜:Google 的地點沒有 wikidata,用「名字＋座標」比對:Wikidata 上**離這個點 100 公尺內**(Lulu 定的)、
+               名字對得上(中/日/英任一個名稱互相包含)的條目才算。對不上寧可不放。 */
+  const WIKI_R = 100;
+  const WD = "https://www.wikidata.org/w/api.php?format=json&origin=*&";
+  const commonsPage = f => "https://commons.wikimedia.org/wiki/File:" + encodeURIComponent(String(f).replace(/ /g, "_"));
+  /* 存的是照片頁網址(Notion「照片」欄);要圖的時候換成 Commons 的縮圖網址 */
+  const commonsImg = (page, w) => "https://commons.wikimedia.org/wiki/Special:FilePath/" + String(page).split("/wiki/File:")[1] + "?width=" + w;
+  const isCommons = v => /^https:\/\/commons\.wikimedia\.org\/wiki\/File:[^\s"'<>]+$/.test(String(v || ""));
+  const wdImage = e => { try { return e.claims.P18[0].mainsnak.datavalue.value; } catch (_) { return ""; } };
+  async function wdEntities(ids, labels) {
+    if (!ids.length) return {};
+    const r = await fetch(WD + "action=wbgetentities&props=claims" + (labels ? "|labels&languages=zh-tw|zh-hant|zh|ja|en" : "") +
+      "&ids=" + ids.slice(0, 50).join("|")).then(x => x.json()).catch(() => null);
+    return (r && r.entities) || {};
+  }
+  /* 一般搜那一批:有 wikidata 的一次問完,答案記在每一筆上(r._wiki:照片頁網址,沒有就 "") */
+  async function wikiForHits(hits) {
+    const want = hits.filter(r => r && r._wiki === undefined);
+    want.forEach(r => { const q = r.extratags && r.extratags.wikidata; if (!/^Q\d+$/.test(q || "")) r._wiki = ""; });
+    const ids = Array.from(new Set(want.filter(r => r._wiki === undefined).map(r => r.extratags.wikidata)));
+    const ents = await wdEntities(ids, false);
+    want.forEach(r => { if (r._wiki === undefined) { const f = wdImage(ents[r.extratags.wikidata] || {}); r._wiki = f ? commonsPage(f) : ""; } });
+  }
+  /* 強力搜挑的:名字＋座標比對(100 公尺內、名字對得上) */
+  const wikiNorm = v => String(v || "").normalize("NFKC").toLowerCase().replace(/[\s・·\-－()（）「」『』.,、。]/g, "");
+  async function wikiNear(name, la, lo) {
+    const g = await fetch(WD + "action=query&list=geosearch&gsprimary=all&gslimit=20&gsradius=" + WIKI_R +
+      "&gscoord=" + la + "|" + lo).then(x => x.json()).catch(() => null);
+    const ids = ((g && g.query && g.query.geosearch) || []).map(x => x.title).filter(t => /^Q\d+$/.test(t));
+    const ents = await wdEntities(ids, true);
+    const n = wikiNorm(name);
+    if (n.length < 2) return "";
+    const cands = ids.map(id => ({ f: wdImage(ents[id] || {}), names: Object.values((ents[id] || {}).labels || {}).map(l => wikiNorm(l.value)).filter(x => x.length >= 2) }))
+      .filter(c => c.f);
+    /* 比對由嚴到寬:名字一模一樣 → 條目名稱包含整個名字(「晴空塔」→「東京晴空塔」)→ 條目名稱比名字短但夠長(3 字以上、七成以上)。
+       最後那一層要卡長度:實測「淺草寺」附近 100 公尺內有「淺草」(地區)這個條目,「淺草」包在「淺草寺」裡,會拿到地區的照片 */
+    const tiers = [x => x === n, x => x.includes(n), x => x.length >= 3 && n.includes(x) && x.length / n.length >= 0.7];
+    for (const t of tiers) { const c = cands.find(c => c.names.some(t)); if (c) return commonsPage(c.f); }
+    return "";
+  }
+  /* 候選那一格:有維基照片就放照片,沒有照舊是小地圖 */
+  const wikiThumb = r => '<span class="thumb"><img class="shot" alt="" loading="lazy" src="' + esc(commonsImg(r._wiki, 112)) + '"></span>';
   function hitThumb(r) {
+    if (r._wiki) return wikiThumb(r);
     const la = +r.lat, lo = +r.lon;
     if (!isFinite(la) || !isFinite(lo)) return "";
     const fx = projX(lo, THUMB_Z), fy = projY(la, THUMB_Z);
@@ -4648,6 +4704,13 @@
     box._hits = res;
     capHits(box);
     moreHitsOnScroll(box, id);
+    box._wiki = wikiForHits(res).then(() => {
+      if (box._hits !== res) return;   /* 已經換了一批 */
+      res.forEach((r, i) => {
+        const t = r._wiki && box.querySelector('[data-hit="' + id + '"][data-i="' + i + '"] .thumb');
+        if (t) t.outerHTML = wikiThumb(r);
+      });
+    });
   }
 
   /* **候選分批出現,一次 8 筆**(2026-10-01,Lulu:搜尋清單動態載入,每 8 筆一次)。
@@ -4787,13 +4850,24 @@
     input.value = name;
     /* 挑了就算「改過」(對話框的關閉規則):點外面不會把挑好的丟掉 */
     const ov = input.closest(".overlay"); if (ov) ov.dataset.picked = "1";
-    pins[name] = { la: +la, lo: +lo, by: "pick", at: addr, pid: place.id || "", src: "google", t: Date.now() };
+    pins[name] = { la: +la, lo: +lo, by: "pick", at: addr, pid: place.id || "", src: "google", t: Date.now(), photo: "" };
     savePins();
+    /* 維基照片:名字＋座標比對(100 公尺內)。問到之前存的話就沒有照片 —— 通常不到一秒 */
+    wikiNear(name, +la, +lo).then(u => { if (u && pins[name] && pins[name].pid === (place.id || "")) { pins[name].photo = u; savePins(); } }).catch(() => {});
     seekReset(id);
     seekMark(id, name);
   }
   /* 這個地點是從 Google 清單挑的嗎 → 它的地點編號(存進 Notion 用) */
   const pidOf = place => (place && pins[place] && pins[place].pid) || "";
+  /* 這一筆要存哪一張維基照片:這支手機剛挑過這個地點 → 挑的時候找到的那張(沒找到就是空的);
+     沒重挑、地點也沒改 → 原本那張;地點改成別的字 → 不要了(照片是跟著地點的)。
+     `before`:改之前的地點(沒給就用讀進來時記的 photoAt) */
+  function photoOf(s, before) {
+    const at = s && s.place && pins[s.place];
+    if (at && at.by === "pick" && "photo" in at) return at.photo || "";
+    const was = before !== undefined ? before : (s.photoAt !== undefined ? s.photoAt : s.place);
+    return s && s.photo && was === s.place ? s.photo : "";
+  }
 
 
   /* 選了一個:地點欄換成那個名字,座標**同時**寫進快取,所以這一筆從此不會再被查。
@@ -4807,8 +4881,11 @@
     input.value = name;
     /* `at` 是地址那一行,狀態列要印它 —— **「已標定」光講名字不夠**:
        使用者剛剛才從三間同名的裡面挑了一間,他要看到的是自己挑的是哪一間。 */
-    pins[name] = { la: +r.lat, lo: +r.lon, by: "pick", at: hitAddr(r) };
+    pins[name] = { la: +r.lat, lo: +r.lon, by: "pick", at: hitAddr(r), photo: r._wiki || "" };
     savePins();
+    if (r._wiki === undefined && box._wiki) box._wiki.then(() => {
+      if (pins[name] && pins[name].by === "pick" && pins[name].la === +r.lat) { pins[name].photo = r._wiki || ""; savePins(); }
+    });
     /* 挑到了 = 這一輪找東西結束。段數歸零,按鈕變回「搜尋」 ——
        不歸零的話,下一次換個地方找會從第 3 段開始,直接把人推到花錢那一段。 */
     seekReset(id);
@@ -5436,7 +5513,7 @@
       (s.place ? (samePlace(s.title, s.place)
         ? (stopWx(s.place, s.day || state.day) ? '<div class="pl wx-only">' + stopWx(s.place, s.day || state.day) + "</div>" : "")
         : '<div class="pl">' + linkify(s.place) + stopWx(s.place, s.day || state.day) + "</div>") : "") +
-      (s.note ? '<div class="nt">' + linkify(s.note) + "</div>" : "") + "</div>" +
+      (s.note ? '<div class="nt">' + linkify(s.note) + "</div>" : "") + wikiPhoto(s.photo) + "</div>" +
       '<div class="rowops">' +
       (movable(s) ? '<button type="button" class="pen" data-edit-stop="' + s.id + '" aria-label="改這一項"><svg class="i" aria-hidden="true"><use href="#i-pen"></use></svg></button>' : "") +
       (movable(s) ? '<button type="button" class="btn btn-ghost btn-sm x" data-del-stop="' + s.id + '" aria-label="刪除這項"><svg class="i" aria-hidden="true"><use href="#i-xmark"></use></svg></button>' : "") +
@@ -5448,6 +5525,14 @@
   /* 「我是誰」= 伺服器說你在這團是哪一個成員。第 2 期以前這是 localStorage 裡
      一個誰都能改的字串;現在伺服器也照這個認人(許願人、+1 都由它決定)。 */
   function myName() { return myMember ? myMember.id : ""; }
+
+  /* 行程卡、許願卡最後一列(備註的下一排)的維基照片(2026-10-18,Lulu)。
+     點照片打開維基共享資源那一頁 —— 作者和授權寫在那裡,下面那行小字是標示出處 */
+  function wikiPhoto(page) {
+    if (!isCommons(page)) return "";
+    return '<a class="wiki-ph" href="' + esc(page) + '" target="_blank" rel="noopener"><img alt="" loading="lazy" src="' +
+      esc(commonsImg(page, 480)) + '" onerror="this.parentNode.hidden=true"><small>照片:維基共享資源</small></a>';
+  }
 
   /* 票多的在前面。地圖上的編號要跟清單對得起來,所以兩邊共用這個排序。 */
   const wishOrder = () => state.wishes.slice().sort((a, b) =>
@@ -5500,7 +5585,7 @@
              (刪掉、加入行程)。
              借 `.wdel` 的樣式(同一排的次要小字按鈕),不新增 class ——
              新 class 要重編,而這裡沒有新的樣式需求。 */
-          "</div>" +
+          "</div>" + wikiPhoto(w.photo) +
           /* **「改」和「刪掉」搬到左滑才出現的那一排。**
              它們以前跟「誰許的」「+1 了誰」擠在同一行小字裡,而那一行是**用讀的**,
              不是用按的 —— 手指掃過去就誤觸,而「刪掉」誤觸沒有回頭路。
