@@ -987,10 +987,8 @@
     .seek-out .hit .thumb img{position:absolute; width:256px; height:256px; max-width:none;}
     /* 照片跟圖磚不一樣:它**填滿**這一格,不是一張大圖挪進觀景窗。
        `object-fit:cover` 讓長寬比不同的照片不變形 —— 裁掉邊比拉扁好。 */
-    .wiki-ph{display:grid; gap:4px; width:min(100%, 280px); margin-top:8px; text-decoration:none;}
-    .wiki-ph img{display:block; width:100%; aspect-ratio:16 / 10; object-fit:cover; border-radius:var(--ds-comp-btn-normal-sm-radius);
-      border:var(--ds-sys-shared-border-xs) solid var(--line); background:var(--surface);}
-    .wiki-ph small{font-size:11px; color:var(--muted);}
+    .wiki-ph{display:flex; margin-top:6px;}
+    #ph-credit{font-size:12px; color:#fff; opacity:.85;}   /* 跟 .ph-n 一樣:深色底上用白字 */
     .wish .wiki-ph{grid-column:1/2;}
     .seek-out .hit .thumb img.shot{inset:0; width:100%; height:100%; object-fit:cover;}
     /* 那個點畫在它**真正**的位置上。框挪到邊界會被夾住,所以點不一定在正中央 ——
@@ -1823,6 +1821,7 @@
       <span class="ph-n" id="ph-n" hidden></span>
       <button type="button" class="btn btn-main btn-sm" id="ph-next" aria-label="下一張" hidden>›</button>
     </div>
+    <a id="ph-credit" target="_blank" rel="noopener" hidden>照片:維基共享資源</a>
     <button type="button" class="btn btn-main btn-sm" id="ph-close">關閉</button>
   </div>
 </div>
@@ -5527,11 +5526,12 @@
   function myName() { return myMember ? myMember.id : ""; }
 
   /* 行程卡、許願卡最後一列(備註的下一排)的維基照片(2026-10-18,Lulu)。
-     點照片打開維基共享資源那一頁 —— 作者和授權寫在那裡,下面那行小字是標示出處 */
+     **跟收據照片一樣大的小縮圖,點了才放大**(10-19,Lulu:「照片太大張了」)—— 共用收據那顆 .ph-thumb 和看照片的對話框;
+     放大那一頁下面帶「照片:維基共享資源」,點了開 Commons 那一頁(作者、授權在那裡) */
   function wikiPhoto(page) {
     if (!isCommons(page)) return "";
-    return '<a class="wiki-ph" href="' + esc(page) + '" target="_blank" rel="noopener"><img alt="" loading="lazy" src="' +
-      esc(commonsImg(page, 480)) + '" onerror="this.parentNode.hidden=true"><small>照片:維基共享資源</small></a>';
+    return '<div class="wiki-ph"><button type="button" class="ph-thumb wiki" data-photo="' + esc(commonsImg(page, 1200)) +
+      '" data-credit="' + esc(page) + '" aria-label="看照片"><img src="' + esc(commonsImg(page, 96)) + '" alt="" loading="lazy"></button></div>';
   }
 
   /* 票多的在前面。地圖上的編號要跟清單對得起來,所以兩邊共用這個排序。 */
@@ -6062,9 +6062,12 @@
     el("ph-prev").hidden = el("ph-next").hidden = el("ph-n").hidden = !many;
     el("ph-n").textContent = many ? (phAt + 1) + " / " + phList.length : "";
   }
-  function openPhoto(urls) {
+  function openPhoto(urls, credit) {
     phList = String(urls || "").split(" ").filter(Boolean);
     if (!phList.length) return;
+    /* 維基的照片:放大那一頁標出處,點了開 Commons 那一頁 */
+    el("ph-credit").hidden = !credit;
+    if (credit) el("ph-credit").href = credit; else el("ph-credit").removeAttribute("href");
     showPhoto(0);
     el("photo-overlay").hidden = false;
   }
@@ -6081,13 +6084,15 @@
     const t = ev.target.closest && ev.target.closest("[data-photo]");
     if (!t) return;
     ev.preventDefault(); ev.stopPropagation();
-    openPhoto(t.dataset.photo);
+    openPhoto(t.dataset.photo, t.dataset.credit || "");
   }, true);
   /* Notion 的網址 1 小時後失效:縮圖載不出來 → 有網路就重讀一次資料(一分鐘最多一次),沒網路就先藏起來 */
   let photoRetryAt = 0;
   document.addEventListener("error", ev => {
     const img = ev.target;
     if (!img || img.tagName !== "IMG" || !img.closest(".ph-thumb")) return;
+    /* 維基的照片不會過期,載不到就是那張沒了 —— 藏起來就好,不要重讀資料 */
+    if (img.closest(".ph-thumb.wiki")) { img.closest(".wiki-ph").hidden = true; return; }
     if (online && Date.now() - photoRetryAt > 60e3) { photoRetryAt = Date.now(); pull().then(render).catch(() => {}); }
     else img.closest(".ph-thumb").hidden = true;
   }, true);
