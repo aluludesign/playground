@@ -1696,7 +1696,8 @@
         <div class="sec-head"><h2>每個人的帳</h2></div>
         <div class="people" id="people"></div>
       </div>
-      <div class="sec">
+      <!-- 旅程結束後這一塊會被 renderSplit() 搬到最上面(2026-10-19,Lulu):那時候大家打開分帳頁只為了「我要轉給誰」 -->
+      <div class="sec" id="sec-transfers">
         <div class="sec-head"><h2>結清方式</h2><span class="hint">最少轉帳次數</span></div>
         <div id="transfers"></div>
         <p class="st-hint" id="fund-transfer-note" style="margin-top:8px" hidden></p>
@@ -5751,6 +5752,10 @@
         '<div class="net"><span>' + word + '</span><span class="v" style="color:' + col + '">' +
         (Math.abs(net) < 0.5 ? "—" : twd(Math.abs(net))) + "</span></div></div>";
     }).join("");
+
+    /* 旅程結束了就只剩「誰要轉給誰」要做,結清方式排到最上面;還在旅途中照原本的順序 */
+    const ts = el("sec-transfers");
+    if (tripEnded()) el("split-warn").after(ts); else el("panel-split").appendChild(ts);
 
     const t = transfers(res);
     el("transfers").innerHTML = t.length
