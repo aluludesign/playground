@@ -694,40 +694,68 @@ const memberRow = (code, sub) => rowsIn(DB.members).find(p => plain(p.properties
   await call(LINE_B, "DELETE", { resource: "wishes", t: T1, id: w2 });
   ok("刪願望 → 不通知", rowsIn(ACT).length === n1, rowsIn(ACT).length - n1);
 
-  /* ================= 共同基金:沒有/預算/一包錢、誰出多少、保管人、補基金(2026-10-02) ================= */
+  /* ================= 預收:沒有/有預收、收款人必填、補交(2026-10-02 起;2026-10-19 預算拿掉、改叫預收) =================
+     Notion 的欄名、選項名刻意不改(基金模式/一包錢/基金保管人/基金出資/基金),只有畫面和動態的字換成預收、收款人 */
+  const fundFeed = async () => (await feed(LINE_B)).map(x => x.text);
+  let nAct = rowsIn(ACT).length;
   r = await call(LINE_A, "PATCH", { resource: "team", t: T1 }, { fund: { mode: "pot", shares: { [mA.id]: 5000, [mB.id]: 3000 }, keeper: mB.id } });
   let tr = rowsIn(DB.trips).find(p => plain(p.properties["代號"]) === T1);
-  ok("團主設一包錢:模式、誰出多少、保管人寫進「團」;每人不一樣 → 「基金」= 0",
+  ok("團主設預收:模式(Notion 照舊寫「一包錢」)、誰交多少、收款人寫進「團」;每人不一樣 → 「基金」= 0",
     r.code === 200 && tr.properties["基金模式"].select.name === "一包錢" && plain(tr.properties["基金出資"]) === mA.id + ":5000," + mB.id + ":3000" &&
     plain(tr.properties["基金保管人"]) === mB.id && tr.properties["基金"].number === 0, tr.properties);
+  ok("改成有預收 → 動態「把預收改成有預收,收款人:B(結清方式跟著變了)」,類型分帳", (await fundFeed()).some(t => /把預收改成有預收,收款人:.*\(結清方式跟著變了\)/.test(t)) &&
+    rowsIn(ACT).slice(nAct).some(p => p.properties["類型"].select.name === "分帳"), (await fundFeed()).slice(0, 3));
   r = await call(LINE_B, "GET", { resource: "team", t: T1 });
   ok("讀出來是 fund:{mode:pot, shares, keeper}", r.body.trip.fund && r.body.trip.fund.mode === "pot" && r.body.trip.fund.shares[mA.id] === 5000 && r.body.trip.fund.keeper === mB.id, r.body.trip.fund);
-  r = await call(LINE_A, "PATCH", { resource: "team", t: T1 }, { fund: { mode: "budget", shares: { [mA.id]: 4000, [mB.id]: 4000, [mD.id]: 4000 } } });
+  nAct = rowsIn(ACT).length;
+  await call(LINE_A, "PATCH", { resource: "team", t: T1 }, { fund: { mode: "pot", shares: { [mA.id]: 5000, [mB.id]: 3000 }, keeper: mB.id } });
+  ok("預收沒變 → 不寫動態", rowsIn(ACT).length === nAct, rowsIn(ACT).length - nAct);
+  r = await call(LINE_A, "PATCH", { resource: "team", t: T1 }, { fund: { mode: "budget", shares: { [mA.id]: 4000 } } });
+  ok("舊畫面送 budget → 400「預算模式已經拿掉,請重新整理」,不默默改", r.code === 400 && /預算模式已經拿掉/.test(r.body.error), r.body);
+  /* 東京 Pa Pa 造的形狀:只有 B、D 交,收款人是團主 A(自己沒交)—— 收款人省略 → 存團主 */
+  r = await call(LINE_A, "PATCH", { resource: "team", t: T1 }, { fund: { mode: "pot", shares: { [mB.id]: 30000, [mD.id]: 30000 } } });
   tr = rowsIn(DB.trips).find(p => plain(p.properties["代號"]) === T1);
-  ok("每人一樣 → 「基金」= 那個金額;預算模式沒有保管人", tr.properties["基金"].number === 4000 && plain(tr.properties["基金保管人"]) === "", tr.properties["基金"]);
+  ok("沒送收款人 → 存團主;只有 B、D 交、每人一樣 → 「基金」30,000", r.code === 200 && plain(tr.properties["基金保管人"]) === mA.id &&
+    plain(tr.properties["基金出資"]) === mB.id + ":30000," + mD.id + ":30000" && tr.properties["基金"].number === 30000, tr.properties);
+  r = await call(LINE_B, "GET", { resource: "team", t: T1 });
+  ok("讀回來一致:收款人 A、只有 B、D", r.body.trip.fund.keeper === mA.id && Object.keys(r.body.trip.fund.shares).join() === [mB.id, mD.id].join(), r.body.trip.fund);
+  const ft = await fundFeed();
+  ok("收款人、出資變了 → 動態「改了收款人:A」「改了預收:… 交 NT$0 → NT$30,000」", ft.some(t => /改了收款人:/.test(t)) && ft.some(t => /改了預收:.*交 NT\$0 → NT\$30,000/.test(t)), ft.slice(0, 4));
+  r = await call(LINE_A, "PATCH", { resource: "team", t: T1 }, { fund: { mode: "pot", shares: { [mB.id]: 100 }, keeper: "Uzz_not_member" } });
+  ok("收款人不是這一團的人 → 400「收款人不在這一團」", r.code === 400 && /收款人不在這一團/.test(r.body.error), r.body);
   r = await call(LINE_A, "PATCH", { resource: "team", t: T1 }, { fund: { mode: "pot", shares: { Uzz_not_member: 100 } } });
-  ok("出基金的人不在這一團 → 400", r.code === 400, r.body);
+  ok("交預收的人不在這一團 → 400", r.code === 400, r.body);
   r = await call(LINE_A, "PATCH", { resource: "team", t: T1 }, { fund: { mode: "pot", shares: {} } });
-  ok("一包錢但沒選誰出 → 400", r.code === 400, r.body);
+  ok("預收但沒選誰交 → 400", r.code === 400, r.body);
   r = await call(LINE_B, "PATCH", { resource: "team", t: T1 }, { fund: { mode: "none" } });
-  ok("不是團主不能改基金設定", r.code === 403, r.body);
-  r = await call(LINE_A, "POST", { resource: "fund", t: T1 }, { who: [mA.id], amount: 100 });
-  ok("預算模式不能補基金", r.code === 400, r.body);
+  ok("不是團主不能改預收設定", r.code === 403, r.body);
   await call(LINE_A, "PATCH", { resource: "team", t: T1 }, { fund: { mode: "pot", shares: { [mA.id]: 5000, [mB.id]: 5000 }, keeper: mB.id } });
   r = await call(LINE_D, "POST", { resource: "fund", t: T1 }, { who: [mA.id, mB.id], amount: 2000 });
-  ok("一般成員(不是保管人)不能記補基金", r.code === 403, r.body);
+  ok("一般成員(不是收款人)不能記補交", r.code === 403 && /收款人/.test(r.body.error), r.body);
   r = await call(LINE_B, "POST", { resource: "fund", t: T1 }, { who: [mA.id, mB.id], amount: 2000 });
   tr = rowsIn(DB.trips).find(p => plain(p.properties["代號"]) === T1);
-  ok("保管人(就算只是一般成員)能記補基金:兩人各 +2,000", r.code === 200 && plain(tr.properties["基金出資"]) === mA.id + ":7000," + mB.id + ":7000" && tr.properties["基金"].number === 7000, plain(tr.properties["基金出資"]));
-  ok("補基金也進動態", (await feed(LINE_A)).some(x => /記了補基金:.*各 NT\$2,000/.test(x.text)), (await feed(LINE_A)).slice(-2));
+  ok("收款人(就算只是一般成員)能記補交:兩人各 +2,000", r.code === 200 && plain(tr.properties["基金出資"]) === mA.id + ":7000," + mB.id + ":7000" && tr.properties["基金"].number === 7000, plain(tr.properties["基金出資"]));
+  ok("補交也進動態:「記了補交預收」", (await feed(LINE_A)).some(x => /記了補交預收:.*各 NT\$2,000/.test(x.text)), (await feed(LINE_A)).slice(-2));
   r = await call(LINE_A, "POST", { resource: "fund", t: T1 }, { who: [mA.id], amount: 0 });
   ok("補 0 元 → 400", r.code === 400, r.body);
   r = await call(LINE_A, "POST", { resource: "expenses", t: T1 }, { title: "租車", amount: 9000, currency: "TWD", payer: "fund", participants: [mA.id, mB.id, mD.id] });
-  ok("記帳付款人可以是「共同基金」", r.code === 200 && r.body.row.payer === "fund", r.body.row);
-  ok("動態寫「(共同基金付)」", (await feed(LINE_B)).some(x => /租車.*\(共同基金付\)/.test(x.text)), "");
-  await call(LINE_A, "PATCH", { resource: "team", t: T1 }, { fund: { mode: "none" } });
+  const rent = r.body.row;
+  ok("記帳付款人可以是「預收」", r.code === 200 && rent.payer === "fund", rent);
+  ok("動態寫「(預收付)」", (await feed(LINE_B)).some(x => /租車.*\(預收付\)/.test(x.text)), "");
+  r = await call(LINE_A, "PATCH", { resource: "team", t: T1 }, { fund: { mode: "none" } });
+  ok("還有預收付的帳 → 不能改成沒有:400「還有 1 筆是預收付的,先改付款人」", r.code === 400 && /還有 1 筆是預收付的,先改付款人/.test(r.body.error), r.body);
+  r = await call(LINE_A, "PATCH", { resource: "expenses", t: T1, id: rent.id }, { payer: mA.id });
+  ok("付款人改掉也進動態:「付款人 預收 → A」", (await feed(LINE_B)).some(x => /租車.*付款人 預收 → /.test(x.text)), (await feed(LINE_B)).slice(0, 2).map(x => x.text));
+  r = await call(LINE_A, "PATCH", { resource: "team", t: T1 }, { fund: { mode: "none" } });
   tr = rowsIn(DB.trips).find(p => plain(p.properties["代號"]) === T1);
-  ok("改回沒有 → 出資清空、基金 0", tr.properties["基金模式"].select.name === "沒有" && plain(tr.properties["基金出資"]) === "" && tr.properties["基金"].number === 0, "");
+  ok("帳改掉之後才能改回沒有 → 出資清空、基金 0、動態「把預收改成沒有」", r.code === 200 && tr.properties["基金模式"].select.name === "沒有" && plain(tr.properties["基金出資"]) === "" &&
+    tr.properties["基金"].number === 0 && (await fundFeed()).some(t => /把預收改成沒有/.test(t)), r.body);
+  /* Notion 還存著「預算」的舊團 → 讀成沒有(出資還在,畫面切到預收時帶出來) */
+  tr.properties["基金模式"] = { select: { name: "預算" } };
+  tr.properties["基金出資"] = { rich_text: [{ plain_text: mB.id + ":30000" }] };
+  r = await call(LINE_B, "GET", { resource: "team", t: T1 });
+  ok("存著「預算」→ 讀成 none、出資照樣讀得到", r.body.trip.fund.mode === "none" && r.body.trip.fund.shares[mB.id] === 30000, r.body.trip.fund);
+  tr.properties["基金模式"] = { select: { name: "沒有" } }; tr.properties["基金出資"] = { rich_text: [] };
 
   /* ================= 最高權限:隱藏、刪除任何一團(2026-10-02) ================= */
   const LULU = "U" + "f".repeat(32);

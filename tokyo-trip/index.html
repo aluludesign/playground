@@ -1055,6 +1055,9 @@
     .fp .amt{font-family:var(--font-mono); font-size:11.5px; color:var(--muted); letter-spacing:.02em; text-align:right;}
     .fp .amt b{color:var(--ink); font-weight:600;}
     .fp.over .amt b{color:var(--neg);}
+    /* 預收那幾排字比較長(交了 · 用 · 剩):名字＋長條一行,金額自己一行,長條才不會被擠沒 */
+    .fp.fp2{grid-template-columns:auto 1fr; row-gap:4px;}
+    .fp.fp2 .amt{grid-column:1 / -1;}
 
     .people{display:grid; grid-template-columns:repeat(auto-fit,minmax(168px,1fr)); gap:10px;}
     .person{background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:13px 14px;}
@@ -1686,7 +1689,7 @@
     <section class="panel" id="panel-split" role="tabpanel" aria-labelledby="tab-split" hidden>
       <div id="split-warn"></div>
       <div class="sec">
-        <div class="sec-head"><h2>共同基金</h2><span class="hint" id="fund-sub"></span></div>
+        <div class="sec-head"><h2>預收</h2><span class="hint" id="fund-sub"></span></div>
         <div class="fund" id="fund"></div>
       </div>
       <div class="sec">
@@ -1696,6 +1699,7 @@
       <div class="sec">
         <div class="sec-head"><h2>結清方式</h2><span class="hint">最少轉帳次數</span></div>
         <div id="transfers"></div>
+        <p class="st-hint" id="fund-transfer-note" style="margin-top:8px" hidden></p>
       </div>
     </section>
   </main>
@@ -1753,23 +1757,24 @@
       </div>
       <p class="st-hint" id="st-date-note" hidden></p>
       <div class="fld" id="st-rate-fld"><label class="rm-label" for="st-rate">匯率(1 外幣 = ? 台幣)</label><input class="rm-input" type="number" id="st-rate" step="0.0001" min="0"></div>
-      <!-- 共同基金(2026-10-02,Lulu):沒有/預算/一包錢;誰有出、每人一樣或不一樣;一包錢才有保管人 -->
-      <div class="fld"><label class="rm-label" for="st-fund-mode">共同基金</label>
+      <!-- 預收(2026-10-19,Lulu:「只有金錢實際流動才記,所以記成預收、收款人」):沒有/有預收;收款人必填(預設團主);
+           誰有交、每人一樣或不一樣。收款人放在這一塊最上面,吃得到 .dialog-gap 那條 12px 的規則 -->
+      <div class="fld"><label class="rm-label" for="st-fund-mode">預收</label>
         <select class="rm-input" id="st-fund-mode">
           <option value="none">沒有</option>
-          <option value="budget">預算(每人一個額度)</option>
-          <option value="pot">一包錢(真的收錢)</option>
+          <option value="pot">有預收(先把錢交給收款人)</option>
         </select></div>
       <div id="st-fund-box" hidden>
-        <div class="fld"><span class="rm-label">誰有出</span><div class="who" id="st-fund-who"></div></div>
+        <div class="fld" id="st-keeper-fld"><label class="rm-label" for="st-keeper">收款人</label><select class="rm-input" id="st-keeper"></select></div>
+        <p class="st-hint" id="st-keeper-gone" hidden>收款人已經不在這一團,請團主重選。</p>
+        <div class="fld"><span class="rm-label">誰有交</span><div class="who" id="st-fund-who"></div></div>
         <div class="fld"><span class="rm-label">金額</span>
           <div class="who">
             <label class="rm-chip"><input type="radio" name="st-fund-same" id="st-fund-same1" value="same" checked>每人一樣</label>
             <label class="rm-chip"><input type="radio" name="st-fund-same" id="st-fund-same0" value="diff">每人不一樣</label>
           </div></div>
-        <div class="fld" id="st-kitty-fld"><label class="rm-label" for="st-kitty">每人出多少(台幣)</label><input class="rm-input" type="number" id="st-kitty" step="1" min="0"></div>
+        <div class="fld" id="st-kitty-fld"><label class="rm-label" for="st-kitty">每人交多少(台幣)</label><input class="rm-input" type="number" id="st-kitty" step="1" min="0"></div>
         <div class="grid2" id="st-fund-each" hidden></div>
-        <div class="fld" id="st-keeper-fld" hidden><label class="rm-label" for="st-keeper">保管人(錢在誰手上)</label><select class="rm-input" id="st-keeper"></select></div>
         <p class="st-hint" id="st-fund-note"></p>
       </div>
       <!-- 副團主(2026-10-01):一般成員只能許願;團主指派 1 位副團主、勾他能管哪幾塊。每天只能換一次 -->
@@ -1797,11 +1802,11 @@
   </form>
 </div>
 
-<!-- 補基金(2026-10-02):一包錢的時候,旅途中誰補了多少。保管人、團主、有記帳權限的副團主能記 -->
+<!-- 補交預收(2026-10-02 起;10-19 改名):旅途中誰補了多少。收款人、團主、有記帳權限的副團主能記 -->
 <div class="overlay" id="fund-top-overlay" hidden>
   <form class="signin" id="fund-top-form" role="dialog" aria-modal="true" aria-labelledby="ft-title">
-    <h2 id="ft-title">補基金</h2>
-    <p>旅途中基金不夠,大家再湊一點。記下誰補了、每人補多少(台幣),結算時會算進去。</p>
+    <h2 id="ft-title">補交預收</h2>
+    <p>旅途中預收不夠,大家再交一點給收款人。記下誰補了、每人補多少(台幣),結算時會算進去。</p>
     <div class="fld"><span class="rm-label">誰補了</span><div class="who" id="ft-who"></div></div>
     <div class="fld"><label class="rm-label" for="ft-amt">每人補多少(台幣)</label><input class="rm-input" type="number" id="ft-amt" min="1" step="1" required></div>
     <div class="err" id="ft-err" hidden></div>
@@ -2223,9 +2228,10 @@
   /* ================= 狀態 ================= */
   const state = { tab: "plan", day: "", rate: (window.TRIP_CONFIG || {}).rate || SEED.rate,
     kitty: 0, names: {}, expenses: [], stops: [], wishes: [], seats: [] };
-  const nameOf = id => (id === "fund" ? "共同基金" : state.names[id] || (MEMBERS.find(m => m.id === id) || {}).def || id);
-  /* **共同基金**(2026-10-02):mode none/budget/pot;shares = 誰出多少(台幣,含補的);keeper = 一包錢的保管人 */
-  let FUND = { mode: "none", keeper: "", shares: {} };
+  const nameOf = id => (id === "fund" ? "預收" : state.names[id] || (MEMBERS.find(m => m.id === id) || {}).def || id);
+  /* **預收**(2026-10-19 起;原「共同基金」):mode none/pot;shares = 誰交了多少(台幣,含補的);
+     keeper = 實際收款人(存的是空的就是團主;存的人已經不在這一團 → 空的,keeperGone = true,結清寫「預收」那一方) */
+  let FUND = { mode: "none", keeper: "", keeperGone: false, shares: {} };
   const colorOf = id => (MEMBERS.find(m => m.id === id) || {}).color || "#7E8796";
 
   const twd = n => "NT$" + Math.round(n).toLocaleString("en-US");
@@ -2407,10 +2413,14 @@
     {
       const f = trip.fund || {}, shares = {};
       Object.keys(f.shares || {}).forEach(id => { if (IDS.includes(id)) shares[id] = Number(f.shares[id]) || 0; });
-      let mode = ["none", "budget", "pot"].includes(f.mode) ? f.mode : "none";
-      /* 舊的團只有「基金」一個數字:當成全部人一樣的預算 */
-      if (mode === "none" && !f.mode && state.kitty > 0) { mode = "budget"; IDS.forEach(id => { shares[id] = state.kitty; }); }
-      FUND = { mode, keeper: mode === "pot" && IDS.includes(f.keeper) ? f.keeper : "", shares: mode === "none" ? {} : shares };
+      /* 預算模式拿掉了(2026-10-19):以前存成預算的、舊團只有「基金」一個數字的,都讀成「沒有」。
+         shares 留著 —— 團主切到「有預收」時直接帶出來(東京 Pa Pa 造會帶出三人各 30,000) */
+      const mode = f.mode === "pot" ? "pot" : "none";
+      if (!f.mode && state.kitty > 0 && !Object.keys(shares).length) IDS.forEach(id => { shares[id] = state.kitty; });
+      const boss = MEMBERS.find(m => m.role === "團主"), saved = f.keeper || "";
+      /* 只有「存的是空的」才當團主;存了人但他已經離團 → 不要改成團主(不然團主要退一筆沒拿到的錢) */
+      const gone = mode === "pot" && !!saved && !IDS.includes(saved);
+      FUND = { mode, keeper: mode !== "pot" || gone ? "" : saved || (boss ? boss.id : ""), keeperGone: gone, shares };
     }
     setTripRegion();
     /* 台灣的團只有台幣:幣別選單收起來,預設台幣 */
@@ -3006,7 +3016,8 @@
     if (!online) return;
     clearTimeout(pullTimer);
     /* 先送排著的,再讀:同時跑的話,讀回來的那份是送出之前的,剛送到的那筆會暫時從畫面上消失 */
-    pullTimer = setTimeout(() => { flushOutbox().catch(() => {}).then(pull).then(render).then(loadFeed).catch(() => {}); }, 400);
+    /* 團的設定也重讀(2026-10-19):團主改了預收、收款人,別人開著的 App 才會跟著換結清方式 */
+    pullTimer = setTimeout(() => { flushOutbox().catch(() => {}).then(pull).then(() => refreshTeam().catch(() => {})).then(render).then(loadFeed).catch(() => {}); }, 400);
   }
 
   /* 按鈕原地轉圈,文字先收起來。寬高先鎖住,不然按下去整排會抽動一下。
@@ -3191,7 +3202,7 @@
     el("bell-dot").hidden = !n;
     el("bell-btn").setAttribute("aria-label", n ? "通知(" + n + " 則新的)" : "通知");
   }
-  const BELL_TAB = { "許願": "wish", "行程": "plan", "交通": "fly", "花費": "cost" };
+  const BELL_TAB = { "許願": "wish", "行程": "plan", "交通": "fly", "花費": "cost", "分帳": "split" };
   const bellWhen = iso => { try { return new Intl.DateTimeFormat("zh-TW", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(iso)); } catch (_) { return ""; } };
   function renderBell() {
     const items = bellItems();
@@ -5612,12 +5623,12 @@
     /* 記完一筆最想馬上知道的是基金還剩多少,所以擺在第一格 */
     const res = ledger(), who = Object.keys(FUND.shares);
     const pot = who.reduce((s, id) => s + FUND.shares[id], 0);
-    /* 預算:出了基金的人分到多少;一包錢:基金裡實際付掉多少 */
-    const used = FUND.mode === "pot" ? res.fundPaid : who.reduce((s, id) => s + res.book[id].owed, 0);
+    /* 預收「用了」= 交錢的人分到的花費(不管當初誰付的),跟分帳頁預收那一塊同一個定義(2026-10-19,Lulu) */
+    const used = who.reduce((s, id) => s + (res.book[id] ? res.book[id].owed : 0), 0);
     const left = pot - used;
     el("cost-stats").innerHTML = [
-      FUND.mode !== "none" && pot > 0
-        ? tile("基金剩餘", twd(Math.abs(left)), left < 0 ? (FUND.mode === "pot" ? "不夠了,要補" : "已經超支") : FUND.mode === "pot" ? "基金付了 " + twd(used) : "每人約 " + twd(left / (who.length || 1)))
+      FUND.mode === "pot" && pot > 0
+        ? tile("預收剩餘", twd(Math.abs(left)), left < 0 ? "不夠了,要再收" : "用了 " + twd(used))
         : tile("每人平均", twd(IDS.length ? total / IDS.length : 0), IDS.length + " 個人"),
       tile("總花費", twd(total), state.expenses.length + " 筆紀錄"),
       tile("行前預訂", twd(total - tripTotal), "機票、住宿等"),
@@ -5674,79 +5685,68 @@
         '<button type="button" class="btn btn-ghost btn-sm" data-del-exp="' + e.id + '">刪除</button></div>' : "") + "</div>";
   }
 
-  /* 共同基金:每人先拿 kitty 元進來,分攤到的錢就從自己那份扣。
-     這裡看的是「花掉多少」,不是「誰先墊的」 —— 墊款是下面「每個人的帳」在管。 */
-  /* 共同基金那一塊。預算:每人一個額度,看各自分到多少;一包錢:收了多少、基金付了多少、剩多少(在誰手上) */
+  /* 預收那一塊(2026-10-19 起;預算模式拿掉了):收了多少、預收付了多少、剩多少(在收款人手上) */
   function renderFund() {
     const sec = el("fund-sub").closest(".sec");
     const who = MEMBERS.filter(m => FUND.shares[m.id] !== undefined);
     const pot = who.reduce((s, m) => s + FUND.shares[m.id], 0);
-    if (sec) sec.hidden = FUND.mode === "none" || !who.length;
-    if (FUND.mode === "none" || !who.length) return;
+    if (sec) sec.hidden = FUND.mode !== "pot" || !who.length;
+    if (FUND.mode !== "pot" || !who.length) return;
     const res = ledger();
     const vals = who.map(m => FUND.shares[m.id]);
     const same = vals.every(v => v === vals[0]);
-    el("fund-sub").textContent = (FUND.mode === "pot" ? "一包錢 · " : "預算 · ") + (same ? "每人 " + twd(vals[0]) : "每人不一樣") + " · 共 " + twd(pot);
-    const pre = state.expenses.filter(e => e.date < (trip && trip.start || "")).reduce((s, e) => s + toTWD(e), 0);
-    const canTop = FUND.mode === "pot" && online && !(trip && trip.ended) &&
+    const kname = FUND.keeper ? nameOf(FUND.keeper) : "";
+    el("fund-sub").textContent = (kname ? kname + "收 · " : "") + (same ? "每人 " + twd(vals[0]) : "每人不一樣") + " · 共 " + twd(pot);
+    const canTop = online && !(trip && trip.ended) &&
       (editable("cost") || (FUND.keeper && myMember && FUND.keeper === myMember.id));
-
-    if (FUND.mode === "pot") {
-      const used = res.fundPaid, left = res.fundLeft;
-      const pct = pot > 0 ? Math.min(100, used / pot * 100) : 0;
-      const rows = who.map(m => '<div class="fp" style="--fc:' + m.color + '">' +
-        '<span class="nm"><span class="dot" style="background:' + m.color + '"></span>' + esc(nameOf(m.id)) + "</span>" +
-        '<span class="track"><i style="width:' + (pot > 0 ? FUND.shares[m.id] / pot * 100 : 0) + '%"></i></span>' +
-        '<span class="amt">出了 <b>' + twd(FUND.shares[m.id]) + "</b></span></div>").join("");
-      el("fund").innerHTML =
-        '<div class="fund-top"><span class="used">基金付了 ' + twd(used) + "</span>" +
-        '<span class="left">' + (left < 0 ? "不夠 <b style=\"color:var(--neg)\">" + twd(-left) + "</b>" : "還剩 <b>" + twd(left) + "</b>") + "</span></div>" +
-        '<div class="fund-bar' + (left < 0 ? " over" : "") + '"><i style="width:' + pct + '%"></i></div>' +
-        '<div class="fund-note">錢在 ' + esc(FUND.keeper ? nameOf(FUND.keeper) : "共同基金") + " 手上 · 收了 " + twd(pot) +
-        (left < 0 ? " · 不夠的照結清方式補" : left > 0 ? " · 剩的照結清方式退" : "") + "</div>" +
-        '<div class="fund-people">' + rows + "</div>" +
-        (canTop ? '<div class="fund-ops"><button type="button" class="btn btn-sm" id="fund-top-btn">補基金</button></div>' : "");
-      if (el("fund-top-btn")) el("fund-top-btn").addEventListener("click", openTopup);
-      return;
-    }
-    const used = who.reduce((s, m) => s + res.book[m.id].owed, 0);
-    const left = pot - used;
+    /* **進度條和「還剩」看交錢的人分到的花費**(2026-10-19,Lulu 看東京 Pa Pa 造問「為什麼這條 bar 沒有值」):
+       以前是「付款人 = 預收」的帳加總,而帳多半記成個人付(那團 16 筆全是),所以永遠是 0。
+       現在跟下面每人那幾列同一個定義。fundLeft(收款人手上的現金)只用在結清和收款人的卡片 */
+    const used = who.reduce((s, m) => s + res.book[m.id].owed, 0), left = pot - used;
     const pct = pot > 0 ? Math.min(100, used / pot * 100) : 0;
+    /* 每個人:交了多少、用掉多少(分攤到的**所有**花費,不管當初誰付的)、還剩多少(2026-10-19,Lulu:「還是可以顯示每人目前花掉多少」)。
+       帳多半記成收款人自己付的,只算「付款人 = 預收」的話每個人都是 0,看不出錢用到哪。
+       沒自己另外付錢的人,「剩」就是結清時收款人要退給他的錢 */
     const rows = who.map(m => {
-      const per = FUND.shares[m.id];
-      const u = res.book[m.id].owed;
-      const rest = per - u;
-      const p = per > 0 ? Math.min(100, u / per * 100) : 0;
-      return '<div class="fp' + (rest < 0 ? " over" : "") + '" style="--fc:' + m.color + '">' +
+      const put = FUND.shares[m.id], u = res.book[m.id].owed, rest = put - u;
+      const p = put > 0 ? Math.min(100, u / put * 100) : 0;
+      return '<div class="fp fp2' + (rest < 0 ? " over" : "") + '" style="--fc:' + m.color + '">' +
         '<span class="nm"><span class="dot" style="background:' + m.color + '"></span>' + esc(nameOf(m.id)) + "</span>" +
         '<span class="track"><i style="width:' + p + '%"></i></span>' +
-        '<span class="amt">用 <b>' + twd(u) + "</b> · " + (rest < 0 ? "超支 " : "剩 ") + twd(Math.abs(rest)) + "</span></div>";
+        '<span class="amt">交了 ' + twd(put) + " · 用 <b>" + twd(u) + "</b> · " + (rest < 0 ? "不夠 " : "剩 ") + twd(Math.abs(rest)) + "</span></div>";
     }).join("");
     el("fund").innerHTML =
-      '<div class="fund-top"><span class="used">已用 ' + twd(used) + "</span>" +
-      '<span class="left">' + (left < 0 ? "超出 <b style=\"color:var(--neg)\">" + twd(-left) + "</b>" : "還剩 <b>" + twd(left) + "</b>") + "</span></div>" +
+      '<div class="fund-top"><span class="used">用了 ' + twd(used) + "</span>" +
+      '<span class="left">' + (left < 0 ? "不夠 <b style=\"color:var(--neg)\">" + twd(-left) + "</b>" : "還剩 <b>" + twd(left) + "</b>") + "</span></div>" +
       '<div class="fund-bar' + (left < 0 ? " over" : "") + '"><i style="width:' + pct + '%"></i></div>' +
-      '<div class="fund-note">' + Math.round(pct) + "% 用掉了" +
-      (pre > 0 ? " · 其中 " + twd(pre) + " 是行前記的" : "") + "</div>" +
-      '<div class="fund-people">' + rows + "</div>";
+      '<div class="fund-note">' + (kname ? "錢在 " + esc(kname) + " 手上 · " : FUND.keeperGone ? "收款人已經不在這一團,請團主重選 · " : "") + "收了 " + twd(pot) +
+      (left < 0 ? " · 不夠的照結清方式補" : left > 0 ? " · 剩的照結清方式退" : "") +
+      " · 用了 = 交錢的人分到的花費" + (res.fundPaid >= 0.5 ? " · 其中 " + twd(res.fundPaid) + " 直接用預收付" : "") + "</div>" +
+      '<div class="fund-people">' + rows + "</div>" +
+      (canTop ? '<div class="fund-ops"><button type="button" class="btn btn-sm" id="fund-top-btn">補交預收</button></div>' : "");
+    if (el("fund-top-btn")) el("fund-top-btn").addEventListener("click", openTopup);
   }
 
   function renderSplit() {
     const res = ledger();
-    el("split-warn").innerHTML = res.unassigned
-      ? '<div class="note" style="margin-bottom:18px"><span>⚠</span><span>有 ' + res.unassigned +
-        " 筆花費還沒指定付款人,這些錢算進「該付」但沒算成任何人「已付」,結算金額會不準。</span></div>" : "";
+    /* 寫「預收付」但這一團沒有預收的帳,ledger 會把它算成沒付款人 —— 分開講,原因不一樣 */
+    const fundNoPot = FUND.mode === "pot" ? 0 : state.expenses.filter(e => e.payerId === "fund").length;
+    const noPayer = res.unassigned - fundNoPot;
+    const warn = t => '<div class="note" style="margin-bottom:18px"><span>⚠</span><span>' + t + "</span></div>";
+    el("split-warn").innerHTML =
+      (noPayer ? warn("有 " + noPayer + " 筆花費還沒指定付款人,這些錢算進「該付」但沒算成任何人「已付」,結算金額會不準。") : "") +
+      (fundNoPot ? warn(fundNoPot + " 筆寫預收付,但這一團沒有預收。把付款人改成實際付錢的人,或請團主在團的設定打開預收。") : "");
     const nt = nets(res), pot = FUND.mode === "pot";
     el("people").innerHTML = MEMBERS.map(m => {
       const b = res.book[m.id];
-      /* 保管人手上有基金剩的錢:他的淨額已經扣掉了,卡片也照這個講 */
+      /* 收款人手上有預收剩的錢:淨額已經扣掉了,卡片也照這個講 */
       const net = nt[m.id];
       const col = net > 0.5 ? "var(--pos)" : net < -0.5 ? "var(--neg)" : "var(--muted)";
       const word = net > 0.5 ? "應收回" : net < -0.5 ? "要付出" : "剛好打平";
       return '<div class="person"><div class="nm"><span class="dot" style="background:' + m.color + '"></span>' + esc(nameOf(m.id)) + "</div>" +
         '<div class="kv"><span>已付</span><span class="num">' + twd(b.paid) + "</span></div>" +
-        (pot && b.put ? '<div class="kv"><span>出基金</span><span class="num">' + twd(b.put) + "</span></div>" : "") +
-        (pot && FUND.keeper === m.id && Math.abs(res.fundLeft) >= 0.5 ? '<div class="kv"><span>' + (res.fundLeft > 0 ? "手上基金剩" : "基金墊不夠") + '</span><span class="num">' + twd(Math.abs(res.fundLeft)) + "</span></div>" : "") +
+        (pot && b.put ? '<div class="kv"><span>交了預收</span><span class="num">' + twd(b.put) + "</span></div>" : "") +
+        (pot && FUND.keeper === m.id && Math.abs(res.fundLeft) >= 0.5 ? '<div class="kv"><span>' + (res.fundLeft > 0 ? "手上預收還剩" : "預收不夠,先墊") + '</span><span class="num">' + twd(Math.abs(res.fundLeft)) + "</span></div>" : "") +
         '<div class="kv"><span>該付</span><span class="num">' + twd(b.owed) + "</span></div>" +
         '<div class="net"><span>' + word + '</span><span class="v" style="color:' + col + '">' +
         (Math.abs(net) < 0.5 ? "—" : twd(Math.abs(net))) + "</span></div></div>";
@@ -5758,6 +5758,13 @@
           '</span><span class="arr">→</span><span class="dot" style="background:' + colorOf(x.to) + '"></span><span class="who2">' + esc(nameOf(x.to)) +
           '</span><span class="v">' + twd(x.v) + "</span></div>").join("")
       : '<div class="empty">' + (state.expenses.length ? "目前所有人都打平了,不用轉帳。" : (editable("cost") ? "還沒有花費紀錄,先去記一筆。" : "還沒有花費紀錄。")) + "</div>";
+    /* 結清方式下面講一句預收怎麼算進去:**看收款人自己的淨額**(不是看預收剩多少)—— 要付出 = 退給大家的錢由他轉;
+       要收回 = 他手上剩的已經從大家要給他的錢裡扣掉了 */
+    const fn = el("fund-transfer-note"), kn = FUND.keeper ? nt[FUND.keeper] : 0, kname = FUND.keeper ? nameOf(FUND.keeper) : "";
+    const say = pot && kname && Math.abs(res.fundLeft) >= 0.5
+      ? (kn < -0.5 ? "預收剩的錢在 " + kname + " 手上,所以退給大家的錢由 " + kname + " 轉。"
+        : kn > 0.5 ? kname + " 手上剩的預收,已經從大家要給 " + kname + " 的錢裡扣掉了。" : "") : "";
+    if (fn) { fn.textContent = say; fn.hidden = !say; }
   }
 
   /* 平常就是那一句;只有一種情況要講:這台瀏覽器連存都存不了(離開就會不見),那是使用者必須知道的 */
@@ -6191,7 +6198,8 @@
   function fillExpPeople(payerId, participants, split) {
     el("xe-payer").innerHTML = '<option value="">— 還不確定 —</option>' +
       MEMBERS.map(m => '<option value="' + m.id + '"' + (m.id === payerId ? " selected" : "") + ">" + esc(nameOf(m.id)) + "</option>").join("") +
-      (FUND.mode === "pot" || payerId === "fund" ? '<option value="fund"' + (payerId === "fund" ? " selected" : "") + ">共同基金</option>" : "");
+      (FUND.mode === "pot" || payerId === "fund" ? '<option value="fund"' + (payerId === "fund" ? " selected" : "") + ">預收" +
+        (FUND.mode === "pot" && FUND.keeper ? "(" + esc(nameOf(FUND.keeper)) + "收的錢)" : "") + "</option>" : "");
     el("xe-who").innerHTML = MEMBERS.map(m =>
       '<label class="rm-chip"><input type="checkbox" value="' + m.id + '"' + (participants.includes(m.id) ? " checked" : "") + ">" + esc(nameOf(m.id)) + "</label>").join("");
     const sp = split || {}, custom = participants.some(p => sp[p] !== undefined);
@@ -8290,12 +8298,15 @@
   }
   el("st-country").addEventListener("change", () => { el("st-rate-fld").hidden = el("st-country").value === "台灣"; });
 
-  /* ---- 團的設定:共同基金 ----
-     模式 → 誰有出(照這一團的成員)→ 每人一樣(一格)或不一樣(每個勾了的人一格)→ 一包錢才有保管人 */
+  /* ---- 團的設定:預收(2026-10-19)----
+     沒有/有預收 → 收款人(必填,預選現在的、沒有就團主)→ 誰有交(預設全部成員、不勾收款人:收款人自己交不交,
+     轉帳結果都一樣,只影響「收了多少」)→ 每人一樣或不一樣。以前存的出資(含舊的預算)直接帶出來 */
   function fillFundSettings() {
     el("st-fund-mode").value = FUND.mode;
+    const boss = MEMBERS.find(m => m.role === "團主");
+    const keeper0 = FUND.keeper || (boss ? boss.id : "");
     const ids0 = Object.keys(FUND.shares);
-    const on = id => FUND.mode === "none" || !ids0.length || ids0.includes(id);
+    const on = id => (ids0.length ? ids0.includes(id) : id !== keeper0);
     el("st-fund-who").innerHTML = MEMBERS.map(m => '<label class="rm-chip"><input type="checkbox" data-fund-who="' + esc(m.id) + '"' +
       (on(m.id) ? " checked" : "") + ">" + esc(nameOf(m.id)) + "</label>").join("");
     const vals = ids0.map(id => FUND.shares[id]);
@@ -8304,38 +8315,42 @@
     el("st-kitty").value = vals.length ? vals[0] : "";
     el("st-fund-each").innerHTML = MEMBERS.map(m => '<div class="fld" data-fund-row="' + esc(m.id) + '"><label class="rm-label" for="st-fe-' + esc(m.id) + '">' + esc(nameOf(m.id)) + "</label>" +
       '<input class="rm-input" type="number" min="0" step="1" id="st-fe-' + esc(m.id) + '" data-fund-amt="' + esc(m.id) + '" value="' + (FUND.shares[m.id] !== undefined ? FUND.shares[m.id] : "") + '"></div>').join("");
-    const boss = MEMBERS.find(m => m.role === "團主");
-    el("st-keeper").innerHTML = '<option value="">— 不指定(轉帳寫「共同基金」)—</option>' + MEMBERS.map(m =>
-      '<option value="' + esc(m.id) + '"' + ((FUND.mode === "pot" ? FUND.keeper : boss && boss.id) === m.id ? " selected" : "") + ">" + esc(nameOf(m.id)) + "</option>").join("");
+    el("st-keeper").innerHTML = MEMBERS.map(m =>
+      '<option value="' + esc(m.id) + '"' + (keeper0 === m.id ? " selected" : "") + ">" + esc(nameOf(m.id)) + "</option>").join("");
+    el("st-keeper-gone").hidden = !FUND.keeperGone;
     syncFundSettings();
   }
   function syncFundSettings() {
     const mode = el("st-fund-mode").value, same = el("st-fund-same1").checked;
-    el("st-fund-box").hidden = mode === "none";
-    el("st-keeper-fld").hidden = mode !== "pot";
+    el("st-fund-box").hidden = mode !== "pot";
     el("st-kitty-fld").hidden = !same;
     el("st-fund-each").hidden = same;
     const who = [].map.call(document.querySelectorAll("[data-fund-who]:checked"), x => x.dataset.fundWho);
     document.querySelectorAll("[data-fund-row]").forEach(row => { row.hidden = !who.includes(row.dataset.fundRow); });
     el("st-fund-note").textContent = mode === "pot"
-      ? "一包錢:記帳時付款人可以選「共同基金」;結算時大家交的錢算進去,剩的退、不夠的補。"
-      : mode === "budget" ? "預算:不影響誰要付誰,只是看每個人分到的花費用了自己的額度多少。" : "";
+      ? "預收:大家先把錢交給收款人。用這筆錢付的帳,付款人選「預收」;結算時交的錢算「已付」,剩的由收款人退、不夠的補給收款人。金額用台幣算,日圓的帳照這團匯率換算。" : "";
   }
   ["st-fund-mode", "st-fund-same1", "st-fund-same0"].forEach(id => el(id).addEventListener("change", syncFundSettings));
   el("st-fund-who").addEventListener("change", syncFundSettings);
   function fundFromSettings() {
     const mode = el("st-fund-mode").value;
-    if (mode === "none") return { mode, shares: {}, keeper: "" };
+    if (mode !== "pot") {
+      /* 要離開預收,卻還有預收付的帳 → 先改付款人(伺服器也會擋) */
+      const n = FUND.mode === "pot" ? state.expenses.filter(e => e.payerId === "fund").length : 0;
+      if (n) throw new Error("還有 " + n + " 筆是預收付的,先改付款人");
+      return { mode: "none", shares: {}, keeper: "" };
+    }
+    if (!el("st-keeper").value) throw new Error("要選收款人");
     const who = [].map.call(document.querySelectorAll("[data-fund-who]:checked"), x => x.dataset.fundWho);
     const same = el("st-fund-same1").checked, shares = {};
     who.forEach(id => { shares[id] = Math.max(0, Math.round(Number(same ? el("st-kitty").value : (el("st-fe-" + id) || {}).value) || 0)); });
-    return { mode, shares, keeper: mode === "pot" ? el("st-keeper").value : "" };
+    return { mode, shares, keeper: el("st-keeper").value };
   }
 
-  /* ---- 補基金 ---- */
+  /* ---- 補交預收 ----:列出所有成員(沒交過的人也能補),先勾有交過的 */
   function openTopup() {
-    el("ft-who").innerHTML = MEMBERS.filter(m => FUND.shares[m.id] !== undefined).map(m =>
-      '<label class="rm-chip"><input type="checkbox" value="' + esc(m.id) + '" checked>' + esc(nameOf(m.id)) + "</label>").join("");
+    el("ft-who").innerHTML = MEMBERS.map(m =>
+      '<label class="rm-chip"><input type="checkbox" value="' + esc(m.id) + '"' + (FUND.shares[m.id] !== undefined ? " checked" : "") + ">" + esc(nameOf(m.id)) + "</label>").join("");
     el("ft-amt").value = "";
     el("ft-err").hidden = true;
     el("fund-top-overlay").hidden = false;

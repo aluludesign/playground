@@ -170,10 +170,18 @@ FAKE_JS = r"""(function(){
   /* newbie=1:團主上次看過通知之後,又有一個人(小美)加入了。noflights=1:這一團還沒有交通 */
   /* nokitty=1:這一團沒有共同基金(團主填 0) */
   if (/[?&]nokitty=1/.test(q)) TRIP.kitty = 0;
-  /* fund=pot:一包錢,阿輝、佳瑜各 10,000、志偉 5,000,保管人佳瑜(keeper=0 不指定);fund=diff:預算、每人不一樣 */
+  /* 預收(2026-10-19 起;預算模式拿掉了)。預設那一團只有舊的「基金」30,000 → 讀成「沒有」,切到預收時帶出每人 30,000。
+     fund=pot:阿輝、佳瑜各 10,000、志偉 5,000,收款人佳瑜(keeper=0:存的是空的 → 畫面當團主阿輝;keeper=gone:存的人已經離團)
+     fund=diff:預收、每人不一樣(阿輝 20,000、佳瑜 10,000),收款人阿輝
+     fund=boss:像東京 Pa Pa 造 —— 收款人是團主(這裡是阿輝)、自己沒交;佳瑜、志偉、雅倫各 30,000
+     fund=budget:Notion 還存著「預算」的舊團(伺服器讀成 none,shares 還在) */
   var fq = (/[?&]fund=([a-z]+)/.exec(q) || [])[1];
-  if (fq === "pot") TRIP.fund = { mode: "pot", keeper: /keeper=0/.test(q) ? "" : "chang_chiayu", shares: { hsieh_chinhui: 10000, chang_chiayu: 10000, chang_chihwei: 5000 } };
-  if (fq === "diff") TRIP.fund = { mode: "budget", keeper: "", shares: { hsieh_chinhui: 20000, chang_chiayu: 10000 } };
+  if (fq === "pot") TRIP.fund = { mode: "pot", keeper: /keeper=0/.test(q) ? "" : /keeper=gone/.test(q) ? "someone_left" : "chang_chiayu", shares: { hsieh_chinhui: 10000, chang_chiayu: 10000, chang_chihwei: 5000 } };
+  if (fq === "diff") TRIP.fund = { mode: "pot", keeper: "hsieh_chinhui", shares: { hsieh_chinhui: 20000, chang_chiayu: 10000 } };
+  if (fq === "boss") TRIP.fund = { mode: "pot", keeper: "hsieh_chinhui", shares: { chang_chiayu: 30000, chang_chihwei: 30000, chang_yalun: 30000 } };
+  /* fund=low:交得比分到的花費少(各 5,000)→ 預收那一塊超支(.over、「不夠」) */
+  if (fq === "low") TRIP.fund = { mode: "pot", keeper: "hsieh_chinhui", shares: { chang_chiayu: 5000, chang_chihwei: 5000 } };
+  if (fq === "budget") TRIP.fund = { mode: "none", keeper: "", shares: { hsieh_chinhui: 30000, chang_chihwei: 30000, chang_yalun: 30000 } };
   if (/[?&]newbie=1/.test(q)) MEMBERS.push({ id: "new_friend", name: "小美", color: "#E4007F", role: "成員", joinedAt: "2026-09-18T09:00:00.000Z" });
   if (/[?&]noflights=1/.test(q)) { ROWS.flights = []; ROWS.seats = []; }
   /* 假收據:一張直的、畫了幾行字的圖(縮圖和放大都看得出是「一張紙」) */
