@@ -416,8 +416,12 @@ function tripPhase(start, end, tz) {
   const today = localToday(tz);
   return { started: !!start && today >= start, ended: !!end && today > end, today };
 }
-const FUND_MODE = { "沒有": "none", "預算": "budget", "一包錢": "pot" };
-const FUND_NAME = { none: "沒有", budget: "預算", pot: "一包錢" };
+/* **預收**(2026-10-19,Lulu:「預算模式不要留,只有金錢實際流動才記,所以記成預收、收款人」)。
+   模式只剩 none(沒有)/ pot(預收:真的把錢交給收款人)。**Notion 的欄名和選項名刻意不改**
+   (基金模式/一包錢/基金保管人/基金出資/基金),改了舊團存設定會失敗;只有畫面上的字換成「預收」「收款人」。
+   以前存成「預算」的團讀成「沒有」(預算本來就不影響誰付誰,結清不會變)。 */
+const FUND_MODE = { "沒有": "none", "預算": "none", "一包錢": "pot" };
+const FUND_NAME = { none: "沒有", pot: "一包錢" };
 function sharesOf(s) {
   const out = {};
   String(s || "").split(",").forEach(x => {
@@ -735,19 +739,41 @@ module.exports = async (req, res) => {
         props["開始日"] = { date: { start } };
         props["結束日"] = { date: { start: end } };
       }
-      /* 共同基金:模式、誰出各出多少、保管人(只有團主能改;補基金走 resource=fund) */
+      /* 預收:模式、誰交了多少、收款人(只有團主能改;補交走 resource=fund) */
+      let fundChange = null;
       if (body.fund !== undefined) {
         const f = body.fund || {}, ids0 = c.members.map(m => m.id);
+        /* 舊版畫面(快取)還會送 budget:擋下來叫他重新整理,不要默默改成別的 */
+        if (f.mode === "budget") return res.status(400).json({ error: "預算模式已經拿掉,請重新整理" });
         const mode = FUND_NAME[f.mode] ? f.mode : "none";
         const shares = {};
         for (const [id, v] of Object.entries(f.shares || {})) {
-          if (ids0.indexOf(id) < 0) return res.status(400).json({ error: "出基金的人不在這一團" });
+          if (ids0.indexOf(id) < 0) return res.status(400).json({ error: "交預收的人不在這一團" });
           const n = Math.round(Number(v));
-          if (!isFinite(n) || n < 0) return res.status(400).json({ error: "基金金額要是 0 或正數" });
+          if (!isFinite(n) || n < 0) return res.status(400).json({ error: "預收金額要是 0 或正數" });
           shares[id] = n;
         }
-        if (mode !== "none" && !Object.keys(shares).length) return res.status(400).json({ error: "要選誰有出共同基金" });
-        const keeper = mode === "pot" && f.keeper && ids0.indexOf(f.keeper) >= 0 ? f.keeper : "";
+        if (mode !== "none" && !Object.keys(shares).length) return res.status(400).json({ error: "要選誰有交預收" });
+        /* **收款人必填**:沒送就是團主;送了但不是這一團的人就擋 */
+        let keeper = "";
+        if (mode === "pot") {
+          if (f.keeper) {
+            if (ids0.indexOf(f.keeper) < 0) return res.status(400).json({ error: "收款人不在這一團" });
+            keeper = f.keeper;
+          } else {
+            const boss = c.members.find(m => m.role === "團主");
+            if (!boss) return res.status(400).json({ error: "要選收款人" });
+            keeper = boss.id;
+          }
+        }
+        /* 要離開預收,這一團卻還有「付款人 = 預收」的帳 → 先改付款人(不然那幾筆會變成沒人付) */
+        if (mode !== "pot" && c.trip.fund.mode === "pot") {
+          const found = await notion("/databases/" + DB.expenses + "/query", { method: "POST", body: JSON.stringify({ page_size: 100,
+            filter: { and: [{ property: "團", rich_text: { equals: c.code } }, { property: "付款人", rich_text: { equals: "fund" } }] } }) });
+          const n = (found.results || []).filter(x => !x.archived).length;
+          if (n) return res.status(400).json({ error: "還有 " + n + " 筆是預收付的,先改付款人" });
+        }
+        fundChange = { was: c.trip.fund, now: { mode, keeper, shares } };
         const vals = Object.values(shares);
         props["基金模式"] = { select: { name: FUND_NAME[mode] } };
         props["基金出資"] = { rich_text: richText(mode === "none" ? "" : sharesIn(shares)) };
@@ -794,6 +820,31 @@ module.exports = async (req, res) => {
         const setRole = (m, role) => notion("/pages/" + m.page, { method: "PATCH", body: JSON.stringify({ properties: { "角色": { select: { name: role } } } }) });
         if (deputyChange.current) await setRole(deputyChange.current, "成員");
         if (deputyChange.target) await setRole(deputyChange.target, "副團主");
+      }
+      /* 預收有變(模式、實際收款人、誰交了多少)→ 寫一則動態給全團。「實際收款人」:存的是空的算團主 */
+      if (fundChange) {
+        try {
+          const boss = c.members.find(m => m.role === "團主");
+          const nmF = id => (c.members.find(m => m.id === id) || {}).name || "某人";
+          const realKeeper = f => f.mode === "pot" ? (f.keeper || (boss ? boss.id : "")) : "";
+          const tw = n => "NT$" + Math.round(Number(n) || 0).toLocaleString("en-US");
+          const { was, now } = fundChange, lines = [];
+          if (was.mode !== now.mode) {
+            lines.push(now.mode === "pot" ? "把預收改成有預收,收款人:" + nmF(realKeeper(now)) + "(結清方式跟著變了)" : "把預收改成沒有(結清方式跟著變了)");
+          } else if (now.mode === "pot") {
+            if (realKeeper(was) !== realKeeper(now)) lines.push("改了收款人:" + nmF(realKeeper(now)));
+            const ws = was.shares || {}, ns = now.shares || {};
+            const ch = Array.from(new Set(Object.keys(ws).concat(Object.keys(ns))))
+              .filter(id => (ws[id] || 0) !== (ns[id] || 0))
+              .map(id => nmF(id) + " 交 " + tw(ws[id] || 0) + " → " + tw(ns[id] || 0));
+            if (ch.length) lines.push("改了預收:" + ch.join("、"));
+          }
+          for (const line of lines) {
+            await notion("/pages", { method: "POST", body: JSON.stringify({ parent: { database_id: DB.activity }, properties: {
+              "說明": { title: richText((c.mine.name + " " + line).slice(0, 300)) }, "團": { rich_text: richText(c.code) },
+              "誰": { rich_text: richText(c.mine.id) }, "類型": { select: { name: "分帳" } } } }) });
+          }
+        } catch (_) { /* 少一則通知 */ }
       }
       const { page, ...trip } = await findTrip(c.code);
       return res.status(200).json({ trip });
@@ -846,9 +897,9 @@ module.exports = async (req, res) => {
       const c = await context(q.t);
       if (c.stop) return stop(c.stop);
       const f = c.trip.fund;
-      if (f.mode !== "pot") return res.status(400).json({ error: "這一團的共同基金不是「一包錢」,不用補" });
+      if (f.mode !== "pot") return res.status(400).json({ error: "這一團沒有預收,不用補" });
       if (c.trip.ended) return res.status(403).json({ why: "ended", error: "這一團已經結束了" });
-      if (!(c.can("cost") || (f.keeper && f.keeper === c.mine.id))) return res.status(403).json({ error: "只有保管人、團主、有記帳權限的副團主能記補基金" });
+      if (!(c.can("cost") || (f.keeper && f.keeper === c.mine.id))) return res.status(403).json({ error: "只有收款人、團主、有記帳權限的副團主能記補交" });
       const amount = Math.round(Number(body.amount));
       if (!isFinite(amount) || amount <= 0) return res.status(400).json({ error: "補多少要填大於 0 的數字" });
       const who = ids(body.who).filter(id => c.members.some(m => m.id === id));
@@ -862,7 +913,7 @@ module.exports = async (req, res) => {
       try {
         const nm = id => (c.members.find(m => m.id === id) || {}).name || "某人";
         await notion("/pages", { method: "POST", body: JSON.stringify({ parent: { database_id: DB.activity }, properties: {
-          "說明": { title: richText(c.mine.name + " 記了補基金:" + who.map(nm).join("、") + " 各 NT$" + amount.toLocaleString("en-US")) },
+          "說明": { title: richText(c.mine.name + " 記了補交預收:" + who.map(nm).join("、") + " 各 NT$" + amount.toLocaleString("en-US")) },
           "團": { rich_text: richText(c.code) }, "誰": { rich_text: richText(c.mine.id) }, "類型": { select: { name: "花費" } } } }) });
       } catch (_) { /* 少一則通知 */ }
       return res.status(200).json({ ok: true, fund: { ...f, shares } });
@@ -1177,7 +1228,7 @@ module.exports = async (req, res) => {
       if (resource === "seats") await log("交通", me2 + " 填了" + nm(row.passenger) + "在 " + row.flight + " 的座位:" + (row.seat || "空的"));
       if (resource === "expenses" && row.participants && row.participants.length) {
         const n = row.participants.length, custom = Object.keys(row.split || {}).length > 0;
-        await log("花費", me2 + " 記了一筆" + said(row.title) + " " + money(row.amount, row.currency) + (row.payer === "fund" ? "(共同基金付)" : "") + "," + n + " 人分" +
+        await log("花費", me2 + " 記了一筆" + said(row.title) + " " + money(row.amount, row.currency) + (row.payer === "fund" ? "(預收付)" : "") + "," + n + " 人分" +
           (custom ? "(每人金額不一樣,打開看自己分多少)" : "(每人約 " + money(row.amount / n, row.currency) + ")"), { to: row.participants });
       }
       return res.status(200).json(photoLost ? { row, photoLost } : { row });
@@ -1213,7 +1264,9 @@ module.exports = async (req, res) => {
       if (resource === "seats" && body.seat !== undefined && String(was.seat || "") !== String(row.seat || ""))
         await log("交通", me2 + " 改了" + nm(row.passenger) + "在 " + row.flight + " 的座位:" + (was.seat || "空的") + " → " + (row.seat || "空的"));
       if (resource === "expenses") {
-        const ch = diffs(was, row, [["title", "項目"], ["amount", "金額", x => money(x, row.currency)], ["date", "日期"]], body);
+        const ch = diffs(was, row, [["title", "項目"], ["amount", "金額", x => money(x, row.currency)], ["date", "日期"],
+          /* 付款人換了也講(2026-10-19):「付款人 錦輝 → 預收」 */
+          ["payer", "付款人", x => (x === "fund" ? "預收" : x ? nm(x) : "還不確定")]], body);
         const who = Array.from(new Set([].concat(was.participants || [], row.participants || [])));
         const moved = JSON.stringify((was.participants || []).slice().sort()) !== JSON.stringify((row.participants || []).slice().sort());
         if (moved) ch.push("分的人改成 " + (row.participants || []).map(nm).join("、"));
