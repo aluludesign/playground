@@ -5623,12 +5623,12 @@
     /* 記完一筆最想馬上知道的是基金還剩多少,所以擺在第一格 */
     const res = ledger(), who = Object.keys(FUND.shares);
     const pot = who.reduce((s, id) => s + FUND.shares[id], 0);
-    /* 預收:收款人手上那包錢實際付掉多少 */
-    const used = res.fundPaid;
+    /* 預收「用了」= 交錢的人分到的花費(不管當初誰付的),跟分帳頁預收那一塊同一個定義(2026-10-19,Lulu) */
+    const used = who.reduce((s, id) => s + (res.book[id] ? res.book[id].owed : 0), 0);
     const left = pot - used;
     el("cost-stats").innerHTML = [
       FUND.mode === "pot" && pot > 0
-        ? tile("預收剩餘", twd(Math.abs(left)), left < 0 ? "不夠了,要再收" : "預收付了 " + twd(used))
+        ? tile("預收剩餘", twd(Math.abs(left)), left < 0 ? "不夠了,要再收" : "用了 " + twd(used))
         : tile("每人平均", twd(IDS.length ? total / IDS.length : 0), IDS.length + " 個人"),
       tile("總花費", twd(total), state.expenses.length + " 筆紀錄"),
       tile("行前預訂", twd(total - tripTotal), "機票、住宿等"),
@@ -5699,7 +5699,10 @@
     el("fund-sub").textContent = (kname ? kname + "收 · " : "") + (same ? "每人 " + twd(vals[0]) : "每人不一樣") + " · 共 " + twd(pot);
     const canTop = online && !(trip && trip.ended) &&
       (editable("cost") || (FUND.keeper && myMember && FUND.keeper === myMember.id));
-    const used = res.fundPaid, left = res.fundLeft;
+    /* **進度條和「還剩」看交錢的人分到的花費**(2026-10-19,Lulu 看東京 Pa Pa 造問「為什麼這條 bar 沒有值」):
+       以前是「付款人 = 預收」的帳加總,而帳多半記成個人付(那團 16 筆全是),所以永遠是 0。
+       現在跟下面每人那幾列同一個定義。fundLeft(收款人手上的現金)只用在結清和收款人的卡片 */
+    const used = who.reduce((s, m) => s + res.book[m.id].owed, 0), left = pot - used;
     const pct = pot > 0 ? Math.min(100, used / pot * 100) : 0;
     /* 每個人:交了多少、用掉多少(分攤到的**所有**花費,不管當初誰付的)、還剩多少(2026-10-19,Lulu:「還是可以顯示每人目前花掉多少」)。
        帳多半記成收款人自己付的,只算「付款人 = 預收」的話每個人都是 0,看不出錢用到哪。
@@ -5713,11 +5716,12 @@
         '<span class="amt">交了 ' + twd(put) + " · 用 <b>" + twd(u) + "</b> · " + (rest < 0 ? "不夠 " : "剩 ") + twd(Math.abs(rest)) + "</span></div>";
     }).join("");
     el("fund").innerHTML =
-      '<div class="fund-top"><span class="used">預收付了 ' + twd(used) + "</span>" +
+      '<div class="fund-top"><span class="used">用了 ' + twd(used) + "</span>" +
       '<span class="left">' + (left < 0 ? "不夠 <b style=\"color:var(--neg)\">" + twd(-left) + "</b>" : "還剩 <b>" + twd(left) + "</b>") + "</span></div>" +
       '<div class="fund-bar' + (left < 0 ? " over" : "") + '"><i style="width:' + pct + '%"></i></div>' +
       '<div class="fund-note">' + (kname ? "錢在 " + esc(kname) + " 手上 · " : FUND.keeperGone ? "收款人已經不在這一團,請團主重選 · " : "") + "收了 " + twd(pot) +
-      (left < 0 ? " · 不夠的照結清方式補" : left > 0 ? " · 剩的照結清方式退" : "") + "</div>" +
+      (left < 0 ? " · 不夠的照結清方式補" : left > 0 ? " · 剩的照結清方式退" : "") +
+      " · 用了 = 交錢的人分到的花費" + (res.fundPaid >= 0.5 ? " · 其中 " + twd(res.fundPaid) + " 直接用預收付" : "") + "</div>" +
       '<div class="fund-people">' + rows + "</div>" +
       (canTop ? '<div class="fund-ops"><button type="button" class="btn btn-sm" id="fund-top-btn">補交預收</button></div>' : "");
     if (el("fund-top-btn")) el("fund-top-btn").addEventListener("click", openTopup);

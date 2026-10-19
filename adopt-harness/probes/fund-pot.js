@@ -3,7 +3,8 @@
  *   PAGE='/index.html?fund=pot&keeper=0'    存的收款人是空的 → 當團主(fixture 的團主是阿輝;不再有「不指定」)
  *   PAGE='/index.html?fund=pot&keeper=gone' 存的收款人已經離團 → 不改成團主,結清寫「預收」那一方,設定裡提醒重選
  *   PAGE='/index.html?fund=diff'            每人不一樣:只列有交的人
- *   PAGE='/index.html?fund=boss'            像東京 Pa Pa 造:收款人是團主、自己沒交
+ *   PAGE='/index.html?fund=boss'            像東京 Pa Pa 造:收款人是團主、自己沒交;進度條 = 交錢的人分到的花費 ÷ 收了
+ *   PAGE='/index.html?fund=low'             交得比分到的少:進度條滿、.over、「不夠」
  *   PAGE='/index.html'                      設定:舊的「基金」30,000 讀成「沒有」、切到預收帶出金額(5 人都勾);收款人必填、預選團主阿輝
  *   PAGE='/index.html?nokitty=1'            設定:以前沒有任何出資 → 切到預收,誰有交預設全部、不勾收款人 */
 var q = s => d.querySelector(s), qa = s => Array.from(d.querySelectorAll(s)), wait = ms => new Promise(r => w.setTimeout(r, ms));
@@ -12,7 +13,8 @@ return (async function () {
   await wait(300);
   var nav = (w.performance.getEntriesByType("navigation")[0] || {}).name || "", bad = [], out = {};
   var ok = (n, c, g) => { if (!c) bad.push(n + " ← " + JSON.stringify(g)); };
-  var pot = /fund=pot/.test(nav), diff = /fund=diff/.test(nav), boss = /fund=boss/.test(nav), keeper0 = /keeper=0/.test(nav), gone = /keeper=gone/.test(nav);
+  var num = (t, re) => Number(((re.exec(t) || [])[1] || "").replace(/,/g, ""));
+  var pot = /fund=pot/.test(nav), diff = /fund=diff/.test(nav), boss = /fund=boss/.test(nav), low = /fund=low/.test(nav), keeper0 = /keeper=0/.test(nav), gone = /keeper=gone/.test(nav);
   q("#tab-split").click(); await wait(100);
   out.標題 = txt("#panel-split .sec-head h2");
   out.預收 = txt("#fund-sub") + " | " + txt("#fund");
@@ -20,7 +22,7 @@ return (async function () {
   out.卡片 = qa("#people .person").map(x => x.textContent.replace(/\s+/g, " ").trim());
   out.結清提示 = q("#fund-transfer-note") && !q("#fund-transfer-note").hidden ? txt("#fund-transfer-note") : "";
   if (pot) {
-    ok("分帳頁那一塊叫「預收」;共 25,000、列出三個交的人;寫「預收付了」「交了」", out.標題 === "預收" && /25,000/.test(out.預收) && qa("#fund .fp").length === 3 && /預收付了/.test(out.預收) && /交了/.test(out.預收), out.預收);
+    ok("分帳頁那一塊叫「預收」;共 25,000、列出三個交的人;寫「預收付了」「交了」", out.標題 === "預收" && /25,000/.test(out.預收) && qa("#fund .fp").length === 3 && /用了 NT\$/.test(out.預收) && /還剩|不夠/.test(out.預收) && /交了/.test(out.預收), out.預收);
     if (gone) {
       ok("收款人已經離團:不改成團主,結清方式出現「預收」那一方,提醒重選", out.轉帳.some(t => /預收/.test(t)) && /收款人已經不在這一團/.test(out.預收) && !/錢在 佳瑜/.test(out.預收), { 轉帳: out.轉帳, 預收: out.預收 });
     } else {
@@ -32,7 +34,7 @@ return (async function () {
     ok("交了錢的人卡片有「交了預收」", out.卡片.filter(t => /交了預收/.test(t)).length === 3, out.卡片);
     q("#tab-cost").click(); await wait(80);
     out.第一格 = txt("#cost-stats .stat");
-    ok("花費第一格「預收剩餘」", /預收剩餘/.test(out.第一格), out.第一格);
+    ok("花費第一格「預收剩餘」、下面寫「用了」(交得比分到的少就「不夠了,要再收」)", /預收剩餘/.test(out.第一格) && /用了 NT\$|不夠了,要再收/.test(out.第一格), out.第一格);
     q("#add-exp-btn") && q("#add-exp-btn").click(); await wait(80);
     out.付款人選項 = qa("#xe-payer option").map(o => o.textContent);
     ok("記帳:付款人多一個「預收(X收的錢)」(收款人離團就只寫「預收」)", out.付款人選項.indexOf(gone ? "預收" : "預收(" + (keeper0 ? "阿輝" : "佳瑜") + "收的錢)") >= 0, out.付款人選項);
@@ -68,12 +70,25 @@ return (async function () {
     }
   } else if (diff) {
     ok("每人不一樣:標題寫「阿輝收 · 每人不一樣」,只列有交的兩個人", /阿輝收 · 每人不一樣/.test(out.預收) && qa("#fund .fp").length === 2, out.預收);
+  } else if (low) {
+    ok("交得比分到的少:進度條滿 100%、.over、右邊寫「不夠」", q("#fund .fund-bar").classList.contains("over") && q("#fund .fund-bar i").style.width === "100%" && /不夠/.test(txt("#fund .fund-top")), txt("#fund .fund-top"));
+    q("#tab-cost").click(); await wait(80);
+    ok("花費第一格:預收剩餘、「不夠了,要再收」", /預收剩餘/.test(txt("#cost-stats .stat")) && /不夠了,要再收/.test(txt("#cost-stats .stat")), txt("#cost-stats .stat"));
   } else if (boss) {
     ok("收款人是團主、自己沒交:「阿輝收 · 每人 NT$30,000 · 共 NT$90,000」", /阿輝收 · 每人 NT\$30,000 · 共 NT\$90,000/.test(txt("#fund-sub")), txt("#fund-sub"));
+    /* 進度條 = 交錢的人分到的花費加總 ÷ 收了(2026-10-19 改;以前是「付款人 = 預收」的帳,帳多半記成個人付就永遠 0) */
+    var used = num(txt("#fund .fund-top"), /用了 NT\$([\d,]+)/), left = num(txt("#fund .fund-top"), /還剩 NT\$([\d,]+)/);
+    var rowsUsed = qa("#fund .fp").map(x => num(x.textContent.replace(/\s+/g, " "), /用 NT\$([\d,]+)/)).reduce((a, b) => a + b, 0);
+    var barW = parseFloat(q("#fund .fund-bar i").style.width);
+    out.進度條 = { 用了: used, 還剩: left, 各列用加總: rowsUsed, 寬: barW };
+    ok("上面「用了」= 下面每人「用」的加總(差 1 元內)、還剩 = 90,000 − 用了、進度條寬 = 用了 ÷ 90,000;說明寫定義",
+      used > 0 && Math.abs(used - rowsUsed) <= 2 && Math.abs(left - (90000 - used)) <= 1 && Math.abs(barW - used / 90000 * 100) < 0.5 && /用了 = 交錢的人分到的花費/.test(txt("#fund")), out.進度條);
+    q("#tab-cost").click(); await wait(80);
+    ok("花費第一格:預收剩餘 = 還剩、寫「用了」", num(txt("#cost-stats .stat"), /預收剩餘\s*NT\$([\d,]+)/) === left && /用了 NT\$/.test(txt("#cost-stats .stat")), txt("#cost-stats .stat"));
+    q("#tab-split").click(); await wait(80);
     /* 每人那一排:交了、用掉(分攤到的所有花費)、剩 —— 沒自己另外付錢的人,剩的就是結清時阿輝要退給他的 */
     out.每人 = qa("#fund .fp").map(x => x.textContent.replace(/\s+/g, " ").trim());
     var yalun = out.每人.find(t => /雅倫/.test(t)) || "", yCard = out.卡片.find(t => t.indexOf("雅倫") === 0) || "";
-    var num = (t, re) => Number(((re.exec(t) || [])[1] || "").replace(/,/g, ""));
     ok("預收每人一排:交了 · 用 · 剩;雅倫(沒自己付過)剩的 = 卡片上應收回", /交了 NT\$30,000 · 用 NT\$[\d,]+ · 剩 NT\$[\d,]+/.test(yalun) &&
       num(yalun, /剩 NT\$([\d,]+)/) === num(yCard, /應收回\s*NT\$([\d,]+)/), { 雅倫: yalun, 卡片: yCard });
     ok("阿輝卡片有「手上預收還剩 NT$90,000」、沒有「交了預收」(這一團沒有預收付的帳)", out.卡片.some(t => t.indexOf("阿輝") === 0 && /手上預收還剩\s*NT\$90,000/.test(t) && !/交了預收/.test(t)), out.卡片);

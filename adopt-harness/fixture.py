@@ -179,6 +179,8 @@ FAKE_JS = r"""(function(){
   if (fq === "pot") TRIP.fund = { mode: "pot", keeper: /keeper=0/.test(q) ? "" : /keeper=gone/.test(q) ? "someone_left" : "chang_chiayu", shares: { hsieh_chinhui: 10000, chang_chiayu: 10000, chang_chihwei: 5000 } };
   if (fq === "diff") TRIP.fund = { mode: "pot", keeper: "hsieh_chinhui", shares: { hsieh_chinhui: 20000, chang_chiayu: 10000 } };
   if (fq === "boss") TRIP.fund = { mode: "pot", keeper: "hsieh_chinhui", shares: { chang_chiayu: 30000, chang_chihwei: 30000, chang_yalun: 30000 } };
+  /* fund=low:交得比分到的花費少(各 5,000)→ 預收那一塊超支(.over、「不夠」) */
+  if (fq === "low") TRIP.fund = { mode: "pot", keeper: "hsieh_chinhui", shares: { chang_chiayu: 5000, chang_chihwei: 5000 } };
   if (fq === "budget") TRIP.fund = { mode: "none", keeper: "", shares: { hsieh_chinhui: 30000, chang_chihwei: 30000, chang_yalun: 30000 } };
   if (/[?&]newbie=1/.test(q)) MEMBERS.push({ id: "new_friend", name: "小美", color: "#E4007F", role: "成員", joinedAt: "2026-09-18T09:00:00.000Z" });
   if (/[?&]noflights=1/.test(q)) { ROWS.flights = []; ROWS.seats = []; }
