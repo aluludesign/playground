@@ -1055,6 +1055,9 @@
     .fp .amt{font-family:var(--font-mono); font-size:11.5px; color:var(--muted); letter-spacing:.02em; text-align:right;}
     .fp .amt b{color:var(--ink); font-weight:600;}
     .fp.over .amt b{color:var(--neg);}
+    /* 預收那幾排字比較長(交了 · 用 · 剩):名字＋長條一行,金額自己一行,長條才不會被擠沒 */
+    .fp.fp2{grid-template-columns:auto 1fr; row-gap:4px;}
+    .fp.fp2 .amt{grid-column:1 / -1;}
 
     .people{display:grid; grid-template-columns:repeat(auto-fit,minmax(168px,1fr)); gap:10px;}
     .person{background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:13px 14px;}
@@ -5698,10 +5701,17 @@
       (editable("cost") || (FUND.keeper && myMember && FUND.keeper === myMember.id));
     const used = res.fundPaid, left = res.fundLeft;
     const pct = pot > 0 ? Math.min(100, used / pot * 100) : 0;
-    const rows = who.map(m => '<div class="fp" style="--fc:' + m.color + '">' +
-      '<span class="nm"><span class="dot" style="background:' + m.color + '"></span>' + esc(nameOf(m.id)) + "</span>" +
-      '<span class="track"><i style="width:' + (pot > 0 ? FUND.shares[m.id] / pot * 100 : 0) + '%"></i></span>' +
-      '<span class="amt">交了 <b>' + twd(FUND.shares[m.id]) + "</b></span></div>").join("");
+    /* 每個人:交了多少、用掉多少(分攤到的**所有**花費,不管當初誰付的)、還剩多少(2026-10-19,Lulu:「還是可以顯示每人目前花掉多少」)。
+       帳多半記成收款人自己付的,只算「付款人 = 預收」的話每個人都是 0,看不出錢用到哪。
+       沒自己另外付錢的人,「剩」就是結清時收款人要退給他的錢 */
+    const rows = who.map(m => {
+      const put = FUND.shares[m.id], u = res.book[m.id].owed, rest = put - u;
+      const p = put > 0 ? Math.min(100, u / put * 100) : 0;
+      return '<div class="fp fp2' + (rest < 0 ? " over" : "") + '" style="--fc:' + m.color + '">' +
+        '<span class="nm"><span class="dot" style="background:' + m.color + '"></span>' + esc(nameOf(m.id)) + "</span>" +
+        '<span class="track"><i style="width:' + p + '%"></i></span>' +
+        '<span class="amt">交了 ' + twd(put) + " · 用 <b>" + twd(u) + "</b> · " + (rest < 0 ? "不夠 " : "剩 ") + twd(Math.abs(rest)) + "</span></div>";
+    }).join("");
     el("fund").innerHTML =
       '<div class="fund-top"><span class="used">預收付了 ' + twd(used) + "</span>" +
       '<span class="left">' + (left < 0 ? "不夠 <b style=\"color:var(--neg)\">" + twd(-left) + "</b>" : "還剩 <b>" + twd(left) + "</b>") + "</span></div>" +

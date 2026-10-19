@@ -70,6 +70,12 @@ return (async function () {
     ok("每人不一樣:標題寫「阿輝收 · 每人不一樣」,只列有交的兩個人", /阿輝收 · 每人不一樣/.test(out.預收) && qa("#fund .fp").length === 2, out.預收);
   } else if (boss) {
     ok("收款人是團主、自己沒交:「阿輝收 · 每人 NT$30,000 · 共 NT$90,000」", /阿輝收 · 每人 NT\$30,000 · 共 NT\$90,000/.test(txt("#fund-sub")), txt("#fund-sub"));
+    /* 每人那一排:交了、用掉(分攤到的所有花費)、剩 —— 沒自己另外付錢的人,剩的就是結清時阿輝要退給他的 */
+    out.每人 = qa("#fund .fp").map(x => x.textContent.replace(/\s+/g, " ").trim());
+    var yalun = out.每人.find(t => /雅倫/.test(t)) || "", yCard = out.卡片.find(t => t.indexOf("雅倫") === 0) || "";
+    var num = (t, re) => Number(((re.exec(t) || [])[1] || "").replace(/,/g, ""));
+    ok("預收每人一排:交了 · 用 · 剩;雅倫(沒自己付過)剩的 = 卡片上應收回", /交了 NT\$30,000 · 用 NT\$[\d,]+ · 剩 NT\$[\d,]+/.test(yalun) &&
+      num(yalun, /剩 NT\$([\d,]+)/) === num(yCard, /應收回\s*NT\$([\d,]+)/), { 雅倫: yalun, 卡片: yCard });
     ok("阿輝卡片有「手上預收還剩 NT$90,000」、沒有「交了預收」(這一團沒有預收付的帳)", out.卡片.some(t => t.indexOf("阿輝") === 0 && /手上預收還剩\s*NT\$90,000/.test(t) && !/交了預收/.test(t)), out.卡片);
   } else {
     q("#menu-btn").click(); await wait(60); q("#cloud-set").click(); await wait(150);
