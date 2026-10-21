@@ -23,11 +23,15 @@ function gaps(ov) {
   return out;
 }
 var OPEN = {
-  "settings-overlay": async () => { q("#menu-btn").click(); await wait(60); q("#cloud-set").click(); await wait(120);
-    var m = q("#st-fund-mode"); m.value = "pot"; m.dispatchEvent(new Event("change")); await wait(40); },
-  "settings-overlay(每人不一樣)": async () => { q("#menu-btn").click(); await wait(60); q("#cloud-set").click(); await wait(120);
-    var m = q("#st-fund-mode"); m.value = "pot"; m.dispatchEvent(new Event("change"));
+  /* 團的設定 2026-10-21 起分三個 tab(一般/錢/副團主):一個 tab 一個畫面,各量一次 */
+  "settings-overlay(一般)": async () => { q("#menu-btn").click(); await wait(60); q("#cloud-set").click(); await wait(120); },
+  "settings-overlay(錢)": async () => { q("#menu-btn").click(); await wait(60); q("#cloud-set").click(); await wait(120);
+    q('[data-st-tab="money"]').click(); var m = q("#st-fund-mode"); m.value = "pot"; m.dispatchEvent(new Event("change")); await wait(40); },
+  "settings-overlay(錢、每人不一樣)": async () => { q("#menu-btn").click(); await wait(60); q("#cloud-set").click(); await wait(120);
+    q('[data-st-tab="money"]').click(); var m = q("#st-fund-mode"); m.value = "pot"; m.dispatchEvent(new Event("change"));
     var r = q("#st-fund-same0"); r.checked = true; r.dispatchEvent(new Event("change", { bubbles: true })); await wait(40); },
+  "settings-overlay(副團主)": async () => { q("#menu-btn").click(); await wait(60); q("#cloud-set").click(); await wait(120);
+    q('[data-st-tab="dep"]').click(); await wait(40); },
   "stop-add-overlay": async () => { q("#add-stop-btn").click(); await wait(120); },
   "wish-add-overlay": async () => { q("#tab-wish").click(); await wait(60); q("#add-wish-btn").click(); await wait(120); },
   "edit-overlay": async () => { q("#tab-plan").click(); await wait(60); var b = q("[data-edit-stop]"); if (b) b.click(); await wait(120); },
