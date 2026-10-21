@@ -21,6 +21,10 @@ return (async function () {
   var out = {}, bad = [];
   var ok = (n, c, g) => { if (!c) bad.push(n + " ← " + JSON.stringify(g)); };
   q("#ai-btn").click(); await wait(150);
+  /* 2026-10-21 起要先選類型「交給 AI」才按得下去(停用的鈕拿不到焦點);選類型那排不算空白,點了不跳去打字 */
+  var kc = q('[data-ai-kind-chip="wish"] input'); kc.checked = true; kc.dispatchEvent(new Event("change", { bubbles: true }));
+  q("#ai-go").focus(); q('[data-ai-kind-chip="wish"]').click();
+  ok("點選類型那排不會跳去打字", d.activeElement !== q("#ai-text"), d.activeElement && d.activeElement.id);
   var box = q("#ai-box");
   ok("拍照、選圖、縮圖、幾張的字都在框裡;框在提醒那段上面", ["#ai-pick", "#ai-shoot", "#ai-imgs", "#ai-img-name"].every(s => box.contains(q(s))) &&
     !!(box.compareDocumentPosition(q("#ai-tip")) & Node.DOCUMENT_POSITION_FOLLOWING), "");

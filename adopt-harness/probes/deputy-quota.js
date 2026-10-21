@@ -18,12 +18,15 @@ return (async function () {
   out.選單 = txt("#menu-ai"); out.選單看得到 = shown(q("#menu-ai"));
   q("#menu-btn").click();
   q("#ai-btn").click(); await wait(250);
+  /* 2026-10-21 起要先選類型才按得下去:選一顆看得到的,再看額度擋不擋 */
+  var kc = d.querySelector("#ai-kinds:not([hidden]) [data-ai-kind-chip]:not([hidden]) input");
+  if (kc) { kc.checked = true; kc.dispatchEvent(new Event("change", { bubbles: true })); }
   out.對話框 = txt("#ai-quota"); out.交給AI按得下去 = !q("#ai-go").disabled;
-  /* 提示字照能做的事組(2026-10-01):一般成員只有許願;只勾行程的副團主沒有「車票」 */
-  out.提示字 = q("#ai-text").placeholder;
-  if (mode === "owner") ok("團主:提示字三種都有", /許願/.test(out.提示字) && /第 3 天/.test(out.提示字) && /車票/.test(out.提示字), out.提示字);
-  if (mode === "member" && !deputy) ok("一般成員:提示字只有許願的例子", !/第 3 天|車票/.test(out.提示字), out.提示字);
-  if (mode === "member" && /can=plan/.test(qs)) ok("只勾行程的副團主:有「第 3 天」、沒有「車票」", /第 3 天/.test(out.提示字) && !/車票/.test(out.提示字), out.提示字);
+  /* 能做的事(2026-10-01 起照權限;2026-10-21 起改成類型 chips):一般成員只有許願;只勾行程的副團主沒有「交通」 */
+  out.提示字 = Array.from(d.querySelectorAll("[data-ai-kind-chip]")).filter(c => !c.hidden && !c.closest("[hidden]")).map(c => c.textContent.trim()).join(",") || "(只能許願)";
+  if (mode === "owner") ok("團主:四類都有", out.提示字 === "許願,行程,交通,記帳", out.提示字);
+  if (mode === "member" && !deputy) ok("一般成員:只能許願(沒有 chips)", out.提示字 === "(只能許願)", out.提示字);
+  if (mode === "member" && /can=plan/.test(qs)) ok("只勾行程的副團主:許願、行程,沒有交通", out.提示字 === "許願,行程", out.提示字);
   q("#ai-cancel").click(); await wait(50);
   if (!aiQ) ok("讀不到次數 → 選單和對話框都不講", !out.選單看得到 && !out.對話框, out);
   else if (+aiQ[1] === 0) ok("用完:講「你的 AI 額度用完了,下午三點後再用」,按不下去;選單也講用完", /你的 AI 額度用完了,下午三點後再用/.test(out.對話框) && !out.交給AI按得下去 && /用完了/.test(out.選單), out);

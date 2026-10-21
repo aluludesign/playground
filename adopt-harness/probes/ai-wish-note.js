@@ -13,7 +13,7 @@ return (async function () {
   var bad = [], out = {};
   var ok = (n, c, g) => { if (!c) bad.push(n + " ← " + JSON.stringify(g)); };
   var n0 = (w.__rows.wishes || []).length;
-  q("#ai-btn").click(); await wait(80); q("#ai-text").value = "想去淺草寺"; q("#ai-form").requestSubmit(); await wait(400);
+  q("#ai-btn").click(); await wait(80); q("#ai-text").value = "想去淺草寺"; (function(){var c=d.querySelector("#ai-kinds:not([hidden]) [data-ai-kind-chip]:not([hidden]) input:checked")||d.querySelector("#ai-kinds:not([hidden]) [data-ai-kind-chip]:not([hidden]) input");if(c&&!c.checked){c.checked=true;c.dispatchEvent(new Event("change",{bubbles:true}));}})(); q("#ai-form").requestSubmit(); await wait(400);
   out.開著 = { 對話框: !q("#wish-add-overlay").hidden, 框裡那句: q("#wf-ai").hidden ? "" : q("#wf-ai").textContent, 清單上那句: q("#wish-msg").hidden ? "" : q("#wish-msg").textContent };
   ok("AI 那句在對話框裡,清單上沒有", out.開著.對話框 && /看起來是想去的地方/.test(out.開著.框裡那句) && /許下去/.test(out.開著.框裡那句) && !out.開著.清單上那句, out.開著);
   q("#wf-cancel").click(); await wait(150);

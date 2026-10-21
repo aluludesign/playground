@@ -13,7 +13,7 @@ w.fetch = function (u, init) {
 var base = { title: "", day: "", time: "", note: "", amount: 0, currency: "", date: "", category: "", legs: [], message: "" };
 async function ask(intent, items) {
   next = Object.assign({}, base, items[0], { intent: intent, items: items.map(x => Object.assign({}, base, x)) });
-  q("#ai-btn").click(); await wait(80); q("#ai-text").value = "好幾筆"; q("#ai-form").requestSubmit(); await wait(400);
+  q("#ai-btn").click(); await wait(80); q("#ai-text").value = "好幾筆"; (function(){var c=d.querySelector("#ai-kinds:not([hidden]) [data-ai-kind-chip]:not([hidden]) input:checked")||d.querySelector("#ai-kinds:not([hidden]) [data-ai-kind-chip]:not([hidden]) input");if(c&&!c.checked){c.checked=true;c.dispatchEvent(new Event("change",{bubbles:true}));}})(); q("#ai-form").requestSubmit(); await wait(400);
 }
 function look(formId) {
   var f = q("#" + formId), st = f.parentElement, n = f.querySelector(".stack-n");

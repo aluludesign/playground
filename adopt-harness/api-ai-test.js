@@ -275,6 +275,15 @@ function ok(name, cond, extra) {
   const said3 = JSON.stringify(sent(r.seen));
   ok("給模型的話和格式:有通票這一種、只要日期、價錢另外一份花費", /\*\*通票\*\*/.test(said3) && /青春18きっぷ/.test(said3) && /只要日期 YYYY-MM-DD/.test(said3) &&
     JSON.stringify(sent(r.seen).generationConfig.responseSchema.properties.legs.items.properties.kind.enum).indexOf("通票") >= 0, "");
+  /* 先選類型(2026-10-21,Lulu):送來 kind 就照它,模型說什麼都不算、不拆複合;給模型的話講清楚 */
+  r = await call({ text: "x", kind: "expense", context: CTX }, () => okJson(JSON.stringify({ intent: "transport", legs: [LEG1], items: [EXP1], message: "",
+    parts: [{ intent: "transport", legs: [LEG1], items: [] }, { intent: "expense", legs: [], items: [EXP1] }] })));
+  const kr = r.res.body.result;
+  ok("選了記帳:intent 一定是 expense、parts 空的(不拆複合)、帳讀得到", kr.intent === "expense" && kr.parts.length === 0 && kr.items[0].amount === 1530, { intent: kr.intent, parts: kr.parts.length, items: kr.items });
+  const saidK = JSON.stringify(sent(r.seen));
+  ok("給模型的話:已經選好類型、intent 一定填 expense、parts 空陣列", /使用者已經選好要加的類型:記帳/.test(saidK) && /intent 一定填 expense/.test(saidK), "");
+  r = await call({ text: "x", kind: "火箭", context: CTX }, () => okJson(GOOD));
+  ok("不認得的 kind 當沒選(照舊讓模型判斷)", r.res.body.result.intent === "wish" && !/使用者已經選好/.test(JSON.stringify(sent(r.seen))), r.res.body.result.intent);
   /* 一張收據是一筆(2026-10-05,Lulu 拿 HANDS 的收據問「為什麼拆成兩筆」):要寫在給模型的話裡,「一張收據要拆兩筆」那個例子不能再出現 */
   r = await call({ text: "這張收據", context: CTX }, () => okJson(GOOD));
   const said = JSON.stringify(sent(r.seen));

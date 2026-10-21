@@ -14,14 +14,15 @@ return (async function () {
   var out = {}, bad = [];
   var ok = (n, c, g) => { if (!c) bad.push(n + " ← " + JSON.stringify(g)); };
   q("#ai-btn").click(); await wait(100);
-  q("#ai-text").value = "想去淺草寺"; q("#ai-form").requestSubmit(); await wait(300);
+  q("#ai-text").value = "想去淺草寺"; (function(){var c=d.querySelector("#ai-kinds:not([hidden]) [data-ai-kind-chip]:not([hidden]) input:checked")||d.querySelector("#ai-kinds:not([hidden]) [data-ai-kind-chip]:not([hidden]) input");if(c&&!c.checked){c.checked=true;c.dispatchEvent(new Event("change",{bubbles:true}));}})(); q("#ai-form").requestSubmit(); await wait(300);
   out.剛按 = q("#ai-go").textContent;
   await wait(9000); out.九秒 = q("#ai-go").textContent;
   await wait(1500); out.十秒半 = q("#ai-go").textContent;
   ok("剛按、9 秒:「AI 讀取中…」;過 10 秒:「還在讀…照片多會久一點」", out.剛按 === "AI 讀取中…" && out.九秒 === "AI 讀取中…" && out.十秒半 === "還在讀…照片多會久一點", out);
   release(); await wait(400);
-  out.回來 = { 按鈕: q("#ai-go").textContent, 能按: !q("#ai-go").disabled, 許願開了: !q("#wish-add-overlay").hidden || !q("#ai-confirm").hidden };
-  ok("AI 回來:按鈕換回「交給 AI」、可以再按,接著開確認", out.回來.按鈕 === "交給 AI" && out.回來.能按 && out.回來.許願開了, out.回來);
+  /* 2026-10-21 起「能不能按」看有沒有選類型(syncAIKind),這裡只看不會卡在讀取中 */
+  out.回來 = { 按鈕: q("#ai-go").textContent, 許願開了: !q("#wish-add-overlay").hidden || !q("#ai-confirm").hidden };
+  ok("AI 回來:按鈕換回「交給 AI」(不卡在讀取中),接著開確認", out.回來.按鈕 === "交給 AI" && out.回來.許願開了, out.回來);
   out.結論 = bad.length ? "✗ " + bad.join(" ;; ") : "全部通過"; out.errors = w.__errors || [];
   return out;
 })();

@@ -16,7 +16,7 @@ return (async function () {
   var legs = [["竹芝碼頭", "大島"], ["大島", "神津島"], ["神津島", "新島"], ["新島", "式根島"], ["式根島", "竹芝碼頭"]]
     .map((x, i) => Object.assign({}, leg, { kind: "船", company: "東海汽船", depart: "2026-10-0" + (4 + (i > 2 ? 1 : 0)) + "T" + String(8 + i).padStart(2, "0") + ":00", from: x[0], to: x[1] }));
   next = { intent: "transport", title: "", day: "", time: "", note: "", message: "", legs: legs };
-  q("#ai-btn").click(); await wait(80); q("#ai-text").value = "船票"; q("#ai-form").requestSubmit(); await wait(300);
+  q("#ai-btn").click(); await wait(80); q("#ai-text").value = "船票"; (function(){var c=d.querySelector("#ai-kinds:not([hidden]) [data-ai-kind-chip]:not([hidden]) input:checked")||d.querySelector("#ai-kinds:not([hidden]) [data-ai-kind-chip]:not([hidden]) input");if(c&&!c.checked){c.checked=true;c.dispatchEvent(new Event("change",{bubbles:true}));}})(); q("#ai-form").requestSubmit(); await wait(300);
   var st = () => ({ 數: q("#fl-stack-n").textContent, 後一: vis("fl-g1"), 後二: vis("fl-g2"), 從: q("#fl-from").value, 開著: vis("flight-overlay") });
   out.第1 = st();
   ok("5 段:第 1 張,寫「1 / 5」,後面畫兩張(最多三張的樣子)", out.第1.數 === "1 / 5" && out.第1.後一 && out.第1.後二 && out.第1.從 === "竹芝碼頭", out.第1);

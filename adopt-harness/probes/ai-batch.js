@@ -22,7 +22,7 @@ var bad = form => qa("#" + form + " .batch-tabs .rm-chip.bt-bad").map(c => c.tex
 var barBtn = ov => q("#" + ov + " .batch-bar:not([hidden]) [data-batch-save]");
 var barTxt = ov => { var b = barBtn(ov); return b ? b.textContent.trim() : ""; };
 var clickTab = async (form, i) => { var inp = qa("#" + form + " .batch-tabs input")[i]; inp.click(); await wait(120); };
-async function ask(result) { next = result; q("#ai-btn").click(); await wait(100); q("#ai-text").value = "好幾筆"; q("#ai-form").requestSubmit(); await wait(450); }
+async function ask(result) { next = result; q("#ai-btn").click(); await wait(100); q("#ai-text").value = "好幾筆"; (function(){var c=d.querySelector("#ai-kinds:not([hidden]) [data-ai-kind-chip]:not([hidden]) input:checked")||d.querySelector("#ai-kinds:not([hidden]) [data-ai-kind-chip]:not([hidden]) input");if(c&&!c.checked){c.checked=true;c.dispatchEvent(new Event("change",{bubbles:true}));}})(); q("#ai-form").requestSubmit(); await wait(450); }
 function swipe(form, dx) {
   var f = q("#" + form), r = f.getBoundingClientRect(), h = f.querySelector("h2").getBoundingClientRect();
   var y = h.top + h.height / 2, x = r.left + r.width / 2;

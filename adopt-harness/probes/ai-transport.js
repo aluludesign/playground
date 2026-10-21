@@ -20,7 +20,7 @@ async function ask(r) {
   next = Object.assign({ title: "", day: "", time: "", note: "", message: "" }, r,
     r.legs ? { legs: r.legs.map(l => Object.assign({}, leg, l)) } : { legs: [] });
   q("#ai-btn").click(); await wait(80);
-  q("#ai-text").value = "這張票"; q("#ai-form").requestSubmit(); await wait(300);
+  q("#ai-text").value = "這張票"; (function(){var c=d.querySelector("#ai-kinds:not([hidden]) [data-ai-kind-chip]:not([hidden]) input:checked")||d.querySelector("#ai-kinds:not([hidden]) [data-ai-kind-chip]:not([hidden]) input");if(c&&!c.checked){c.checked=true;c.dispatchEvent(new Event("change",{bubbles:true}));}})(); q("#ai-form").requestSubmit(); await wait(300);
 }
 return (async function () {
   var out = { 角色: mode }, bad = [];

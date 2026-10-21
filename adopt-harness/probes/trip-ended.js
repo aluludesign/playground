@@ -45,8 +45,11 @@ return (async function () {
       return real(u, i);
     };
     q("#ai-btn").click(); await wait(100);
+    /* 2026-10-21 起先選類型:看得到「記帳」那顆、選了之後提示字是收據的例子 */
+    var ec = q('[data-ai-kind-chip="expense"]');
+    if (ec && !ec.hidden) { var ei = ec.querySelector("input"); ei.checked = true; ei.dispatchEvent(new Event("change", { bubbles: true })); }
     out.提示字 = q("#ai-text").placeholder;
-    q("#ai-text").value = "這張收據"; q("#ai-form").requestSubmit(); await wait(400);
+    q("#ai-text").value = "這張收據"; (function(){var c=d.querySelector("#ai-kinds:not([hidden]) [data-ai-kind-chip]:not([hidden]) input:checked")||d.querySelector("#ai-kinds:not([hidden]) [data-ai-kind-chip]:not([hidden]) input");if(c&&!c.checked){c.checked=true;c.dispatchEvent(new Event("change",{bubbles:true}));}})(); q("#ai-form").requestSubmit(); await wait(400);
     /* 2026-10-02 起 AI 讀到的帳開「記一筆」對話框(為了好幾筆可以疊卡片),不再是花費頁上那張內嵌的表 */
     out.記一筆 = { 開著: !q("#exp-edit-overlay").hidden && q("#xe-h2").textContent === "記一筆", 分頁: (q('.tab[aria-selected="true"]') || {}).id, 項目: q("#xe-title").value, 金額: q("#xe-amount").value, 幣別: q("#xe-cur").value, 日期: q("#xe-date").value, 分類: q("#xe-cat").value, AI關了: q("#ai-overlay").hidden };
     ok("提示字有「收據」的例子", /收據/.test(out.提示字), out.提示字);

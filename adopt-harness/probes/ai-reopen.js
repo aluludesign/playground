@@ -16,7 +16,7 @@ return (async function () {
   var ok = (n, c, g) => { if (!c) bad.push(n + " ← " + JSON.stringify(g)); };
   q("#ai-btn").click(); await wait(120);
   out.第一次 = box("#ai-form");
-  q("#ai-text").value = "想去淺草寺"; q("#ai-form").requestSubmit(); await wait(400);
+  q("#ai-text").value = "想去淺草寺"; (function(){var c=d.querySelector("#ai-kinds:not([hidden]) [data-ai-kind-chip]:not([hidden]) input:checked")||d.querySelector("#ai-kinds:not([hidden]) [data-ai-kind-chip]:not([hidden]) input");if(c&&!c.checked){c.checked=true;c.dispatchEvent(new Event("change",{bubbles:true}));}})(); q("#ai-form").requestSubmit(); await wait(400);
   /* 不管走到哪一張(確認卡或許願表),都按取消 */
   var c = ["#ai-cancel2", "#wf-cancel", "#ai-cancel"].map(s => q(s)).find(b => b && !b.closest("[hidden]"));
   out.取消 = c && c.id; if (c) c.click(); await wait(150);
@@ -25,7 +25,7 @@ return (async function () {
   ok("第二次打開 AI:卡片的位置和大小跟第一次一樣", out.第一次 === out.第二次, out);
   q("#ai-cancel").click(); await wait(100);
   /* 再來一次:這次真的存一筆(走完疊卡片那條路)再打開 */
-  q("#ai-btn").click(); await wait(100); q("#ai-text").value = "想去淺草寺"; q("#ai-form").requestSubmit(); await wait(400);
+  q("#ai-btn").click(); await wait(100); q("#ai-text").value = "想去淺草寺"; (function(){var c=d.querySelector("#ai-kinds:not([hidden]) [data-ai-kind-chip]:not([hidden]) input:checked")||d.querySelector("#ai-kinds:not([hidden]) [data-ai-kind-chip]:not([hidden]) input");if(c&&!c.checked){c.checked=true;c.dispatchEvent(new Event("change",{bubbles:true}));}})(); q("#ai-form").requestSubmit(); await wait(400);
   var save = ["#ai-confirm", "#wish-form"].map(s => q(s)).find(f => f && !f.hidden && !f.closest("[hidden]"));
   if (save) { save.requestSubmit(); await wait(600); }
   q("#ai-btn").click(); await wait(120);

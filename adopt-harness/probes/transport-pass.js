@@ -77,7 +77,7 @@ return (async function () {
   var leg = { kind: "通票", no: "青春18きっぷ", company: "JR", depart: "2026-03-20", arrive: "2026-03-22", from: "", to: "", code: "", dir: "", match: "", note: "JR 全線普通・快速", seats: [], others: 0, photos: [] };
   next = Object.assign({}, base, { intent: "transport", legs: [leg], parts: [{ intent: "transport", legs: [leg], items: [] },
     { intent: "expense", legs: [], items: [Object.assign({}, base, { title: "青春18きっぷ", amount: 10000, currency: "JPY", date: "2026-03-18", category: "交通" })] }] });
-  q("#ai-btn").click(); await wait(100); q("#ai-text").value = "這張"; q("#ai-form").requestSubmit();
+  q("#ai-btn").click(); await wait(100); q("#ai-text").value = "這張"; (function(){var c=d.querySelector("#ai-kinds:not([hidden]) [data-ai-kind-chip]:not([hidden]) input:checked")||d.querySelector("#ai-kinds:not([hidden]) [data-ai-kind-chip]:not([hidden]) input");if(c&&!c.checked){c.checked=true;c.dispatchEvent(new Event("change",{bubbles:true}));}})(); q("#ai-form").requestSubmit();
   for (var i = 0; i < 40 && q("#flight-overlay").hidden; i++) await wait(100);
   out.AI第一張 = { 種類: (q("#fl-kinds input:checked") || {}).value, 型別: q("#fl-depart").type, 第一天: q("#fl-depart").value, 最後一天: q("#fl-arrive").value, 票名: q("#fl-no").value,
     編號: qa("#flight-form .batch-tabs:not([hidden]) .rm-chip").map(c => c.textContent.trim()) };

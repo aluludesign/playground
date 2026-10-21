@@ -199,6 +199,8 @@ function prompt(text, ctx) {
     "旅客:" + people + "。座位的 member 要填這裡的代號(看名字或護照拼音對);對不上的填 unknown。",
     "已經有的交通:" + legs + "。",
     "",
+    ...(ctx.kind ? ["**使用者已經選好要加的類型:" + ({ wish: "許願", stop: "行程", transport: "交通", expense: "記帳" })[ctx.kind] + "(intent = " + ctx.kind + ")**。" +
+      "intent 一定填 " + ctx.kind + ",只照這一類讀(其他類的資料不要);parts 一律空陣列。同一類有好幾筆照樣全部列出來。", ""] : []),
     "使用者說:" + (text || "(沒有打字,只有圖片)"),
   ].join("\n");
 }
@@ -307,6 +309,8 @@ function cleanItem(f, ctx, intent) {
 }
 function clean(f, ctx) {
   const s = str;
+  /* 使用者選好類型了(ctx.kind):照它,模型說什麼都不算;也不拆複合 */
+  if (ctx.kind) f = Object.assign({}, f, { intent: ctx.kind, parts: [] });
   /* 以前的 seats(只改座位)併進 transport:模型照舊回 seats 也接得住 */
   const intent = f.intent === "seats" ? "transport" : ["wish", "stop", "transport", "expense"].includes(f.intent) ? f.intent : "unknown";
   const day = Number.isInteger(f.day) && f.day >= 1 && f.day <= ctx.days.length ? f.day : 0;
@@ -407,6 +411,8 @@ module.exports = async (req, res) => {
   if (images.some(x => x.length > MAX_B64) || images.reduce((n, x) => n + x.length, 0) > MAX_TOTAL_B64)
     return res.status(413).json({ error: "圖片太大,少放一張或換小一點的再試" });
   const ctx = tripCtx(b.context);
+  /* **使用者先選好類型**(2026-10-21,Lulu):許願/行程/交通/記帳。選了就照這一類讀,不再自己判斷,也不拆複合(parts) */
+  ctx.kind = ["wish", "stop", "transport", "expense"].indexOf(b.kind) >= 0 ? b.kind : "";
   ctx.nImages = images.length;
   const SCHEMA = schema(ctx);
 

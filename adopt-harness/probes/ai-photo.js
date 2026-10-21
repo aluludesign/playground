@@ -27,7 +27,7 @@ async function ask(result, withPhoto) {
   next = Object.assign({}, base, result);
   q("#ai-btn").click(); await wait(100);
   if (withPhoto) await givePhoto();
-  q("#ai-text").value = "這張"; q("#ai-form").requestSubmit(); await wait(400);
+  q("#ai-text").value = "這張"; (function(){var c=d.querySelector("#ai-kinds:not([hidden]) [data-ai-kind-chip]:not([hidden]) input:checked")||d.querySelector("#ai-kinds:not([hidden]) [data-ai-kind-chip]:not([hidden]) input");if(c&&!c.checked){c.checked=true;c.dispatchEvent(new Event("change",{bubbles:true}));}})(); q("#ai-form").requestSubmit(); await wait(400);
 }
 return (async function () {
   await wait(300);

@@ -31,7 +31,7 @@ async function ask(result, photo) {
   next = result;
   q("#ai-btn").click(); await wait(100);
   if (photo) await givePhoto();
-  q("#ai-text").value = "這張票"; q("#ai-form").requestSubmit(); await wait(450);
+  q("#ai-text").value = "這張票"; (function(){var c=d.querySelector("#ai-kinds:not([hidden]) [data-ai-kind-chip]:not([hidden]) input:checked")||d.querySelector("#ai-kinds:not([hidden]) [data-ai-kind-chip]:not([hidden]) input");if(c&&!c.checked){c.checked=true;c.dispatchEvent(new Event("change",{bubbles:true}));}})(); q("#ai-form").requestSubmit(); await wait(450);
 }
 var nOf = id => { var f = q("#" + id), n = f && f.querySelector(".stack-n"); return n && !n.hidden ? n.textContent : ""; };
 var ghosts = id => { var st = q("#" + id).parentElement; return [!!st.querySelector(".g1:not([hidden])"), !!st.querySelector(".g2:not([hidden])")]; };

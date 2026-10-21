@@ -67,7 +67,7 @@ return (async function () {
   next = Object.assign({}, base, { intent: "expense", items: [
     Object.assign({}, base, { title: "HANDS", amount: 3256, currency: "JPY", date: "2026-10-05", category: "購物", photos: [1, 2] }),
     Object.assign({}, base, { title: "一蘭", amount: 2980, currency: "JPY", date: "2026-10-05", category: "餐飲", photos: [3] })] });
-  q("#ai-text").value = "這三張"; q("#ai-form").requestSubmit();
+  q("#ai-text").value = "這三張"; (function(){var c=d.querySelector("#ai-kinds:not([hidden]) [data-ai-kind-chip]:not([hidden]) input:checked")||d.querySelector("#ai-kinds:not([hidden]) [data-ai-kind-chip]:not([hidden]) input");if(c&&!c.checked){c.checked=true;c.dispatchEvent(new Event("change",{bubbles:true}));}})(); q("#ai-form").requestSubmit();
   for (var i = 0; i < 60 && q("#exp-edit-overlay").hidden; i++) await wait(100);
   out.送出 = { AI次數: aiCalls, 張數: sentBody && sentBody.images && sentBody.images.length, 舊欄位: sentBody && sentBody.image !== undefined };
   out.第一張尺寸 = sentBody && sentBody.images ? await dims(sentBody.images[0]) : null;
@@ -107,7 +107,7 @@ return (async function () {
   await give([A, C]);
   var ex1 = calls(/resource=expenses/, "POST").length;
   next = Object.assign({}, base, { intent: "expense", items: [Object.assign({}, base, { title: "沒標圖的", amount: 500, currency: "JPY", date: "2026-10-05", category: "其他" })] });
-  q("#ai-text").value = "x"; q("#ai-form").requestSubmit();
+  q("#ai-text").value = "x"; (function(){var c=d.querySelector("#ai-kinds:not([hidden]) [data-ai-kind-chip]:not([hidden]) input:checked")||d.querySelector("#ai-kinds:not([hidden]) [data-ai-kind-chip]:not([hidden]) input");if(c&&!c.checked){c.checked=true;c.dispatchEvent(new Event("change",{bubbles:true}));}})(); q("#ai-form").requestSubmit();
   for (var k = 0; k < 60 && q("#exp-edit-overlay").hidden; k++) await wait(100);
   q("#exp-edit-form").requestSubmit(); await wait(700);
   var last = calls(/resource=expenses/, "POST").slice(ex1)[0];
@@ -122,7 +122,7 @@ return (async function () {
   next = Object.assign({}, base, { intent: "transport", legs: [TLEG], parts: [{ intent: "transport", legs: [TLEG], items: [] }, { intent: "expense", legs: [], items: [
     Object.assign({}, base, { title: "高鐵 南港→左營", amount: 1530, currency: "TWD", date: "2026-10-06", category: "交通", photos: [2] }),
     Object.assign({}, base, { title: "HANDS 收據", amount: 3256, currency: "JPY", date: "2026-10-05", category: "購物", photos: [1] })] }] });
-  q("#ai-text").value = "收據和車票"; q("#ai-form").requestSubmit();
+  q("#ai-text").value = "收據和車票"; (function(){var c=d.querySelector("#ai-kinds:not([hidden]) [data-ai-kind-chip]:not([hidden]) input:checked")||d.querySelector("#ai-kinds:not([hidden]) [data-ai-kind-chip]:not([hidden]) input");if(c&&!c.checked){c.checked=true;c.dispatchEvent(new Event("change",{bubbles:true}));}})(); q("#ai-form").requestSubmit();
   for (var m = 0; m < 60 && q("#flight-overlay").hidden; m++) await wait(100);
   out.混合 = { 交通開了: !q("#flight-overlay").hidden, 編號: qa("#flight-form .batch-tabs:not([hidden]) .rm-chip").map(c => c.textContent.trim()) };
   ok("收據＋車票 → 一批 3 張:1 交通、2 花費、3 花費", out.混合.交通開了 && out.混合.編號.length === 3 && /交通/.test(out.混合.編號[0]) && /花費/.test(out.混合.編號[2]), out.混合);
@@ -145,7 +145,7 @@ return (async function () {
       { intent: "wish", legs: [], items: [Object.assign({}, base, { title: "北海道一日遊", note: "Klook NT$1,590", photos: [1] })] },
       { intent: "expense", legs: [], items: [Object.assign({}, base, { title: "高鐵 南港→左營", amount: 1530, currency: "TWD", date: "2026-10-06", category: "交通", photos: [3] }),
         Object.assign({}, base, { title: "渋谷本店", amount: 21035, currency: "JPY", date: "2026-10-05", category: "購物", photos: [2] })] }] });
-  q("#ai-text").value = ""; q("#ai-form").requestSubmit();
+  q("#ai-text").value = ""; (function(){var c=d.querySelector("#ai-kinds:not([hidden]) [data-ai-kind-chip]:not([hidden]) input:checked")||d.querySelector("#ai-kinds:not([hidden]) [data-ai-kind-chip]:not([hidden]) input");if(c&&!c.checked){c.checked=true;c.dispatchEvent(new Event("change",{bubbles:true}));}})(); q("#ai-form").requestSubmit();
   for (var m3 = 0; m3 < 60 && q("#flight-overlay").hidden; m3++) await wait(100);
   out.四張 = qa("#flight-form .batch-tabs:not([hidden]) .rm-chip").map(c => c.textContent.trim());
   ok("Klook＋收據＋車票 → 一批 4 張:交通、許願、花費、花費", out.四張.length === 4 && /交通/.test(out.四張[0]) && /許願/.test(out.四張[1]) && /花費/.test(out.四張[3]), out.四張);

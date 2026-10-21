@@ -19,7 +19,7 @@ return (async function () {
   var bad = [], out = {};
   var ok = (n, c, g) => { if (!c) bad.push(n + " ← " + JSON.stringify(g)); };
   q("#tab-wish").click(); await wait(100);
-  q("#ai-btn").click(); await wait(80); q("#ai-text").value = "想吃美食"; q("#ai-form").requestSubmit(); await wait(400);
+  q("#ai-btn").click(); await wait(80); q("#ai-text").value = "想吃美食"; (function(){var c=d.querySelector("#ai-kinds:not([hidden]) [data-ai-kind-chip]:not([hidden]) input:checked")||d.querySelector("#ai-kinds:not([hidden]) [data-ai-kind-chip]:not([hidden]) input");if(c&&!c.checked){c.checked=true;c.dispatchEvent(new Event("change",{bubbles:true}));}})(); q("#ai-form").requestSubmit(); await wait(400);
   out.問的時候 = visibleWith("只說了吃美食");
   var cancel = ["#ai-cancel2", "#ai-cancel", "#wf-cancel"].map(s => q(s)).find(b => b && !b.closest("[hidden]"));
   out.按了 = cancel && cancel.id; if (cancel) cancel.click(); await wait(200);
