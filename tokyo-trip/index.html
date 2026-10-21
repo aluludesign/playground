@@ -1534,6 +1534,12 @@
     .laygroup .lay + .lay{border-left:var(--ds-sys-shared-border-xs) solid var(--ds-sys-shared-color-outline-variant);}
     .laygroup .lay.rm-chip[aria-pressed="true"]{border:0;}
     .laygroup .lay.rm-chip + .lay.rm-chip{border-left:var(--ds-sys-shared-border-xs) solid var(--ds-sys-shared-color-outline-variant);}
+    /* 團的設定的 tab 列(2026-10-21):同一個分段按鈕,撐滿一整行、三段一樣寬;不要地圖那顆小圓點 */
+    .laygroup.st-tabs{display:flex; width:100%; overflow:hidden; margin-bottom:8px;}   /* 下面第一格的浮動標題會凸到框上,多留一點 */
+    .st-tabs .st-tab.rm-chip{flex:1; justify-content:center; border:0; border-radius:0;}
+    .st-tabs .st-tab.rm-chip + .st-tab.rm-chip{border-left:var(--ds-sys-shared-border-xs) solid var(--ds-sys-shared-color-outline-variant);}
+    .st-panel{display:grid; gap:12px;}
+    .st-panel[hidden]{display:none;}
     /* 花費分類 ＝ Chip / Label：不能點，沒有狀態；底色是各分類自己的顏色（行內 style），所以字維持白色 */
     .rm-chip.cat{border-color:transparent; color:#fff;}
   }
@@ -1746,7 +1752,16 @@
 <div class="overlay" id="settings-overlay" hidden>
   <form class="signin wide" id="settings-form">
     <h2>團的設定</h2>
-    <div id="set-trip">
+    <!-- **分成三個 tab**(2026-10-21,Lulu:「匯率跟錢放一起,自己的放在團主一起,反正他不是團主就看不到其他」)。
+         樣子跟地圖上「全部已排|Day n」同一個分段按鈕(她選的)。只切顯示、不重畫表單 —— 改到一半換 tab 值還在;
+         「存起來」一次存三個 tab。不是團主的人看不到 tab 列,只有自己的名字和顏色。每次打開都從「一般」開始 -->
+    <div class="laygroup st-tabs" id="st-tabs" role="group" aria-label="團的設定分頁">
+      <button type="button" class="rm-chip rm-chip--selectable st-tab" data-st-tab="gen" aria-pressed="true">一般</button>
+      <button type="button" class="rm-chip rm-chip--selectable st-tab" data-st-tab="money" aria-pressed="false">錢</button>
+      <button type="button" class="rm-chip rm-chip--selectable st-tab" data-st-tab="dep" aria-pressed="false">副團主</button>
+    </div>
+    <div class="st-panel" data-st-panel="gen">
+      <div id="set-trip">
       <div class="fld"><label class="rm-label" for="st-name">團名</label><input class="rm-input" type="text" id="st-name" maxlength="40" required></div>
       <div class="grid2">
         <div class="fld"><label class="rm-label" for="st-country">國家</label><select class="rm-input" id="st-country"><option value="日本">日本</option><option value="台灣">台灣</option></select></div>
@@ -1757,6 +1772,14 @@
         <div class="fld"><label class="rm-label" for="st-end">最後一天</label><input class="rm-input" type="date" id="st-end" required></div>
       </div>
       <p class="st-hint" id="st-date-note" hidden></p>
+        <hr class="set-sep">
+      </div>
+    <div class="grid2">
+      <div class="fld"><label class="rm-label" for="st-myname">我在這團叫</label><input class="rm-input" type="text" id="st-myname" maxlength="20" required></div>
+      <div class="fld"><label class="rm-label" for="st-mycolor">我的顏色</label><input class="rm-input" type="color" id="st-mycolor"></div>
+    </div>
+    </div>
+    <div class="st-panel" data-st-panel="money" hidden>
       <div class="fld" id="st-rate-fld"><label class="rm-label" for="st-rate">匯率(1 外幣 = ? 台幣)</label><input class="rm-input" type="number" id="st-rate" step="0.0001" min="0"></div>
       <!-- 預收(2026-10-19,Lulu:「只有金錢實際流動才記,所以記成預收、收款人」):沒有/有預收;收款人必填(預設團主);
            誰有交、每人一樣或不一樣。收款人放在這一塊最上面,吃得到 .dialog-gap 那條 12px 的規則 -->
@@ -1778,6 +1801,8 @@
         <div class="grid2" id="st-fund-each" hidden></div>
         <p class="st-hint" id="st-fund-note"></p>
       </div>
+    </div>
+    <div class="st-panel" data-st-panel="dep" hidden>
       <!-- 副團主(2026-10-01):一般成員只能許願;團主指派 1 位副團主、勾他能管哪幾塊。每天只能換一次 -->
       <div class="fld"><label class="rm-label" for="st-deputy">副團主</label><select class="rm-input" id="st-deputy"></select></div>
       <p class="st-hint" id="st-deputy-note"></p>
@@ -1788,12 +1813,6 @@
           <label class="rm-chip"><input type="checkbox" id="st-can-seat">交通</label>
         </div>
       </div>
-    </div>
-    <p id="set-trip-ro" hidden>團的設定只有團主能改。</p>
-    <hr class="set-sep">
-    <div class="grid2">
-      <div class="fld"><label class="rm-label" for="st-myname">我在這團叫</label><input class="rm-input" type="text" id="st-myname" maxlength="20" required></div>
-      <div class="fld"><label class="rm-label" for="st-mycolor">我的顏色</label><input class="rm-input" type="color" id="st-mycolor"></div>
     </div>
     <div class="err" id="st-err" hidden></div>
     <div class="ops">
@@ -8260,11 +8279,22 @@
 
   /* ---------- 團的設定 ---------- */
   function showSetErr(msg) { const b = el("st-err"); b.textContent = msg || ""; b.hidden = !msg; }
+  /* 團的設定的 tab:只切顯示,表單不重畫(改到一半換 tab,值都還在) */
+  function settingsTab(k) {
+    document.querySelectorAll("[data-st-tab]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.stTab === k)));
+    document.querySelectorAll("[data-st-panel]").forEach(p => { p.hidden = p.dataset.stPanel !== k; });
+  }
+  el("st-tabs").addEventListener("click", ev => {
+    const b = ev.target.closest && ev.target.closest("[data-st-tab]");
+    if (b) settingsTab(b.dataset.stTab);
+  });
   function openSettings() {
     if (!trip || !myMember) return;
     const owner = myMember.role === "團主";
+    /* 不是團主:沒有 tab 列,只看得到自己的名字和顏色(「一般」那一頁下面那兩格) */
+    el("st-tabs").hidden = !owner;
     el("set-trip").hidden = !owner;
-    el("set-trip-ro").hidden = owner;
+    settingsTab("gen");   /* 每次打開都從「一般」開始 */
     el("st-name").value = trip.name || "";
     el("st-country").value = trip.country || "日本";
     el("st-city").value = trip.city || "";
