@@ -32,13 +32,13 @@ var OPEN = {
     var r = q("#st-fund-same0"); r.checked = true; r.dispatchEvent(new Event("change", { bubbles: true })); await wait(40); },
   "settings-overlay(副團主)": async () => { q("#menu-btn").click(); await wait(60); q("#cloud-set").click(); await wait(120);
     q('[data-st-tab="dep"]').click(); await wait(40); },
-  "stop-add-overlay": async () => { q("#add-stop-btn").click(); await wait(120); },
-  "wish-add-overlay": async () => { q("#tab-wish").click(); await wait(60); q("#add-wish-btn").click(); await wait(120); },
+  "stop-add-overlay": async () => { addBy("stop"); await wait(120); },
+  "wish-add-overlay": async () => { q("#tab-wish").click(); await wait(60); addBy("wish"); await wait(120); },
   "edit-overlay": async () => { q("#tab-plan").click(); await wait(60); var b = q("[data-edit-stop]"); if (b) b.click(); await wait(120); },
   "exp-edit-overlay": async () => { q("#tab-cost").click(); await wait(60); var b = q("[data-edit-exp]"); if (b) b.click(); await wait(120); },
-  "flight-overlay": async () => { q("#tab-fly").click(); await wait(60); var b = q("[data-flight-add]"); if (b) b.click(); await wait(150); },
+  "flight-overlay": async () => { q("#tab-fly").click(); await wait(60); addBy("transport"); await wait(150); },
   "wish-edit-overlay": async () => { q("#tab-wish").click(); await wait(60); var b = q("[data-edit-wish]"); if (b) b.click(); await wait(120); },
-  "ai-overlay": async () => { q("#ai-btn").click(); await wait(120); },
+  "ai-overlay": async () => { addAI(); await wait(120); },
 };
 return (async function () {
   await wait(400);

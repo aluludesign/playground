@@ -19,7 +19,7 @@ var leg = { kind: "", no: "", company: "", depart: "", from: "", arrive: "", to:
 async function ask(r) {
   next = Object.assign({ title: "", day: "", time: "", note: "", message: "" }, r,
     r.legs ? { legs: r.legs.map(l => Object.assign({}, leg, l)) } : { legs: [] });
-  q("#ai-btn").click(); await wait(80);
+  addAI(); await wait(80);
   q("#ai-text").value = "這張票"; q("#ai-form").requestSubmit(); await wait(300);
 }
 return (async function () {

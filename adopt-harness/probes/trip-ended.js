@@ -15,12 +15,22 @@ return (async function () {
   var openSettings = async () => { q("#menu-btn").click(); q("#cloud-set").click(); if (!q("#menu-pop").hidden) q("#menu-btn").click(); await wait(100); };
   if (ended) {
     out.橫幅 = shown(q("#ended-bar")) ? txt("#ended-bar") : "(沒有)";
-    out.AI = shown(q("#ai-btn")); out.加行程 = shown(q("#add-stop-btn"));
-    q("#tab-wish").click(); await wait(80);
-    out.許願 = shown(q("#add-wish-btn")); out.投票按得下去 = qa("#wish-list [data-vote]").some(b => !b.disabled);
+    /* 2026-10-22 起入口是各頁右下角的「＋」(fabOn);AI = ＋打開之後 AI 那一邊按不按得下去 */
+    out.加行程 = fabOn("plan");
+    out.許願 = fabOn("wish"); await wait(80);
+    out.投票按得下去 = qa("#wish-list [data-vote]").some(b => !b.disabled);
     out.改願望 = qa("#wish-list [data-edit-wish], #wish-list [data-del-wish]").length;
-    q("#tab-fly").click(); await wait(80); out.加交通 = !!(q("[data-flight-add]") && !q("[data-flight-add]").hidden);
-    q("#tab-cost").click(); await wait(80); out.記一筆 = shown(q("#add-exp-btn"));
+    out.加交通 = fabOn("fly"); await wait(80);
+    out.記一筆 = fabOn("cost"); await wait(80);
+    out.AI = false;
+    if (out.記一筆) {
+      addAI(); await wait(80);
+      out.AI = !q('[data-add-mode="ai"]').disabled;
+      out.新增對話框 = { 類型: qa("[data-add-kind]").filter(c => !c.hidden).map(c => c.textContent.trim()), 類型那排: shown(q("#add-kinds-f")), 說: txt("#add-why"), 按鈕: txt("#ai-go") };
+      ok("團主結束後按＋:只有記帳(不用選)、AI 切不過去、直接手動、講團結束了", !out.AI && out.新增對話框.類型.join() === "記帳" && !out.新增對話框.類型那排 &&
+        /結束了/.test(out.新增對話框.說) && /手動/.test(out.新增對話框.按鈕), out.新增對話框);
+      q("#ai-cancel").click(); await wait(50);
+    }
     ok("結束:AI、行程、許願、投票、改願望、交通都沒有", !out.AI && !out.加行程 && !out.許願 && !out.投票按得下去 && !out.改願望 && !out.加交通, out);
     if (member) ok("一般成員:不能記帳;橫幅講結束了、只能看", !out.記一筆 && /結束了,只能看/.test(out.橫幅) && !/記帳/.test(out.橫幅), out);
     else {
@@ -31,7 +41,9 @@ return (async function () {
       q("#st-cancel").click();
     }
   } else if (started) {
-    ok("進行中:沒有結束的橫幅、AI 在", !shown(q("#ended-bar")) && shown(q("#ai-btn")), "");
+    out.進行中 = { 橫幅: shown(q("#ended-bar")), 加號: fabOn("plan") };
+    addAI(); await wait(80); out.進行中.AI = !q('[data-add-mode="ai"]').disabled && q('[data-add-mode="ai"]').getAttribute("aria-pressed") === "true"; q("#ai-cancel").click(); await wait(50);
+    ok("進行中:沒有結束的橫幅、＋在、AI 用得了", !out.進行中.橫幅 && out.進行中.加號 && out.進行中.AI, out.進行中);
     await openSettings();
     out.日期 = { 第一天鎖: q("#st-start").disabled, 最後一天鎖: q("#st-end").disabled, 最早: q("#st-end").min, 現在: q("#st-end").value, 說: txt("#st-date-note") };
     ok("進行中:第一天鎖、最後一天只能往後(min = 現在的最後一天)", out.日期.第一天鎖 && !out.日期.最後一天鎖 && out.日期.最早 === out.日期.現在 && /往後延/.test(out.日期.說), out.日期);
@@ -44,7 +56,8 @@ return (async function () {
         intent: "expense", title: "一蘭拉麵", amount: 2980, currency: "JPY", date: "2026-10-05", category: "餐飲", note: "", legs: [], message: "" } }) });
       return real(u, i);
     };
-    q("#ai-btn").click(); await wait(100);
+    q("#tab-cost").click(); await wait(80);   /* ＋預設選這一頁那一類:花費頁 = 記帳 */
+    addAI(); await wait(100);
     out.提示字 = q("#ai-text").placeholder;
     q("#ai-text").value = "這張收據"; q("#ai-form").requestSubmit(); await wait(400);
     /* 2026-10-02 起 AI 讀到的帳開「記一筆」對話框(為了好幾筆可以疊卡片),不再是花費頁上那張內嵌的表 */

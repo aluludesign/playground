@@ -526,6 +526,8 @@ const memberRow = (code, sub) => rowsIn(DB.members).find(p => plain(p.properties
   ok("結束之後不能許願", r.code === 403 && r.body.why === "ended", r.body);
   r = await call(LINE_C, "POST", { resource: "expenses", t: T2 }, { title: "結束後補一筆", amount: 100, currency: "TWD", date: twDay(-2), category: "餐飲", payer: "", participants: [] });
   ok("**結束之後團主還能記帳**", r.code === 200, r.body);
+  r = await call(LINE_C, "POST", { resource: "photo", t: T2 }, { image: Buffer.from([0xff, 0xd8, 0xff, 0xd9]).toString("base64") });
+  ok("結束之後團主還能傳照片(記帳要放圖)", r.code === 200 && !!r.body.photo, r.body);
 
   /* ================= 測試環境:團主「用成員身分看」 ================= */
   await call(LINE_A, "PATCH", { resource: "team", t: T1 }, { can: { plan: false, cost: false, seat: false } });
@@ -642,8 +644,15 @@ const memberRow = (code, sub) => rowsIn(DB.members).find(p => plain(p.properties
 
   /* ---------- AI 讀過的照片存起來(2026-10-04):花費、交通 ---------- */
   const JPG = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0, 16, 74, 70, 73, 70, 0, 1, 1, 0, 0, 1, 0, 1, 0, 0, 0xff, 0xd9]).toString("base64");
+  /* 2026-10-22 起許願、加行程也能放圖(「附圖」欄),許願誰都能許 → 沒有權限的成員也能傳 */
   r = await call(LINE_D, "POST", { resource: "photo", t: T1 }, { image: JPG });
-  ok("照片:沒有記帳、交通權限的成員不能傳(403)", r.code === 403, r.body);
+  const pidD = r.body && r.body.photo;
+  ok("照片:沒有記帳、交通權限的成員也能傳(許願要放圖)", r.code === 200 && /^[0-9a-f-]{36}$/.test(pidD || ""), r.body);
+  r = await call(LINE_D, "POST", { resource: "wishes", t: T1 }, { title: "貓咪咖啡", place: "", pics: [pidD, "壞的"] });
+  ok("許願帶 pics → 掛在「附圖」欄、讀回來 pics 是網址(壞的編號丟掉)、維基那欄不動", r.code === 200 && r.body.row.pics.length === 1 && /files\.notion\.test\//.test(r.body.row.pics[0]) && r.body.row.photo === "" &&
+    !!rowsIn(DB.itinerary).find(p => plain(p.properties["項目"]) === "貓咪咖啡" && p.properties["附圖"]), r.body);
+  r = await call(LINE_D, "POST", { resource: "wishes", t: T1 }, { title: "附圖過期", pics: ["0".repeat(8) + "-0000-0000-0000-" + "0".repeat(12)] });
+  ok("許願的附圖掛不上去(過期)→ 願望照樣許了,回 photoLost", r.code === 200 && r.body.photoLost === true && r.body.row.pics.length === 0, r.body);
   r = await call(LINE_A, "POST", { resource: "photo", t: T1 }, { image: Buffer.from("not a jpeg").toString("base64") });
   ok("照片:不是 JPEG → 400", r.code === 400, r.body);
   r = await call(LINE_A, "POST", { resource: "photo", t: T1 }, { image: JPG });
@@ -659,6 +668,10 @@ const memberRow = (code, sub) => rowsIn(DB.members).find(p => plain(p.properties
   ok("一筆掛兩張(photos 陣列;壞的編號丟掉):photos 兩個網址、photo 是第一張", r.code === 200 && r.body.row.photos.length === 2 && r.body.row.photo === r.body.row.photos[0], r.body.row && r.body.row.photos);
   r = await call(LINE_A, "POST", { resource: "flights", t: T1 }, { kind: "火車", no: "のぞみ 1", dir: "其他", from: "東京", to: "新大阪", depart: "2026-10-05T08:00", photo: pid });
   ok("交通帶 photo → 也掛得上去", r.code === 200 && /files\.notion\.test\//.test(r.body.row.photo), r.body);
+  r = await call(LINE_A, "POST", { resource: "itinerary", t: T1 }, { title: "看夜景", day: "2026-10-05", time: "20:00", pics: [pid, pid2] });
+  ok("行程帶 pics → 「附圖」欄兩張、讀回來 pics 兩個網址", r.code === 200 && r.body.row.pics.length === 2 && r.body.row.pics.every(u => /files\.notion\.test\//.test(u)), r.body);
+  r = await call(LINE_A, "PATCH", { resource: "itinerary", t: T1, id: r.body.row.id }, { title: "看夜景", day: "2026-10-05", time: "21:00", place: "", note: "" });
+  ok("改行程沒帶 pics → 附圖照舊留著", r.code === 200 && r.body.row.pics.length === 2 && r.body.row.time === "21:00", r.body);
   r = await call(LINE_A, "POST", { resource: "expenses", t: T1 }, { title: "照片過期那筆", amount: 500, currency: "JPY", payer: mA.id, participants: [mA.id], photo: "0".repeat(8) + "-0000-0000-0000-" + "0".repeat(12) });
   ok("照片掛不上去(過期)→ 帳照樣存進去(沒照片),回 photoLost 讓 App 講一聲", r.code === 200 && r.body.photoLost === true && !r.body.row.photo &&
     rowsIn(DB.expenses).filter(p => plain(p.properties["項目"]) === "照片過期那筆").length === 1, r.body);

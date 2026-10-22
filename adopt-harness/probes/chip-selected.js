@@ -11,7 +11,7 @@ return (async function () {
   out.大家的許願 = { 框: cs.borderTopWidth + " " + cs.borderTopColor, 底: cs.backgroundColor, 字: cs.color };
   ok("大家的許願(選取):1px #A5887C 框、#C9C0BD 底、#4D3B33 字", cs.borderTopWidth === "1px" && cs.borderTopColor === "rgb(165, 136, 124)" &&
     cs.backgroundColor === "rgb(201, 192, 189)" && cs.color === "rgb(77, 59, 51)", out.大家的許願);
-  q("#tab-cost").click(); await wait(80); q("#add-exp-btn").click(); await wait(100);
+  q("#tab-cost").click(); await wait(80); addBy("expense"); await wait(100);
   var chip = qa("#xe-who .rm-chip").find(c => c.querySelector("input:checked"));
   var cc = chip && getComputedStyle(chip);
   out.誰分攤 = cc && { 框: cc.borderTopWidth + " " + cc.borderTopColor, 底: cc.backgroundColor };

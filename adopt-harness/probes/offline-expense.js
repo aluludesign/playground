@@ -16,7 +16,7 @@ return (async function () {
   var offlineBoot = /離線/.test(txt("#cloud-msg"));
   out.開機 = offlineBoot ? "離線(副本)" : "連線中";
   out.狀態列 = txt("#cloud-msg");
-  out.記一筆 = shown(q("#add-exp-btn"));
+  out.記一筆 = fabOn("cost");
   if (offlineBoot && !/只能記帳/.test(out.狀態列)) {
     ok("舊版副本(沒帶權限)→ 照舊唯讀:記一筆不出現、狀態列說不能編輯", !out.記一筆 && /不能編輯/.test(out.狀態列), out);
     return fin();
@@ -29,7 +29,7 @@ return (async function () {
   w.fetch = function (u, i) { return down && /\/api\//.test(String(u)) ? Promise.reject(new TypeError("Failed to fetch")) : real(u, i); };
   var before = (w.__rows.expenses || []).length;
 
-  q("#add-exp-btn").click(); await wait(100);
+  addBy("expense"); await wait(100);
   q("#xe-title").value = "地鐵便利商店";
   q("#xe-amount").value = "480";
   if (!q("#xe-who input:checked")) q("#xe-who input").checked = true;

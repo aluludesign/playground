@@ -157,6 +157,19 @@ function schema(ctx) {
   };
 }
 
+/* **使用者先選好要加什麼**(2026-10-22,Lulu:全站一顆＋,先選許願/行程/交通/記帳,行程和交通可以多勾「記帳」)。
+   選了就只照這一類讀(勾了記帳再加花費),不再自己判斷 */
+const KIND_ZH = { wish: "許願", stop: "行程", transport: "交通", expense: "記帳" };
+function kindRule(ctx) {
+  if (!ctx.kind) return [];
+  const k = ctx.kind, zh = KIND_ZH[k];
+  if (!ctx.also) return ["**使用者已經選好要加的類型:" + zh + "(intent = " + k + ")**。" +
+    "intent 一定填 " + k + ",只照這一類讀(其他類的資料不要);parts 一律空陣列。同一類有好幾筆照樣全部列出來。", ""];
+  return ["**使用者已經選好要加的類型:" + zh + "(intent = " + k + "),並勾了「一起記帳」**。intent 一定填 " + k + ";" +
+    "只讀這兩類:" + zh + "那份照常,票價、門票或訂位的金額另外一份 expense(每張票、每筆金額各一筆)。" +
+    "兩份都要列在 parts(" + k + " 那份也要列進去)。看不到金額就只回 " + k + ",parts 空陣列。", ""];
+}
+
 function prompt(text, ctx) {
   const days = ctx.days.map((d, i) => "第 " + (i + 1) + " 天 = " + d).join("、") || "(還沒有日期)";
   const people = ctx.members.map(m => m.id + "(" + (m.name || "?") + ")").join("、") || "(沒有名單)";
@@ -199,6 +212,7 @@ function prompt(text, ctx) {
     "旅客:" + people + "。座位的 member 要填這裡的代號(看名字或護照拼音對);對不上的填 unknown。",
     "已經有的交通:" + legs + "。",
     "",
+    ...kindRule(ctx),
     "使用者說:" + (text || "(沒有打字,只有圖片)"),
   ].join("\n");
 }
@@ -305,7 +319,18 @@ function cleanItem(f, ctx, intent) {
     photos: cleanPhotos(f.photos, ctx),
   };
 }
+/* 使用者選好類型了(ctx.kind):照它,模型說什麼都不算。沒勾記帳就不拆複合;勾了只留這一類＋花費 */
 function clean(f, ctx) {
+  if (!ctx.kind) return cleanRaw(f, ctx);
+  const want = [ctx.kind].concat(ctx.also ? ["expense"] : []);
+  let ps = (Array.isArray(f.parts) ? f.parts : []).filter(p => p && want.includes(p.intent === "seats" ? "transport" : p.intent));
+  /* 最外層是別種、但 parts 裡有選的那一種 → 用那一份當最外層 */
+  const mine = f.intent !== ctx.kind && ps.find(p => p.intent === ctx.kind);
+  /* 勾了記帳、模型把花費放在最外層、parts 卻沒有花費 → 補進去,不然帳就丟了 */
+  if (ctx.also && f.intent === "expense" && !ps.some(p => p.intent === "expense")) ps = ps.concat([{ intent: "expense", legs: [], items: Array.isArray(f.items) && f.items.length ? f.items : [f] }]);
+  return cleanRaw(Object.assign({}, f, mine ? { legs: mine.legs || [], items: mine.items || [] } : {}, { intent: ctx.kind, parts: ctx.also ? ps : [] }), ctx);
+}
+function cleanRaw(f, ctx) {
   const s = str;
   /* 以前的 seats(只改座位)併進 transport:模型照舊回 seats 也接得住 */
   const intent = f.intent === "seats" ? "transport" : ["wish", "stop", "transport", "expense"].includes(f.intent) ? f.intent : "unknown";
@@ -338,7 +363,7 @@ function clean(f, ctx) {
        車票先填座位,下一張記錢的時候「誰分攤」才能先勾坐那幾個位子的人 */
     parts: (() => {
       const has = p => p.intent !== "unknown" && (p.intent === "transport" ? p.legs.length : p.items.some(x => x.title || x.amount));
-      const ps = (Array.isArray(f.parts) ? f.parts : []).slice(0, 6).map(p => clean(Object.assign({}, p, { parts: [], message: "" }), ctx)).filter(has);
+      const ps = (Array.isArray(f.parts) ? f.parts : []).slice(0, 6).map(p => cleanRaw(Object.assign({}, p, { parts: [], message: "" }), ctx)).filter(has);
       /* **同一種的併成一份,不要丟**(2026-10-12,Lulu:收據＋高鐵票一起丟,AI 只讀了車票)。
          以前同一種只留第一份 —— 模型把票價、收據分成兩份花費,收據那份就不見了。一模一樣的(同一段、同一筆)只留一個 */
       const byKind = new Map();
@@ -407,6 +432,9 @@ module.exports = async (req, res) => {
   if (images.some(x => x.length > MAX_B64) || images.reduce((n, x) => n + x.length, 0) > MAX_TOTAL_B64)
     return res.status(413).json({ error: "圖片太大,少放一張或換小一點的再試" });
   const ctx = tripCtx(b.context);
+  /* **使用者先選好類型**(2026-10-22,Lulu):許願/行程/交通/記帳;行程、交通可以多勾記帳(also=expense) */
+  ctx.kind = ["wish", "stop", "transport", "expense"].indexOf(b.kind) >= 0 ? b.kind : "";
+  ctx.also = (ctx.kind === "stop" || ctx.kind === "transport") && b.also === "expense" ? "expense" : "";
   ctx.nImages = images.length;
   const SCHEMA = schema(ctx);
 

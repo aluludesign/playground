@@ -13,10 +13,10 @@
 // 另外多開花費那兩張(九張截圖從來沒開過,但改動會落在它們身上)。
 var opened = [];
 function act(name, fn) { try { fn(); opened.push(name); } catch (e) { opened.push(name + ' ✗ ' + e); } }
-act('add-stop-btn', function () { d.getElementById('add-stop-btn').click(); });
+act('add-stop-btn', function () { addBy("stop"); });
 act('data-edit-stop', function () { d.querySelector('[data-edit-stop]').click(); });
 act('tab-cost', function () { d.getElementById('tab-cost').click(); });
-act('add-exp-btn', function () { d.getElementById('add-exp-btn').click(); });
+act('add-exp-btn', function () { addBy("expense"); });
 act('data-edit-exp', function () { d.querySelector('[data-edit-exp]').click(); });
 
 var els = [].slice.call(d.querySelectorAll('.fld input, .fld select, .fld textarea'));

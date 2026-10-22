@@ -14,12 +14,12 @@ var menu = which => { q("#menu-btn").click(); q("#" + which).click(); if (!q("#m
 var DIALOGS = [
   { name: "團的設定", ov: "settings-overlay", open: () => menu("cloud-set"), field: "st-name", cancel: "st-cancel" },
   { name: "邀請朋友", ov: "invite-overlay", open: () => menu("cloud-invite"), field: null, cancel: "inv-close" },
-  { name: "加一段交通", ov: "flight-overlay", open: () => { q("#tab-fly").click(); q("[data-flight-add]").click(); }, field: "fl-no", cancel: "fl-cancel" },
+  { name: "加一段交通", ov: "flight-overlay", open: () => { q("#tab-fly").click(); addBy("transport"); }, field: "fl-no", cancel: "fl-cancel" },
   { name: "改一筆花費", ov: "exp-edit-overlay", open: () => { q("#tab-cost").click(); q("[data-edit-exp]").click(); }, field: "xe-title", cancel: "xe-cancel" },
   { name: "改一項行程", ov: "edit-overlay", open: () => { q("#tab-plan").click(); q("[data-edit-stop]").click(); }, field: "se-title", cancel: "se-cancel" },
-  { name: "加一筆行程", ov: "stop-add-overlay", open: () => { q("#tab-plan").click(); q("#add-stop-btn").click(); }, field: "sf-title", cancel: "sf-cancel" },
-  { name: "AI 幫你加", ov: "ai-overlay", open: () => q("#ai-btn").click(), field: "ai-text", cancel: "ai-cancel" },
-  { name: "許一個願望", ov: "wish-add-overlay", open: () => { q("#tab-wish").click(); q("#add-wish-btn").click(); }, field: "wf-title", cancel: "wf-cancel" },
+  { name: "加一筆行程", ov: "stop-add-overlay", open: () => { q("#tab-plan").click(); addBy("stop"); }, field: "sf-title", cancel: "sf-cancel" },
+  { name: "AI 幫你加", ov: "ai-overlay", open: () => addAI(), field: "ai-text", cancel: "ai-cancel" },
+  { name: "許一個願望", ov: "wish-add-overlay", open: () => { q("#tab-wish").click(); addBy("wish"); }, field: "wf-title", cancel: "wf-cancel" },
   { name: "改願望", ov: "wish-edit-overlay", open: () => { q("#tab-wish").click(); q("#wishbox").open = true; q("[data-edit-wish=w2]").click(); }, field: "we-title", cancel: "we-cancel" },
 ];
 async function openTime() {

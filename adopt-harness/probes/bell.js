@@ -13,7 +13,7 @@ var seen = () => (w.__calls || []).filter(c => /resource=me/.test(c.url) && c.bo
 return (async function () {
   var out = { 情境: qs }, bad = [];
   var ok = (n, c, g) => { if (!c) bad.push(n + " ← " + JSON.stringify(g)); };
-  var bell = q("#bell-btn"), ai = q("#ai-btn"), menu = q("#menu-btn");
+  var bell = q("#bell-btn"), menu = q("#menu-btn");
   out.鈴鐺 = shown(bell); out.紅點 = shown(q("#bell-dot"));
   ok("全部人都有鈴鐺", out.鈴鐺, out);
   if (member) {
@@ -22,9 +22,10 @@ return (async function () {
     if (newbie) ok("一般成員:看得到「小美 加入了這一團」,但沒有座位提醒、沒有去填座位", /小美 加入了這一團/.test(out.清單) && !/座位/.test(out.清單) && !q("#bell-list [data-bell-fly]"), out.清單);
     return fin();
   }
-  var rb = bell.getBoundingClientRect(), ra = ai.getBoundingClientRect(), rm = menu.getBoundingClientRect();
-  out.位置 = { AI右: Math.round(ra.right), 鈴左: Math.round(rb.left), 鈴右: Math.round(rb.right), 選單左: Math.round(rm.left) };
-  ok("鈴鐺在 AI 和漢堡選單中間,不重疊", out.鈴鐺 && ra.right <= rb.left && rb.right <= rm.left, out.位置);
+  /* 頂列的 ✨ AI 2026-10-22 拿掉了(改成右下角的＋),鈴鐺只剩「在漢堡選單左邊、不重疊」 */
+  var rb = bell.getBoundingClientRect(), rm = menu.getBoundingClientRect();
+  out.位置 = { 鈴左: Math.round(rb.left), 鈴右: Math.round(rb.right), 選單左: Math.round(rm.left) };
+  ok("鈴鐺在漢堡選單左邊,不重疊", out.鈴鐺 && rb.right <= rm.left, out.位置);
   var feedOn = /feed=1/.test(qs);
   ok(newbie || feedOn ? "有新的 → 紅點" : "沒有新的 → 沒有紅點", out.紅點 === (newbie || feedOn), out.紅點);
   if (feedOn) {

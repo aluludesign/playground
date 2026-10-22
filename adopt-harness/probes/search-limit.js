@@ -6,7 +6,7 @@ var many = Array.from({ length: 40 }, (_, i) => ({ lat: String(35.6 + i / 1000),
 w.fetch = (u => function (x, i) { if (/nominatim/.test(String(x))) { asked.push(String(x)); return Promise.resolve({ ok: true, json: () => Promise.resolve(many) }); } return u(x, i); })(w.fetch);
 return (async function () {
   var out = {}, bad = [];
-  q("#add-stop-btn").click(); await wait(80);
+  addBy("stop"); await wait(80);
   q("#sf-title").value = "拉麵"; q('[data-seek="sf-title"]').click(); await wait(1500);
   out.要幾筆 = (/[?&]limit=(\d+)/.exec(asked[0] || "") || [])[1];
   var n = () => qa('#stop-form [data-hit="sf-title"]').length;

@@ -34,7 +34,7 @@ if (!noUI) {
 return (async function () {
   var out = { 模式: noUI ? "沒有 UI Kit" : "有 UI Kit" }, bad = [];
   var ok = (n, c, g) => { if (!c) bad.push(n + " ← " + JSON.stringify(g)); };
-  q("#add-stop-btn").click(); await wait(80);
+  addBy("stop"); await wait(80);
   q("#sf-title").value = "一蘭";
   var b = q('[data-seek="sf-title"]');
   for (var k = 0; k < 2; k++) { b.click(); await wait(1400); }

@@ -9,7 +9,7 @@ if (!/trip_as=member/.test(d.cookie)) {
 }
 var b = q("#dev-badge"), br = b.getBoundingClientRect();
 var hit = d.elementFromPoint(br.left + br.width / 2, br.top + br.height / 2);
-var over = ["#trip-name", "#countdown", "#ai-btn", "#menu-btn", ".tabs"].filter(function (s) {
+var over = ["#trip-name", "#countdown", "#add-fab", "#menu-btn", ".tabs"].filter(function (s) {
   var e = q(s); if (!drawn(e)) return false; var x = e.getBoundingClientRect();
   return !(x.right <= br.left || x.left >= br.right || x.bottom <= br.top || x.top >= br.bottom); });
 d.cookie = "trip_as=; Path=/; Max-Age=0";

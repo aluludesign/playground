@@ -35,7 +35,7 @@ return (async function () {
     q("#tab-cost").click(); await wait(80);
     out.第一格 = txt("#cost-stats .stat");
     ok("花費第一格「預收剩餘」、下面寫「用了」(交得比分到的少就「不夠了,要再收」)", /預收剩餘/.test(out.第一格) && /用了 NT\$|不夠了,要再收/.test(out.第一格), out.第一格);
-    q("#add-exp-btn") && q("#add-exp-btn").click(); await wait(80);
+    addBy("expense"); await wait(80);
     out.付款人選項 = qa("#xe-payer option").map(o => o.textContent);
     ok("記帳:付款人多一個「預收(X收的錢)」(收款人離團就只寫「預收」)", out.付款人選項.indexOf(gone ? "預收" : "預收(" + (keeper0 ? "阿輝" : "佳瑜") + "收的錢)") >= 0, out.付款人選項);
     q("#xe-cancel") && q("#xe-cancel").click();
@@ -51,7 +51,7 @@ return (async function () {
     }
     if (!gone && !keeper0) {
       /* 記一筆「付款人 = 預收」→ 團的設定想改成沒有,要先擋下來(伺服器也擋) */
-      q("#tab-cost").click(); await wait(80); q("#add-exp-btn").click(); await wait(100);
+      q("#tab-cost").click(); await wait(80); addBy("expense"); await wait(100);
       q("#xe-title").value = "租車"; q("#xe-amount").value = "9000"; q("#xe-amount").dispatchEvent(new Event("input", { bubbles: true }));
       q("#xe-payer").value = "fund"; q("#xe-payer").dispatchEvent(new Event("change", { bubbles: true }));
       q("#exp-edit-form").requestSubmit(); await wait(400);

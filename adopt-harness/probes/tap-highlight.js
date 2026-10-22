@@ -5,7 +5,7 @@ return (async function () {
   await wait(300);
   var bad = [], out = {};
   var ok = (n, c, g) => { if (!c) bad.push(n + " ← " + JSON.stringify(g)); };
-  var els = ["#ai-btn", "#menu-btn", "#tab-plan", "#add-stop-btn", ".day", "a"].map(s => q(s)).filter(Boolean);
+  var els = ["#add-fab", "#menu-btn", "#tab-plan", ".day", "a"].map(s => q(s)).filter(Boolean);
   out.tap = els.map(e => getComputedStyle(e).webkitTapHighlightColor);
   ok("按鈕、分頁、日子、連結都沒有 tap highlight(透明)", out.tap.every(c => c === "rgba(0, 0, 0, 0)" || c === "transparent"), out.tap);
   var css = Array.from(d.styleSheets).map(sh => { try { return Array.from(sh.cssRules).map(r => r.cssText).join("\n"); } catch (_) { return ""; } }).join("\n");

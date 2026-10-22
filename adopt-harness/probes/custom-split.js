@@ -21,7 +21,7 @@ return (async function () {
   var before = { 佳瑜: owed("佳瑜"), 阿輝: owed("阿輝"), 媽: owed("媽") };
 
   q("#tab-cost").click(); await wait(150);
-  q("#add-exp-btn").click(); await wait(150);
+  addBy("expense"); await wait(150);
   setv("xe-title", "燒肉"); setv("xe-amount", "9000");
   q("#xe-cur").value = "JPY"; q("#xe-cur").dispatchEvent(new Event("change", { bubbles: true }));
   q("#xe-payer").value = "hsieh_chinhui";

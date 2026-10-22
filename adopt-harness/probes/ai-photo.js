@@ -25,7 +25,7 @@ async function givePhoto() {
 }
 async function ask(result, withPhoto) {
   next = Object.assign({}, base, result);
-  q("#ai-btn").click(); await wait(100);
+  addAI(); await wait(100);
   if (withPhoto) await givePhoto();
   q("#ai-text").value = "這張"; q("#ai-form").requestSubmit(); await wait(400);
 }
@@ -80,7 +80,7 @@ return (async function () {
   if (!fail) {
     /* 2. 手動記一筆:不傳、不帶 */
     var upA = w.__photoUploads || 0;
-    q("#add-exp-btn").click(); await wait(120);
+    addBy("expense"); await wait(120);
     q("#xe-title").value = "手動的那筆"; q("#xe-amount").value = "300";
     q("#exp-edit-form").requestSubmit(); await wait(500);
     var man = calls(/resource=expenses/, "POST").slice(-1)[0];

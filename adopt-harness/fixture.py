@@ -192,6 +192,10 @@ FAKE_JS = r"""(function(){
   /* photo=1:第一筆花費和第一段交通已經有照片(截圖用);photo=2:第一筆花費掛兩張 */
   if (/[?&]photo=[12]/.test(q)) { if (ROWS.expenses[0]) { ROWS.expenses[0].photo = PHOTO_URL; ROWS.expenses[0].photos = /photo=2/.test(q) ? [PHOTO_URL, PHOTO_URL2] : [PHOTO_URL]; }
     if (ROWS.flights[0]) { ROWS.flights[0].photo = PHOTO_URL; ROWS.flights[0].photos = [PHOTO_URL]; } }
+  /* long=1:每一頁都很長(2026-10-22:看最後一列的 ✎ ✕ 捲得出來、不會被右下角的「＋」蓋住) */
+  if (/[?&]long=1/.test(q)) ["itinerary", "expenses", "wishes", "flights"].forEach(function(r){
+    var base = (ROWS[r] || []).slice();
+    for (var k = 1; k <= 4; k++) base.forEach(function(x){ ROWS[r].push(Object.assign({}, x, { id: x.id + "-L" + k, no: x.no ? x.no + k : x.no })); }); });
   var SEEN = { at: %(seen)s };
   var canQ = (/[?&]can=([a-z,]*)/.exec(q) || [])[1];
   if (canQ !== undefined) canQ.split(",").forEach(function(k){ if (k in TRIP.can) TRIP.can[k] = true; });
@@ -329,6 +333,9 @@ FAKE_JS = r"""(function(){
       var nPh = body.photos && body.photos.length ? body.photos.length : 1;
       body = Object.assign({}, body, { photo: PHOTO_URL, photos: [PHOTO_URL, PHOTO_URL2, PHOTO_URL].slice(0, nPh) });
     }
+    /* 行程、許願手動放的圖(2026-10-22,「附圖」欄):送上傳編號 pics → 讀回來是網址 */
+    if ((r === "itinerary" || r === "wishes") && method === "POST" && body.pics && body.pics.length)
+      body = Object.assign({}, body, { pics: [PHOTO_URL, PHOTO_URL2, PHOTO_URL].slice(0, body.pics.length) });
     var rows = ROWS[r];
     if (!rows) return reply({ error: "不認識的資料表:" + r }, 400);
     var id = param(s, "id");
