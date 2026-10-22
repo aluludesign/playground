@@ -244,13 +244,16 @@ AHTML
   fi
 }
 
+# 各頁的新增鈕 2026-10-22 收成右下角一顆「＋」:按它 → 關掉第一次的 AI 說明 → 選那一類 → 切手動 → 下一步,就是以前那張手動表單
+hand () { echo "d.getElementById('add-fab').click();d.getElementById('ai-intro-ok').click();d.querySelector('[data-add-kind=$1] input').click();d.querySelector('[data-add-mode=hand]').click();d.getElementById('ai-form').requestSubmit();"; }
 echo "截 $LABEL:"
 shot 01-plan-mobile      390 1500 ""                                            ".stop:3+"
 # 02 的名字留著(基準表上追得到),但它現在拍的是**「1100 長得跟手機一樣」**——
 # 那正是這一輪要的結果:窄桌機不再有自己的一套版面。
 shot 02-plan-desktop    1100  900 ""                                            ".stop:3+"
 shot 03-cost-mobile      390 1400 "d.getElementById('tab-cost').click();"       ".exp:3+,.rm-chip:3+,.catrow:2+"
-shot 04-split-mobile     390 1300 "d.getElementById('tab-split').click();"      ".fp:5+"
+# 預收的那幾格(.fp)只有「有預收」才有(10-19 起預設沒有),所以用 fund=pot 那一套
+shot 04-split-mobile     390 1300 "d.getElementById('tab-split').click();"      ".fp:3+" "/index.html?fund=pot"
 # **這張以前拍錯頁。** 腳本還是「把 `#wishbox` 打開」—— 那是許願還住在行程頁
 # 裡面的年代。許願變成分頁之後,那一行什麼都沒做,於是這張「許願頁」拍到的是行程頁,
 # 而斷言 `.wish:3+` 照樣過(願望清單在 DOM 裡,只是那一欄沒露出來)。
@@ -287,7 +290,7 @@ shot 06-map-sheet        390 1000 ""                                            
 # 在 1100 拍的話,拍到的是一張名字寫著抽屜、畫面上沒有抽屜的圖,
 # 而那種圖會讓下一個人以為抽屜壞了。
 shot 07-map-drawer      1440  900 "d.getElementById('lay-wish').click();"        ".map .pin:3+,.stop:3+"
-shot 08-addstop-form     390 1100 "d.getElementById('add-stop-btn').click();"   "#stop-form:not([hidden]) input:3+,.stop:3+"
+shot 08-addstop-form     390 1100 "$(hand stop)"   "#stop-form:not([hidden]) input:3+,.stop:3+"
 shot 09-edit-dialog      390  900 "d.querySelector('[data-edit-stop]').click();" "#edit-overlay:not([hidden]) #edit-form input:3+,.stop:3+"
 # 10 / 11:花費的兩張表單。九張裡從來沒有一張打開過它們,而裡面有 16 個欄位、
 # 10 個 .who 核取方塊、10 個成員膠囊 —— 第三塊(color / letter-spacing)和
@@ -299,7 +302,7 @@ shot 09-edit-dialog      390  900 "d.querySelector('[data-edit-stop]').click();"
 # 是**空的 <div>**,那五個膠囊是 JS 跑起來才產生的(index.html:2447 / :2496)。
 # 靜態 markup 不算數 —— 那正是 08 / 09 的斷言收緊過的理由。
 # 再加 `:not([hidden])` 確認容器真的開了(`.click()` 丟例外會被 try/catch 吃掉)。
-shot 10-exp-form         390 1700 "d.getElementById('tab-cost').click(); d.getElementById('add-exp-btn').click();" \
+shot 10-exp-form         390 1700 "d.getElementById('tab-cost').click(); $(hand expense)" \
                                   "#exp-edit-overlay:not([hidden]) .rm-input:7+,#exp-edit-overlay .who label.rm-chip:4+"
 shot 11-exp-edit-dialog  390 1100 "d.getElementById('tab-cost').click(); d.querySelector('[data-edit-exp]').click();" \
                                   "#exp-edit-overlay:not([hidden]) .rm-input:7+,#exp-edit-overlay .who label.rm-chip:4+"
@@ -313,7 +316,7 @@ shot 11-exp-edit-dialog  390 1100 "d.getElementById('tab-cost').click(); d.query
 # 直接查的話這張圖會變成「非決定性來源」那張表上的新一列。
 # 回的三筆是真的(三間 teamLab,大阪／麻布台／京都),那正是這個功能存在的理由:
 # 一個名字對到三個地方,**要人自己挑**。
-shot 12-place-search     390 1100 "w.fetch=function(u){return String(u).indexOf('nominatim')<0?Promise.reject(new Error('擋掉')):Promise.resolve({ok:true,json:function(){return Promise.resolve([{lat:'34.6111',lon:'135.5205',display_name:'teamLab Botanical Garden, 長居公園, 東住吉區, 大阪市, 大阪府, 日本'},{lat:'35.6620',lon:'139.7434',display_name:'teamLab Borderless Museum, 麻布台ヒルズ, 虎ノ門, 港區, 東京都, 日本'},{lat:'34.9837',lon:'135.7654',display_name:'teamLab BioVortex, 八条通, 下京区, 京都市, 京都府, 日本'}])}})};d.getElementById('add-stop-btn').click();d.getElementById('sf-title').value='teamLab';d.querySelector('[data-seek=sf-title]').click();" \
+shot 12-place-search     390 1100 "w.fetch=function(u){return String(u).indexOf('nominatim')<0?Promise.reject(new Error('擋掉')):Promise.resolve({ok:true,json:function(){return Promise.resolve([{lat:'34.6111',lon:'135.5205',display_name:'teamLab Botanical Garden, 長居公園, 東住吉區, 大阪市, 大阪府, 日本'},{lat:'35.6620',lon:'139.7434',display_name:'teamLab Borderless Museum, 麻布台ヒルズ, 虎ノ門, 港區, 東京都, 日本'},{lat:'34.9837',lon:'135.7654',display_name:'teamLab BioVortex, 八条通, 下京区, 京都市, 京都府, 日本'}])}})};$(hand stop)d.getElementById('sf-title').value='teamLab';d.querySelector('[data-seek=sf-title]').click();" \
                                   "#stop-form:not([hidden]) .seek-out .hit:3+"
 
 # 13:「改我的願望」。理由跟 10 / 11 同形 —— **沒有截圖的介面等於沒有人看過**,
@@ -361,7 +364,7 @@ shot 13-wish-edit        390 1000 "d.getElementById('wishbox').open=true; d.quer
 # 斷言那一趟是在 JS 開跑後固定 900ms 檢查的,而三次搜尋要排 3×1100ms 的佇列
 # (Nominatim 的使用條款),再快也趕不上。**登記成工具缺口:斷言的等待時間
 # 應該能逐張指定**,不然「需要多步驟才到得了的狀態」永遠只能用弱斷言守。
-shot 14-seek-strong      390 1000 "(async function(){var R=[{lat:'35.6',lon:'139.7',display_name:'某個地方, 東京都, 日本'}];w.fetch=function(u){return String(u).indexOf('nominatim')<0?Promise.reject(new Error('擋掉')):Promise.resolve({ok:true,json:function(){return Promise.resolve(R)}})};d.getElementById('add-stop-btn').click();d.getElementById('sf-title').value='泡溫泉';var b=d.querySelector('[data-seek=sf-title]');var nap=function(){return new Promise(function(r){w.setTimeout(r,50)})};for(var i=0;i<2;i++){b.click();for(var k=0;k<40&&!b.disabled;k++){await nap()}for(var m=0;m<120&&b.disabled;m++){await nap()}}var okb=d.querySelector('[data-arm=sf-title]');if(okb){okb.click();await nap();await nap()}})();" \
+shot 14-seek-strong      390 1000 "(async function(){var R=[{lat:'35.6',lon:'139.7',display_name:'某個地方, 東京都, 日本'}];w.fetch=function(u){return String(u).indexOf('nominatim')<0?Promise.reject(new Error('擋掉')):Promise.resolve({ok:true,json:function(){return Promise.resolve(R)}})};$(hand stop)d.getElementById('sf-title').value='泡溫泉';var b=d.querySelector('[data-seek=sf-title]');var nap=function(){return new Promise(function(r){w.setTimeout(r,50)})};for(var i=0;i<2;i++){b.click();for(var k=0;k<40&&!b.disabled;k++){await nap()}for(var m=0;m<120&&b.disabled;m++){await nap()}}var okb=d.querySelector('[data-arm=sf-title]');if(okb){okb.click();await nap();await nap()}})();" \
                                   "#stop-form:not([hidden]) [data-seek]:1+"
 
 # 15:改**別人**那一筆的樣子 —— 暖色那一條說得出是誰許的。
@@ -396,7 +399,7 @@ shot 15-wish-edit-other  390 1000 "d.getElementById('wishbox').open=true; d.quer
 # (這段註解一開始寫在下面那個 `shot` 的續行中間。`\` 接到 `#` 那一行,
 #  斷言參數就沒了,而最後那一行變成一個叫 `"#stop-form…"` 的指令,整支 exit 127。
 #  **續行裡不能夾註解** —— 而錯誤訊息只說 command not found,沒提到續行。)
-shot 16-seek-hint      390 1000 "(async function(){var R=[{lat:'35.6',lon:'139.7',display_name:'某個地方, 東京都, 日本'}];w.fetch=function(u){return String(u).indexOf('nominatim')<0?Promise.reject(new Error('擋掉')):Promise.resolve({ok:true,json:function(){return Promise.resolve(R)}})};d.getElementById('add-stop-btn').click();d.getElementById('sf-title').value='泡溫泉';var b=d.querySelector('[data-seek=sf-title]');var nap=function(){return new Promise(function(r){w.setTimeout(r,50)})};for(var i=0;i<2;i++){b.click();for(var k=0;k<40&&!b.disabled;k++){await nap()}for(var m=0;m<120&&b.disabled;m++){await nap()}}})();" \
+shot 16-seek-hint      390 1000 "(async function(){var R=[{lat:'35.6',lon:'139.7',display_name:'某個地方, 東京都, 日本'}];w.fetch=function(u){return String(u).indexOf('nominatim')<0?Promise.reject(new Error('擋掉')):Promise.resolve({ok:true,json:function(){return Promise.resolve(R)}})};$(hand stop)d.getElementById('sf-title').value='泡溫泉';var b=d.querySelector('[data-seek=sf-title]');var nap=function(){return new Promise(function(r){w.setTimeout(r,50)})};for(var i=0;i<2;i++){b.click();for(var k=0;k<40&&!b.disabled;k++){await nap()}for(var m=0;m<120&&b.disabled;m++){await nap()}}})();" \
                                   "#stop-form:not([hidden]) [data-seek]:1+"
 
 # 17:寬桌機的三塊 —— 行程 ｜ 許願 ｜ 地圖。
@@ -412,7 +415,7 @@ shot 17-plan-three-cols 1440  900 ""                                            
 # 現在它蓋在滿版的許願 sheet 上面,而「蓋在上面」正是要用眼睛確認的事 ——
 # 蓋錯一層(例如被地圖蓋住)在斷言上看起來完全正常:元素在、值也對,只是沒人看得到。
 # 先把許願 sheet 打開再按,拍的才是真的那一層疊在真的那一層上面。
-shot 18-wish-add        390 1000 "d.getElementById('wishbox').open=true; d.getElementById('add-wish-btn').click();" \
+shot 18-wish-add        390 1000 "d.getElementById('wishbox').open=true; $(hand wish)" \
                                   "#wish-add-overlay:not([hidden]) .rm-input:3+"
 
 # 19:手機上的「交通」分頁(以前叫「搭機」)。
@@ -453,12 +456,23 @@ shot 25-confirm-desktop  1440  900 "d.getElementById('tab-cost').click(); [].fin
 
 # AI 對話框(2026-10-12,Lulu):打字、兩張縮圖、拍照選圖都在「想做什麼」同一個框裡,拍照選圖在最底下。
 # 斷言不數縮圖:斷言那一輪的 toBlob 在 --dump-dom 的虛擬時間裡來不及(截圖那一輪有);縮圖由 probes/ai-composer.js 驗
-shot 26-ai-composer       390  900 "(async function(){d.getElementById('ai-btn').click();var mk=function(c){var cv=d.createElement('canvas');cv.width=300;cv.height=200;var g=cv.getContext('2d');g.fillStyle=c;g.fillRect(0,0,300,200);return new Promise(function(r){cv.toBlob(function(b){r(new w.File([b],'a.jpg',{type:'image/jpeg'}))},'image/jpeg',.9)})};var dt=new w.DataTransfer();dt.items.add(await mk('#c9a07a'));dt.items.add(await mk('#7a9bc9'));var i=d.getElementById('ai-file');i.files=dt.files;i.dispatchEvent(new Event('change',{bubbles:true}));d.getElementById('ai-text').value='收據和車票';})();" \
+shot 26-ai-composer       390  900 "(async function(){d.getElementById('add-fab').click();d.getElementById('ai-intro-ok').click();var mk=function(c){var cv=d.createElement('canvas');cv.width=300;cv.height=200;var g=cv.getContext('2d');g.fillStyle=c;g.fillRect(0,0,300,200);return new Promise(function(r){cv.toBlob(function(b){r(new w.File([b],'a.jpg',{type:'image/jpeg'}))},'image/jpeg',.9)})};var dt=new w.DataTransfer();dt.items.add(await mk('#c9a07a'));dt.items.add(await mk('#7a9bc9'));var i=d.getElementById('ai-file');i.files=dt.files;i.dispatchEvent(new Event('change',{bubbles:true}));d.getElementById('ai-text').value='收據和車票';})();" \
                                   "#ai-overlay:not([hidden]) #ai-box #ai-pick:1+,#ai-box #ai-text:1+" "/index.html?touch=1"
 
 # 通票(2026-10-12,Lulu 拿青春18きっぷ問):交通頁一張卡寫第一天 → 最後一天、共幾天、有票的人(只在交通頁,行程上沒有)
-shot 27-pass-card         390 1300 "(async function(){var nap=function(ms){return new Promise(function(r){w.setTimeout(r,ms)})};d.getElementById('tab-fly').click();await nap(100);d.querySelector('[data-flight-add]').click();await nap(80);var i=d.querySelector('#fl-kinds input[value=通票]');i.checked=true;i.dispatchEvent(new Event('change',{bubbles:true}));d.getElementById('fl-no').value='青春18きっぷ';d.getElementById('fl-airline').value='JR';d.getElementById('fl-depart').value='2026-10-04';d.getElementById('fl-arrive').value='2026-10-06';d.getElementById('fl-note').value='JR 全線普通・快速';d.querySelector('#fl-drivers input[value=chang_chiayu]').checked=true;d.getElementById('flight-form').requestSubmit();})();" \
+shot 27-pass-card         390 1300 "(async function(){var nap=function(ms){return new Promise(function(r){w.setTimeout(r,ms)})};d.getElementById('tab-fly').click();await nap(100);$(hand transport)await nap(80);var i=d.querySelector('#fl-kinds input[value=通票]');i.checked=true;i.dispatchEvent(new Event('change',{bubbles:true}));d.getElementById('fl-no').value='青春18きっぷ';d.getElementById('fl-airline').value='JR';d.getElementById('fl-depart').value='2026-10-04';d.getElementById('fl-arrive').value='2026-10-06';d.getElementById('fl-note').value='JR 全線普通・快速';d.querySelector('#fl-drivers input[value=chang_chiayu]').checked=true;d.getElementById('flight-form').requestSubmit();})();" \
                                   "#board-wrap .tleg:1+"
+
+# 全站一顆「＋」(2026-10-22,Lulu):右下角浮著、新增對話框(AI / 手動)、第一次的 AI 說明、手動表單放圖
+shot 28-fab-plan-mobile   390  900 "" "#add-fab:not([hidden]):1+"
+shot 29-add-ai            390  900 "d.getElementById('tab-fly').click();d.getElementById('add-fab').click();d.getElementById('ai-intro-ok').click();d.getElementById('add-also').click();" \
+                                  "#ai-overlay:not([hidden]) #add-kinds [data-add-kind]:4+,#add-also:checked:1+"
+shot 30-add-hand          390  900 "d.getElementById('tab-cost').click();d.getElementById('add-fab').click();d.getElementById('ai-intro-ok').click();d.querySelector('[data-add-mode=hand]').click();" \
+                                  "#ai-overlay:not([hidden]) #add-hand:not([hidden]):1+"
+shot 31-ai-intro          390  900 "d.getElementById('add-fab').click();" "#ai-intro-overlay:not([hidden]) #ai-intro-never:1+"
+shot 32-stop-pics         390 1000 "(async function(){$(hand stop)var mk=function(c){var cv=d.createElement('canvas');cv.width=300;cv.height=200;var g=cv.getContext('2d');g.fillStyle=c;g.fillRect(0,0,300,200);return new Promise(function(r){cv.toBlob(function(b){r(new w.File([b],'a.jpg',{type:'image/jpeg'}))},'image/jpeg',.9)})};var dt=new w.DataTransfer();dt.items.add(await mk('#c9a07a'));dt.items.add(await mk('#7a9bc9'));var i=d.querySelector('#stop-form [data-pics-file]');i.files=dt.files;i.dispatchEvent(new Event('change',{bubbles:true}));})();" \
+                                  "#stop-add-overlay:not([hidden]) .man-pics:1+" "/index.html?touch=1"
+shot 33-wish-member-mobile 390  900 "d.getElementById('tab-wish').click();" "#add-fab:not([hidden]):1+" "/index.html?fake=member"
 
 kill $SRV 2>/dev/null || true
 rm -rf "$H/.work"

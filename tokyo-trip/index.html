@@ -987,7 +987,7 @@
     .seek-out .hit .thumb img{position:absolute; width:256px; height:256px; max-width:none;}
     /* 照片跟圖磚不一樣:它**填滿**這一格,不是一張大圖挪進觀景窗。
        `object-fit:cover` 讓長寬比不同的照片不變形 —— 裁掉邊比拉扁好。 */
-    .wiki-ph{display:flex; margin-top:6px;}
+    .wiki-ph{display:flex; gap:6px; margin-top:6px;}
     #ph-credit{font-size:12px; color:#fff; opacity:.85;}   /* 跟 .ph-n 一樣:深色底上用白字 */
     .wish .wiki-ph{grid-column:1/2;}
     .seek-out .hit .thumb img.shot{inset:0; width:100%; height:100%; object-fit:cover;}
@@ -1087,7 +1087,6 @@
       background:none; border:1px solid var(--line); border-radius:9px; cursor:pointer;}
     /* AI 按鈕。用 id 不用 class:走鐘防護只掃 class。
        margin-left:auto 把它和選單一起推到右邊,倒數留在標題旁。 */
-    #ai-btn{margin-left:auto; flex:0 0 auto; height:38px;}
     .ai-imgs{display:flex; gap:8px; flex-wrap:wrap;}
     .ai-imgs .ai-im{position:relative; width:56px; height:56px; border-radius:8px; overflow:hidden; border:var(--ds-sys-shared-border-xs) solid var(--line); background:var(--surface);}
     .ai-imgs .ai-im img{width:100%; height:100%; object-fit:cover; display:block;}
@@ -1132,6 +1131,7 @@
     /* 刪除前的確認會疊在交通那張對話框上面,要比它高一層(Esc 也是先關最上面那張) */
     #confirm-overlay{z-index:61;}
     #pick-overlay{z-index:61;}
+    #ai-intro-overlay{z-index:61;}
     .pk-grid{display:grid; grid-template-columns:repeat(3, 1fr); gap:8px;}
     .pk-tile{position:relative; display:block; aspect-ratio:1; border-radius:8px; overflow:hidden; border:var(--ds-sys-shared-border-xs) solid var(--line); cursor:pointer; background:var(--surface);}
     .pk-tile img{width:100%; height:100%; object-fit:cover; display:block;}
@@ -1425,13 +1425,39 @@
     .btn-main:disabled,.btn-line:disabled,.btn-main[aria-disabled="true"]{background:color-mix(in srgb, var(--ds-sys-shared-color-on-surface) 12%, transparent); border-color:transparent;}
     .btn-ghost:disabled{border-color:transparent;}
 
-    /* ---- Button / AI（#ai-btn）----
+    /* ---- Button / AI（#add-fab,2026-10-22 以前是頂列的 #ai-btn）----
        底色是 Figma 的 Color style「Steel/Ai/Ai Primary」（漸層不能做成變數，所以色點寫在這裡）；
        hover 時 design-system 那層虹光照舊淡入，對到 Figma 的「Ai Overlay」。 */
-    #ai-btn{background:linear-gradient(135deg, #F6F8FB 0%, #E0E5F0 16%, #B8CBD8 36%, #B2B6C6 52%, #D8CDC2 70%, #C3CBD2 84%, #88919A 100%);
+    #add-fab{background:linear-gradient(135deg, #F6F8FB 0%, #E0E5F0 16%, #B8CBD8 36%, #B2B6C6 52%, #D8CDC2 70%, #C3CBD2 84%, #88919A 100%);
       border:var(--ds-sys-shared-border-md) solid var(--ds-sys-shared-color-on-ai-primary); border-radius:var(--ds-comp-btn-normal-full-radius);
       color:var(--ds-sys-shared-color-on-ai-primary);}
-    #ai-btn:focus-visible{outline:3px solid var(--ds-comp-focus-ring-color); outline-offset:2px; border-radius:var(--ds-comp-btn-normal-full-radius);}
+    #add-fab:focus-visible{outline:3px solid var(--ds-comp-focus-ring-color); outline-offset:2px; border-radius:var(--ds-comp-btn-normal-full-radius);}
+    /* 浮在右下角(手機在底部分頁列上方);蓋在清單(20)、分頁列(30)上面,對話框(60)下面 */
+    #add-fab{position:fixed; right:calc(16px + env(safe-area-inset-right,0px)); bottom:calc(var(--tabh,0px) + 16px); z-index:35;
+      width:56px; height:56px; min-width:0; padding:0; justify-content:center; box-shadow:0 6px 18px -6px rgba(20,26,45,.45);}
+    #add-fab .steel-content-layer{font-size:30px; font-weight:400; line-height:1;}
+    #add-fab[hidden]{display:none;}
+    /* 清單最底下留出＋的位置:最後一列的 ✎ ✕ 要捲得出來,不能被它蓋住(56 + 16 + 一點空) */
+    /* 交通、花費是整頁捲的,留在 .wrap 底下;行程、許願在寬桌機(三欄)也是,手機和窄桌機那兩頁是地圖＋sheet,留在 sheet 裡(下面) */
+    body.has-fab[data-view="fly"] .wrap,body.has-fab[data-view="cost"] .wrap{padding-bottom:calc(80px + var(--tabh,0px) + env(safe-area-inset-bottom,0px));}
+    @media (min-width:1280px){
+      body.has-fab[data-view="plan"] .wrap,body.has-fab[data-view="wish"] .wrap{padding-bottom:calc(80px + var(--tabh,0px) + env(safe-area-inset-bottom,0px));}
+    }
+    /* 手機、窄桌機的行程/許願是自己會捲的 sheet(.wrap 的留白管不到),在 sheet 底下留;收到剩一條細 bar 時不留(不然收不細) */
+    @media (max-width:1279px){
+      body.has-fab[data-view="plan"] #panel-plan:not([data-det="0"]),body.has-fab[data-view="wish"] #panel-plan:not([data-det="0"]){padding-bottom:calc(80px + env(safe-area-inset-bottom,0px));}
+    }
+    /* 新增對話框:AI / 手動那一排跟設定的分頁同一個樣子(地圖上那排分段按鈕) */
+    .add-mode{margin:4px 0 14px;}
+    .add-mode .st-tab.rm-chip{flex-direction:column; gap:0; line-height:1.3; padding-block:6px; height:auto;}
+    .add-mode .st-tab small{font-size:12px; font-weight:400; opacity:.8;}
+    #add-also-f{margin:-4px 0 12px;}
+    .ai-intro{margin:0 0 14px; padding-left:20px; line-height:1.6;}
+    .ai-intro li + li{margin-top:6px;}
+    .ai-intro-never{margin-bottom:12px;}
+    /* 手動表單放圖(2026-10-22):跟 AI 框裡那排縮圖同一個樣子 */
+    .man-pics .ai-imgs{padding:0 0 8px;}
+    .man-pics .ai-tools{display:flex; align-items:center; gap:var(--ds-sys-shared-spacing-md); flex-wrap:wrap;}
 
     /* ---- Text field / Text area / Dropdown（.rm-input）---- */
     .rm-input{min-height:var(--ds-comp-field-height); padding:var(--ds-sys-shared-spacing-2xl);
@@ -1585,12 +1611,7 @@
          **虹光和方向掃掠是同一層**,不是兩層(我第一版拆成兩個 span,那是我自己想的)。
          `steel-sheen-surface` 是高光跟著指標／傾斜走的那一層,少了它高光不會動。
          裝飾層都 `aria-hidden`:讀螢幕的人不需要聽到兩個空節點。 -->
-    <button type="button" class="btn-steel-hybrid steel-sheen-surface rm-btn rm-btn--sm"
-            id="ai-btn" aria-haspopup="dialog">
-      <span class="steel-iridescent-overlay directional-sheen" aria-hidden="true"></span>
-      <span class="white-sweep-flare" aria-hidden="true"></span>
-      <span class="steel-content-layer">✨ AI</span>
-    </button>
+    <!-- ✨ AI 這顆 2026-10-22 拿掉了(Lulu):AI 和手動合併成右下角那顆浮動「＋」(#add-fab),樣子照搬這顆 -->
     <!-- 測試環境切成「成員身分」時一直掛著:忘了自己在用成員身分看,會以為權限壞了。按它就切回團主。
          **排在頂列裡、漢堡選單左邊,不浮在畫面上** —— 浮著的版本在某些寬度蓋住了漢堡(Lulu 回報);
          更早一版放在選單裡,選單收著它就跟著藏起來。手機上頂列擠滿了,改掛在分頁列正上方。 -->
@@ -1637,7 +1658,6 @@
       <div class="col">
       <div class="sec-head">
         <h2 id="day-title">當日行程</h2>
-        <button class="btn btn-sm btn-main" id="add-stop-btn" type="button"><svg class="i" aria-hidden="true"><use href="#i-plus"></use></svg>加行程</button>
       </div>
       <!-- 送出之後那句話講在這裡,不講在頁尾。表單送出就收起來了,所以槽在表單**外面**
            才活得過那一下。預設 hidden、外層不掛任何有 display 的 class,
@@ -1654,7 +1674,6 @@
           <!-- **跟「＋加行程」同一個位置**:各自區塊的右上角。以前它在清單的最下面,
                願望多的時候要捲到底才按得到 —— 而這是「想到就丟一筆」的東西。
                排在地圖那顆的左邊:先給「加東西」,再給「換個方式看」。 -->
-          <button class="btn btn-sm btn-main" id="add-wish-btn" type="button"><svg class="i" aria-hidden="true"><use href="#i-plus"></use></svg>許願</button>
           <svg class="i wish-caret" aria-hidden="true"><use href="#i-chevron-down"></use></svg>
         </summary>
         <p class="wish-intro">想去哪裡先丟進來,不用等排好。誰都可以許願、可以幫別人的願望 +1。</p>
@@ -1668,8 +1687,7 @@
          航班、座位、行李額度是整趟不變的東西,壓在每天的行程上面只是把當天的事推下去。
          搬過來之後預設攤開:一整頁只放一張收起來的卡沒有意義。 -->
     <section class="panel" id="panel-fly" role="tabpanel" aria-labelledby="tab-fly" hidden>
-    <!-- 「＋加一段交通」在右上角(2026-10-02,Lulu):跟其他頁的新增鈕同一顆 primary sm,不再排在清單最後面 -->
-    <div class="fly-head"><button type="button" class="btn btn-sm btn-main" id="fly-add" data-flight-add hidden><svg class="i" aria-hidden="true"><use href="#i-plus"></use></svg>加一段交通</button></div>
+    <!-- 各頁的新增鈕 2026-10-22 都拿掉了,改用右下角那顆浮動「＋」(#add-fab) -->
     <div id="board-wrap"></div>
     </section>
 
@@ -1685,7 +1703,6 @@
       <div class="sec">
         <div class="sec-head">
           <h2>費用明細</h2>
-          <button class="btn btn-sm btn-main" id="add-exp-btn" type="button"><svg class="i" aria-hidden="true"><use href="#i-plus"></use></svg>記一筆</button>
         </div>
         <!-- 「＋記一筆」2026-10-02 起跳出對話框(Lulu:要像其他地方一樣),用的是 #exp-edit-overlay 的新增模式;以前這裡是就地展開的表單 -->
         <div id="exp-list"></div>
@@ -1710,6 +1727,14 @@
       </div>
     </section>
   </main>
+  <!-- **全站一顆新增鈕**(2026-10-22,Lulu):行程、許願、交通、花費四頁的右下角(手機在底部分頁列上方),AI 和手動合併 ——
+       按了先選要加什麼(預設這一頁那一類),預設用 AI、可以切成手動。只在這個人能加東西的那幾頁出現(一般成員只有許願頁)。
+       樣子照搬以前頂列的 ✨ AI(漸層、邊框、虹光掃掠那幾層),上面只放「＋」 -->
+  <button type="button" class="btn-steel-hybrid steel-sheen-surface rm-btn" id="add-fab" aria-label="新增" aria-haspopup="dialog" hidden>
+    <span class="steel-iridescent-overlay directional-sheen" aria-hidden="true"></span>
+    <span class="white-sweep-flare" aria-hidden="true"></span>
+    <span class="steel-content-layer" aria-hidden="true">＋</span>
+  </button>
 
   <!-- 頁尾只寫一句(2026-10-02,Lulu)。#sync 也是「已刪除」「存好了」這種操作回饋的地方(flash):講 2.8 秒,再換回這一句 -->
   <footer>
@@ -2013,7 +2038,28 @@
      存的時候走的是原本的 addWish / addStop / 座位那幾條路,權限也還是它們在管。 -->
 <div class="overlay" id="ai-overlay" hidden>
   <form class="signin" id="ai-form">
-    <h2>AI 幫你加</h2>
+    <h2 id="ai-h2">新增</h2>
+    <!-- 先選這次要加什麼(2026-10-22,Lulu):預設這一頁那一類,只列有權限的;只有一種(一般成員只能許願)就整排不出現 -->
+    <div class="fld" id="add-kinds-f"><span class="rm-label">要加什麼</span>
+      <div class="who" id="add-kinds" role="radiogroup" aria-label="要加什麼">
+        <label class="rm-chip" data-add-kind="wish"><input type="radio" name="add-kind" value="wish">許願</label>
+        <label class="rm-chip" data-add-kind="stop"><input type="radio" name="add-kind" value="stop">行程</label>
+        <label class="rm-chip" data-add-kind="transport"><input type="radio" name="add-kind" value="transport">交通</label>
+        <label class="rm-chip" data-add-kind="expense"><input type="radio" name="add-kind" value="expense">記帳</label>
+      </div></div>
+    <!-- 行程、交通可以多勾「一起記帳」:AI 讀完開那張卡＋記帳卡(車票的票價、門票或訂位的金額)。許願不行;沒有記帳權限的人不出現 -->
+    <div class="who" id="add-also-f" hidden><label class="rm-chip"><input type="checkbox" id="add-also">＋ 一起記帳(票價、門票、訂位的金額)</label></div>
+    <!-- 用 AI 還是手動:預設 AI。切換處寫明手動不用 AI 次數 -->
+    <div class="laygroup st-tabs add-mode" id="add-mode" role="group" aria-label="怎麼加">
+      <button type="button" class="rm-chip rm-chip--selectable st-tab" data-add-mode="ai" aria-pressed="true">✨ AI 幫你加<small>每天有次數</small></button>
+      <button type="button" class="rm-chip rm-chip--selectable st-tab" data-add-mode="hand" aria-pressed="false">手動加<small>不用 AI 次數</small></button>
+    </div>
+    <!-- 手動:下一步打開那一類的表單(可以放照片)。AI 用完或出錯自動切過來,原因寫在這裡 -->
+    <div id="add-hand" hidden>
+      <p class="note" id="add-why" hidden></p>
+      <p class="ai-tip" id="add-hand-say">手動填一張表,可以放照片。不用 AI 次數。</p>
+    </div>
+    <div id="ai-part">
     <!-- 你今天還能用幾次(見 api/_usage.js)。外層不掛 class:裡面那個 .note 是 display:flex,掛在同一層會蓋掉 [hidden] -->
     <div id="ai-quota" hidden></div>
     <!-- **打字、照片、拍照選圖都在同一個框裡**(2026-10-12,Lulu:「拍照、選圖移到想做什麼的框內(放最底下),讀進來的照片也一起移進去,框可以大一點」)。
@@ -2035,7 +2081,8 @@
       </div></div>
     <!-- 省次數的提醒(2026-10-02,Lulu):AI 一次讀到好幾筆會疊成卡片一張一張確認,而次數是「按一次交給 AI」算一次 -->
     <!-- 2026-10-05:一張收據記成一筆(合計,品項寫在備註),不再暗示「收據裡有好幾筆」會拆開;要分開就叫它分開 -->
-    <p class="ai-tip" id="ai-tip">💡 一次把好幾筆寫在一起(例:「想去淺草寺、晴空塔、上野公園」),或一張截圖裡有好幾個地方,<b>只算 1 次 AI</b>。一張收據會記成一筆(合計),要分開記就打「分開記」。</p>
+    <p class="ai-tip" id="ai-tip">💡 同一類一次放好幾筆(例:「想去淺草寺、晴空塔、上野公園」、三張收據),<b>只算 1 次 AI</b>。一張收據會記成一筆(合計),要分開記就打「分開記」。</p>
+    </div><!-- /#ai-part -->
     <div class="err" id="ai-err" hidden></div>
     <div class="ops">
       <button type="submit" class="btn btn-main" id="ai-go">交給 AI</button>
@@ -2049,8 +2096,6 @@
       <select class="rm-input" id="ai-kind">
         <option value="wish">許願</option>
         <option value="stop">行程</option>
-        <option value="transport">交通(機票、車票、租車、座位)</option>
-        <option value="expense">記帳(收據、帳單)</option>
       </select></div>
     <div class="fld" id="ai-f-day"><label class="rm-label" for="ai-day">哪一天</label><select class="rm-input" id="ai-day"></select></div>
     <div class="fld" id="ai-f-time"><label class="rm-label" for="ai-time">時間</label><input class="rm-input" type="time" id="ai-time"></div>
@@ -2067,6 +2112,21 @@
       <button type="button" class="btn btn-ghost btn-sm" id="ai-back">重來</button>
       <button type="button" class="btn btn-ghost btn-sm" id="ai-cancel2">取消</button>
     </div>
+  </form>
+</div>
+
+<!-- 第一次用 AI 的說明(2026-10-22,Lulu):有額度、一次可以加好幾筆、用完還能手動;可以勾「不再顯示」 -->
+<div class="overlay" id="ai-intro-overlay" hidden>
+  <form class="signin" id="ai-intro-form">
+    <h2>✨ AI 幫你加</h2>
+    <ul class="ai-intro">
+      <li>丟一段話或照片(收據、車票、截圖),AI 讀完先給你看,按了才存。</li>
+      <li><b>每個人每天有次數限制</b><span id="ai-intro-left"></span>,讀成功才扣。</li>
+      <li>同一類一次可以加好幾筆(三張收據、一段話寫好幾個地方),只算 1 次。</li>
+      <li>次數用完還是可以切成「手動加」,不用 AI 次數。</li>
+    </ul>
+    <label class="rm-chip ai-intro-never"><input type="checkbox" id="ai-intro-never">不再顯示</label>
+    <div class="ops"><button type="submit" class="btn btn-main" id="ai-intro-ok">知道了</button></div>
   </form>
 </div>
 
@@ -2505,8 +2565,10 @@
   });
   /* by:從願望排進來的那一筆記著是誰許的 —— 有它才退得回願望區 */
   const stopFromRow = r => ({ id: r.id, day: r.day, time: r.time || "", title: r.title, place: r.place || "", note: r.note || "", by: r.by || "", placeId: r.placeId || "",
-    photo: r.photo || "", photoAt: r.place || "" });
-  const stopToRow = s => ({ title: s.title, day: s.day, time: s.time, place: s.place, note: s.note, kind: "其他", placeId: pidOf(s.place) || s.placeId || "", photo: photoOf(s) });
+    photo: r.photo || "", photoAt: r.place || "", pics: (r.pics || []).slice() });
+  /* picIds:手動加時自己放的圖(上傳編號),只有建的那一次帶;讀回來的 pics 是網址(2026-10-22) */
+  const stopToRow = s => ({ title: s.title, day: s.day, time: s.time, place: s.place, note: s.note, kind: "其他", placeId: pidOf(s.place) || s.placeId || "", photo: photoOf(s),
+    pics: s.picIds && s.picIds.length ? s.picIds : undefined });
 
   /* --- 本機 --- */
   function loadLocal() {
@@ -2779,9 +2841,10 @@
     state.stops.push(o); saveLocal(); render();
     if (!online) return;
     try {
-      const { row } = await api("?resource=itinerary", { method: "POST", body: JSON.stringify(stopToRow(o)) });
+      const { row, photoLost } = await api("?resource=itinerary", { method: "POST", body: JSON.stringify(stopToRow(o)) });
       const k = state.stops.indexOf(o);
       if (k > -1) state.stops[k] = stopFromRow(row);
+      if (photoLost) flash("照片沒存到(上傳太久了),這一筆照樣存了");
       render();
     } catch (err) { failStop(o, err); }
   }
@@ -2894,9 +2957,11 @@
     state.wishes.push(w); renderWishes();
     if (!online) { saveLocal(); return; }
     try {
-      const { row } = await api("?resource=wishes", { method: "POST", body: JSON.stringify(Object.assign({}, w, { placeId: pidOf(w.place), photo: photoOf(w, "") })) });
+      const { row, photoLost } = await api("?resource=wishes", { method: "POST", body: JSON.stringify(Object.assign({}, w, { placeId: pidOf(w.place), photo: photoOf(w, ""),
+        pics: w.picIds && w.picIds.length ? w.picIds : undefined, picIds: undefined })) });
       const k = state.wishes.indexOf(w);
       if (k > -1) state.wishes[k] = row;
+      if (photoLost) flash("照片沒存到(上傳太久了),這個願望照樣許了");
       renderWishes();
     } catch (err) {
       const k = state.wishes.indexOf(w);
@@ -3070,17 +3135,14 @@
   /* 唯讀時把所有會改資料的入口收起來 */
   function renderEditAbility() {
     const on = editable();
-    /* 結束的團:AI 按鈕對所有人消失;頂端講一句發生了什麼、還能做什麼 */
+    /* 結束的團:AI 對所有人關掉(＋只剩手動記帳);頂端講一句發生了什麼、還能做什麼 */
     const ended = online && tripEnded();
-    el("ai-btn").hidden = ended;
     const bar = el("ended-bar");
     bar.hidden = !ended;
     if (ended) bar.textContent = "這一團已經在 " + String(trip.end || "").slice(5).replace("-", "/") + " 結束了,只能看" +
       (editable("cost") ? " · 你還可以記帳、改花費" : "");
-    const bs = el("add-stop-btn"), be = el("add-exp-btn");
-    if (bs) bs.hidden = !editable("plan");
-    /* 離線也能記帳(先排著,見「還沒送出的花費」)—— 所以這顆看的是 queueCost,不是 editable */
-    if (be) be.hidden = !(editable("cost") || queueCost());
+    /* 各頁的新增鈕收成右下角一顆「＋」(2026-10-22),它出不出現看 mayAdd() */
+    syncFab();
     /* 這段字本來寫死「紀錄存在這台裝置的瀏覽器裡」。三種模式只有一種成立,
        而另外兩種它照樣印 —— 連著 Notion 的人讀到的是一句假話。
        而且「匯入備份」在唯讀時是藏起來的,說明卻還在教人按它。 */
@@ -3603,8 +3665,6 @@
     const fl = flightsSorted();
     const S = seatsNow();
     const can = mayFly();
-    /* 新增鈕在頁面右上角(#fly-add),這裡只管它出不出現 */
-    el("fly-add").hidden = !can;
     const addBtn = "";
     if (!fl.length) {
       box.innerHTML = '<div class="tleg tl-empty"><p>還沒有交通。' +
@@ -3688,6 +3748,7 @@
       '<label class="rm-chip"><input type="checkbox" value="' + m.id + '"' + (drv.indexOf(m.id) >= 0 ? " checked" : "") + ">" + esc(nameOf(m.id)) + "</label>").join("");
     applyKind(kind);
     el("fl-del").hidden = !f;
+    picsShow("flight-form", !f);
     el("fl-ai").hidden = true;
     el("fl-skip").hidden = true;
     showFlightErr("");
@@ -3731,7 +3792,7 @@
     return "";
   }
   /* 照表單現在的樣子存這一段。photoNums:AI 說這一段來自第幾張圖(手動加的是 null,不帶照片)。回 { row, was, lost } */
-  async function flightSave(photoNums) {
+  async function flightSave(photoNums, extra) {
     const kind = flKind(), K = KIND[kind];
     let no = K.no ? el("fl-no").value.trim() : "";
     if (kind === "飛機") no = no.toUpperCase().replace(/\s+/g, "");
@@ -3748,7 +3809,9 @@
       depart, from: K.pass ? "" : el("fl-from").value.trim(), arrive, to: K.pass ? "" : el("fl-to").value.trim(),
       code: el("fl-code").value.trim(), note: el("fl-note").value.trim(), drivers,
     };
-    const pids = photoNums ? await aiPhotoIds(photoNums) : [];
+    const ai = photoNums ? await aiPhotoIds(photoNums) : [];
+    /* extra:手動加時自己放的圖(上傳編號) */
+    const pids = ai.concat(extra || []).slice(0, 3);
     if (pids.length) body.photos = pids;
     const was = flightEditing;
     const saved = was
@@ -3770,7 +3833,7 @@
     saveSnap();
     render();
     renderCountdown();
-    return { row, was, lost: !!photoNums && !!aiPhotos && !pids.length };
+    return { row, was, lost: !!photoNums && !!aiPhotos && !ai.length };
   }
   el("flight-form").addEventListener("submit", async ev => {
     ev.preventDefault();
@@ -3781,7 +3844,10 @@
     const btn = el("fl-save");
     btn.disabled = true;
     try {
-      const { row, was, lost } = await flightSave(flFromAI ? flPhotoNums : null);
+      const pics = await picsUpload("flight-form", btn);
+      btn.disabled = true;
+      const { row, was, lost } = await flightSave(flFromAI ? flPhotoNums : null, pics.ids);
+      if (pics.lost) flash("有照片沒傳上去,這一段照樣存了");
       flash((was ? "改好了" : "加好了:" + legName(row)) + (lost ? "(照片沒存到)" : ""));
       closeFlight();
     } catch (e) {
@@ -5543,7 +5609,7 @@
       (s.place ? (samePlace(s.title, s.place)
         ? (stopWx(s.place, s.day || state.day) ? '<div class="pl wx-only">' + stopWx(s.place, s.day || state.day) + "</div>" : "")
         : '<div class="pl">' + linkify(s.place) + stopWx(s.place, s.day || state.day) + "</div>") : "") +
-      (s.note ? '<div class="nt">' + linkify(s.note) + "</div>" : "") + wikiPhoto(s.photo) + "</div>" +
+      (s.note ? '<div class="nt">' + linkify(s.note) + "</div>" : "") + picsRow(s.pics, s.photo) + "</div>" +
       '<div class="rowops">' +
       (movable(s) ? '<button type="button" class="pen" data-edit-stop="' + s.id + '" aria-label="改這一項"><svg class="i" aria-hidden="true"><use href="#i-pen"></use></svg></button>' : "") +
       (movable(s) ? '<button type="button" class="btn btn-ghost btn-sm x" data-del-stop="' + s.id + '" aria-label="刪除這項"><svg class="i" aria-hidden="true"><use href="#i-xmark"></use></svg></button>' : "") +
@@ -5561,8 +5627,13 @@
      放大那一頁下面帶「照片:維基共享資源」,點了開 Commons 那一頁(作者、授權在那裡) */
   function wikiPhoto(page) {
     if (!isCommons(page)) return "";
-    return '<div class="wiki-ph"><button type="button" class="ph-thumb wiki" data-photo="' + esc(commonsImg(page, 1200)) +
-      '" data-credit="' + esc(page) + '" aria-label="看照片"><img src="' + esc(commonsImg(page, 96)) + '" alt="" loading="lazy"></button></div>';
+    return '<button type="button" class="ph-thumb wiki" data-photo="' + esc(commonsImg(page, 1200)) +
+      '" data-credit="' + esc(page) + '" aria-label="看照片"><img src="' + esc(commonsImg(page, 96)) + '" alt="" loading="lazy"></button>';
+  }
+  /* 同一排還有手動加時自己放的圖(2026-10-22,「附圖」欄):自己的在前、維基的在後,都是同一顆小縮圖 */
+  function picsRow(pics, page) {
+    const mine = photoThumb(pics || []), wiki = wikiPhoto(page);
+    return mine || wiki ? '<div class="wiki-ph">' + mine + wiki + "</div>" : "";
   }
 
   /* 票多的在前面。地圖上的編號要跟清單對得起來,所以兩邊共用這個排序。 */
@@ -5585,7 +5656,6 @@
     el("wish-n").textContent = list.length ? list.length + " 個" : "";
     /* 只有三欄版面拖得動 —— 那裡時間軸和願望並排看得到,滑鼠也拖得準。 */
     el("wish-list").classList.toggle("can-sort", editable("plan") && wideCols() && list.length > 0);
-    el("add-wish-btn").hidden = tripEnded();
 
     if (!list.length) {
       el("wish-list").innerHTML = '<div class="empty">還沒有人許願。</div>';
@@ -5616,7 +5686,7 @@
              (刪掉、加入行程)。
              借 `.wdel` 的樣式(同一排的次要小字按鈕),不新增 class ——
              新 class 要重編,而這裡沒有新的樣式需求。 */
-          "</div>" + wikiPhoto(w.photo) +
+          "</div>" + picsRow(w.pics, w.photo) +
           /* **「改」和「刪掉」搬到左滑才出現的那一排。**
              它們以前跟「誰許的」「+1 了誰」擠在同一行小字裡,而那一行是**用讀的**,
              不是用按的 —— 手指掃過去就誤觸,而「刪掉」誤觸沒有回頭路。
@@ -5867,6 +5937,7 @@
     syncWishLock();
     syncWishBar();
     syncHeadH();
+    syncFab();
   }
   document.querySelectorAll(".tab").forEach(b => b.addEventListener("click", () => switchTab(b.dataset.tab)));
   /* 使用者在寬桌機上還是點得到那個 summary。點了就再開回去 ——
@@ -6038,6 +6109,7 @@
     /* **保險。** 上面那條路已經不藏這張卡了,但這個檔案有五年的歷史,
        而「藏了沒人設回來」的代價是一個無聲的空遮罩。開的時候自己確認一次,便宜。 */
     el("stop-form").hidden = false;
+    picsShow("stop-form", true);
     el("stop-add-overlay").hidden = false;
     /* 以前是 sf-time —— 游標一進時間欄,手機就先跳出選時間的轉盤。改放在「要去哪」 */
     el("sf-title").focus();
@@ -6046,13 +6118,14 @@
     el("stop-add-overlay").hidden = true;
     seekClear("sf-title");
   }
-  el("add-stop-btn").addEventListener("click", openStopAdd);
   el("sf-cancel").addEventListener("click", closeStopAdd);
   /* 怎麼關:見「對話框怎麼關」那一段(2026-09-29 起全部一致 —— 改過才只有取消關得掉)。
      以前這張是一律只有取消(2026-09-28),理由是填到一半手滑就全沒了;新規則照樣擋住那一種。 */
-  el("stop-form").addEventListener("submit", ev => {
+  el("stop-form").addEventListener("submit", async ev => {
     ev.preventDefault();
     const title = el("sf-title").value.trim();
+    const pics = await picsUpload("stop-form", el("stop-form").querySelector('button[type="submit"]'));
+    if (pics.lost) flash("有照片沒傳上去,這一筆照樣存了");
     /* **只有挑過的才有 `place`。** 兩欄合併之後這一行就是「程式不再自己猜」那個決定
        的落點:沒挑就是空字串,而「沒有 place 就不查、不上地圖」是本來就有的規則。
        所以拿掉自動猜測不必改地圖那條路 —— 只要改誰去填這一欄。 */
@@ -6063,6 +6136,7 @@
       title: title,
       place: place,
       note: el("sf-note").value.trim(),
+      picIds: pics.ids,
     });
     checkPlace({ place: place, title: title }, "stop-msg");
     el("stop-form").reset();
@@ -6123,7 +6197,7 @@
     const img = ev.target;
     if (!img || img.tagName !== "IMG" || !img.closest(".ph-thumb")) return;
     /* 維基的照片不會過期,載不到就是那張沒了 —— 藏起來就好,不要重讀資料 */
-    if (img.closest(".ph-thumb.wiki")) { img.closest(".wiki-ph").hidden = true; return; }
+    if (img.closest(".ph-thumb.wiki")) { img.closest(".ph-thumb").hidden = true; return; }
     if (online && Date.now() - photoRetryAt > 60e3) { photoRetryAt = Date.now(); pull().then(render).catch(() => {}); }
     else img.closest(".ph-thumb").hidden = true;
   }, true);
@@ -6188,11 +6262,11 @@
     fillExpPeople("", IDS.slice());
     el("xe-note").value = "";
     showExpError("");
+    picsShow("exp-edit-form", online);   /* 照片要連上網才傳得上去;離線記帳(先排著)不放圖 */
     tuckMapForDialog(false);
     delete el("exp-edit-overlay").dataset.keep;
     el("exp-edit-overlay").hidden = false;
   }
-  el("add-exp-btn").addEventListener("click", openExpenseNew);
   el("exp-list").addEventListener("click", ev => {
     const b = ev.target.closest("[data-del-exp]");
     if (b) {
@@ -6284,6 +6358,7 @@
     const e = state.expenses.find(x => x.id === id);
     if (!e) return;
     editingExp = id; expFromAI = false;
+    picsShow("exp-edit-form", false);
     el("xe-h2").textContent = "改這一筆"; el("xe-ai").hidden = true; el("xe-skip").hidden = true;
     stackPaint("exp-edit-form", 0, 0);
     el("xe-date").value = e.date || "";
@@ -6314,9 +6389,10 @@
     return expSplitErr(Math.abs(parseFloat(el("xe-amount").value) || 0), ps, expSplitInput(), el("xe-cur").value);
   }
   /* 新的一筆:照表單記下來。photoNums:AI 說來自第幾張圖(手動記的是 null)。回 { title, lost } */
-  async function expSaveNew(photoNums) {
+  async function expSaveNew(photoNums, extra) {
     const title = el("xe-title").value.trim();
-    const photoIds = photoNums ? await aiPhotoIds(photoNums) : [];
+    const ai = photoNums ? await aiPhotoIds(photoNums) : [];
+    const photoIds = ai.concat(extra || []).slice(0, 3);   /* extra:手動記時自己放的圖 */
     addExpense({
       id: uid(), date: el("xe-date").value, title, category: el("xe-cat").value,
       amount: Math.abs(parseFloat(el("xe-amount").value) || 0), currency: el("xe-cur").value,
@@ -6324,7 +6400,7 @@
       photoIds, createdAt: new Date().toISOString(),
     });
     lastExpDate = el("xe-date").value;   /* 連記好幾筆通常是同一天 */
-    return { title, lost: !!photoNums && !!aiPhotos && !photoIds.length };
+    return { title, lost: !!photoNums && !!aiPhotos && !ai.length };
   }
   el("exp-edit-form").addEventListener("submit", async ev => {
     ev.preventDefault();
@@ -6334,8 +6410,10 @@
     if (bad) { showExpError(bad); return; }
     const id = editingExp;
     if (id === "new") {
-      const { title, lost } = await expSaveNew(expFromAI ? expPhotoNums : null);
-      flash("記下來了:" + title + (lost ? "(照片沒存到)" : ""));
+      const pics = await picsUpload("exp-edit-form", el("xe-save"));
+      if (editingExp !== "new") return;   /* 傳照片的時候被取消了 */
+      const { title, lost } = await expSaveNew(expFromAI ? expPhotoNums : null, pics.ids);
+      flash("記下來了:" + title + (lost || pics.lost ? "(照片沒存到)" : ""));
       closeExpEdit();
       return;
     }
@@ -6745,28 +6823,119 @@
   }
   const aiErr = (id, msg) => { el(id).textContent = msg || ""; el(id).hidden = !msg; };
 
-  function openAI() {
+  /* ================= 全站一顆「＋」(2026-10-22,Lulu) =================
+     取代各頁的新增鈕(加行程、許願、加一段交通、記一筆)和頂列的 ✨ AI:按了先選要加什麼(預設這一頁那一類、只列有權限的),
+     預設用 AI、可以切成手動(寫明不用 AI 次數)。行程、交通可以多勾「一起記帳」。AI 只照選的類型讀,不再自己判斷。
+     額度用完、AI 出錯、沒網路、團結束 → 自動切成手動並講一聲,不讓人卡在 AI 畫面。 */
+  const FAB_KIND = { plan: "stop", wish: "wish", fly: "transport", cost: "expense" };
+  const ADD_KINDS = ["wish", "stop", "transport", "expense"];
+  const ADD_TAB = { stop: "plan", wish: "wish", transport: "fly", expense: "cost" };
+  /* 這個人能不能加這一類 —— 跟以前各頁那顆新增鈕的規則一樣(記帳離線也能先排著,看 queueCost) */
+  function mayAdd(k) {
+    if (k === "wish") return !tripEnded();
+    if (k === "stop") return editable("plan");
+    if (k === "transport") return mayFly();
+    if (k === "expense") return editable("cost") || queueCost();
+    return false;
+  }
+  /* ＋只出現在這四頁、而且這個人能加這一頁那一類(一般成員只有許願頁) */
+  function syncFab() {
+    const fab = el("add-fab");
+    if (!fab) return;
+    const k = FAB_KIND[state.tab], on = !!k && mayAdd(k);
+    fab.hidden = !on;
+    document.body.classList.toggle("has-fab", on);
+  }
+  const AI_PH = { wish: "例:這家拉麵店想去、照片裡這個地方", stop: "例:第 3 天晚上 7 點去淺草寺、這張餐廳訂位確認",
+    transport: "例:這張機票、高鐵票,或貼上租車的訂位確認", expense: "例:這張收據記一筆、晚餐花了 6000 日幣" };
+  const AI_ASK = { wish: "想去哪裡", stop: "要排什麼", transport: "什麼交通", expense: "記什麼" };
+  const HAND_NAME = { wish: "許一個願望", stop: "加一筆行程", transport: "加一段交通", expense: "記一筆" };
+  let addMode = "ai";
+  const addKind = () => { const c = document.querySelector('input[name="add-kind"]:checked'); return c ? c.value : "wish"; };
+  /* AI 能不能用:要連上網、用 LINE 登入、團還沒結束 */
+  const aiUsable = () => online && !!lineUser && !tripEnded();
+  const aiOffWhy = () => !online ? "沒網路,AI 用不了,先手動加。" : !lineUser ? "AI 要先用 LINE 登入才能用,先手動加。" : "這一團已經結束了,AI 關掉了,只能手動加。";
+  const addAlso = () => !el("add-also-f").hidden && el("add-also").checked;
+  function setAddMode(m, why) {
+    addMode = m;
+    el("add-mode").querySelectorAll("[data-add-mode]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.addMode === m)));
+    syncAdd();
+    aiErr("add-why", why || "");
+  }
+  function syncAdd() {
+    const k = addKind(), ai = addMode === "ai";
+    el("ai-part").hidden = !ai; el("add-hand").hidden = ai;
+    el("add-also-f").hidden = !ai || !(k === "stop" || k === "transport") || !editable("cost");
+    el("ai-ask-label").textContent = AI_ASK[k];
+    el("ai-text").placeholder = AI_PH[k];
+    el("add-hand-say").textContent = "手動填一張「" + HAND_NAME[k] + "」,可以放照片。不用 AI 次數。";
+    const go = el("ai-go");
+    if (!go.dataset.busy) {
+      go.textContent = ai ? "交給 AI" : "下一步:手動填";
+      go.disabled = ai && !!(aiMine && aiMine.left <= 0);   /* 伺服器也會擋;這裡先擋,免得等了幾秒才被拒絕 */
+    }
+    if (!ai) aiErr("ai-err", "");
+  }
+  function openAdd() {
+    const kinds = ADD_KINDS.filter(mayAdd);
+    if (!kinds.length) return;
     tuckMapForDialog(false);
     el("ai-form").reset(); clearAIFiles();
-    /* **沒有通行碼的人只能做一件事:許願。** 所以問法也只問那一件 ——
-       「想做什麼」配上三種例子,是問給管理員聽的;對其他四個人來說,
-       那是三個選項裡有兩個他按不下去。 */
-    /* AI 能建的三種:許願(誰都行)、行程(要 plan)、座位(要 seat)。後兩種都不行才只問許願 */
-    const wishOnly = !editable("plan") && !editable("seat") && !editable("cost");
-    el("ai-ask-label").textContent = wishOnly ? "想去哪裡?" : "想做什麼";
-    /* **提示字照他能做的事組**(2026-10-01,Lulu:非團主只放許願的例子;被勾了權限的副團主看他能做的那幾種)。
-       只勾「行程」的副團主不該看到「車票」—— 那是他按了 AI 也加不進去的東西 */
-    el("ai-text").placeholder = wishOnly
-      ? "例:這家拉麵店想去／照片裡這個地方"
-      : "例:" + ["這家想去許願", editable("plan") ? "加到第 3 天晚上 7 點" : "", editable("seat") ? "這張是車票或訂位確認" : "",
-          editable("cost") ? "這張收據記一筆" : ""].filter(Boolean).join("／");
+    const def = kinds.indexOf(FAB_KIND[state.tab]) >= 0 ? FAB_KIND[state.tab] : kinds[0];
+    document.querySelectorAll("[data-add-kind]").forEach(c => {
+      c.hidden = kinds.indexOf(c.dataset.addKind) < 0;
+      c.querySelector("input").checked = c.dataset.addKind === def;
+    });
+    el("add-kinds-f").hidden = kinds.length < 2;
     el("ai-img-name").textContent = "";
     aiErr("ai-err", "");
     el("ai-form").hidden = false; el("ai-confirm").hidden = true;
+    const usable = aiUsable();
+    el("add-mode").querySelector('[data-add-mode="ai"]').disabled = !usable;
+    setAddMode(usable ? "ai" : "hand", usable ? "" : aiOffWhy());
     el("ai-overlay").hidden = false;
-    el("ai-text").focus();
+    if (!usable) return;
     loadAIQuota();
+    if (!aiIntroOff()) showAIIntro(); else el("ai-text").focus();
   }
+  /* 手動:關掉這張,打開那一類的表單;AI 框裡已經放的照片一起帶過去 */
+  function addByHand(k) {
+    const files = aiFiles.splice(0);
+    closeAI();
+    if (FAB_KIND[state.tab] !== k && !(k === "wish" && state.tab === "plan" && wideCols())) switchTab(ADD_TAB[k]);
+    if (k === "stop") openStopAdd();
+    else if (k === "wish") openWishAdd();
+    else if (k === "transport") openFlight(null);
+    else openExpenseNew();
+    if (files.length) picsSet(PICS_OF[k], files);
+  }
+  el("add-fab").addEventListener("click", openAdd);
+  el("add-kinds").addEventListener("change", syncAdd);
+  el("add-mode").addEventListener("click", ev => {
+    const b = ev.target.closest("[data-add-mode]");
+    if (!b || b.disabled || b.dataset.addMode === addMode) return;
+    setAddMode(b.dataset.addMode);
+    if (addMode === "ai") { if (!aiIntroOff()) showAIIntro(); else el("ai-text").focus(); }
+  });
+  /* ---- 第一次用 AI 的說明(2026-10-22,Lulu):有額度、一次可以加好幾筆、用完還能手動。勾「不再顯示」就記在這台 ---- */
+  const AI_INTRO_LS = "trippps-ai-intro-off";
+  let aiIntroSeen = false;   /* 沒勾不再顯示:這次開著的頁面只講一次 */
+  const aiIntroOff = () => { if (aiIntroSeen) return true; try { return localStorage.getItem(AI_INTRO_LS) === "1"; } catch (_) { return false; } };
+  function paintAIIntroLeft() {
+    el("ai-intro-left").textContent = aiMine && aiMine.limit ? "(你今天還能用 " + Math.max(0, aiMine.left) + " 次,共 " + aiMine.limit + " 次)" : "";
+  }
+  function showAIIntro() {
+    aiIntroSeen = true;
+    el("ai-intro-never").checked = false;
+    paintAIIntroLeft();
+    el("ai-intro-overlay").hidden = false;
+  }
+  el("ai-intro-form").addEventListener("submit", ev => {
+    ev.preventDefault();
+    if (el("ai-intro-never").checked) { try { localStorage.setItem(AI_INTRO_LS, "1"); } catch (_) {} }
+    el("ai-intro-overlay").hidden = true;
+    if (!el("ai-overlay").hidden && addMode === "ai") el("ai-text").focus();
+  });
 
   /* ---- 你今天的 AI 還剩幾次(2026-10-01,Lulu 定案) ----
      每個人每天固定次數:一般成員 20、團主和副團主 25;參加好幾團也是同一份。成功拿到結果才扣。
@@ -6776,7 +6945,11 @@
   function paintAIQuota(u) {
     aiMine = u || null;
     const box = el("ai-quota"), menu = el("menu-ai");
-    el("ai-go").disabled = !!(u && u.left <= 0);   /* 伺服器也會擋;這裡先擋,免得等了幾秒才被拒絕 */
+    syncAdd();
+    if (!el("ai-intro-overlay").hidden) paintAIIntroLeft();
+    /* 用完了:新增對話框開著、還在 AI 那一邊 → 自動切成手動,講一聲(2026-10-22) */
+    if (u && u.left <= 0 && !el("ai-overlay").hidden && !el("ai-form").hidden && addMode === "ai")
+      setAddMode("hand", "你今天的 AI 額度用完了(" + (u.when || "明天") + "後再用),先改成手動加。");
     if (!u || !u.limit) { box.hidden = menu.hidden = true; box.innerHTML = menu.innerHTML = ""; return; }
     const out = u.left <= 0;
     const when = u.when || "明天";
@@ -7292,6 +7465,7 @@
   function openWishFromAI(r) {
     const pos = itemPos(), total = aiItemTotal;
     openWishAdd();
+    picsShow("wish-form", false);   /* AI 讀出來的不放圖(手動加才有) */
     el("wish-add-overlay").dataset.keep = "1";   /* AI 填的也算「改過」 */
     el("wf-title").value = r.title || "";
     el("wf-note").value = r.note || "";
@@ -7314,6 +7488,7 @@
   /* seated:誰分攤先勾這幾個人(一批裡交通那筆有座位的人);空的就全員 */
   function openExpenseFromAI(r, seated) {
     expFromAI = true; expPhotoNums = r.photos || [];
+    picsShow("exp-edit-form", false);
     const pos = itemPos(), total = aiItemTotal;
     switchTab("cost");
     editingExp = "new";
@@ -7364,6 +7539,7 @@
       f = same.find(x => day && dayOf(x.depart) === day) || (!day && same.length === 1 ? same[0] : null);
     }
     openFlight(f ? f.id : null);
+    picsShow("flight-form", false);
     flFromAI = true; flPhotoNums = r.photos || [];
     if (!f && KIND[r.kind]) {
       const i = el("fl-kinds").querySelector('input[value="' + r.kind + '"]');
@@ -7404,7 +7580,7 @@
      `prefers-reduced-motion` 還是擋掉:那不是偏好設定,是有人看了會不舒服。
      頁面切到背景時也不掃 —— 看不到的動畫只是在耗電。 */
   (function initAiPulse() {
-    const btn = el("ai-btn");
+    const btn = el("add-fab");
     if (!btn) return;
     const still = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let timer = 0;
@@ -7423,7 +7599,6 @@
 
   })();
 
-  el("ai-btn").addEventListener("click", openAI);
   el("ai-cancel").addEventListener("click", () => { batchEnd(); closeAI(); });
   el("ai-cancel2").addEventListener("click", () => { batchEnd(); closeAI(); });
   /* 怎麼關:見「對話框怎麼關」那一段(2026-09-29 起全部一致)。這一張裝著**拿不回來的東西** ——
@@ -7454,9 +7629,11 @@
     paintAIFiles();
   }
   /* 挑 3 張:已經在的先勾著,新的照順序補到 3 張;勾滿了其他的變灰,取消勾一張才能改勾別的 */
-  let pickList = [];
-  function openPicker(list) {
-    pickList = list;
+  /* 手動表單的照片也用這一張挑(2026-10-22):have = 原本就有的、done = 挑好之後交回去;沒給就是 AI 框那一組 */
+  let pickList = [], pickHave = [], pickDone = null;
+  function openPicker(list, have, done) {
+    pickList = list; pickHave = have || aiFiles;
+    pickDone = done || (keep => { aiFiles = keep; paintAIFiles(); });
     el("pk-grid").innerHTML = list.map((x, i) => '<label class="pk-tile"><input type="checkbox" data-pk="' + i + '"' + (i < AI_MAX_IMGS ? " checked" : "") +
       ' aria-label="第 ' + (i + 1) + ' 張"><img src="' + x.url + '" alt=""></label>').join("");
     paintPicker();
@@ -7473,16 +7650,16 @@
     ev.preventDefault();
     const keep = Array.from(el("pk-grid").querySelectorAll("[data-pk]")).filter(b => b.checked).map(b => pickList[+b.dataset.pk]);
     pickList.forEach(x => { if (keep.indexOf(x) < 0) URL.revokeObjectURL(x.url); });
-    aiFiles = keep.slice(0, AI_MAX_IMGS); pickList = [];
+    pickList = [];
     el("pick-overlay").hidden = true;
-    paintAIFiles();
+    pickDone(keep.slice(0, AI_MAX_IMGS));
   });
   /* 取消:原本就有的照舊,這次新選的都不要 */
   el("pk-cancel").addEventListener("click", () => {
-    pickList.forEach(x => { if (aiFiles.indexOf(x) < 0) URL.revokeObjectURL(x.url); });
+    pickList.forEach(x => { if (pickHave.indexOf(x) < 0) URL.revokeObjectURL(x.url); });
     pickList = [];
     el("pick-overlay").hidden = true;
-    paintAIFiles();
+    pickDone(pickHave.slice());
   });
   el("ai-imgs").addEventListener("click", ev => {
     const b = ev.target.closest("[data-ai-rm]");
@@ -7491,6 +7668,85 @@
     if (x) URL.revokeObjectURL(x.url);
     paintAIFiles();
   });
+  /* ---- 手動表單放圖(2026-10-22,Lulu:「記帳許願行程交通手動加也可以手動上傳圖片,這個之前沒做要補上」)----
+     四張手動表單(加行程、許願、加一段交通、記一筆)都有一排「📷 拍照」「🖼️ 選圖」,一次最多 3 張,跟 AI 框裡那排一樣。
+     存的時候才縮(長邊 1600px)、才用 photoUpload 傳,拿到編號跟著那一筆存:行程和許願掛「行程」表的「附圖」欄、交通和花費掛「照片」欄。
+     **傳不上去不擋存檔**,只是講一聲照片沒存到。改既有的那一筆、AI 讀出來的不出現(AI 讀過的照片有自己那條路)。 */
+  const PICS_OF = { stop: "stop-form", wish: "wish-form", transport: "flight-form", expense: "exp-edit-form" };
+  const PICS = {};   /* 表單 id → [{ file, url, name }] */
+  function picsBox(formId) {
+    const form = el(formId);
+    let box = form.querySelector(":scope > .man-pics");
+    if (box) return box;
+    box = document.createElement("div"); box.className = "fld man-pics"; box.hidden = true;
+    box.innerHTML = '<span class="rm-label">照片(可留白,最多 ' + AI_MAX_IMGS + ' 張)</span><div class="ai-imgs" data-pics-list hidden></div>' +
+      '<div class="ai-tools"><button type="button" class="btn btn-sm" data-pics-shoot>📷 拍照</button>' +
+      '<input type="file" accept="image/*" capture="environment" data-pics-cam hidden>' +
+      '<button type="button" class="btn btn-sm" data-pics-pick>🖼️ 選圖</button>' +
+      '<input type="file" accept="image/*" multiple data-pics-file hidden><span data-pics-n></span></div>';
+    form.insertBefore(box, form.querySelector(":scope > .err") || form.querySelector(":scope > .ops"));
+    box.querySelector("[data-pics-shoot]").hidden = !(window.matchMedia && window.matchMedia("(pointer: coarse)").matches);
+    box.querySelector("[data-pics-shoot]").addEventListener("click", () => box.querySelector("[data-pics-cam]").click());
+    box.querySelector("[data-pics-pick]").addEventListener("click", () => box.querySelector("[data-pics-file]").click());
+    box.querySelectorAll('input[type="file"]').forEach(i => i.addEventListener("change", () => picsTake(formId, i)));
+    box.querySelector("[data-pics-list]").addEventListener("click", ev => {
+      const b = ev.target.closest("[data-pics-rm]");
+      if (!b) return;
+      const [x] = (PICS[formId] || []).splice(+b.dataset.picsRm, 1);
+      if (x) URL.revokeObjectURL(x.url);
+      picsPaint(formId);
+    });
+    return box;
+  }
+  function picsPaint(formId) {
+    const b = picsBox(formId), list = PICS[formId] || [], L = b.querySelector("[data-pics-list]");
+    L.innerHTML = list.map((x, i) => '<span class="ai-im"><img src="' + x.url + '" alt=""><button type="button" data-pics-rm="' + i + '" aria-label="拿掉這張">✕</button></span>').join("");
+    L.hidden = !list.length;
+    b.querySelector("[data-pics-n]").textContent = list.length ? "已加入 " + list.length + " 張" : "";
+    b.querySelector("[data-pics-pick]").disabled = b.querySelector("[data-pics-shoot]").disabled = list.length >= AI_MAX_IMGS;
+  }
+  /* 打開表單時:on = 這張要不要放圖(手動新增才要);原本的清掉 */
+  function picsShow(formId, on) {
+    const b = picsBox(formId);
+    (PICS[formId] || []).forEach(x => URL.revokeObjectURL(x.url));
+    PICS[formId] = [];
+    picsPaint(formId);
+    b.hidden = !on;
+  }
+  function picsSet(formId, files) {
+    picsBox(formId).hidden = false;
+    PICS[formId] = files.slice(0, AI_MAX_IMGS);
+    files.slice(AI_MAX_IMGS).forEach(x => URL.revokeObjectURL(x.url));
+    picsPaint(formId);
+    const ov = el(formId).closest(".overlay");
+    if (ov) ov.dataset.picked = "1";   /* 帶了照片過來也算「改過」:點外面不會丟掉 */
+  }
+  function picsTake(formId, input) {
+    const files = Array.from(input.files || []).filter(f => /^image\//.test(f.type) || !f.type);
+    input.value = "";
+    if (!files.length) return;
+    const ov = el(formId).closest(".overlay");
+    if (ov) ov.dataset.picked = "1";
+    const fresh = files.map(f => ({ file: f, url: URL.createObjectURL(f), name: f.name })), have = PICS[formId] || [];
+    if (have.length + fresh.length > AI_MAX_IMGS) { openPicker(have.concat(fresh), have, keep => { PICS[formId] = keep; picsPaint(formId); }); return; }
+    PICS[formId] = have.concat(fresh);
+    picsPaint(formId);
+  }
+  /* 存的時候:縮、傳,回 { ids, lost }。btn 那顆先停用、寫「傳照片中…」 */
+  async function picsUpload(formId, btn) {
+    const list = PICS[formId] || [];
+    if (!list.length || picsBox(formId).hidden) return { ids: [], lost: false };
+    if (!online) return { ids: [], lost: true };
+    const was = btn ? btn.textContent : "";
+    if (btn) { btn.disabled = true; btn.textContent = "傳照片中…"; }
+    try {
+      const ids = (await Promise.all(list.map(x => shrinkImage(x.file, 1600, 0.85).then(photoUpload).catch(() => "")))).filter(Boolean);
+      return { ids, lost: ids.length < list.length };
+    } finally {
+      if (btn && btn.isConnected) { btn.disabled = false; btn.textContent = was; }
+    }
+  }
+
   /* 縮:一張 1600px;好幾張 1200px(Vercel 一個請求約 4.5MB,幾張加起來要壓在下面);還是太大就再縮一次,再不行就講 */
   const AI_MAX_TOTAL = 4_000_000;
   async function shrinkAIFiles() {
@@ -7517,22 +7773,24 @@
 
   el("ai-form").addEventListener("submit", async ev => {
     ev.preventDefault();
+    if (addMode === "hand") { addByHand(addKind()); return; }
     const text = el("ai-text").value.trim();
     if (!text && !aiFiles.length) { aiErr("ai-err", "打一段話,或加一張圖。"); return; }
     if (!online) { aiErr("ai-err", "AI 要連上網才能用。"); return; }
     aiErr("ai-err", "");
     const go = el("ai-go");
-    go.disabled = true; go.textContent = "AI 讀取中…";
+    go.dataset.busy = "1"; go.disabled = true; go.textContent = "AI 讀取中…";
     /* 伺服器最多等 50 秒(2026-10-12 從 22 秒放寬,好幾張照片一趟要十幾秒)。超過 10 秒先講一聲,不然看起來像卡住 */
     const slow = setTimeout(() => { if (go.disabled) go.textContent = "還在讀…照片多會久一點"; }, 10000);
     try {
       try { aiSent = aiFiles.length ? await shrinkAIFiles() : []; }
-      catch (e) { throw Object.assign(new Error(e.message || "這張圖片讀不出來"), { said: true }); }
+      catch (e) { throw Object.assign(new Error(e.message || "這張圖片讀不出來"), { said: true, input: true }); }
       const res = await fetch(AI_API, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         /* 這一團的事實跟著送:AI 那支不再寫死任何一團(第幾天、誰是誰、已經有哪幾段交通) */
-        body: JSON.stringify({ text, images: aiSent, context: {
+        /* kind:使用者選的類型(2026-10-22 起一定有);also:行程、交通多勾了「一起記帳」 */
+        body: JSON.stringify({ text, images: aiSent, kind: addKind(), also: addAlso() ? "expense" : "", context: {
           today: todayISO(), day: state.day,
           days: DAYS.map(d => d.date),
           members: MEMBERS.map(m => ({ id: m.id, name: nameOf(m.id) })),
@@ -7552,10 +7810,14 @@
     } catch (e) {
       /* 伺服器回的已經是一句完整的中文,再加「沒成功:」會變成兩層失敗。
          只有 fetch 自己丟的(真的連不上)才換成這一句。 */
-      aiErr("ai-err", e.said ? e.message : "連不上 AI,檢查一下網路");
+      const msg = e.said ? e.message : "連不上 AI,檢查一下網路";
+      /* 照片太大這種自己改得了的,留在 AI 這邊講;其他(額度用完、AI 出錯、連不上)自動切成手動(2026-10-22) */
+      if (e.input) aiErr("ai-err", msg);
+      else { delete go.dataset.busy; setAddMode("hand", msg.replace(/[。.]?$/, "。") + "先改成手動加" + (aiFiles.length ? ",剛剛放的照片會一起帶過去。" : "。")); }
     } finally {
       clearTimeout(slow);
-      go.disabled = false; go.textContent = "交給 AI";
+      delete go.dataset.busy;
+      syncAdd();
     }
   });
 
@@ -7663,6 +7925,7 @@
     el("wish-form").reset();
     fillWishWho();   /* reset() 會把下拉選回第一個,所以要在它後面再填一次 */
     el("wish-form").hidden = false;   /* 同上,保險 */
+    picsShow("wish-form", true);
     el("wish-add-overlay").hidden = false;
     el("wf-title").focus();
   }
@@ -7673,14 +7936,6 @@
     seekClear("wf-title");
     showWishError("");
   }
-  /* **要擋掉冒泡。** 這顆現在長在 `<summary>` 裡,而點 summary 的預設行為是
-     開合 `<details>` —— 不擋的話按「＋許願」會順手把整塊許願收起來,
-     對話框開了又被蓋在一個收起來的區塊上,看起來像「按了沒反應」。 */
-  el("add-wish-btn").addEventListener("click", ev => {
-    ev.preventDefault();
-    ev.stopPropagation();
-    openWishAdd();
-  });
   el("wf-cancel").addEventListener("click", () => { batchEnd(); closeWishAdd(); });
   /* 怎麼關:見「對話框怎麼關」那一段(2026-09-29 起全部一致 —— 改過才只有取消關得掉)。 */
   function wishCheck() {
@@ -7688,13 +7943,13 @@
     if (!el("wf-by").value) return "還認不出你是誰 —— 重新整理一下再許一次。";
     return "";
   }
-  function wishSave() {
+  function wishSave(picIds) {
     const title = el("wf-title").value.trim(), by = el("wf-by").value;
     const place = locatedAt(title) ? title : "";
     addWish({
       id: uid(), title: title, place: place,
       note: el("wf-note").value.trim(), by: by, votes: [by],
-      createdAt: new Date().toISOString(),
+      createdAt: new Date().toISOString(), picIds: picIds || [],
     });
     /* 許願**以前完全沒有這個回饋**,而它正是最需要的地方:願望有一大半不填地點,
        存進去之後地圖上就是沒有它,而使用者分不出那是「我沒填」「還在查」還是「壞了」。
@@ -7707,7 +7962,9 @@
     if (batch) { batchSaveAll(); return; }
     const bad = wishCheck();
     if (bad) { showWishError(bad); return; }
-    wishSave();
+    const pics = await picsUpload("wish-form", el("wf-submit"));
+    if (pics.lost) flash("有照片沒傳上去,願望照樣許了");
+    wishSave(pics.ids);
     el("wish-form").reset();
     closeWishAdd();
   });
@@ -8886,6 +9143,7 @@
     "exp-edit-overlay": ["xe-cancel"], "edit-overlay": ["se-cancel"], "stop-add-overlay": ["sf-cancel"],
     "ai-overlay": ["ai-cancel", "ai-cancel2"], "wish-add-overlay": ["wf-cancel"], "wish-edit-overlay": ["we-cancel"],
     "time-overlay": ["tf-cancel"], "fund-top-overlay": ["ft-cancel"], "confirm-overlay": ["cf-cancel"], "photo-overlay": ["ph-close"], "pick-overlay": ["pk-cancel"],
+    "ai-intro-overlay": ["ai-intro-ok"],
   };
   const fieldsOf = ov => [].map.call(ov.querySelectorAll("input,select,textarea"),
     f => f.type === "checkbox" || f.type === "radio" ? (f.checked ? "1" : "0") : f.type === "file" ? String(f.files && f.files.length) : f.value).join("\u0001");

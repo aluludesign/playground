@@ -15,7 +15,7 @@
 var opened = [];
 function act(name, fn) { try { fn(); opened.push(name); } catch (e) { opened.push(name + ' ✗ ' + e); } }
 act('tab-cost', function () { d.getElementById('tab-cost').click(); });
-act('add-exp-btn', function () { d.getElementById('add-exp-btn').click(); });
+act('add-exp-btn', function () { addBy("expense"); });
 act('data-edit-exp', function () { d.querySelector('[data-edit-exp]').click(); });
 
 function r3(n) { return Math.round(n * 1000) / 1000; }

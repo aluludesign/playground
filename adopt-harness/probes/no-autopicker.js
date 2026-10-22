@@ -12,12 +12,12 @@ return (async function () {
     if (a && PICK.test(a.type || "")) bad.push(name + " → " + got);
     if (close) { close(); await wait(80); }
   }
-  await tryOpen("加行程", () => q("#add-stop-btn").click(), () => q("#sf-cancel") && q("#sf-cancel").click());
+  await tryOpen("加行程", () => addBy("stop"), () => q("#sf-cancel") && q("#sf-cancel").click());
   q("#tab-cost").click(); await wait(80);
-  await tryOpen("記一筆", () => q("#add-exp-btn").click(), () => q("#xe-cancel").click());
+  await tryOpen("記一筆", () => addBy("expense"), () => q("#xe-cancel").click());
   await tryOpen("改花費", () => q("[data-edit-exp]").click(), () => q("#xe-cancel").click());
   q("#tab-fly").click(); await wait(80);
-  await tryOpen("加航班", () => q("[data-flight-add]").click(), () => q("#fl-cancel").click());
+  await tryOpen("加航班", () => addBy("transport"), () => q("#fl-cancel").click());
   await tryOpen("團的設定", () => q("#cloud-set").click(), () => q("#st-cancel").click());
   out.結論 = bad.length ? "✗ " + bad.join(";") : "✓ 沒有一個自己停在日期/時間欄";
   out.errors = w.__errors || [];

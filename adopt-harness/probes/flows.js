@@ -34,7 +34,7 @@ return (async function () {
   if (before) { w.sessionStorage.removeItem("probe-before");
     return { landedOn: w.location.search, before: JSON.parse(before), h1: txt("#trip-name"), sent: calls() }; }
   /* 團主:加航班、改座位、團的設定、邀請 */
-  q("[data-flight-add]").click(); await wait(50);
+  addBy("transport"); await wait(50);
   var formOpen = !q("#flight-overlay").hidden, dirDefault = q("#fl-dir").value, seatInputs = qa("#fl-seats input").length;
   set("fl-no", "br 198"); set("fl-dir", "其他"); set("fl-depart", "2026-10-06T08:00"); set("fl-arrive", "2026-10-06T07:00");
   submit("flight-form"); await wait(100);

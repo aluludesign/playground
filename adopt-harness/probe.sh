@@ -131,6 +131,15 @@ PAGE=${PAGE:-/index.html}
   echo 'document.getElementById("f").onload = function(){'
   echo '  var d = this.contentDocument, w = this.contentWindow;'
   echo '  setTimeout(function(){'
+  # 2026-10-22 起各頁的新增鈕和頂列的 ✨ AI 收成右下角一顆「＋」(#add-fab)。探針共用這兩個:
+  #   addAI()      按＋、關掉第一次的 AI 說明 → 停在新增對話框的 AI 那一邊(類型預設這一頁那一類)
+  #   addBy("stop"|"wish"|"transport"|"expense")  按＋ → 選那一類 → 切手動 → 下一步 = 以前那張手動表單
+  echo '  var addAI = function(){ d.getElementById("add-fab").click(); var o = d.getElementById("ai-intro-overlay"); if (o && !o.hidden) d.getElementById("ai-intro-ok").click(); };'
+  #   fabOn("plan"|"wish"|"fly"|"cost"|"split")  切到那一頁,回「＋看不看得到」(以前各頁那顆新增鈕在不在)
+  echo '  var fabOn = function(t){ d.getElementById("tab-" + t).click(); var f = d.getElementById("add-fab"); return !!f && !f.hidden && f.getClientRects().length > 0; };'
+  #   fabAt(...)  同上,但看完切回原本那一頁
+  echo '  var fabAt = function(t){ var was = d.body.dataset.view || "plan"; var r = fabOn(t); if (was !== t) d.getElementById("tab-" + was).click(); return r; };'
+  echo '  var addBy = function(k){ addAI(); var c = d.querySelector("[data-add-kind=\""+k+"\"] input"); if (c) c.checked = true; d.querySelector("[data-add-mode=hand]").click(); d.getElementById("ai-form").requestSubmit(); };'
   echo '    var out;'
   echo '    try { out = (function(){'
   cat "$JS"

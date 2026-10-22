@@ -26,7 +26,7 @@ return (async function () {
   var ok = (n, c, g) => { if (!c) bad.push(n + " ← " + JSON.stringify(g)); };
   q("#tab-wish").click(); await wait(80);
   q("#wishbox") && (q("#wishbox").open = true);
-  q("#add-wish-btn").click(); await wait(120);
+  addBy("wish"); await wait(120);
   q("#wf-title").value = "淺草寺"; q('[data-seek="wf-title"]').click();
   for (var i = 0; i < 40 && !q("#wf-title-out .hit"); i++) await wait(100);
   await wait(300);
@@ -53,7 +53,7 @@ return (async function () {
   ok("點了放大:大圖、下面「照片:維基共享資源」連到 Commons 那一頁", out.放大.開了 && /Sensoji_2023\.jpg\?width=1200/.test(out.放大.圖) && out.放大.出處 === PAGE && out.放大.字 === "照片:維基共享資源", out.放大);
   q("#ph-close").click(); await wait(60);
   /* 挑沒照片的那一筆 → 不帶照片 */
-  q("#add-wish-btn").click(); await wait(120);
+  addBy("wish"); await wait(120);
   q("#wf-title").value = "淺草寺前"; q('[data-seek="wf-title"]').click();
   for (var k = 0; k < 40 && !q("#wf-title-out .hit"); k++) await wait(100);
   await wait(300);
@@ -65,7 +65,7 @@ return (async function () {
     !(qa("#wish-list .wish").find(x => /淺草寺前拉麵/.test(x.textContent)) || d.body).querySelector(".wiki-ph"), p2 && p2.body);
   /* 行程:挑了淺草寺 → 存進去帶照片,行程卡最後一列有照片 */
   q("#tab-plan").click(); await wait(80);
-  q("#add-stop-btn").click(); await wait(120);
+  addBy("stop"); await wait(120);
   q("#sf-title").value = "淺草寺"; q('[data-seek="sf-title"]').click();
   for (var m = 0; m < 40 && !q("#sf-title-out .hit"); m++) await wait(100);
   await wait(300);

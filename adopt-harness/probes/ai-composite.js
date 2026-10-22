@@ -29,7 +29,7 @@ async function givePhoto() {
 }
 async function ask(result, photo) {
   next = result;
-  q("#ai-btn").click(); await wait(100);
+  addAI(); await wait(100);
   if (photo) await givePhoto();
   q("#ai-text").value = "這張票"; q("#ai-form").requestSubmit(); await wait(450);
 }

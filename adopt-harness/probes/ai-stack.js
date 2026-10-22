@@ -16,7 +16,7 @@ return (async function () {
   var legs = [["竹芝碼頭", "大島"], ["大島", "神津島"], ["神津島", "新島"], ["新島", "式根島"], ["式根島", "竹芝碼頭"]]
     .map((x, i) => Object.assign({}, leg, { kind: "船", company: "東海汽船", depart: "2026-10-0" + (4 + (i > 2 ? 1 : 0)) + "T" + String(8 + i).padStart(2, "0") + ":00", from: x[0], to: x[1] }));
   next = { intent: "transport", title: "", day: "", time: "", note: "", message: "", legs: legs };
-  q("#ai-btn").click(); await wait(80); q("#ai-text").value = "船票"; q("#ai-form").requestSubmit(); await wait(300);
+  addAI(); await wait(80); q("#ai-text").value = "船票"; q("#ai-form").requestSubmit(); await wait(300);
   var st = () => ({ 數: q("#fl-stack-n").textContent, 後一: vis("fl-g1"), 後二: vis("fl-g2"), 從: q("#fl-from").value, 開著: vis("flight-overlay") });
   out.第1 = st();
   ok("5 段:第 1 張,寫「1 / 5」,後面畫兩張(最多三張的樣子)", out.第1.數 === "1 / 5" && out.第1.後一 && out.第1.後二 && out.第1.從 === "竹芝碼頭", out.第1);
@@ -42,7 +42,7 @@ return (async function () {
   ok("全部存起來 → 關掉", !vis("flight-overlay"), st());
   var ships = (w.__rows.flights || []).filter(f => f.kind === "船").length;
   ok("存了 4 段(不要的那一段沒存)", ships === 4, ships);
-  q("[data-flight-add]") && (q("#tab-fly").click(), await wait(60), q("#fly-add").click(), await wait(100));
+  q("#tab-fly").click(); await wait(60); addBy("transport"); await wait(100);
   ok("自己按「加一段交通」:不疊卡片、不寫幾分之幾", !vis("fl-g1") && !vis("fl-stack-n"), st());
   out.結論 = bad.length ? "✗ " + bad.join(" ;; ") : "全部通過"; out.errors = w.__errors || [];
   return out;

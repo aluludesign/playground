@@ -4,7 +4,7 @@
 var q = s => d.querySelector(s), txt = s => (q(s) && q(s).textContent || "").replace(/\s+/g, " ").trim();
 /* offsetParent 對 position:fixed 的元素永遠是 null(提示條就是 fixed)—— 改問畫出來的方塊有沒有大小 */
 var shown = e => { if (!e || e.hidden) return false; var r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
-var state = () => ({ 切換鈕: txt("#cloud-viewas") || "(沒有)", 提示條: shown(q("#dev-badge")), 加行程: shown(q("#add-stop-btn")), 狀態列: txt("#cloud-msg") });
+var state = () => ({ 切換鈕: txt("#cloud-viewas") || "(沒有)", 提示條: shown(q("#dev-badge")), 加行程: fabAt("plan"), 狀態列: txt("#cloud-msg") });
 if (/prod=1/.test(w.location.search)) {
   var s0 = state(); d.cookie = "trip_as=member; Path=/";
   return { 正式站: s0, 說明: "正式站不該有切換鈕,也不該有提示條" };

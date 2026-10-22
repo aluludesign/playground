@@ -23,7 +23,7 @@ return (async function () {
 
   /* 1. 手動加一張通票 */
   q("#tab-fly").click(); await wait(120);
-  q("[data-flight-add]").click(); await wait(80);
+  addBy("transport"); await wait(80);
   ok("種類裡有「通票」", !!q('#fl-kinds input[value="通票"]'), qa("#fl-kinds input").map(i => i.value));
   set("fl-depart", "2026-10-03T09:00");
   pick("通票"); await wait(40);
@@ -66,7 +66,7 @@ return (async function () {
   ok("卡上寫「有票 佳瑜」", /有票/.test(out.卡2) && /佳瑜/.test(out.卡2), out.卡2);
 
   /* 3. 換回火車:日期留著、補上時間,起訖站回來 */
-  q("[data-flight-add]").click(); await wait(80);
+  addBy("transport"); await wait(80);
   pick("通票"); set("fl-depart", "2026-10-05"); pick("火車"); await wait(40);
   out.換回 = { 型別: q("#fl-depart").type, 值: q("#fl-depart").value, 起站: !q("#fl-from").closest(".fld").hidden, 方向: !q("#fl-f-dir").hidden, 第一天字: txt("#fl-depart-l") };
   ok("通票 → 火車:日期留著(補 10:00)、起訖站和方向回來、標題回到「發車(當地時間)」", out.換回.型別 === "datetime-local" && out.換回.值 === "2026-10-05T10:00" &&
@@ -77,7 +77,7 @@ return (async function () {
   var leg = { kind: "通票", no: "青春18きっぷ", company: "JR", depart: "2026-03-20", arrive: "2026-03-22", from: "", to: "", code: "", dir: "", match: "", note: "JR 全線普通・快速", seats: [], others: 0, photos: [] };
   next = Object.assign({}, base, { intent: "transport", legs: [leg], parts: [{ intent: "transport", legs: [leg], items: [] },
     { intent: "expense", legs: [], items: [Object.assign({}, base, { title: "青春18きっぷ", amount: 10000, currency: "JPY", date: "2026-03-18", category: "交通" })] }] });
-  q("#ai-btn").click(); await wait(100); q("#ai-text").value = "這張"; q("#ai-form").requestSubmit();
+  addAI(); await wait(100); q("#ai-text").value = "這張"; q("#ai-form").requestSubmit();
   for (var i = 0; i < 40 && q("#flight-overlay").hidden; i++) await wait(100);
   out.AI第一張 = { 種類: (q("#fl-kinds input:checked") || {}).value, 型別: q("#fl-depart").type, 第一天: q("#fl-depart").value, 最後一天: q("#fl-arrive").value, 票名: q("#fl-no").value,
     編號: qa("#flight-form .batch-tabs:not([hidden]) .rm-chip").map(c => c.textContent.trim()) };

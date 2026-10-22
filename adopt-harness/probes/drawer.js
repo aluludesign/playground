@@ -193,7 +193,7 @@ function drag(toWidth, releaseOn) {
       /* 把抽屜拖到最寬,那是對話框最容易被蓋掉的狀態 —— 要測就測最壞的那一種。 */
       drag(want(4));   /* 用這支自己的拖曳助手,拖到第 4 檔 = 螢幕的 3/4 */
       await sleep(200);
-      d.getElementById("add-stop-btn").click();
+      addBy("stop");
       await until(function () { return !d.getElementById("stop-add-overlay").hidden; });
       await sleep(150);
       var card = d.getElementById("stop-form").getBoundingClientRect();

@@ -31,7 +31,7 @@ return (async function () {
   ok("第五天有還車", /還車 · TOYOTA 租車/.test(txt("#route")), txt("#route"));
   /* 表單跟著種類換 */
   q("#tab-fly").click(); await wait(80);
-  q("[data-flight-add]").click(); await wait(80);
+  addBy("transport"); await wait(80);
   out.預設 = { 種類: q("#fl-kinds input:checked").value, 標題: txt("#fl-title"), 班次: txt("#fl-no-l"), 座位: !q("#fl-f-seats").hidden };
   pick("巴士"); await wait(30);
   out.巴士 = { 班次: txt("#fl-no-l"), 公司: txt("#fl-airline-l"), 出發: txt("#fl-depart-l"), 從: txt("#fl-from-l"), 座位提示: q("#fl-seats input").placeholder };

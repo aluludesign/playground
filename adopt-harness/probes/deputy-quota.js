@@ -17,21 +17,28 @@ return (async function () {
   q("#menu-btn").click(); await wait(250);
   out.選單 = txt("#menu-ai"); out.選單看得到 = shown(q("#menu-ai"));
   q("#menu-btn").click();
-  q("#ai-btn").click(); await wait(250);
-  out.對話框 = txt("#ai-quota"); out.交給AI按得下去 = !q("#ai-go").disabled;
-  /* 提示字照能做的事組(2026-10-01):一般成員只有許願;只勾行程的副團主沒有「車票」 */
-  out.提示字 = q("#ai-text").placeholder;
-  if (mode === "owner") ok("團主:提示字三種都有", /許願/.test(out.提示字) && /第 3 天/.test(out.提示字) && /車票/.test(out.提示字), out.提示字);
-  if (mode === "member" && !deputy) ok("一般成員:提示字只有許願的例子", !/第 3 天|車票/.test(out.提示字), out.提示字);
-  if (mode === "member" && /can=plan/.test(qs)) ok("只勾行程的副團主:有「第 3 天」、沒有「車票」", /第 3 天/.test(out.提示字) && !/車票/.test(out.提示字), out.提示字);
+  addAI(); await wait(250);
+  out.對話框 = txt("#ai-quota");
+  out.模式 = (q('[data-add-mode][aria-pressed="true"]') || {}).dataset.addMode;
+  out.切成手動的話 = txt("#add-why");
+  /* 用完的時候已經自動切成手動;切回 AI 那一邊看「交給 AI」按不按得下去 */
+  q('[data-add-mode="ai"]').click(); await wait(50);
+  out.交給AI按得下去 = !q("#ai-go").disabled;
+  /* 要加什麼那一排照能做的事列(2026-10-22 取代 10-01 的「提示字照能做的事組」):一般成員只有許願 → 整排不出現 */
+  out.類型 = shown(q("#add-kinds-f")) ? qa("[data-add-kind]").filter(c => !c.hidden).map(c => c.textContent.trim()).join(",") : "(只能許願)";
+  if (mode === "owner") ok("團主:四種都能選", out.類型 === "許願,行程,交通,記帳", out.類型);
+  if (mode === "member" && !deputy) ok("一般成員:不用選(只能許願)", out.類型 === "(只能許願)", out.類型);
+  if (mode === "member" && /can=plan/.test(qs)) ok("只勾行程的副團主:許願、行程", out.類型 === "許願,行程", out.類型);
   q("#ai-cancel").click(); await wait(50);
   if (!aiQ) ok("讀不到次數 → 選單和對話框都不講", !out.選單看得到 && !out.對話框, out);
-  else if (+aiQ[1] === 0) ok("用完:講「你的 AI 額度用完了,下午三點後再用」,按不下去;選單也講用完", /你的 AI 額度用完了,下午三點後再用/.test(out.對話框) && !out.交給AI按得下去 && /用完了/.test(out.選單), out);
-  else ok("選單「今天的 AI 還能用 N／M 次 · 參加的團共用」;對話框「你今天還能用 AI N 次」", /還能用 18／20 次/.test(out.選單) && /參加的團共用/.test(out.選單) && /你今天還能用 AI 18 次/.test(out.對話框) && out.交給AI按得下去, out);
+  else if (+aiQ[1] === 0) ok("用完:自動切成手動、講用完了;AI 那邊講「你的 AI 額度用完了,下午三點後再用」、按不下去;選單也講用完",
+    out.模式 === "hand" && /額度用完了/.test(out.切成手動的話) && /手動/.test(out.切成手動的話) &&
+    /你的 AI 額度用完了,下午三點後再用/.test(out.對話框) && !out.交給AI按得下去 && /用完了/.test(out.選單), out);
+  else ok("選單「今天的 AI 還能用 N／M 次 · 參加的團共用」;對話框「你今天還能用 AI N 次」", /還能用 18／20 次/.test(out.選單) && /參加的團共用/.test(out.選單) && /你今天還能用 AI 18 次/.test(out.對話框) && out.交給AI按得下去 && out.模式 === "ai", out);
   if (/strong=5\/8/.test(qs)) ok("選單也寫強力搜還能用幾次", /強力搜:還能用 5／8 次/.test(out.選單), out.選單);
   /* 權限 */
-  out.加行程 = shown(q("#add-stop-btn"));
-  q("#tab-fly").click(); await wait(80); out.加交通 = !!(q("[data-flight-add]") && !q("[data-flight-add]").hidden); q("#tab-plan").click();
+  out.加行程 = fabOn("plan");
+  out.加交通 = fabOn("fly"); await wait(80); q("#tab-plan").click();
   if (mode === "member" && !deputy) ok("一般成員:沒有加行程、沒有加交通(只能許願)", !out.加行程 && !out.加交通, out);
   if (mode === "member" && deputy) ok("副團主(團主勾了行程):加得了行程、加不了交通", out.加行程 && !out.加交通, out);
   if (mode === "owner") {

@@ -5,7 +5,7 @@ var shown = e => !!e && !e.closest("[hidden]") && e.getBoundingClientRect().heig
 return (async function () {
   var out = {};
   q("#tab-wish").click(); await wait(100);
-  q("#add-wish-btn").click(); await wait(120);
+  addBy("wish"); await wait(120);
   out.許願表有你是誰 = shown(q("#wf-by"));
   q("#wf-title").value = "探針的願望";
   q("#wish-form").requestSubmit(); await wait(300);

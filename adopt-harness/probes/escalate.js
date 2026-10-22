@@ -59,7 +59,7 @@ async function press(id) {
 (async function () {
   await sleep(0);   /* 陷阱 14-a */
   try {
-    d.getElementById("add-stop-btn").click();
+    addBy("stop");
     await until(function () { return !q("#stop-form").hidden; });
     var inp = d.getElementById("sf-title");
 
@@ -132,7 +132,7 @@ async function press(id) {
 
     // ---- 換表單不可以帶著段數 ----
     osm.length = 0; goo.length = 0;
-    d.getElementById("add-wish-btn").click();
+    addBy("wish");
     await until(function () { return !q("#wish-form").hidden; });
     ok("換到許願表單,按鈕是「搜尋」", btn("wf-title").textContent === "搜尋", btn("wf-title").textContent);
 

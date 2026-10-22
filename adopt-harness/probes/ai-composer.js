@@ -20,7 +20,7 @@ return (async function () {
   var st = d.createElement("style"); st.textContent = "*,*::before,*::after{transition:none!important}"; d.head.appendChild(st);
   var out = {}, bad = [];
   var ok = (n, c, g) => { if (!c) bad.push(n + " ← " + JSON.stringify(g)); };
-  q("#ai-btn").click(); await wait(150);
+  addAI(); await wait(150);
   var box = q("#ai-box");
   ok("拍照、選圖、縮圖、幾張的字都在框裡;框在提醒那段上面", ["#ai-pick", "#ai-shoot", "#ai-imgs", "#ai-img-name"].every(s => box.contains(q(s))) &&
     !!(box.compareDocumentPosition(q("#ai-tip")) & Node.DOCUMENT_POSITION_FOLLOWING), "");

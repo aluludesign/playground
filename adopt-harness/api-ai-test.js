@@ -275,6 +275,31 @@ function ok(name, cond, extra) {
   const said3 = JSON.stringify(sent(r.seen));
   ok("給模型的話和格式:有通票這一種、只要日期、價錢另外一份花費", /\*\*通票\*\*/.test(said3) && /青春18きっぷ/.test(said3) && /只要日期 YYYY-MM-DD/.test(said3) &&
     JSON.stringify(sent(r.seen).generationConfig.responseSchema.properties.legs.items.properties.kind.enum).indexOf("通票") >= 0, "");
+  /* 先選類型(2026-10-22,Lulu:全站一顆＋):送來 kind 就照它,模型說什麼都不算;沒勾記帳不拆複合 */
+  r = await call({ text: "x", kind: "expense", context: CTX }, () => okJson(JSON.stringify({ intent: "transport", legs: [LEG1], items: [EXP1], message: "",
+    parts: [{ intent: "transport", legs: [LEG1], items: [] }, { intent: "expense", legs: [], items: [EXP1] }] })));
+  const kr = r.res.body.result;
+  ok("選了記帳:intent 一定是 expense、parts 空的(不拆複合)、帳讀得到", kr.intent === "expense" && kr.parts.length === 0 && kr.items[0].amount === 1530, { intent: kr.intent, parts: kr.parts.length, items: kr.items });
+  const saidK = JSON.stringify(sent(r.seen));
+  ok("給模型的話:已經選好類型、intent 一定填 expense、parts 空陣列", /使用者已經選好要加的類型:記帳/.test(saidK) && /intent 一定填 expense/.test(saidK) && /parts 一律空陣列/.test(saidK), "");
+  r = await call({ text: "x", kind: "火箭", context: CTX }, () => okJson(GOOD));
+  ok("不認得的 kind 當沒選(照舊讓模型判斷)", r.res.body.result.intent === "wish" && !/使用者已經選好/.test(JSON.stringify(sent(r.seen))), r.res.body.result.intent);
+  /* 交通＋勾記帳:兩份都留;模型多回的別種(許願)丟掉 */
+  r = await call({ text: "x", kind: "transport", also: "expense", context: CTX }, () => okJson(JSON.stringify({ intent: "transport", legs: [LEG1], items: [], message: "",
+    parts: [{ intent: "transport", legs: [LEG1], items: [] }, { intent: "expense", legs: [], items: [EXP1] }, { intent: "wish", legs: [], items: [{ title: "淺草寺" }] }] })));
+  const ka = r.res.body.result;
+  ok("交通＋記帳:parts 只有交通和花費(許願丟掉),交通在前", ka.intent === "transport" && ka.parts.map(p => p.intent).join() === "transport,expense", ka.parts.map(p => p.intent));
+  ok("給模型的話:勾了一起記帳、兩份都列在 parts", /勾了「一起記帳」/.test(JSON.stringify(sent(r.seen))), "");
+  /* 模型把花費放最外層、parts 只有交通:花費要補回來,最外層換成交通 */
+  r = await call({ text: "x", kind: "transport", also: "expense", context: CTX }, () => okJson(JSON.stringify({ intent: "expense", legs: [LEG1], items: [EXP1], message: "",
+    parts: [{ intent: "transport", legs: [LEG1], items: [] }] })));
+  const kb = r.res.body.result;
+  ok("交通＋記帳:模型把帳放最外層也不丟", kb.intent === "transport" && kb.parts.map(p => p.intent).join() === "transport,expense" && kb.parts[1].items[0].amount === 1530, kb.parts.map(p => p.intent));
+  /* 許願不能附帶記帳:also 不理 */
+  r = await call({ text: "x", kind: "wish", also: "expense", context: CTX }, () => okJson(JSON.stringify({ intent: "expense", legs: [], items: [EXP1], message: "",
+    parts: [{ intent: "wish", legs: [], items: [{ title: "淺草寺" }] }, { intent: "expense", legs: [], items: [EXP1] }] })));
+  const kw = r.res.body.result;
+  ok("許願＋記帳:記帳不理,只回許願、讀那一份的地方", kw.intent === "wish" && kw.parts.length === 0 && kw.items[0].title === "淺草寺", { intent: kw.intent, parts: kw.parts.length, items: kw.items });
   /* 一張收據是一筆(2026-10-05,Lulu 拿 HANDS 的收據問「為什麼拆成兩筆」):要寫在給模型的話裡,「一張收據要拆兩筆」那個例子不能再出現 */
   r = await call({ text: "這張收據", context: CTX }, () => okJson(GOOD));
   const said = JSON.stringify(sent(r.seen));

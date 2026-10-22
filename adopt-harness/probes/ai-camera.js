@@ -6,7 +6,7 @@ var touch = /[?&]touch=1/.test(w.location.search);
 return (async function () {
   var out = { 模式: touch ? "觸控" : "電腦" }, bad = [];
   var ok = (n, c, g) => { if (!c) bad.push(n + " ← " + JSON.stringify(g)); };
-  q("#ai-btn").click(); await wait(80);
+  addAI(); await wait(80);
   out.拍照鈕 = shown(q("#ai-shoot")); out.選圖鈕 = shown(q("#ai-pick"));
   var cam = q("#ai-cam"), file = q("#ai-file");
   out.相機欄 = { capture: cam.getAttribute("capture"), accept: cam.accept }; out.選圖欄有capture = file.hasAttribute("capture");

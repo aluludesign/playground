@@ -143,27 +143,11 @@ async function drag(dy) {
       w.getComputedStyle(d.querySelector(".cols > .col:not(#wishbox)")).display === "none",
       { 許願: w.getComputedStyle(d.getElementById("wishbox")).display,
         行程: w.getComputedStyle(d.querySelector(".cols > .col:not(#wishbox)")).display });
-    /* **捲動時,黏住的日期列要蓋住底下經過的東西。**
-       「＋許願」和地圖那顆本來浮在日期卡上面 —— 我給它們墊了 `z-index:1`
-       (為了擋 `<details>` 的開合),而那剛好跟黏住的日期列同一層、又排在後面。
-       擋點擊該用 `stopPropagation()`,不是圖層。
-
-       **判準是「那個位置最上面是誰」,不是兩個框有沒有重疊** ——
-       捲到一半本來就會重疊,那是 sticky 的正常行為;要問的是誰蓋住誰。 */
-    (function () {
-      var sh = d.getElementById("panel-plan"), days = d.getElementById("days");
-      var add = d.getElementById("add-wish-btn");
-      sh.scrollTop = 150;
-      return new Promise(function (r) { w.setTimeout(r, 350); }).then(function () {
-        function topAt(e) {
-          var q = e.getBoundingClientRect();
-          var h = d.elementFromPoint(Math.round(q.left + q.width / 2), Math.round(q.top + q.height / 2));
-          return h && (days === h || days.contains(h));
-        }
-        ok("捲動時「＋許願」被日期列蓋住(它在底下,不是浮在上面)", topAt(add), "add-wish-btn");
-        sh.scrollTop = 0;
-      });
-    })();
+    /* (「＋許願」被黏住的日期列蓋住那一條 2026-10-22 拿掉了:那顆收成右下角的「＋」,不在標頭裡)
+       那一段順便捲了 sheet 再捲回來、等了一下 —— 後面量 sheet 高度的那幾條吃這個節奏,照樣捲一下、等一下 */
+    d.getElementById("panel-plan").scrollTop = 150;
+    await sleep(350);
+    d.getElementById("panel-plan").scrollTop = 0;
     await sleep(450);
 
     /* **那條標頭不再是開關。** `#wishbox` 底層還是 `<details>`,而在這個版面裡
@@ -195,7 +179,7 @@ async function drag(dy) {
        那條規則是舊模型留下的:以前手機的地圖是 z70,會整片蓋住對話框。
        翻過來之後地圖是 z1 的背景,對話框本來就在它上面,收它只剩壞處 ——
        **而且沒有人會再打開它**。底板一抽走,收合 sheet 就變成「內容消失」。 */
-    d.getElementById("add-wish-btn").click();
+    addBy("wish");
     await until(function () { return !d.getElementById("wish-add-overlay").hidden; });
     await sleep(200);
     ok("開「許願」對話框時,地圖還在(它是底,不該被收走)",
@@ -245,7 +229,7 @@ async function drag(dy) {
        真的手機扣掉 Safari 的上下列大概 550–750,600 是比較小的那一種 —— 量那個才是這條要守的事。 */
     var frameH = w.frameElement && w.frameElement.style.height;
     if (w.frameElement) { w.frameElement.style.height = "600px"; await sleep(200); }
-    d.getElementById("add-wish-btn").click();
+    addBy("wish");
     await until(function () { return !d.getElementById("wish-add-overlay").hidden; });
     d.getElementById("wf-title").value = "溫泉";
     d.querySelector('[data-seek="wf-title"]').click();

@@ -13,7 +13,7 @@ return (async function () {
   await wait(300);
   var out = {}, bad = [];
   var ok = (n, c, g) => { if (!c) bad.push(n + " ← " + JSON.stringify(g)); };
-  q("#ai-btn").click(); await wait(100);
+  addAI(); await wait(100);
   q("#ai-text").value = "想去淺草寺"; q("#ai-form").requestSubmit(); await wait(300);
   out.剛按 = q("#ai-go").textContent;
   await wait(9000); out.九秒 = q("#ai-go").textContent;

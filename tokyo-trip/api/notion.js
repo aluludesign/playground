@@ -92,6 +92,9 @@ const photoId = v => (/^[0-9a-f-]{32,36}$/i.test(String(v || "")) ? String(v) : 
 /* 帶 photos(陣列)或 photo(一個,舊版)都收;最多 3 張 */
 const photoIds = b => Array.from(new Set((Array.isArray(b.photos) ? b.photos : [b.photo]).map(photoId).filter(Boolean))).slice(0, 3);
 const photoIn = list => ({ files: list.map(id => ({ type: "file_upload", file_upload: { id } })) });
+/* 行程、許願手動加時自己放的圖(2026-10-22,Lulu):存「行程」表的「附圖」欄(檔案)。「照片」欄是維基網址,兩個分開。
+   App 送 pics(上傳編號的陣列),讀回來 pics 是網址 */
+const picIds = b => photoIds({ photos: Array.isArray(b.pics) ? b.pics : [] });
 
 function expenseOut(page) {
   const p = page.properties;
@@ -185,6 +188,7 @@ function stopOut(page) {
     /* Google 的地點編號(2026-10-02,Places UI Kit):從 Google 清單挑的才有。可以永久存 —— 座標不行(只能 30 天,手機自己記) */
     placeId: p["地點編號"] ? txt(p["地點編號"]) : "",
     photo: photoUrl(p["照片"]),
+    pics: photosOut(p["附圖"]),
   };
 }
 function stopIn(b) {
@@ -196,6 +200,7 @@ function stopIn(b) {
   };
   if (b.placeId !== undefined) props["地點編號"] = { rich_text: richText(String(b.placeId || "").slice(0, 200)) };
   if (b.photo !== undefined) props["照片"] = photoProp(b.photo);
+  if (picIds(b).length) props["附圖"] = photoIn(picIds(b));
   if (b.day) props["日期"] = { date: { start: b.day } };
   /* **退回願望區 = 把日期清掉**(2026-09-30):沒有日期的那一列就是願望,許願人和票都還在 */
   else if (b.day === null) props["日期"] = { date: null };
@@ -218,6 +223,7 @@ function wishOut(page) {
     by: txt(p["許願人"]),
     placeId: p["地點編號"] ? txt(p["地點編號"]) : "",
     photo: photoUrl(p["照片"]),
+    pics: photosOut(p["附圖"]),
     createdAt: page.created_time,
   };
 }
@@ -230,6 +236,7 @@ function wishIn(b) {
     "許願人": { rich_text: richText(b.by) },
     ...(b.placeId !== undefined ? { "地點編號": { rich_text: richText(String(b.placeId || "").slice(0, 200)) } } : {}),
     ...(b.photo !== undefined ? { "照片": photoProp(b.photo) } : {}),
+    ...(picIds(b).length ? { "附圖": photoIn(picIds(b)) } : {}),
     "票": { rich_text: richText(ids(b.votes).join(",")) },
   };
 }
@@ -864,13 +871,14 @@ module.exports = async (req, res) => {
   /* ---------- 上傳一張照片(2026-10-04) ----------
      POST { image: 縮過的 JPEG(base64) } → { photo: Notion 的上傳編號 }。之後建花費/交通時帶 photo 就掛上去。
      同一張可以掛好幾筆(一張收據拆成好幾筆帳),但要在 1 小時內掛,不然 Notion 會把它收掉。
-     能記帳或能動交通的人才能傳(就是能把它掛上去的那些人)。 */
+     能記帳或能動交通的人才能傳(就是能把它掛上去的那些人)。
+     2026-10-22 起許願、加行程也能放圖(掛在「附圖」),許願誰都能許 → 團還沒結束的成員都能傳;結束了只剩能記帳的人 */
   if (resource === "photo") {
     if (!allow("POST")) return;
     try {
       const c = await context(q.t);
       if (c.stop) return stop(c.stop);
-      if (!c.can("cost") && !c.can("seat")) return res.status(403).json({ error: "這一塊目前只有團主動得了" });
+      if (!c.can("cost") && (c.trip.ended || !c.mine || !c.mine.id)) return res.status(403).json({ error: c.trip.ended ? "這一團已經結束了" : "這一塊目前只有團主動得了" });
       const b64 = typeof body.image === "string" ? body.image : "";
       if (!b64) return res.status(400).json({ error: "沒有照片" });
       if (b64.length > 3_000_000) return res.status(413).json({ error: "照片太大" });
@@ -1151,11 +1159,16 @@ module.exports = async (req, res) => {
       const mineId = c.mine.id;
       if (c.trip.ended) return res.status(403).json({ why: "ended", error: "這一團已經結束了,不能再許願或投票" });
       if (method === "POST") {
-        const props = shape.in({ ...body, by: mineId, votes: ids(body.votes).filter(v => v === mineId) });
-        const page = await notion("/pages", { method: "POST",
-          body: JSON.stringify({ parent: { database_id: shape.db }, properties: withTrip(props) }) });
+        const props = withTrip(shape.in({ ...body, by: mineId, votes: ids(body.votes).filter(v => v === mineId) }));
+        /* 附圖掛不上去(上傳超過 1 小時)不擋:拿掉再建一次,回 photoLost */
+        let page, photoLost = false;
+        const make = () => notion("/pages", { method: "POST", body: JSON.stringify({ parent: { database_id: shape.db }, properties: props }) });
+        try { page = await make(); } catch (e) {
+          if (!props["附圖"] || e.status >= 500) throw e;
+          delete props["附圖"]; photoLost = true; page = await make();
+        }
         await log("許願", me2 + " 許願:" + said(body.title || "想去的地方"));
-        return res.status(200).json({ row: shape.out(page) });
+        return res.status(200).json(photoLost ? { row: shape.out(page), photoLost } : { row: shape.out(page) });
       }
       if (method === "PATCH" || method === "DELETE") {
         const page = await rowOf(q.id);
@@ -1218,8 +1231,8 @@ module.exports = async (req, res) => {
       try {
         page = await notion("/pages", { method: "POST", body: JSON.stringify({ parent: { database_id: shape.db }, properties: props }) });
       } catch (e) {
-        if (!props["照片"] || e.status >= 500) throw e;
-        delete props["照片"]; photoLost = true;
+        if (!(props["照片"] || props["附圖"]) || e.status >= 500) throw e;
+        delete props["照片"]; delete props["附圖"]; photoLost = true;
         page = await notion("/pages", { method: "POST", body: JSON.stringify({ parent: { database_id: shape.db }, properties: props }) });
       }
       const row = shape.out(page);

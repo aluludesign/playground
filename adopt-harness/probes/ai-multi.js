@@ -13,7 +13,7 @@ w.fetch = function (u, init) {
 var base = { title: "", day: "", time: "", note: "", amount: 0, currency: "", date: "", category: "", legs: [], message: "" };
 async function ask(intent, items) {
   next = Object.assign({}, base, items[0], { intent: intent, items: items.map(x => Object.assign({}, base, x)) });
-  q("#ai-btn").click(); await wait(80); q("#ai-text").value = "好幾筆"; q("#ai-form").requestSubmit(); await wait(400);
+  addAI(); await wait(80); q("#ai-text").value = "好幾筆"; q("#ai-form").requestSubmit(); await wait(400);
 }
 function look(formId) {
   var f = q("#" + formId), st = f.parentElement, n = f.querySelector(".stack-n");

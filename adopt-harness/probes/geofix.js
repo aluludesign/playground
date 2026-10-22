@@ -365,10 +365,8 @@ function pinsOf(k) { return pins()[k]; }
     var wbOpenBefore = q("#wishbox").open;
     /* 「在地圖上看」那顆刪掉之後,「在它左邊」就沒有對象了 ——
        剩下的那半(它在標頭裡、而且按它不會把整塊收起來)照問。 */
-    ok("「＋許願」在標頭裡",
-      q(".wish-head").contains(q("#add-wish-btn")),
-      q("#add-wish-btn").parentElement.className);
-    q("#add-wish-btn").click();
+    /* 「＋許願」2026-10-22 收成右下角的「＋」(不在標頭裡了);「不會順手把許願區收起來」照問 */
+    addBy("wish");
     ok("按它不會順手把許願區收起來(它在 summary 裡,預設行為要擋掉)",
       q("#wishbox").open === wbOpenBefore,
       { 之前: wbOpenBefore, 之後: q("#wishbox").open });
@@ -389,7 +387,7 @@ function pinsOf(k) { return pins()[k]; }
 
     flashes.length = 0;
     var nStopBefore = d.querySelectorAll("#route .stop").length;
-    q("#add-stop-btn").click();
+    addBy("stop");
     q("#sf-time").value = "16:00";
     q("#sf-title").value = "早點睡";
     q("#stop-form button[type=submit]").click();
@@ -492,7 +490,7 @@ function pinsOf(k) { return pins()[k]; }
        所以當時的證據是「有沒有發出查詢」。
        現在打了字而沒挑 = 沒有 `place`,而規則一不准自動查 —— **一次都不會發**。
        所以判準變成「**表有沒有接住它**」:接住就有 pin,沒接住就沒有 pin。 */
-    q("#add-wish-btn").click();
+    addBy("wish");
     q("#wf-title").value = "富士電視台";
     q("#wf-by").value = "hsieh_chinhui";
     q("#wf-submit").click();
@@ -513,7 +511,7 @@ function pinsOf(k) { return pins()[k]; }
        「富士山」照樣要命中人工表 —— 而命中的證據是**它拿得到 pin,而且一次查詢都不發**。
        (這一筆的 place 是空的,所以走的是 pinForItem 第三步:標題比對人工表。) */
     var osmB11d = osm.length;
-    q("#add-wish-btn").click();
+    addBy("wish");
     q("#wf-title").value = "富士山 五合目";
     q("#wf-by").value = "hsieh_chinhui";
     q("#wf-submit").click();
@@ -552,7 +550,7 @@ function pinsOf(k) { return pins()[k]; }
       { display: w.getComputedStyle(q("#wishbox")).display,
         高: Math.round(q("#wishbox").getBoundingClientRect().height) });
     flashes.length = 0;
-    q("#add-wish-btn").click();
+    addBy("wish");
     q("#wf-title").value = "早點睡";
     q("#wf-by").value = "hsieh_chinhui";
     /* **錨點換了,因為表單搬走了。**
@@ -611,7 +609,7 @@ function pinsOf(k) { return pins()[k]; }
 
     // 12b ---- 加行程那一槽,以及「查不到」「不在日本境內」兩句 ----
     flashes.length = 0;
-    q("#add-stop-btn").click();
+    addBy("stop");
     q("#sf-time").value = "17:00";
     q("#sf-title").value = "多喝水";
     q("#stop-form button[type=submit]").click();
@@ -642,7 +640,7 @@ function pinsOf(k) { return pins()[k]; }
        現在填在標題上 —— `pinForItem` 第三步會拿標題去比對人工表,一次查詢都不發。 */
     flashes.length = 0;
     var netB12 = asked.length + osm.length;
-    q("#add-stop-btn").click();
+    addBy("stop");
     ok("再打開表單 → 上一句話收掉了(不留成背景)", q("#stop-msg").hidden === true, q("#stop-msg").outerHTML);
     q("#sf-time").value = "19:00";
     q("#sf-title").value = "TPE 桃園 T1";
@@ -701,8 +699,10 @@ function pinsOf(k) { return pins()[k]; }
        (`照片沒存到(上傳太久了),這一筆照樣存了`,花費和交通共用同一句)—— 跟「記下來了」同一類的操作回饋。 */
     /* 43 這一次(2026-10-12):AI 好幾筆改成一批、最後一起存,存完講「存好了 N 筆」(存到一半失敗是「存好了 N 筆,第 N+1 筆沒存進去」)。
        取代以前每存一筆講一次「記下來了:…」的那一套 —— 同一類的操作回饋。 */
+    /* 48 這一次(2026-10-22):手動放圖(全站一顆＋)傳不上去/掛不上去那幾句 —— 行程、許願的「照片沒存到(上傳太久了)」,
+       行程、許願、交通的「有照片沒傳上去,這一筆照樣存了」。跟 42 那句同一類的操作回饋。 */
     ok("flash() 的字面數沒有暴增(那三句沒回來,新增的是既有那一套的同類)",
-      out.flash字面數 <= 43, out.flash字面數);
+      out.flash字面數 <= 48, out.flash字面數);
     out.sayHere字面數 = (d.documentElement.outerHTML.match(/sayHere\(/g) || []).length;
 
     /* ======================================================================
@@ -742,7 +742,7 @@ function pinsOf(k) { return pins()[k]; }
        所以改用一筆標題裡不含任何人工表關鍵字、而且地點欄有真實快取座標的願望。
        「台場自由女神像」對 OUTSIDE 那十四組 key 一個都不中。 */
     var CLEAN = "台場自由女神像";
-    q("#add-wish-btn").click();
+    addBy("wish");
     q("#wf-title").value = CLEAN;
     await pickPlace("wf", CLEAN, "35.6270", "139.7740");
     q("#wf-by").value = "hsieh_chinhui";
@@ -814,8 +814,8 @@ function pinsOf(k) { return pins()[k]; }
       me: { id: "hsieh_chinhui", name: "阿輝", color: "#E60012", role: "成員", invite: "q4wn8t" },
     };
     serveNotion = true;
-    ok("切換之前是團主、可以編輯(對照的起點)", q("#add-stop-btn").hidden === false && /團主/.test(q("#cloud-msg").textContent),
-      { 加行程藏著: q("#add-stop-btn").hidden, 狀態列: q("#cloud-msg").textContent });
+    ok("切換之前是團主、可以編輯(對照的起點)", fabAt("plan") && /團主/.test(q("#cloud-msg").textContent),
+      { 加號: fabAt("plan"), 狀態列: q("#cloud-msg").textContent });
     /* **先打開漢堡選單,因為人就是這樣按的。**
        連線那幾顆搬進選單之後,`q("#cloud-in").click()` 照樣會觸發 ——
        對 `display:none` 的元素呼叫 `.click()` 是會動的。於是這一段仍然綠,
@@ -838,8 +838,8 @@ function pinsOf(k) { return pins()[k]; }
     /* **這一條是上面那句身分宣告的憑證。** 只看 cloud-msg 的話,我只是在讀一段
        我自己也可以寫錯的文案;`add-stop-btn` 被收起來是 `renderEditAbility()`
        對 `editable()` 的反應,那才是真的在問「這個 session 能不能編輯」。 */
-    ok("而且 editable() 真的是 false(加行程的按鈕被收起來了)",
-      q("#add-stop-btn").hidden === true, q("#add-stop-btn").outerHTML.slice(0, 100));
+    ok("而且 editable() 真的是 false(行程頁的＋被收起來了)",
+      !fabAt("plan"), q("#add-fab").outerHTML.slice(0, 100));
 
     /* ---- 不可編輯的時候,收的是對話框那一層,不是裡面那張卡 ----
        **這一條是被一個線上才會發生的 bug 逼出來的,而且它在這支探針裡躲了四輪。**
@@ -1007,7 +1007,7 @@ function pinsOf(k) { return pins()[k]; }
        現在那張卡對他不出現了(Lulu 的決定):他只有許願這一條路,
        就直接把 AI 讀出來的東西倒進既有的「＋許願」對話框。
        **那幾條不是壞了,是那個畫面沒了** —— 換成問這條路該成立的事。 */
-    q("#ai-btn").click();
+    addAI();
     await until(function () { return q("#ai-overlay").hidden === false; });
     ok("問法也跟著換:只問他唯一能做的那件事",
       /想去哪/.test(q("#ai-ask-label").textContent || ""), q("#ai-ask-label").textContent);
@@ -1031,7 +1031,7 @@ function pinsOf(k) { return pins()[k]; }
     await until(function () { return q("#wish-add-overlay").hidden === true; });
     ok("那個許願框按取消關得掉", q("#wish-add-overlay").hidden === true, q("#wish-add-overlay").hidden);
     await sleep(80);
-    q("#ai-btn").click();
+    addAI();
     await until(function () { return q("#ai-overlay").hidden === false; });
     /* ---- 這個對話框只有「取消」關得掉 ----
        **裡面裝著拿不回來的東西**:上傳的那張照片,和 AI 讀出來的結果。
@@ -1090,7 +1090,7 @@ function pinsOf(k) { return pins()[k]; }
     /* **要按那顆按鈕,不要直接叫函式。** `openWishAdd()` 在頁面的 IIFE 裡,
        探針根本拿不到;而且真人就是按那一顆。 */
     function whoNames() {
-      q("#add-wish-btn").click();
+      addBy("wish");
       return whoNamesQuiet().map(function (o) { return o.textContent; });
     }
     /* 第 2 期起沒有「內建的五個人」這條退路了 —— 名單只從伺服器來。

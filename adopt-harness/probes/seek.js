@@ -86,7 +86,7 @@ var SIX = [0, 1, 2, 3, 4, 5].map(function (i) {
     });
 
     // 2 ---- 打關鍵字 → 候選清單 ----
-    d.getElementById("add-stop-btn").click();
+    addBy("stop");
     await until(function () { return !q("#stop-form").hidden; });
     asked.length = 0; reply = THREE;
     d.getElementById("sf-title").value = "teamLab";
@@ -231,7 +231,7 @@ var SIX = [0, 1, 2, 3, 4, 5].map(function (i) {
 
     var n0 = stops().length;
     asked.length = 0; reply = THREE;
-    if (q("#stop-form").hidden) d.getElementById("add-stop-btn").click();
+    if (q("#stop-form").hidden) addBy("stop");
     await until(function () { return !q("#stop-form").hidden; });
     d.getElementById("sf-time").value = "10:00";
     d.getElementById("sf-title").value = "teamLab";
@@ -256,7 +256,7 @@ var SIX = [0, 1, 2, 3, 4, 5].map(function (i) {
     // 沒挑的:place 必須是空的
     var n1 = stops().length;
     asked.length = 0;
-    d.getElementById("add-stop-btn").click();
+    addBy("stop");
     await until(function () { return !q("#stop-form").hidden; });
     d.getElementById("sf-time").value = "11:00";
     d.getElementById("sf-title").value = "泡溫泉";

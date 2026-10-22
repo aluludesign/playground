@@ -34,7 +34,7 @@ return (async function () {
   var ok = (n, c, g) => { if (!c) bad.push(n + " ← " + JSON.stringify(g)); };
   var A = await file("a.jpg", 2400, 1800, "#fff"), B = await file("b.jpg", 1800, 2400, "#eee"), C = await file("c.jpg", 2000, 1500, "#ddd"), D = await file("d.jpg", 800, 600, "#ccc");
 
-  q("#ai-btn").click(); await wait(120);
+  addAI(); await wait(120);
   ok("選圖那一格可以一次選好幾張(multiple)、按鈕先講「最多 3 張」", q("#ai-file").multiple && /最多 3 張/.test(txt("#ai-pick")), txt("#ai-pick"));
   await give([A, B]);
   out.兩張 = { 縮圖: thumbs(), 說: txt("#ai-img-name") };
@@ -102,7 +102,7 @@ return (async function () {
   }
 
   /* AI 沒講來自哪幾張(舊的回法):掛全部 */
-  q("#ai-btn").click(); await wait(120);
+  addAI(); await wait(120);
   ok("重新打開 AI:上一次的照片清掉了", thumbs() === 0 && txt("#ai-img-name") === "", thumbs());
   await give([A, C]);
   var ex1 = calls(/resource=expenses/, "POST").length;
@@ -115,7 +115,7 @@ return (async function () {
 
   /* 收據＋高鐵票一起丟(2026-10-12,Lulu:「AI 只讀了車票」):交通 1 段 + 花費 2 筆(票價、收據)= 一批 3 張;
      交通和票價掛圖 2(車票),收據只掛圖 1 */
-  q("#ai-btn").click(); await wait(120);
+  addAI(); await wait(120);
   await give([A, B]);
   var up2 = w.__photoUploads || 0, fl2 = calls(/resource=flights/, "POST").length, ex2 = calls(/resource=expenses/, "POST").length;
   var TLEG = { kind: "火車", no: "125", company: "台灣高鐵", from: "南港", to: "左營", depart: "2026-10-06T11:20", arrive: "2026-10-06T13:05", code: "", dir: "其他", match: "", note: "", seats: [], photos: [2] };
@@ -137,7 +137,7 @@ return (async function () {
   ok("照片各掛各的:交通和票價掛車票那張、收據掛收據那張", tkt && rcp && tkt !== rcp && me[0].body.photos.join() === tkt && me[1].body.photos.length === 1, out.混合存了);
 
   /* Klook＋收據＋車票(2026-10-12,Lulu:「行程/許願那張不見」):伺服器把許願補進 parts 之後,App 開 4 張:交通、許願、花費 ×2,一起存 */
-  q("#ai-btn").click(); await wait(120);
+  addAI(); await wait(120);
   await give([A, B, C]);
   var fl3 = calls(/resource=flights/, "POST").length, ex3 = calls(/resource=expenses/, "POST").length, wi3 = (w.__rows.wishes || []).length;
   next = Object.assign({}, base, { intent: "wish", title: "北海道一日遊", items: [Object.assign({}, base, { title: "北海道一日遊", note: "Klook NT$1,590", photos: [1] })],
