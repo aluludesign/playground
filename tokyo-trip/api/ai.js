@@ -165,7 +165,7 @@ function kindRule(ctx) {
   const k = ctx.kind, zh = KIND_ZH[k];
   if (!ctx.also) return ["**使用者已經選好要加的類型:" + zh + "(intent = " + k + ")**。" +
     "intent 一定填 " + k + ",只照這一類讀(其他類的資料不要);parts 一律空陣列。同一類有好幾筆照樣全部列出來。", ""];
-  return ["**使用者已經選好要加的類型:" + zh + "(intent = " + k + "),並勾了「一起記帳」**。intent 一定填 " + k + ";" +
+  return ["**使用者已經選好要加的類型:" + zh + "(intent = " + k + "),並勾了「順便記帳」**。intent 一定填 " + k + ";" +
     "只讀這兩類:" + zh + "那份照常,票價、門票或訂位的金額另外一份 expense(每張票、每筆金額各一筆)。" +
     "兩份都要列在 parts(" + k + " 那份也要列進去)。看不到金額就只回 " + k + ",parts 空陣列。", ""];
 }

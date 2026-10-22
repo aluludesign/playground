@@ -289,7 +289,7 @@ function ok(name, cond, extra) {
     parts: [{ intent: "transport", legs: [LEG1], items: [] }, { intent: "expense", legs: [], items: [EXP1] }, { intent: "wish", legs: [], items: [{ title: "淺草寺" }] }] })));
   const ka = r.res.body.result;
   ok("交通＋記帳:parts 只有交通和花費(許願丟掉),交通在前", ka.intent === "transport" && ka.parts.map(p => p.intent).join() === "transport,expense", ka.parts.map(p => p.intent));
-  ok("給模型的話:勾了一起記帳、兩份都列在 parts", /勾了「一起記帳」/.test(JSON.stringify(sent(r.seen))), "");
+  ok("給模型的話:勾了順便記帳、兩份都列在 parts", /勾了「順便記帳」/.test(JSON.stringify(sent(r.seen))), "");
   /* 模型把花費放最外層、parts 只有交通:花費要補回來,最外層換成交通 */
   r = await call({ text: "x", kind: "transport", also: "expense", context: CTX }, () => okJson(JSON.stringify({ intent: "expense", legs: [LEG1], items: [EXP1], message: "",
     parts: [{ intent: "transport", legs: [LEG1], items: [] }] })));

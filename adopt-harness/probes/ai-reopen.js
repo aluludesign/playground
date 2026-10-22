@@ -28,7 +28,7 @@ return (async function () {
   addAI(); await wait(100); q("#ai-text").value = "想去淺草寺"; q("#ai-form").requestSubmit(); await wait(400);
   var save = ["#ai-confirm", "#wish-form"].map(s => q(s)).find(f => f && !f.hidden && !f.closest("[hidden]"));
   if (save) { save.requestSubmit(); await wait(600); }
-  /* 存完會跳到許願頁;＋預設選那一頁那一類(許願沒有「一起記帳」那一行,卡片本來就矮一點)—— 回同一頁再比 */
+  /* 存完會跳到許願頁;＋預設選那一頁那一類(許願沒有「順便記帳」那一行,卡片本來就矮一點)—— 回同一頁再比 */
   q("#tab-plan").click(); await wait(80);
   addAI(); await wait(120);
   out.存完再開 = box("#ai-form");

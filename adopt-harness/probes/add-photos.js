@@ -2,7 +2,7 @@
  *   WIDTH=390 PAGE='/index.html?touch=1' ./probe.sh probes/add-photos.js     (也跑 1440)
  * 看:
  *   - 第一次 AI 說明勾「不再顯示」→ 記在這台
- *   - 送給 AI 的帶 kind(選的那一類)、勾了一起記帳帶 also=expense;回來交通＋花費 → 一批兩張卡
+ *   - 送給 AI 的帶 kind(選的那一類)、勾了順便記帳帶 also=expense;回來交通＋花費 → 一批兩張卡
  *   - AI 出錯 → 自動切成手動、講一聲;按下一步打開那一類的表單,AI 框裡放的照片一起帶過去
  *   - 四種手動表單都能放圖:存的時候先上傳,行程/許願帶 pics(「附圖」欄)、交通/花費帶 photos(「照片」欄);清單上那一列出現小縮圖
  *   - 改既有的那一筆不出現放圖 */
@@ -49,9 +49,9 @@ return (async function () {
   out.記住了 = (function () { try { return w.localStorage.getItem("trippps-ai-intro-off"); } catch (_) { return "讀不到"; } })();
   ok("第一次跳說明;勾「不再顯示」按知道了 → 記在這台、說明關掉、游標回打字框", out.說明 && out.記住了 === "1" && !shown(q("#ai-intro-overlay")) && d.activeElement === q("#ai-text"), out);
 
-  /* 2. 選交通＋一起記帳 → 送 kind、also;回交通＋花費 → 一批兩張 */
+  /* 2. 選交通＋順便記帳 → 送 kind、also;回交通＋花費 → 一批兩張 */
   var tr = q('[data-add-kind="transport"] input'); tr.checked = true; tr.dispatchEvent(new Event("change", { bubbles: true })); await wait(30);
-  out.一起記帳出現 = shown(q("#add-also-f"));
+  out.順便記帳出現 = shown(q("#add-also-f"));
   q("#add-also").checked = true;
   q("#ai-text").value = "高鐵票";
   next = { status: 200, body: { result: { intent: "transport", legs: [{ kind: "火車", no: "125", company: "台灣高鐵", depart: "2026-10-05T11:20", from: "南港", to: "左營", arrive: "", seats: [], photos: [] }], items: [], message: "",
@@ -61,18 +61,18 @@ return (async function () {
   await until(() => shown(q("#flight-overlay")));
   out.送出 = { kind: (sent[0] || {}).kind, also: (sent[0] || {}).also };
   out.一批 = qa("#flight-form .batch-tabs label").map(l => l.textContent.trim());
-  ok("選交通、勾一起記帳 → 送 kind=transport、also=expense", out.一起記帳出現 && out.送出.kind === "transport" && out.送出.also === "expense", out.送出);
+  ok("選交通、勾順便記帳 → 送 kind=transport、also=expense", out.順便記帳出現 && out.送出.kind === "transport" && out.送出.also === "expense", out.送出);
   ok("回來交通＋花費 → 一批兩張(交通、花費)", out.一批.length === 2 && /交通/.test(out.一批[0]) && /花費/.test(out.一批[1]), out.一批);
   q("#fl-cancel").click(); await wait(80);
 
   /* 3. 許願不能附帶記帳:選許願就沒有那個勾,送的 also 是空的 */
   q("#add-fab").click(); await wait(80);
   var wi = q('[data-add-kind="wish"] input'); wi.checked = true; wi.dispatchEvent(new Event("change", { bubbles: true })); await wait(30);
-  out.許願的一起記帳 = shown(q("#add-also-f"));
+  out.許願的順便記帳 = shown(q("#add-also-f"));
   q("#ai-text").value = "淺草寺"; next = null;
   q("#ai-form").requestSubmit(); await wait(400);
   out.許願送出 = { kind: (sent[1] || {}).kind, also: (sent[1] || {}).also };
-  ok("選許願:沒有「一起記帳」、送 kind=wish、also 空的", !out.許願的一起記帳 && out.許願送出.kind === "wish" && !out.許願送出.also, out.許願送出);
+  ok("選許願:沒有「順便記帳」、送 kind=wish、also 空的", !out.許願的順便記帳 && out.許願送出.kind === "wish" && !out.許願送出.also, out.許願送出);
   qa("#ai-cancel2, #wf-cancel").forEach(b => { if (shown(b)) b.click(); }); await wait(80);
   if (shown(q("#ai-overlay"))) q("#ai-cancel").click();
 

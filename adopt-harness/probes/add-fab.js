@@ -2,7 +2,7 @@
  *   團主:            WIDTH=390 ./probe.sh probes/add-fab.js            (也跑 1440)
  *   一般成員:        PAGE='/index.html?fake=member' WIDTH=390 ./probe.sh probes/add-fab.js
  *   只勾記帳的副團主:PAGE='/index.html?fake=member&can=cost' WIDTH=390 ./probe.sh probes/add-fab.js
- * 看:哪幾頁有＋、樣子照搬以前的 ✨ AI、預設選這一頁那一類、只列有權限的、一起記帳只在行程/交通、
+ * 看:哪幾頁有＋、樣子照搬以前的 ✨ AI、預設選這一頁那一類、只列有權限的、順便記帳只在行程/交通、
  *     手動那邊寫「不用 AI 次數」、第一次的 AI 說明(不再顯示)、最後一列的 ✎ ✕ 捲得出來不被＋蓋住。 */
 var q = s => d.querySelector(s), qa = s => Array.prototype.slice.call(d.querySelectorAll(s));
 var wait = ms => new Promise(r => w.setTimeout(r, ms));
@@ -52,7 +52,7 @@ return (async function () {
     q("#add-fab").click(); await wait(120);
     var intro = shown(q("#ai-intro-overlay"));
     if (intro) { out.第一次說明 = txt("#ai-intro-overlay"); q("#ai-intro-ok").click(); await wait(50); }
-    out.對話框[t] = { 類型: kindsNow().join(","), 選好: picked(), 一起記帳: shown(q("#add-also-f")), 模式: q('[data-add-mode][aria-pressed="true"]').dataset.addMode,
+    out.對話框[t] = { 類型: kindsNow().join(","), 選好: picked(), 順便記帳: shown(q("#add-also-f")), 模式: q('[data-add-mode][aria-pressed="true"]').dataset.addMode,
       手動那顆: txt('[data-add-mode="hand"]'), 第一次說明: intro };
     q("#ai-cancel").click(); await wait(50);
   }
@@ -61,7 +61,7 @@ return (async function () {
     var o = out.對話框[t];
     ok(t + ":預設選好這一頁那一類、用 AI、手動那顆寫「不用 AI 次數」", o.選好 === tabKind[t] && o.模式 === "ai" && /不用 AI 次數/.test(o.手動那顆), o);
     var mayCost = !member || /cost/.test(can);
-    ok(t + ":「一起記帳」只在行程、交通,而且要能記帳", o.一起記帳 === ((t === "plan" || t === "fly") && mayCost), o);
+    ok(t + ":「順便記帳」只在行程、交通,而且要能記帳", o.順便記帳 === ((t === "plan" || t === "fly") && mayCost), o);
   });
   if (!member) ok("團主:四種都能選", (out.對話框.plan || {}).類型 === "許願,行程,交通,記帳", out.對話框.plan);
   if (member && !can) ok("一般成員:只能許願 → 不用選(整排不出現)", (out.對話框.wish || {}).類型 === "(不用選)", out.對話框.wish);
@@ -70,12 +70,12 @@ return (async function () {
   var first = Object.keys(out.對話框)[0], introN = Object.keys(out.對話框).filter(t => out.對話框[t].第一次說明).length;
   ok("第一次按＋才跳 AI 說明,之後這次不再跳", out.對話框[first].第一次說明 && introN === 1, { 跳了幾次: introN });
   ok("說明講:有次數限制、一次可以好幾筆、用完還能手動加、有「不再顯示」", /次數限制/.test(out.第一次說明) && /好幾筆/.test(out.第一次說明) && /手動加/.test(out.第一次說明) && /不再顯示/.test(out.第一次說明), out.第一次說明);
-  /* 切到手動:AI 那一塊收起來、一起記帳收起來、按鈕變「下一步:手動填」;切回來還在 */
+  /* 切到手動:AI 那一塊收起來、順便記帳收起來、按鈕變「下一步:手動填」;切回來還在 */
   var t0 = member && !can ? "wish" : "plan";
   fabOn(t0); q("#add-fab").click(); await wait(80);
   q('[data-add-mode="hand"]').click(); await wait(40);
-  out.手動 = { AI那塊: shown(q("#ai-part")), 額度那行: shown(q("#ai-quota")), 一起記帳: shown(q("#add-also-f")), 按鈕: txt("#ai-go"), 說: txt("#add-hand-say") };
-  ok("切成手動:AI 那塊收起來、按鈕「下一步:手動填」、講不用 AI 次數", !out.手動.AI那塊 && !out.手動.一起記帳 && /手動填/.test(out.手動.按鈕) && /不用 AI 次數/.test(out.手動.說), out.手動);
+  out.手動 = { AI那塊: shown(q("#ai-part")), 額度那行: shown(q("#ai-quota")), 順便記帳: shown(q("#add-also-f")), 按鈕: txt("#ai-go"), 說: txt("#add-hand-say") };
+  ok("切成手動:AI 那塊收起來、按鈕「下一步:手動填」、講不用 AI 次數", !out.手動.AI那塊 && !out.手動.順便記帳 && /手動填/.test(out.手動.按鈕) && /不用 AI 次數/.test(out.手動.說), out.手動);
   q('[data-add-mode="ai"]').click(); await wait(40);
   ok("切回 AI:打字框回來、按鈕「交給 AI」", shown(q("#ai-text")) && txt("#ai-go") === "交給 AI", txt("#ai-go"));
   q("#ai-cancel").click(); await wait(50);
