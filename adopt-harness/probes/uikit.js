@@ -36,25 +36,27 @@ return (async function () {
   var ok = (n, c, g) => { if (!c) bad.push(n + " ← " + JSON.stringify(g)); };
   q("#add-stop-btn").click(); await wait(80);
   q("#sf-title").value = "一蘭";
-  var b = q('[data-seek="sf-title"]');
-  for (var k = 0; k < 2; k++) { b.click(); await wait(1400); }
-  var arm = q('[data-arm="sf-title"]');
+  /* 2026-10-29 起:對話框的「搜尋」打開全螢幕地圖搜尋,之後在那裡的搜尋框按;Google 清單出現在那裡的卡片區 */
+  q('[data-seek="sf-title"]').click(); await wait(1400);
+  var b = q('[data-seek="ss-q"]');
+  b.click(); await wait(1400);
+  var arm = q('[data-arm="ss-q"]');
   var stQ = /strong=(\d+)\//.exec(w.location.search);
-  if (stQ && +stQ[1] > 0) ok("強力搜的提示句旁邊寫今天還能用幾次", /今天還能用 \d+ 次/.test(txt("#sf-title-out")), txt("#sf-title-out"));
-  if (!/strong=0\//.test(w.location.search)) ok("兩次沒挑到 → 出現強力搜", !!arm, txt("#sf-title-out"));
+  if (stQ && +stQ[1] > 0) ok("強力搜的提示句旁邊寫今天還能用幾次", /今天還能用 \d+ 次/.test(txt("#ss-q-out")), txt("#ss-q-out"));
+  if (!/strong=0\//.test(w.location.search)) ok("兩次沒挑到 → 出現強力搜", !!arm, txt("#ss-q-out"));
   if (arm) arm.click(); await wait(50);
   b.click(); await wait(400);
   if (stQ && +stQ[1] === 0) {
-    out.用完 = { 提示: txt("#sf-title-out"), 清單: !!q("#stop-form gmp-place-search") };
-    ok("強力搜用完(strong=0/8):不給強力搜那顆、講幾點重算", !arm && /強力搜用完了/.test(txt("#sf-title-out")) && !/免費/.test(txt("#sf-title-out")), out.用完);
+    out.用完 = { 提示: txt("#ss-q-out"), 清單: !!q("#ss-q-out gmp-place-search") };
+    ok("強力搜用完(strong=0/8):不給強力搜那顆、講幾點重算", !arm && /強力搜用完了/.test(txt("#ss-q-out")) && !/免費/.test(txt("#ss-q-out")), out.用完);
     out.結論 = bad.length ? "✗ " + bad.join(" ;; ") : "全部通過"; out.errors = w.__errors || []; return out;
   }
   if (noUI) {
     out.呼叫 = calls().filter(c => /mapskey|places/.test(c));
     ok("沒有 UI Kit(金鑰拿不到):不再走舊的強力搜,講「清單載入出現錯誤」", out.呼叫.some(c => /mapskey/.test(c)) && !out.呼叫.some(c => /^GET places/.test(c)) &&
-      !q("#stop-form gmp-place-search") && /清單載入出現錯誤/.test(txt("#sf-title-out")) && !/免費/.test(txt("#sf-title-out")), { 呼叫: out.呼叫, 說: txt("#sf-title-out") });
+      !q("#ss-q-out gmp-place-search") && /清單載入出現錯誤/.test(txt("#ss-q-out")) && !/免費/.test(txt("#ss-q-out")), { 呼叫: out.呼叫, 說: txt("#ss-q-out") });
   } else {
-    var ps = q("#stop-form gmp-place-search");
+    var ps = q("#ss-q-out gmp-place-search");
     if (stQ) {
       var used = (w.__calls || []).filter(c => /\/api\/ai\?strong=1/.test(c.url) && c.method === "POST").length;
       ok("清單出來之前先跟伺服器記一次強力搜", used === 1, used);
@@ -62,7 +64,7 @@ return (async function () {
     if (/gmperror=1/.test(w.location.search)) {
       ps.dispatchEvent(new w.Event("gmp-error")); ps.dispatchEvent(new w.Event("gmp-error")); await wait(200);
       var refunds = (w.__calls || []).filter(c => /refund=1/.test(c.url));
-      out.出錯 = { 說: txt("#sf-title-out"), 退了幾次: refunds.length, 收據: refunds[0] && refunds[0].body.ticket };
+      out.出錯 = { 說: txt("#ss-q-out"), 退了幾次: refunds.length, 收據: refunds[0] && refunds[0].body.ticket };
       q("#menu-btn").click(); await wait(80); out.出錯.選單 = txt("#menu-ai"); q("#menu-btn").click();
       ok("清單出錯 → 講清單載入出現錯誤、退回那一次(錯兩次也只退一次)、選單回到 5／8",
         /清單載入出現錯誤/.test(out.出錯.說) && refunds.length === 1 && out.出錯.收據 === "t4" && /強力搜:還能用 5／8 次/.test(out.出錯.選單), out.出錯);
@@ -71,16 +73,17 @@ return (async function () {
     out.清單 = !!ps; out.查的字 = w.__uikitQuery; out.偏重 = w.__uikitBias;
     ok("強力搜 → Google 的清單出現,查的是輸入框的字、偏重這一團的城市", out.清單 && out.查的字 === "一蘭" && out.偏重 && out.偏重.center && Math.abs(out.偏重.center.lat - 35.68) < 0.1 && out.偏重.radius === 50000, out);
     ok("沒有打舊的強力搜(places)", !calls().some(c => /^GET places/.test(c)), calls());
-    out.照片 = !!q("#stop-form gmp-place-search gmp-place-media");
+    ok("Google 的結果不標在地圖上(Google 條款),一般搜留下的點也收掉", !q("#ss-map .pin"), q("#ss-map").querySelectorAll(".pin").length);
+    out.照片 = !!q("#ss-q-out gmp-place-search gmp-place-media");
     ok("清單內容有照片那一項(gmp-place-all-content 不帶照片)", out.照片, "");
     var ev = new w.Event("gmp-select"); ev.place = PLACE; ps.dispatchEvent(ev); await wait(150);
     var want = failName ? "一蘭" : "一蘭 新宿中央東口店";
-    out.挑了 = { 輸入框: q("#sf-title").value, 狀態: txt("#sf-title-out") };
+    out.挑了 = { 輸入框: q("#sf-title").value, 狀態: txt("#sf-title-out"), 回到對話框: q("#seek-screen").hidden };
     var pin = JSON.parse(w.localStorage.getItem("tokyo5-pin3") || "{}")[want] || {};
     out.記下 = { la: pin.la, pid: pin.pid, 有日期: !!pin.t, src: pin.src };
-    if (failName) ok("問不到名字:用打的字當名字,座標和編號照樣記下、已標定", out.挑了.輸入框 === "一蘭" && /已標定/.test(out.挑了.狀態) &&
+    if (failName) ok("問不到名字:用打的字當名字,座標和編號照樣記下、已標定", out.挑了.輸入框 === "一蘭" && /已標定/.test(out.挑了.狀態) && out.挑了.回到對話框 &&
       pin.la === 35.6905 && pin.pid === "ChIJ_fake_ichiran", out);
-    else ok("挑了一家:名字(問 Google 拿到的)填進去、狀態講已標定+地址;手機記座標、編號、日期", out.挑了.輸入框 === "一蘭 新宿中央東口店" && /已標定/.test(out.挑了.狀態) && /新宿區/.test(out.挑了.狀態) &&
+    else ok("挑了一家:名字(問 Google 拿到的)填進去、狀態講已標定+地址;手機記座標、編號、日期", out.挑了.輸入框 === "一蘭 新宿中央東口店" && /已標定/.test(out.挑了.狀態) && out.挑了.回到對話框 && /新宿區/.test(out.挑了.狀態) &&
       pin.la === 35.6905 && pin.pid === "ChIJ_fake_ichiran" && !!pin.t && pin.src === "google", out);
 
     q("#sf-time").value = "12:00";

@@ -16,6 +16,9 @@ async function until(fn, tries) {
   for (var i = 0; i < (tries || 160); i++) { if (fn()) return true; await sleep(50); }
   return false;
 }
+/* 2026-10-29 起候選在全螢幕地圖搜尋的卡片區(#ss-q-out);點卡片只是選起來,「選這個」才帶回去 */
+function hits() { return d.querySelectorAll('[data-hit="ss-q"]'); }
+function pick(i) { var h = hits()[i]; h.click(); h.parentNode.querySelector(".htake").click(); }
 function pins() { return JSON.parse(w.localStorage.getItem("tokyo5-pin3") || "{}"); }
 
 var realFetch = w.fetch.bind(w);
@@ -93,13 +96,13 @@ var SIX = [0, 1, 2, 3, 4, 5].map(function (i) {
     q('[data-seek="sf-title"]').click();
     ok("按了搜尋 → 真的發出查詢", await until(function () { return asked.length > 0; }), asked);
     ok("列出全部三筆候選(不是自己挑一筆)",
-      await until(function () { return d.querySelectorAll('[data-hit="sf-title"]').length === 3; }),
-      d.querySelectorAll('[data-hit="sf-title"]').length);
+      await until(function () { return hits().length === 3; }),
+      hits().length);
     /* ---- 候選最多露四則半,其餘用捲的;那句提示在捲動區外面 ----
        **半則是刻意的**:露一半的那則就是在說「底下還有」。
        而提示不跟著捲 —— 它的用途是「這些都不是的時候下一步做什麼」,
        跟著捲出去的話,要看到它得先捲到底,那時候他已經放棄了。 */
-    var first = q('[data-hit="sf-title"]');
+    var first = hits()[0];
     /* **這條原本寫 `querySelector("span")`,而那是位置式的選擇器。**
        加了縮圖之後這一列有三個 span(縮圖、包文字的那層、地址),第一個是空的縮圖,
        於是斷言紅了 —— 而紅的原因跟「有沒有給地址」一點關係都沒有。
@@ -126,27 +129,27 @@ var SIX = [0, 1, 2, 3, 4, 5].map(function (i) {
     ok("三筆候選的縮圖各自指到不同的地方(不是同一張圖配同一個點)",
       (function () {
         var seen = {};
-        [].forEach.call(d.querySelectorAll('[data-hit="sf-title"] .ph img'),
+        [].forEach.call(d.querySelectorAll('[data-hit="ss-q"] .ph img'),
           function (im) { seen[im.getAttribute("src")] = 1; });
         return Object.keys(seen).length >= 2;
       })(),
-      [].map.call(d.querySelectorAll('[data-hit="sf-title"] .ph img'),
+      [].map.call(d.querySelectorAll('[data-hit="ss-q"] .ph img'),
         function (im) { return im.getAttribute("src"); }));
     /* **2026-10-02 起先鎖這一團的城市**(Lulu:盡量鎖在選的地區):第一次查帶 bounded=1、框是城市周圍約 50 公里;
        有結果就不再放寬。放寬那條(一筆都沒有)在 escalate.js 量 —— 那裡的樁一律回空的。 */
-    ok("先在這一團的城市周圍找(bounded=1,框約 1 度寬),有結果就不放寬", asked.length === 1 && /bounded=1/.test(asked[0]) &&
-      /viewbox=139\.\d+,3[56]\.\d+,140\.\d+,35\.\d+/.test(asked[0]), asked);
-    ok("但 viewbox 留著當加權", /viewbox=/.test(asked.join(" ")), asked);
-    ok("而且帶了國家代碼", /countrycodes=jp/.test(asked.join(" ")), asked);
+    /* **2026-10-29 起先搜地圖畫面範圍**(全螢幕地圖搜尋):bounded=1、viewbox 是畫面那一塊;有結果就不放寬。
+       「搜整個城市」那條(城市框、國家代碼)在 map-search.js 量 */
+    ok("只搜地圖畫面那一塊(bounded=1、帶 viewbox),有結果就不放寬", asked.length === 1 && /bounded=1/.test(asked[0]) &&
+      /viewbox=1[34]\d\.\d+,3\d\.\d+,1[34]\d\.\d+,3\d\.\d+/.test(asked[0]), asked);
 
     /* ---- 六筆的時候:露出下一張的邊,其餘用捲的 ---- */
     asked.length = 0; reply = SIX;
     d.getElementById("sf-title").value = "teamLab";
     q('[data-seek="sf-title"]').click();
-    await until(function () { return d.querySelectorAll('[data-hit="sf-title"]').length === 6; });
+    await until(function () { return hits().length === 6; });
     await sleep(120);
-    var wrap = q("#sf-title-out .hits") || q(".seek-out .hits");
-    ok("候選裝在一個自己會捲的容器裡", !!wrap, q(".seek-out").innerHTML.slice(0, 120));
+    var wrap = q("#ss-q-out .hits");
+    ok("候選裝在一個自己會捲的容器裡", !!wrap, q("#ss-q-out").innerHTML.slice(0, 120));
     /* **2026-10-29 起是橫向卡片**(Lulu:跟強力搜的清單一樣):以前的「露四則半」換成「露出下一張的邊」,
        同一件事 —— 露一截就是在說「右邊還有」。卡片的細節在 osm-cards.js 量。 */
     var cs = wrap.querySelectorAll(".hcard"), wr = wrap.getBoundingClientRect(), c1 = cs[1] && cs[1].getBoundingClientRect();
@@ -154,7 +157,7 @@ var SIX = [0, 1, 2, 3, 4, 5].map(function (i) {
       !!c1 && c1.left < wr.right - 20, { 清單右緣: Math.round(wr.right), 第二張左緣: c1 && Math.round(c1.left) });
     ok("而且真的捲得動(六張裝不下)", wrap.scrollWidth > wrap.clientWidth + 4,
       { 內容: wrap.scrollWidth, 看得到: wrap.clientWidth });
-    var hintEl = q(".seek-out .hint");
+    var hintEl = q("#ss-q-out .hint");
     ok("那句提示排在候選後面", !!hintEl &&
       hintEl.getBoundingClientRect().top >= wrap.getBoundingClientRect().bottom - 1,
       hintEl && { 提示上緣: Math.round(hintEl.getBoundingClientRect().top),
@@ -167,12 +170,11 @@ var SIX = [0, 1, 2, 3, 4, 5].map(function (i) {
     asked.length = 0; reply = THREE;
     d.getElementById("sf-title").value = "teamLab";
     q('[data-seek="sf-title"]').click();
-    await until(function () { return d.querySelectorAll('[data-hit="sf-title"]').length === 3; });
+    await until(function () { return hits().length === 3; });
     await sleep(80);
 
     // 3 ---- 選一個 ----
-    var second = d.querySelectorAll('[data-hit="sf-title"]')[1];   /* 麻布台那間 */
-    second.click();
+    pick(1);   /* 麻布台那間 */
     await sleep(60);
     ok("選了之後那一欄換成挑到的名字",
       d.getElementById("sf-title").value === "teamLab Borderless Museum",
@@ -189,10 +191,10 @@ var SIX = [0, 1, 2, 3, 4, 5].map(function (i) {
     d.getElementById("sf-title").value = "泡溫泉";
     q('[data-seek="sf-title"]').click();
     ok("查無 → 說找不到,而且給下一步怎麼辦",
-      await until(function () { return /找不到/.test(d.getElementById("sf-title-out").textContent); }),
-      d.getElementById("sf-title-out").textContent);
+      await until(function () { return /找不到/.test(d.getElementById("ss-q-out").textContent); }),
+      d.getElementById("ss-q-out").textContent);
     ok("查無 → 一筆候選都不畫(不要退而求其次給一個)",
-      d.querySelectorAll('[data-hit="sf-title"]').length === 0, null);
+      hits().length === 0, null);
     ok("查無 → 那一欄維持使用者打的字,沒有被動過",
       d.getElementById("sf-title").value === "泡溫泉", d.getElementById("sf-title").value);
 
@@ -236,8 +238,8 @@ var SIX = [0, 1, 2, 3, 4, 5].map(function (i) {
     d.getElementById("sf-time").value = "10:00";
     d.getElementById("sf-title").value = "teamLab";
     q('[data-seek="sf-title"]').click();
-    await until(function () { return d.querySelectorAll('[data-hit="sf-title"]').length === 3; });
-    d.querySelectorAll('[data-hit="sf-title"]')[1].click();
+    await until(function () { return hits().length === 3; });
+    pick(1);
     await sleep(60);
     ok("挑完之後狀態列說「已標定」,而且印的是地址(他剛從三間裡挑了一間)",
       /已標定/.test(d.getElementById("sf-title-out").textContent) &&
@@ -405,9 +407,9 @@ var SIX = [0, 1, 2, 3, 4, 5].map(function (i) {
     q("#we-title").value = "teamLab";
     q('[data-seek="we-title"]').click();
     ok("編輯框裡的搜尋鈕真的會查",
-      await until(function () { return d.querySelectorAll('[data-hit="we-title"]').length === 3; }),
-      d.querySelectorAll('[data-hit="we-title"]').length);
-    d.querySelectorAll('[data-hit="we-title"]')[1].click();
+      await until(function () { return hits().length === 3; }),
+      hits().length);
+    pick(1);
     await sleep(50);
     ok("挑完之後那一欄換成挑到的名字",
       q("#we-title").value === "teamLab Borderless Museum", q("#we-title").value);

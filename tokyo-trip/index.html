@@ -1025,6 +1025,47 @@
       border-radius:var(--ds-sys-radius-full); background:var(--surface); color:var(--ink); font-size:22px; line-height:1;
       box-shadow:0 1px 3px rgba(0,0,0,.25); cursor:pointer;}
     .seek-out .hnext[hidden]{display:none;}
+    /* 卡片左上角的編號,跟地圖上那顆點同一個數字、同一個樣子 */
+    .seek-out .hit .hn{position:absolute; left:8px; top:8px; z-index:1; min-width:22px; height:22px; padding:0 6px; border-radius:11px;
+      border:1.5px solid #fff; background:var(--color-accent); color:var(--color-accent-ink); box-shadow:0 1px 4px rgba(0,0,0,.35);
+      font-family:var(--font-mono); font-size:11px; font-style:normal; font-weight:700; line-height:19px; text-align:center;}
+    .seek-out .hit{position:relative;}
+    .seek-out .hops{display:flex; align-items:center; gap:8px; margin:2px 10px 10px;}
+    .seek-out .hops .hmap{margin:0;}
+    /* 選起來的那張:外框亮起來,「選這個」才出現 */
+    .seek-out .hcard.on{border-color:var(--color-accent); box-shadow:inset 0 0 0 1px var(--color-accent);}
+    .seek-out .hcard:not(.on) .htake{display:none;}
+
+    /* ---- 全螢幕地圖搜尋(2026-10-29)----
+       地圖撐滿整個畫面,搜尋框疊在上面、卡片疊在下面。「畫面內」= 地圖扣掉這兩塊(見 ssView())。
+       z 75:蓋過對話框(60)和地圖 sheet(70),在選單(80)和提示(100)底下 */
+    #seek-screen{position:fixed; inset:0; z-index:75; background:var(--surface-2);}
+    #seek-screen[hidden]{display:none;}
+    #seek-screen #ss-map{position:absolute; inset:0; height:auto; min-height:0; border:0; border-radius:0;}
+    .ss-bar{position:absolute; left:0; right:0; top:0; z-index:6; display:flex; align-items:center; gap:8px;
+      padding:calc(env(safe-area-inset-top, 0px) + 10px) 12px 10px; background:var(--surface); box-shadow:0 1px 6px rgba(0,0,0,.18);}
+    .ss-bar .seek{flex:1; min-width:0; max-width:640px;}
+    .ss-bar .ss-x{flex:none; width:40px; height:40px; padding:0; border:0; border-radius:var(--ds-sys-radius-full);
+      background:none; color:var(--ink); font-size:20px; line-height:1; cursor:pointer;}
+    .ss-bar .ss-x:hover,.ss-bar .ss-x:focus-visible{background:var(--surface-2);}
+    .ss-bar.nudge{animation:ov-nudge .3s;}
+    /* 縮放鈕和 OSM 標示不能被搜尋框蓋住(標示是 OSM 的使用規定) */
+    #seek-screen .map .mapzoom{top:calc(var(--ss-top, 60px) + 8px);}
+    #seek-screen .ss-all{position:absolute; left:12px; top:calc(var(--ss-top, 60px) + 10px); z-index:5; box-shadow:0 1px 4px rgba(0,0,0,.2);}
+    #seek-screen .ss-all[aria-pressed="true"]::before{background:var(--ds-sys-color-on-secondary-container); border-color:var(--ds-sys-color-surf-container-lowest);}
+    #seek-screen .map .attr{top:var(--ss-top, 60px); bottom:auto; border-radius:0 0 0 4px;}
+    #ss-q-out{position:absolute; left:0; right:0; bottom:0; z-index:6; margin:0; border:0; border-radius:16px 16px 0 0;
+      max-height:62%; overflow-y:auto; overscroll-behavior:contain; padding-bottom:env(safe-area-inset-bottom, 0px);
+      box-shadow:0 -1px 8px rgba(0,0,0,.18);}
+    #ss-q-out .ss-city{margin-left:8px;}
+    /* 搜到的點:全部標出來、編號跟卡片一樣。名字只在選起來的那顆旁邊出現,四十個名字擠在一起什麼都看不到 */
+    #ss-map .pin{background:var(--color-accent); color:var(--color-accent-ink);}
+    /* 已排行程的點(「全部已排」開著):顏色是那一天的(inline),小一點、在搜到的點底下 */
+    #ss-map .pin.plan{z-index:1; transform:translate(-50%,-50%) scale(.85);}
+    #ss-map .pin.plan.on{z-index:5; transform:translate(-50%,-50%) scale(1.1);}
+    #ss-map .pin .lab{display:none;}
+    #ss-map .pin.on{z-index:5; transform:translate(-50%,-50%) scale(1.25);}
+    #ss-map .pin.on .lab{display:block;}
     .wiki-ph{display:flex; margin-top:6px;}
     #ph-credit{font-size:12px; color:#fff; opacity:.85;}   /* 跟 .ph-n 一樣:深色底上用白字 */
     .wish .wiki-ph{grid-column:1/2;}
@@ -1882,6 +1923,22 @@
     <a id="ph-credit" target="_blank" rel="noopener" hidden>照片:維基共享資源</a>
     <button type="button" class="btn btn-main btn-sm" id="ph-close">關閉</button>
   </div>
+</div>
+
+<!-- 全螢幕地圖搜尋(2026-10-29,Lulu):在對話框的地點欄按「搜尋」就進來。畫面只剩上面的搜尋框(右邊 ✕)、
+     撐滿的地圖、下面一排橫滑卡片;原本的對話框留在底下沒動,已填的內容都在。
+     點地圖上的點或卡片 = 選起來;卡片上的「選這個」才帶回對話框。✕ = 不選地點,打的字留在地點欄。
+     關法照對話框的規則(DIALOG_CANCEL):沒改過 Esc 就關,改過只能按 ✕ 或「選這個」。 -->
+<div id="seek-screen" role="dialog" aria-modal="true" aria-label="搜尋地點" hidden>
+  <div class="map" id="ss-map"></div>
+  <form class="ss-bar" id="ss-bar">
+    <div class="seek"><input class="rm-input" type="search" id="ss-q" enterkeyhint="search" aria-label="搜尋地點">
+    <button type="button" class="btn btn-sm" data-seek="ss-q">搜尋</button></div>
+    <button type="button" class="ss-x" id="ss-x" aria-label="不選地點,回去">✕</button>
+  </form>
+  <!-- 跟主地圖那顆「全部已排」同一個樣子;開了把六天已排的點畫在搜到的點底下 -->
+  <button type="button" class="rm-chip rm-chip--selectable lay ss-all" id="ss-all" aria-pressed="false">全部已排</button>
+  <div class="seek-out" id="ss-q-out" hidden></div>
 </div>
 
 <!-- 從相簿一次選超過 3 張(2026-10-12,Lulu):系統的相簿畫面網頁限制不了張數,所以回到 App 再挑。
@@ -4470,6 +4527,221 @@
       "&q=" + encodeURIComponent(q)).then(r => r.json()).catch(() => null));
   }
 
+  /* ---- 全螢幕地圖搜尋(2026-10-29,Lulu)----
+     地點欄按「搜尋」→ 這個畫面:搜尋框、撐滿的地圖、下面一排卡片。結果全部標在地圖上,點和卡片同一個編號。
+     - 點地圖上的點或點卡片 = **選起來**(兩邊一起亮);卡片上的「選這個」才帶回對話框。
+     - 只搜**畫面裡看得到的那一塊**(viewbox＋bounded=1)。拖動或縮放之後,卡片只列畫面裡的(只在搜到的裡面篩,不重搜),
+       搜尋鈕變「重新搜這個範圍」,按了才重搜 —— **地圖一動就搜不行**:Nominatim 的條款不准自動、連續地查。
+     - 畫面裡 0 筆 →「這個範圍找不到」＋「搜整個城市」,讓人自己按。
+     - ✕ = 不選地點,打的字留在地點欄(「泡溫泉」這種沒有固定地點的,就用這個名字)。
+     - 強力搜照舊:Google 的清單出現在卡片那一區,**不在地圖上標點**(Google 的條款)。
+     搜尋的那幾個狀態(段數、強力搜上膛)跟著搜尋框走:進來時從地點欄那一格帶過來,✕ 回去時帶回去。 */
+  const SS = "ss-q";
+  let ssFor = null, ssSel = -1, ssMoved = false;
+  const ssMap = () => el("ss-map");
+  /* 地圖被蓋住的上下兩塊:上面是搜尋框,下面是卡片。`reserve`:搜尋的時候卡片可能還沒出來,先照卡片會佔的高度扣 */
+  let ssCardsH = 0;
+  function ssCover(reserve) {
+    const m = ssMap().getBoundingClientRect(), bar = el("ss-bar").getBoundingClientRect(), out = seekBox(SS);
+    const top = Math.max(0, bar.bottom - m.top);
+    let bot = out && !out.hidden ? Math.max(0, m.bottom - out.getBoundingClientRect().top) : 0;
+    if (reserve) bot = Math.max(bot, Math.min(ssCardsH || 300, m.height * 0.55));
+    return { top: top, bot: bot };
+  }
+  const unX = (x, z) => x / Math.pow(2, z) * 360 - 180;
+  const unY = (y, z) => Math.atan(Math.sinh(Math.PI * (1 - 2 * y / Math.pow(2, z)))) * 180 / Math.PI;
+  /* 畫面裡看得到的那一塊(經緯度):左、上、右、下 */
+  function ssBBox() {
+    const box = ssMap(), v = box._v, w = box.clientWidth, h = box.clientHeight, c = ssCover(true);
+    if (!v) return cityView();
+    const x0 = v.cx - w / 2 / TILE, x1 = v.cx + w / 2 / TILE;
+    const y0 = v.cy + (c.top - h / 2) / TILE, y1 = v.cy + (h / 2 - c.bot) / TILE;
+    return [unX(x0, v.z), unY(y0, v.z), unX(x1, v.z), unY(y1, v.z)].map(x => x.toFixed(5)).join(",");
+  }
+  function seekView(q, view) {
+    return queued(() => fetch("https://nominatim.openstreetmap.org/search?format=json" +
+      "&limit=40&extratags=1&accept-language=zh-TW&bounded=1&viewbox=" + view +
+      "&q=" + encodeURIComponent(q)).then(r => r.json()).catch(() => null));
+  }
+  /* 把一塊經緯度範圍放進畫面看得到的那一塊(扣掉搜尋框和卡片)。塞得下的最大縮放;`zMax`:只有一個點時不要貼到街區 */
+  function ssFit(box, lons, lats, zMax, reserve) {
+    const w = box.clientWidth, h = box.clientHeight, c = ssCover(reserve), vh = h - c.top - c.bot;
+    let z = zMax;
+    for (; z > Z_MIN; z--) {
+      const xs = lons.map(lo => projX(lo, z)), ys = lats.map(la => projY(la, z));
+      if ((Math.max.apply(null, xs) - Math.min.apply(null, xs)) * TILE <= w - 40 &&
+          (Math.max.apply(null, ys) - Math.min.apply(null, ys)) * TILE <= vh - 40) break;
+    }
+    const xs = lons.map(lo => projX(lo, z)), ys = lats.map(la => projY(la, z));
+    /* 看得到的那一塊的中心在元素中心往下 (top - bot)/2 的地方 */
+    box._v = { z: z, cx: (Math.max.apply(null, xs) + Math.min.apply(null, xs)) / 2,
+               cy: (Math.max.apply(null, ys) + Math.min.apply(null, ys)) / 2 - (c.top - c.bot) / 2 / TILE };
+  }
+  /* 一進來的畫面:**主畫面那張地圖剛剛看著的地方** —— 同一個中心(看得到的那一塊的中心)、同一個縮放。
+     不是「把那一塊整個塞進來」:兩個畫面形狀不一樣(桌機寬很多、手機下面有卡片),硬塞會一路縮遠,搜的範圍就大了好幾倍。
+     主地圖沒有畫面(新團沒點、交通/花費頁、手機清單拉滿)→ 這一團的城市 */
+  function ssStartView(box) {
+    const m = el("map"), v = m && m._v;
+    const cov = m ? mapCoveredBottom(m) : 0;
+    if (v && m.clientWidth > 50 && m.clientHeight - cov > 120) {
+      const c = ssCover(true);
+      box._v = { z: v.z, cx: v.cx, cy: v.cy - cov / 2 / TILE - (c.top - c.bot) / 2 / TILE };
+      return;
+    }
+    const cv = cityView().split(",").map(Number);
+    ssFit(box, [cv[0], cv[2]], [cv[1], cv[3]], Z_MAX, true);
+  }
+
+  function openSeekScreen(id) {
+    const input = el(id), q = input ? input.value.trim() : "";
+    if (!q) { seekSay(id, "先打幾個字,再按搜尋。"); return; }
+    /* 同一欄已經在搜(畫面開著)就接著算段數;換一欄才從那一欄帶過來 */
+    const again = ssFor === id && !el("seek-screen").hidden;
+    ssFor = id; ssSel = -1; ssMoved = false;
+    if (!again) { seekTries[SS] = seekTries[id] || 0; seekArmed[SS] = !!seekArmed[id]; seekUsedStrong[SS] = !!seekUsedStrong[id]; }
+    el(SS).value = q;
+    seekClear(SS);
+    const scr = el("seek-screen");
+    scr.hidden = false;
+    scr.style.setProperty("--ss-top", el("ss-bar").offsetHeight + "px");
+    const box = ssMap();
+    box._hitPts = []; box._focus = null;
+    ssPaintPts(box);
+    /* 搜到的點:選起來。已排行程的點:只是把名字亮出來看是哪一個,不能選(要的是新地點) */
+    box._onPin = k => { if (k[0] === "h") ssSelect(+k.slice(1), true); else { box._focus = k; paintMap(box); } };
+    box._onMove = ssUserMoved;
+    ssStartView(box);
+    paintMap(box);
+    initMapGestures(box);
+    paintSeekBtn(SS);
+    runSeek(SS);
+  }
+  /* `taken`:剛剛選了一個(「選這個」或 Google 清單)—— 地點欄已經填好,不用把搜尋框的字帶回去 */
+  function closeSeekScreen(taken) {
+    const id = ssFor;
+    if (id && !taken && el(id)) {
+      const typed = el(SS).value.trim();
+      if (typed) el(id).value = typed;
+      seekTries[id] = seekTries[SS] || 0; seekArmed[id] = !!seekArmed[SS]; seekUsedStrong[id] = !!seekUsedStrong[SS];
+      paintSeekBtn(id);
+      seekMark(id, el(id).value.trim());
+    }
+    ssFor = null; ssSel = -1;
+    el("seek-screen").hidden = true;
+    const out = seekBox(SS);
+    out._hits = null; out._show = null; out.innerHTML = ""; out.hidden = true;
+    /* 地圖也清空:藏起來的點留著的話,下次進來會先閃一下上一輪的結果 */
+    const box = ssMap();
+    box._pts = []; box._hitPts = []; box._focus = null; box.innerHTML = "";
+  }
+
+  /* ---- 「全部已排」(2026-10-29,Lulu:搜尋地圖畫面也可以打開看全部已排行程的點)----
+     跟主地圖那顆同名同樣子;預設關著,開了記在這台手機。點的顏色和編號照主地圖「全部已排」:那一天的顏色、第幾天。
+     **只畫已經有座標的**,不為了這一層去查 Nominatim(搜尋那邊要用那一秒一次的額度)。
+     畫在搜到的點底下,而且不算「畫面裡的結果」—— 卡片只列搜到的。 */
+  let ssAll = false;
+  try { ssAll = localStorage.getItem("tokyo5-ss-all") === "1"; } catch (_) {}
+  function ssPlanPts() {
+    const out = [];
+    DAYS.forEach(d => dayList(d.date).forEach((x, i) => {
+      const at = pinOf(x);
+      if (!inJapan(at)) return;
+      out.push({ k: "p" + d.date + "-" + i, n: d.n, cls: "plan", color: d.color, on: d.on, la: at.la, lo: at.lo,
+        place: x.place || x.title, title: x.title, tip: "DAY " + d.n + " " + (x.time || "") + " " + x.title });
+    }));
+    return out;
+  }
+  function ssPaintPts(box) {
+    box._pts = (ssAll ? ssPlanPts() : []).concat(box._hitPts || []);
+    if (box._focus && !box._pts.some(p => p.k === box._focus)) box._focus = ssSel >= 0 ? "h" + ssSel : null;
+    el("ss-all").setAttribute("aria-pressed", String(ssAll));
+  }
+  el("ss-all").addEventListener("click", () => {
+    ssAll = !ssAll;
+    try { localStorage.setItem("tokyo5-ss-all", ssAll ? "1" : "0"); } catch (_) {}
+    const box = ssMap();
+    ssPaintPts(box);
+    paintMap(box);
+  });
+
+  /* 搜到一批:全部標在地圖上。`fit`:「搜整個城市」的結果不一定在畫面裡,把畫面拉到框得住全部 */
+  function ssShow(res, fit) {
+    const box = ssMap();
+    ssSel = -1;
+    box._focus = null;
+    const hp = box._hitPts = res.map((r, i) => ({ k: "h" + i, n: i + 1, la: +r.lat, lo: +r.lon, title: hitName(r), place: hitName(r), tip: hitName(r) }))
+      .filter(p => isFinite(p.la) && isFinite(p.lo));
+    const out = seekBox(SS);
+    if (out && out.querySelector(".hcard")) ssCardsH = out.offsetHeight;
+    if (fit && hp.length) ssFit(box, hp.map(p => p.lo), hp.map(p => p.la), hp.length > 1 ? 16 : 15);
+    ssPaintPts(box);
+    paintMap(box);
+  }
+  /* 這一筆現在在畫面裡看得到嗎(扣掉搜尋框和卡片) */
+  function ssInView(r) {
+    const box = ssMap(), v = box._v;
+    if (!v) return true;
+    const w = box.clientWidth, h = box.clientHeight, c = ssCover(false);
+    const x = w / 2 + (projX(+r.lon, v.z) - v.cx) * TILE, y = h / 2 + (projY(+r.lat, v.z) - v.cy) * TILE;
+    return x >= 0 && x <= w && y >= c.top && y <= h - c.bot;
+  }
+  /* 卡片只列畫面裡的。**只在搜到的裡面篩**,不重搜 */
+  function ssFilter() {
+    const out = seekBox(SS), list = out && out.querySelector(".hits");
+    if (!list || !out._hits) return;
+    const show = out._hits.map((r, i) => i).filter(i => ssInView(out._hits[i]));
+    const was = out._show || out._hits.map((r, i) => i);
+    if (show.join() === was.join()) return;
+    out._show = show;
+    list.innerHTML = "";
+    list.scrollLeft = 0;
+    let none = out.querySelector(".ss-none");
+    if (!none) { none = document.createElement("div"); none.className = "said ss-none"; list.parentNode.insertBefore(none, list); }
+    none.textContent = "畫面裡沒有搜到的地點 —— 拖回去看看,或按上面的「重新搜這個範圍」。";
+    none.hidden = show.length > 0;
+    if (out._more) out._more();
+  }
+  function ssUserMoved() {
+    ssMoved = true;
+    paintSeekBtn(SS);
+    ssFilter();
+  }
+  /* 選起來:點和卡片一起亮。從點來的 → 清單捲到那張;從卡片來的 → 地圖移到那個點(縮放不動) */
+  function ssSelect(i, fromPin) {
+    const out = seekBox(SS), box = ssMap(), r = out && out._hits && out._hits[i];
+    if (!r) return;
+    ssSel = i;
+    box._focus = "h" + i;
+    /* 選起來也算改過(對話框的關閉規則):Esc 不會把它丟掉 */
+    el("seek-screen").dataset.picked = "1";
+    if (fromPin && out._show && out._show.indexOf(i) < 0) { out._show = null; ssFilter(); }
+    let card = out.querySelector('[data-hit="' + SS + '"][data-i="' + i + '"]');
+    const list = out.querySelector(".hits");
+    /* 那張還沒排出來(分批載入):一批一批接上去,直到它出現 */
+    for (let n = 0; !card && list && n < 10; n++) {
+      const before = list.children.length;
+      const show = out._show || out._hits.map((x, k) => k);
+      list.insertAdjacentHTML("beforeend", show.slice(before, before + HIT_PAGE).map(k => hitHTML(SS, out._hits[k], k)).join(""));
+      if (list.children.length === before) break;
+      card = out.querySelector('[data-hit="' + SS + '"][data-i="' + i + '"]');
+    }
+    [].forEach.call(out.querySelectorAll(".hcard"), c => c.classList.toggle("on", c.querySelector("[data-i]").getAttribute("data-i") === String(i)));
+    if (fromPin) {
+      if (card && list) list.scrollTo({ left: list.scrollLeft + card.getBoundingClientRect().left - list.getBoundingClientRect().left - 10, behavior: "smooth" });
+    } else if (box._v) {
+      const c = ssCover(false);
+      box._v.cx = projX(+r.lon, box._v.z);
+      box._v.cy = projY(+r.lat, box._v.z) - (c.top - c.bot) / 2 / TILE;
+    }
+    paintMap(box);
+  }
+  function ssTake(i) {
+    const id = ssFor, out = seekBox(SS);
+    if (!id || !out || !out._hits || !out._hits[i]) return;
+    takeHit(id, i, out);
+    closeSeekScreen(true);
+  }
+
   /* display_name 是「名字, 街, 區, 市, 縣, 郵遞區號, 國家」。第一截當名字,其餘當地址 ——
      兩個都要給:光看名字分不出兩間同名的鬼太郎茶屋,那正是要人挑的理由。 */
   const hitName = r => String(r.display_name || "").split(",")[0].trim();
@@ -4616,7 +4888,8 @@
     const b = seekBtn(id);
     if (!b) return;
     const strong = !!seekArmed[id] && !onSnapshot();
-    b.textContent = strong ? "強力搜" : "搜尋";
+    /* 全螢幕搜尋裡拖過或縮放過地圖:按下去是照新的畫面重搜,所以字要講出來 */
+    b.textContent = strong ? "強力搜" : id === SS && ssMoved ? "重新搜這個範圍" : "搜尋";
     b.classList.toggle("seek-strong", strong);
     /* **輸入框跟著換。** 只換按鈕的話,上膛這件事發生在畫面右下角一顆小東西上,
        而使用者的眼睛在輸入框裡。同一個地方畫,退場才不會漏掉一半。 */
@@ -4634,7 +4907,8 @@
     paintSeekBtn(id);
   }
 
-  async function runSeek(id) {
+  /* `how === "city"`:全螢幕搜尋裡按了「搜整個城市」—— 不用畫面範圍,照以前那樣先城市、再放寬 */
+  async function runSeek(id, how) {
     const input = el(id);
     const q = input ? input.value.trim() : "";
     if (!q) { seekSay(id, "先打幾個字,再按搜尋。"); return; }
@@ -4651,6 +4925,7 @@
     seekLast[id] = q;
     const strong = !!seekArmed[id] && !onSnapshot();
     seekTries[id] = (seekTries[id] || 0) + 1;
+    if (id === SS) ssMoved = false;   /* 這一次就是照現在的畫面搜的,按鈕回到「搜尋」 */
     /* **段數一加就重畫按鈕,不等查詢回來。** 等回來才畫的話,使用者按下去
        之後要盯著一顆沒反應的按鈕等一秒多,而他會再按一次。 */
     paintSeekBtn(id);
@@ -4677,7 +4952,8 @@
     }
     let res;
     try {
-      res = await seekPlace(q);
+      /* 全螢幕搜尋:只搜地圖畫面裡看得到的那一塊(Nominatim 的 viewbox＋bounded=1) */
+      res = id === SS && how !== "city" ? await seekView(q, ssBBox()) : await seekPlace(q);
     } finally {
       if (b0) b0.disabled = false;
     }
@@ -4723,7 +4999,11 @@
          於是那顆「好」沒被畫出來 —— 而「查無」正是最需要它的時刻。
          同一句話有兩個產生它的地方,就會有一個先過期。 */
       const nb = seekBox(id);
-      nb.innerHTML = '<div class="said hint">' + esc("「" + q + "」找不到。") + "</div>" + hintHTML(id);
+      /* 畫面範圍裡 0 筆:講一聲,旁邊一顆「搜整個城市」讓人自己按 —— **不自動往外找**(2026-10-29,取代 10-02 的自動往外) */
+      const inView = id === SS && how !== "city";
+      if (id === SS) ssShow([], false);
+      nb.innerHTML = '<div class="said hint">' + esc(inView ? "這個範圍找不到「" + q + "」。" : "「" + q + "」找不到。") +
+        (inView ? '<button type="button" class="btn btn-sm ss-city" data-city="1">搜整個城市</button>' : "") + "</div>" + hintHTML(id);
       nb.hidden = false;
       return;
     }
@@ -4751,7 +5031,9 @@
       seekTail(id);
     box.hidden = false;
     box._hits = res;
+    box._show = null;
     moreHitsOnScroll(box, id);
+    if (id === SS) ssShow(res, how === "city");
     box._wiki = wikiForHits(res).then(() => {
       if (box._hits !== res) return;   /* 已經換了一批 */
       return cardWiki(box, id, res);
@@ -4848,14 +5130,16 @@
   };
   const hitHTML = (id, r, i) => {
     const name = hitName(r), cat = hitCat(r), hrs = hitHours(r);
-    return '<div class="hcard"><button type="button" class="hit" data-hit="' + id + '" data-i="' + i + '">' +
+    return '<div class="hcard' + (id === SS && i === ssSel ? " on" : "") + '"><button type="button" class="hit" data-hit="' + id + '" data-i="' + i + '">' +
       '<span class="ph">' + (r._wiki ? cardShot(r) : cardMap(r)) + "</span>" +
+      '<i class="hn">' + (i + 1) + "</i>" +
       '<span class="cred"' + (r._cred ? "" : " hidden") + ">" + esc(r._cred || "") + "</span>" +
       '<span class="txt"><b>' + esc(name) + "</b>" +
       (cat ? '<span class="cat">' + esc(cat) + "</span>" : "") +
       '<span class="at">' + esc(hitAddr(r)) + "</span>" +
       (hrs ? '<span class="hrs">營業時間 ' + esc(hrs) + "</span>" : "") + "</span></button>" +
-      '<a class="hmap" href="' + esc(gmap(name, { la: +r.lat, lo: +r.lon })) + '" target="_blank" rel="noopener">地圖 ↗</a></div>';
+      '<div class="hops"><button type="button" class="btn btn-main btn-sm htake" data-take="' + i + '">選這個</button>' +
+      '<a class="hmap" href="' + esc(gmap(name, { la: +r.lat, lo: +r.lon })) + '" target="_blank" rel="noopener">地圖 ↗</a></div></div>';
   };
   /* 維基照片拿到了:把那張卡的地圖小圖換成照片,再去 Commons 問作者和授權(使用規定要標) */
   function cardWiki(box, id, res) {
@@ -4889,15 +5173,17 @@
   function moreHitsOnScroll(box, id) {
     const list = box.querySelector(".hits"), next = box.querySelector(".hnext");
     if (!list) return;
+    /* `box._show`:全螢幕搜尋時只列畫面裡看得到的那幾筆(第幾筆的編號照舊,跟地圖上的點對得起來);沒有就是全部 */
     const more = () => {
-      const all = box._hits || [], shown = list.querySelectorAll(".hit").length;
+      const all = box._hits || [], show = box._show || all.map((_, k) => k), shown = list.querySelectorAll(".hit").length;
       const nearEnd = list.scrollLeft + list.clientWidth >= list.scrollWidth - 2 * CARD_W;
-      if (nearEnd && shown < all.length) {
-        list.insertAdjacentHTML("beforeend", all.slice(shown, shown + HIT_PAGE).map((r, k) => hitHTML(id, r, shown + k)).join(""));
+      if (nearEnd && shown < show.length) {
+        list.insertAdjacentHTML("beforeend", show.slice(shown, shown + HIT_PAGE).map(k => hitHTML(id, all[k], k)).join(""));
       }
       /* 已經是最後一張就收起「›」 */
-      if (next) next.hidden = list.scrollLeft + list.clientWidth >= list.scrollWidth - 4 && list.querySelectorAll(".hit").length >= all.length;
+      if (next) next.hidden = list.scrollLeft + list.clientWidth >= list.scrollWidth - 4 && list.querySelectorAll(".hit").length >= show.length;
     };
+    box._more = more;
     list.addEventListener("scroll", more, { passive: true });
     more();
   }
@@ -4962,6 +5248,8 @@
   function showUIKit(id, q, ticket) {
     seekReset(id); seekUsedStrong[id] = true;   /* 跟舊的強力搜一樣:只給用一次,跑完退回一般搜 */
     const box = seekBox(id);
+    /* 全螢幕搜尋:Google 的結果**不標在地圖上**(Google 的條款不准畫在別家的地圖上),一般搜留下的點也收掉,免得對不上 */
+    if (id === SS) { box._hits = null; ssShow([], false); }
     /* **橫的排法才有照片**(2026-10-02 用真的金鑰量過:直的清單不放照片,Google 自己的範例也一樣)。
        一家一張卡,照片在上,左右滑。內容:照片、評分、價位、營業中 */
     box.innerHTML = '<div class="uikit"><gmp-place-search selectable orientation="horizontal">' +
@@ -4987,7 +5275,8 @@
      店名和地址用編號再問一次 Google(fetchFields);問不到(金鑰沒開 Places API (New)、網路斷)
      就先用使用者打的字當名字 —— 座標照樣記下,地圖上的點是對的。 */
   async function takeGooglePlace(id, place, typed) {
-    const input = el(id);
+    /* 全螢幕搜尋的清單:名字填回原本那一欄,然後回到對話框 */
+    const to = id === SS ? ssFor : id, input = el(to);
     if (!place || !input) return;
     const loc = place.location;
     const la = loc && (typeof loc.lat === "function" ? loc.lat() : loc.lat), lo = loc && (typeof loc.lng === "function" ? loc.lng() : loc.lng);
@@ -5009,7 +5298,8 @@
     /* 維基照片:名字＋座標比對(100 公尺內)。問到之前存的話就沒有照片 —— 通常不到一秒 */
     wikiNear(name, +la, +lo).then(u => { if (u && pins[name] && pins[name].pid === (place.id || "")) { pins[name].photo = u; savePins(); } }).catch(() => {});
     seekReset(id);
-    seekMark(id, name);
+    if (to !== id) { seekReset(to); closeSeekScreen(true); }
+    seekMark(to, name);
   }
   /* 這個地點是從 Google 清單挑的嗎 → 它的地點編號(存進 Notion 用) */
   const pidOf = place => (place && pins[place] && pins[place].pid) || "";
@@ -5027,12 +5317,15 @@
   /* 選了一個:地點欄換成那個名字,座標**同時**寫進快取,所以這一筆從此不會再被查。
      `by:"pick"` 是「這是人親手選的」—— 開場那段跟人工表對帳的程式碼會跳過它,
      不然使用者選的座標會被那張表蓋掉(表的 key 是子字串,「箱根湯本站」會中)。 */
-  function takeHit(id, i) {
-    const box = seekBox(id), r = box && box._hits && box._hits[i];
+  /* `from`:候選在哪一格(全螢幕搜尋的卡片區);沒給就是這一欄自己底下那格 */
+  function takeHit(id, i, from) {
+    const box = from || seekBox(id), r = box && box._hits && box._hits[i];
     const input = el(id);
     if (!r || !input) return;
     const name = hitName(r);
     input.value = name;
+    /* 挑了就算「改過」(對話框的關閉規則):點外面不會把挑好的丟掉 */
+    const ov = input.closest(".overlay"); if (ov) ov.dataset.picked = "1";
     /* `at` 是地址那一行,狀態列要印它 —— **「已標定」光講名字不夠**:
        使用者剛剛才從三間同名的裡面挑了一間,他要看到的是自己挑的是哪一間。 */
     pins[name] = { la: +r.lat, lo: +r.lon, by: "pick", at: hitAddr(r), photo: r._wiki || "" };
@@ -5088,7 +5381,16 @@
       return;
     }
     const go = ev.target.closest && ev.target.closest("[data-seek]");
-    if (go) { runSeek(go.getAttribute("data-seek")); return; }
+    if (go) {
+      /* 對話框裡的「搜尋」= 進全螢幕搜尋;全螢幕搜尋框旁邊那顆才是真的去查 */
+      const sid = go.getAttribute("data-seek");
+      if (sid === SS) runSeek(SS); else openSeekScreen(sid);
+      return;
+    }
+    if (ev.target.closest && ev.target.closest("[data-city]")) { runSeek(SS, "city"); return; }
+    const take = ev.target.closest && ev.target.closest("[data-take]");
+    if (take) { ssTake(+take.getAttribute("data-take")); return; }
+    if (ev.target.closest && ev.target.closest("#ss-x")) { closeSeekScreen(false); return; }
     const nx = ev.target.closest && ev.target.closest("[data-hnext]");
     if (nx) {
       const list = nx.parentNode.querySelector(".hits"), c = list && list.querySelector(".hcard");
@@ -5096,8 +5398,13 @@
       return;
     }
     const hit = ev.target.closest && ev.target.closest("[data-hit]");
-    if (hit) { takeHit(hit.getAttribute("data-hit"), +hit.getAttribute("data-i")); }
+    if (hit) {
+      /* 全螢幕搜尋裡點卡片只是選起來;要帶回去按「選這個」 */
+      const hid = hit.getAttribute("data-hit");
+      if (hid === SS) ssSelect(+hit.getAttribute("data-i"), false); else takeHit(hid, +hit.getAttribute("data-i"));
+    }
   });
+  el("ss-bar").addEventListener("submit", ev => { ev.preventDefault(); runSeek(SS); });
   /* 卡片照片載不到:維基照片 → 退回地圖小圖;地圖小圖 → 類別圖示 */
   document.addEventListener("error", ev => {
     const img = ev.target, ph = img && img.tagName === "IMG" && img.closest(".hcard .ph");
@@ -5116,7 +5423,7 @@
     const t = ev.target;
     if (!t || !t.id || !/^(sf|wf|se|we|ai)-title$/.test(t.id) || ev.key !== "Enter") return;
     ev.preventDefault();   /* 不要順手送出整張表單 */
-    runSeek(t.id);
+    openSeekScreen(t.id);
   });
 
   /* ---- 再查一次(已退場) ----
@@ -5334,6 +5641,7 @@
     v.cy = (v.cy + oy) * k - oy;
     v.z = z;
     paintMap(box);
+    if (box._onMove) box._onMove();
   }
 
   /* 桌機滑過某一列 → 地圖上對應的那個點跳出來。只換 class,不重畫整張圖 ——
@@ -5492,12 +5800,15 @@
         box._v.cy -= (m.y - from.y) / TILE;
         zoomAt(box, Math.round(Math.log(s) / Math.LN2), m.x, m.y);
         if (Math.round(Math.log(s) / Math.LN2) === 0) paintMap(box);
+        if (box._onMove) box._onMove();
       } else if (mode === "pan") {
         if (moved < 6 && downPin) {
           /* 點在標記上 —— 開 Google 地圖,不要當成要放大 */
           const href = downPin.getAttribute("href");
           lastTap = 0;
-          if (href) openOut(href);
+          /* 全螢幕搜尋的點:點了是選起來,不是開 Google 地圖 */
+          if (box._onPin) box._onPin(downPin.dataset.k);
+          else if (href) openOut(href);
         } else if (moved < 6) {
           /* 幾乎沒動 = 點空白處。連點兩下就放大。 */
           const now = Date.now();
@@ -5507,6 +5818,7 @@
           box._v.cx -= (n.x - from.x) / TILE;
           box._v.cy -= (n.y - from.y) / TILE;
           paintMap(box);
+          if (box._onMove) box._onMove();
         }
       }
       if (!pt.size) { mode = null; downPin = null; }
@@ -7413,7 +7725,7 @@
     stackPaint("ai-confirm", 0, 0);
     /* 有地名就先幫他搜一次:**挑哪一個還是人挑**,這裡只是省他按一下「搜尋」。
        不挑的話照樣存得進去,只是不上地圖 —— 跟手動加同一條規則(locatedAt)。 */
-    if (r.title && el("ai-kind").value !== "transport" && !quietSeek) runSeek("ai-title");
+    if (r.title && el("ai-kind").value !== "transport" && !quietSeek) openSeekScreen("ai-title");
   }
   /* 一批裡的行程/許願:打開確認卡、填這一筆 */
   function openConfirmFor(kind, r) {
@@ -7442,7 +7754,7 @@
     el("wf-skip").hidden = true;
     stackPaint("wish-form", 0, 0);
     /* 有地名就先搜一次 —— **挑哪一個還是人挑**,跟手動加同一條規則。 */
-    if (r.title && !quietSeek) runSeek("wf-title");
+    if (r.title && !quietSeek) openSeekScreen("wf-title");
   }
   /* 記帳:AI 讀到的打開「記一筆」對話框(以前是花費頁上那張內嵌的表;要疊卡片,改成對話框) */
   let expFromAI = false;   /* 這張「記一筆」是 AI 讀出來的(存的時候帶 AI 讀過的照片) */
@@ -9027,6 +9339,8 @@
     "exp-edit-overlay": ["xe-cancel"], "edit-overlay": ["se-cancel"], "stop-add-overlay": ["sf-cancel"],
     "ai-overlay": ["ai-cancel", "ai-cancel2"], "wish-add-overlay": ["wf-cancel"], "wish-edit-overlay": ["we-cancel"],
     "time-overlay": ["tf-cancel"], "fund-top-overlay": ["ft-cancel"], "confirm-overlay": ["cf-cancel"], "photo-overlay": ["ph-close"], "pick-overlay": ["pk-cancel"],
+    /* 全螢幕地圖搜尋:沒有「外面」可以點,只有 Esc。改過 = 搜尋框改了字,或選起了一個地點 */
+    "seek-screen": ["ss-x"],
   };
   const fieldsOf = ov => [].map.call(ov.querySelectorAll("input,select,textarea"),
     f => f.type === "checkbox" || f.type === "radio" ? (f.checked ? "1" : "0") : f.type === "file" ? String(f.files && f.files.length) : f.value).join("\u0001");
@@ -9050,7 +9364,8 @@
       card.classList.remove("nudge"); void card.offsetWidth; card.classList.add("nudge");
       let hint = ov.querySelector(".ov-hint");
       if (!hint) { hint = document.createElement("div"); hint.className = "ov-hint"; hint.setAttribute("role", "status"); ov.appendChild(hint); }
-      hint.textContent = "有改過的內容 —— 按「取消」或「存起來」才會關";
+      hint.textContent = ov.id === "seek-screen" ? "要帶回去按卡片上的「選這個」,不選地點按 ✕"
+        : "有改過的內容 —— 按「取消」或「存起來」才會關";
       hint.hidden = false;
       clearTimeout(hint._t); hint._t = setTimeout(() => { hint.hidden = true; }, 2400);
       return false;

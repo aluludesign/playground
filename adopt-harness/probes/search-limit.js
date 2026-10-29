@@ -9,8 +9,8 @@ return (async function () {
   q("#add-stop-btn").click(); await wait(80);
   q("#sf-title").value = "拉麵"; q('[data-seek="sf-title"]').click(); await wait(1500);
   out.要幾筆 = (/[?&]limit=(\d+)/.exec(asked[0] || "") || [])[1];
-  var n = () => qa('#stop-form [data-hit="sf-title"]').length;
-  var hits = q("#stop-form .hits");
+  var n = () => qa('#ss-q-out [data-hit="ss-q"]').length;
+  var hits = q("#ss-q-out .hits");   /* 2026-10-29 起在全螢幕地圖搜尋的卡片區 */
   out.一開始排幾筆 = n();
   out.捲得動 = !!hits && hits.scrollWidth > hits.clientWidth;   /* 2026-10-29 起是橫向卡片,左右捲 */
   /* 動態載入(2026-10-01,Lulu:每 8 筆一次):捲到底才接下一批 */
@@ -21,7 +21,8 @@ return (async function () {
   if (out.每捲一次.join() !== "16,24,32,40,40,40") bad.push("捲到底接的批次不對 " + out.每捲一次.join());
   if (!out.捲得動) bad.push("清單沒有捲");
   /* 後面才接上來的那幾筆挑得到(序號對得上原本那一份) */
-  qa('#stop-form [data-hit="sf-title"]')[37].click(); await wait(80);
+  var h38 = qa('#ss-q-out [data-hit="ss-q"]')[37]; h38.click(); await wait(40);
+  h38.parentNode.querySelector(".htake").click(); await wait(80);   /* 點卡片只是選起來,「選這個」才帶回去 */
   out.挑第38筆 = q("#sf-title").value;
   if (out.挑第38筆 !== "第38間拉麵") bad.push("挑第 38 筆拿到 " + out.挑第38筆);
   q("#sf-cancel").click();

@@ -9,7 +9,9 @@ var shown = id => !q("#" + id).hidden;
 var backdrop = id => q("#" + id).dispatchEvent(new w.MouseEvent("click", { bubbles: true }));
 var esc = () => d.dispatchEvent(new w.KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
 var type = (id, v) => { var e = q("#" + id); e.value = v; e.dispatchEvent(new w.Event("input", { bubbles: true })); };
-var hintOn = id => { var h = q("#" + id + " .ov-hint"); return !!h && !h.hidden && /取消/.test(h.textContent); };
+var hintOn = (id, re) => { var h = q("#" + id + " .ov-hint"); return !!h && !h.hidden && (re || /取消/).test(h.textContent); };
+/* 全螢幕地圖搜尋那一列會真的按搜尋:Nominatim 換成樁(回空的),不打真的網路 */
+w.fetch = (f => function (u, i) { return /nominatim/.test(String(u)) ? Promise.resolve({ ok: true, json: () => Promise.resolve([]) }) : f(u, i); })(w.fetch);
 var menu = which => { q("#menu-btn").click(); q("#" + which).click(); if (!q("#menu-pop").hidden) q("#menu-btn").click(); };
 var DIALOGS = [
   { name: "團的設定", ov: "settings-overlay", open: () => menu("cloud-set"), field: "st-name", cancel: "st-cancel" },
@@ -21,6 +23,9 @@ var DIALOGS = [
   { name: "AI 幫你加", ov: "ai-overlay", open: () => q("#ai-btn").click(), field: "ai-text", cancel: "ai-cancel" },
   { name: "許一個願望", ov: "wish-add-overlay", open: () => { q("#tab-wish").click(); q("#add-wish-btn").click(); }, field: "wf-title", cancel: "wf-cancel" },
   { name: "改願望", ov: "wish-edit-overlay", open: () => { q("#tab-wish").click(); q("#wishbox").open = true; q("[data-edit-wish=w2]").click(); }, field: "we-title", cancel: "we-cancel" },
+  /* 2026-10-29:全螢幕地圖搜尋。沒有「外面」可點(地圖蓋滿),但規則一樣;改過的提示講「選這個」和 ✕,不是取消 */
+  { name: "全螢幕地圖搜尋", ov: "seek-screen", open: () => { q("#tab-wish").click(); if (q("#wish-add-overlay").hidden) q("#add-wish-btn").click(); q("#wf-title").value = "拉麵"; q('[data-seek="wf-title"]').click(); },
+    field: "ss-q", cancel: "ss-x", hint: /選這個/, after: () => { q("#wf-title").value = ""; q("#wf-cancel").click(); } },
 ];
 async function openTime() {
   var wl = q("#wish-list"), card = wl && wl.querySelector(".wish[data-wish]");
@@ -54,11 +59,12 @@ return (async function () {
       await D.open(); await wait(150);
       if (D.ov === "time-overlay") { var t = q("#tf-time"); t.value = t.value === "07:07" ? "08:08" : "07:07"; t.dispatchEvent(new w.Event("input", { bubbles: true })); }
       else type(D.field, "探針改過的字");
-      backdrop(D.ov); await wait(60); r.改過_點外面後還開著 = shown(D.ov); r.有提示 = hintOn(D.ov);
+      backdrop(D.ov); await wait(60); r.改過_點外面後還開著 = shown(D.ov); r.有提示 = hintOn(D.ov, D.hint);
       esc(); await wait(60); r.改過_Esc後還開著 = shown(D.ov);
       q("#" + D.cancel).click(); await wait(80); r.按取消後關了 = !shown(D.ov);
       ok(D.name + ":改過,點外面和 Esc 都關不掉、有講要按哪裡;取消才關", r.改過_點外面後還開著 && r.有提示 && r.改過_Esc後還開著 && r.按取消後關了, r);
     }
+    if (D.after) { D.after(); await wait(80); }
     out[D.name] = r;
   }
   out.結論 = bad.length ? "✗ " + bad.join(" ;; ") : "全部通過(" + list.length + " 張)";
