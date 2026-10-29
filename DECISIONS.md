@@ -52,6 +52,19 @@ commit 之後回來把 hash 補上。還沒 commit 的先寫 `未進版控`。
 
 # tokyo-trip
 
+## 2026-10-29
+
+### `--ds-*` 跟著 Figma 改名,值先不動 · `未進版控`
+
+- **決定**:Figma 把 Style 從 `ds/sys/shared/*` 搬到 `ds/sys/*`、Comps 改成只指 Style,網站照改:`--ds-sys-shared-*` → `--ds-sys-*`,
+  `chip-height`/`chip-icon` → `chip-md-height`/`chip-md-icon`,Comps 改寫成 `var(--ds-sys-*)`(跟 Figma 一樣三層)。
+  Figma 改了名字、值相同的照新名:on surface → `text-100`、inverse on surface → `text-inverse-100`、outline variant → `outline-200`、
+  custom 1 → `customs-custom-1`。補上 Style 的 radius/border/icon/height 全套,樣式表裡寫死、剛好等值的圓角和框線粗細改用它們。
+- **為什麼**:「方案」轉 Lulu 10-29 的決定;同時要求 Retro 畫面完全不變。前後用 `probes/computed-all.js` 逐元素比 computed style,390/1440 五個分頁零差異。
+- **代價**:Figma Retro 的值跟網站不一樣、或 Figma 沒有這個名字的 11 個,**先維持網站原值**,註解標「待定」等 Lulu 決定:
+  secondary、on secondary container、surface、surf container low/—/high/highest、on surface var、outline、on custom container 1/4。
+  網站只有 Retro,Modern/Airbnb 的改動(focus ring、icon 刻度、底部分頁列)沒有對應的東西可改。
+
 ## 2026-10-19
 
 ### 共同基金改成預收,收款人必填(預設團主),拿掉預算 · `feat/prepaid-fund`
