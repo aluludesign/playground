@@ -982,42 +982,52 @@
     /* 候選清單自己有上限。六筆候選會把「你是誰」和送出鈕推到幾百像素外 ——
        **要挑的東西和要按的東西不該互相擠掉**,清單自己捲就好。 */
     .seek-out{margin-top:6px; border:var(--ds-sys-border-xs) solid var(--line); border-radius:10px; overflow:hidden; background:var(--surface);}
-    /* **捲的是候選那一塊,不是整個框。** 整個框捲的話,排在最後的提示會跟著捲出去,
-       而那句話正是「這些都不是的時候下一步做什麼」—— 它要一直在。
-       高度由 `capHits()` 量完寫上來(四則半),這裡只給捲動的行為。 */
-    .seek-out .hits{overflow-y:auto; overscroll-behavior:contain;}
+    /* **候選是一排橫向卡片**(2026-10-29,Lulu:跟強力搜的 Google 清單長得一樣)。捲的只有卡片那一排(左右滑),
+       提示和退路那兩句在下面、一直看得到。卡片寬 240 是刻意的:手機上看到一張多一點,露出的那一截就是在說「右邊還有」。
+       寬高跟 JS 的 CARD_W / CARD_H 是同一組數字 —— 地圖小圖是照這個窗算位移的,改一邊要一起改。 */
     .overlay .seek-out{max-height:70vh; overflow-y:auto; overscroll-behavior:contain;}
-    .seek-out .hit{display:flex; gap:9px; align-items:center; width:100%; text-align:left; padding:9px 11px; border:0; border-top:var(--ds-sys-border-xs) solid var(--line);
+    .seek-out .hits-wrap{position:relative;}
+    .seek-out .hits{display:flex; gap:8px; padding:10px; overflow-x:auto; overscroll-behavior-x:contain;
+      scroll-snap-type:x mandatory; scroll-padding:10px; scrollbar-width:none;}
+    .seek-out .hits::-webkit-scrollbar{display:none;}
+    .seek-out .hcard{flex:0 0 240px; display:flex; flex-direction:column; scroll-snap-align:start; overflow:hidden;
+      border:var(--ds-sys-border-xs) solid var(--line); border-radius:var(--ds-sys-radius-md); background:var(--surface);}
+    .seek-out .hit{display:flex; flex-direction:column; flex:1; width:100%; padding:0; border:0; text-align:left;
       background:none; font:inherit; color:inherit; cursor:pointer;}
-    .seek-out .hit:first-child{border-top:0;}
     .seek-out .hit:hover,.seek-out .hit:focus-visible{background:var(--accent-soft);}
-    /* **`min-width:0` 不是裝飾。** flex 項目的預設 `min-width:auto` 不讓它縮到
-       內容以下,於是地址那行不會夾、整列被撐開,縮圖被擠掉。 */
-    .seek-out .hit .txt{display:block; flex:1; min-width:0;}
-    .seek-out .hit b{display:block; font-weight:600;}
-    /* 地址那行會很長。夾成兩行,不要讓一筆候選把清單撐到看不完。
-       **這條原本寫成 `.hit span`,而這一輪那樣寫會壞。** 這一列現在有三個 span:
-       縮圖 `.thumb`、包文字的 `.txt`、地址。`.txt` 會一起吃到 `-webkit-box` 和
-       兩行的夾子,名字和地址被當成同一塊夾掉 —— 而那看起來只是「地址少了一行」,
-       不像壞掉。**給地址自己的名字,不要靠它排第幾個。** */
+    /* 上半部:照片 / 地圖小圖 / 類別圖示。固定尺寸 + overflow:hidden 當觀景窗:圖磚是 256px 的,用位移把要看的那一塊挪進來。
+       先給底色,圖還沒到的時候那一格不是白洞,卡片高度也不會跳。 */
+    .seek-out .hit .ph{position:relative; display:block; width:240px; height:128px; overflow:hidden; background:var(--surface-2);}
+    .seek-out .hit .ph img.tile{position:absolute; width:256px; height:256px; max-width:none;}
+    /* 照片跟圖磚不一樣:它**填滿**這一格,不是一張大圖挪進觀景窗。`object-fit:cover` 裁掉邊比拉扁好。 */
+    .seek-out .hit .ph img.shot{position:absolute; inset:0; width:100%; height:100%; object-fit:cover;}
+    /* 那個點畫在它**真正**的位置上。框挪到邊界會被夾住,所以點不一定在正中央 ——
+       寧可偏一點也不要為了置中而指到錯的地方。 */
+    .seek-out .hit .ph .dot{position:absolute; width:10px; height:10px; margin:-6px 0 0 -6px;
+      border:var(--ds-sys-border-md) solid #fff; border-radius:50%; background:var(--color-accent); box-shadow:0 0 0 1px rgba(0,0,0,.25);}
+    .seek-out .hit .ph-icon{display:flex; align-items:center; justify-content:center; width:100%; height:100%; font-size:40px;}
+    /* 維基照片的作者和授權(Commons 的使用規定要標),在照片正下方 */
+    .seek-out .hit .cred{display:block; padding:3px 10px 0; font-size:10.5px; color:var(--muted);
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+    .seek-out .hit .txt{display:flex; flex-direction:column; gap:2px; padding:8px 10px 6px; min-width:0;}
+    .seek-out .hit b{font-weight:600; display:-webkit-box; -webkit-line-clamp:2; line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;}
+    .seek-out .hit .cat{font-size:12px; color:var(--ink-2);}
+    /* 地址那行會很長,夾成兩行。**給地址自己的名字,不要靠它排第幾個**(以前 `.hit span` 把名字和地址一起夾掉過) */
     .seek-out .hit .at{display:-webkit-box; -webkit-line-clamp:2; line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
       font-size:12px; color:var(--muted);}
-    /* 候選左邊那張小圖。**放的是「它在哪」,不是「它長什麼樣」** —— 理由見 hitThumb()。
-       固定尺寸 + overflow:hidden 當觀景窗:圖磚是 256px 的,用位移把要看的那一塊挪進來。
-       先給底色,圖磚還沒到的時候那一格不是白洞,列高也不會跳。 */
-    .seek-out .hit .thumb{position:relative; flex:0 0 auto; width:56px; height:56px; overflow:hidden;
-      border:var(--ds-sys-border-xs) solid var(--line); border-radius:7px; background:var(--surface-2);}
-    .seek-out .hit .thumb img{position:absolute; width:256px; height:256px; max-width:none;}
-    /* 照片跟圖磚不一樣:它**填滿**這一格,不是一張大圖挪進觀景窗。
-       `object-fit:cover` 讓長寬比不同的照片不變形 —— 裁掉邊比拉扁好。 */
+    .seek-out .hit .hrs{font-size:12px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+    /* 「地圖 ↗」在卡片按鈕外面:點它只開地圖,不算選這個地點 */
+    .seek-out .hmap{align-self:flex-start; margin:2px 10px 10px; padding:5px 12px; border:var(--ds-sys-border-xs) solid var(--ds-sys-color-outline-100);
+      border-radius:var(--ds-sys-radius-full); font-size:12.5px; font-weight:600; color:var(--accent); text-decoration:none;}
+    .seek-out .hmap:hover,.seek-out .hmap:focus-visible{background:var(--accent-soft);}
+    /* 往下一張。放在照片那一段的高度,不擋到字 */
+    .seek-out .hnext{position:absolute; right:8px; top:calc(10px + 64px - 18px); width:36px; height:36px; padding:0; border:0;
+      border-radius:var(--ds-sys-radius-full); background:var(--surface); color:var(--ink); font-size:22px; line-height:1;
+      box-shadow:0 1px 3px rgba(0,0,0,.25); cursor:pointer;}
+    .seek-out .hnext[hidden]{display:none;}
     .wiki-ph{display:flex; margin-top:6px;}
     #ph-credit{font-size:12px; color:#fff; opacity:.85;}   /* 跟 .ph-n 一樣:深色底上用白字 */
     .wish .wiki-ph{grid-column:1/2;}
-    .seek-out .hit .thumb img.shot{inset:0; width:100%; height:100%; object-fit:cover;}
-    /* 那個點畫在它**真正**的位置上。框挪到邊界會被夾住,所以點不一定在正中央 ——
-       寧可偏一點也不要為了置中而指到錯的地方。 */
-    .seek-out .hit .thumb .dot{position:absolute; width:7px; height:7px; margin:-4px 0 0 -4px;
-      border:1.5px solid #fff; border-radius:50%; background:var(--color-accent); box-shadow:0 0 0 1px rgba(0,0,0,.25);}
     .seek-out .said{padding:9px 11px; font-size:12.5px; color:var(--muted);}
     /* **句子裡那三個字就是按鈕。** 一句問句要有地方回答,而最省事的那個地方
        就在問句裡面 —— 旁邊再擺一顆「好」,等於要人先讀懂問題再去找答案在哪。
@@ -4487,8 +4497,8 @@
      而讓那個點指到別的地方去。z 是 13(一塊約 4.9 km,窗內約 1 km):再近就每一列
      都長得像「一條街」,再遠就看不出街廓。要調就改這一個常數。
 
-     (2026-10-02 起只有免費那兩段用這個槽;強力搜改成 Google 的 UI Kit 清單,照片是它自己的。) */
-  const THUMB = 56, THUMB_Z = 13;
+     (2026-10-02 起只有免費那兩段用這個槽;強力搜改成 Google 的 UI Kit 清單,照片是它自己的。)
+     (2026-10-29 起候選改成橫向卡片,這張小圖變成卡片上半部、窗大一點,做法見 cardMap()。) */
   /* ---- 維基照片(2026-10-18,Lulu:「維基有搜到就放維基的圖,沒有就保持小地圖;確定列進許願或行程時,有圖就在備註下一排出現」)----
      上面那段 09-22 的結論(不放照片)是「分辨同名的店」那件事;店家幾乎沒有維基照片,所以照樣是小地圖,分得出來。
      有照片的多半是景點,不太會撞名。照片一律是維基共享資源(Commons)上的,可以合法存、照著標「維基共享資源」。
@@ -4535,21 +4545,6 @@
     const tiers = [x => x === n, x => x.includes(n), x => x.length >= 3 && n.includes(x) && x.length / n.length >= 0.7];
     for (const t of tiers) { const c = cands.find(c => c.names.some(t)); if (c) return commonsPage(c.f); }
     return "";
-  }
-  /* 候選那一格:有維基照片就放照片,沒有照舊是小地圖 */
-  const wikiThumb = r => '<span class="thumb"><img class="shot" alt="" loading="lazy" src="' + esc(commonsImg(r._wiki, 112)) + '"></span>';
-  function hitThumb(r) {
-    if (r._wiki) return wikiThumb(r);
-    const la = +r.lat, lo = +r.lon;
-    if (!isFinite(la) || !isFinite(lo)) return "";
-    const fx = projX(lo, THUMB_Z), fy = projY(la, THUMB_Z);
-    const tx = Math.floor(fx), ty = Math.floor(fy);
-    const px = (fx - tx) * TILE, py = (fy - ty) * TILE;
-    const fit = v => Math.max(THUMB - TILE, Math.min(0, v));
-    const ox = fit(Math.round(THUMB / 2 - px)), oy = fit(Math.round(THUMB / 2 - py));
-    return '<span class="thumb"><img alt="" loading="lazy" src="https://tile.openstreetmap.org/' +
-      THUMB_Z + "/" + tx + "/" + ty + '.png" style="left:' + ox + "px; top:" + oy + 'px">' +
-      '<i class="dot" style="left:' + Math.round(px + ox) + "px; top:" + Math.round(py + oy) + 'px"></i></span>';
   }
 
   function seekBox(id) { return el(id + "-out"); }
@@ -4746,7 +4741,8 @@
        所以它同時是「在最後面」和「一直看得到」。
        四則半是刻意的:露一半的那則就是在說「底下還有,可以捲」。
        **退路那句在更下面** —— 它是「都不挑也沒關係」,看完清單之後的事。 */
-    box.innerHTML = '<div class="hits">' + res.slice(0, HIT_PAGE).map((r, i) => hitHTML(id, r, i)).join("") + "</div>" +
+    box.innerHTML = '<div class="hits-wrap"><div class="hits">' + res.slice(0, HIT_PAGE).map((r, i) => hitHTML(id, r, i)).join("") + "</div>" +
+      '<button type="button" class="hnext" data-hnext="' + id + '" aria-label="下一個">›</button></div>' +
       hintHTML(id) +
       /* **只有這一輪真的問了 Google 才標。** Google 的條款要求「在非 Google 地圖上
          顯示他們的 Places 資料要標來源」,而免費那家是 OpenStreetMap ——
@@ -4755,14 +4751,10 @@
       seekTail(id);
     box.hidden = false;
     box._hits = res;
-    capHits(box);
     moreHitsOnScroll(box, id);
     box._wiki = wikiForHits(res).then(() => {
       if (box._hits !== res) return;   /* 已經換了一批 */
-      res.forEach((r, i) => {
-        const t = r._wiki && box.querySelector('[data-hit="' + id + '"][data-i="' + i + '"] .thumb');
-        if (t) t.outerHTML = wikiThumb(r);
-      });
+      return cardWiki(box, id, res);
     });
   }
 
@@ -4770,35 +4762,144 @@
      資料是同一次請求就拿回來的(免費那段最多 40 筆),只是畫面上先排 8 筆,
      捲到底再接下 8 筆 —— 一次排 40 列、40 張小地圖,手機上會頓。 */
   const HIT_PAGE = 8;
-  const hitHTML = (id, r, i) =>
-    '<button type="button" class="hit" data-hit="' + id + '" data-i="' + i + '">' +
-    hitThumb(r) + '<span class="txt"><b>' + esc(hitName(r)) + '</b><span class="at">' +
-    esc(hitAddr(r)) + "</span></span></button>";
+  /* ---- 一般搜的候選 = 橫向卡片(2026-10-29,Lulu:長得跟強力搜的 Google 清單一樣)----
+     左右滑、一次看到一張多一點(露出下一張的邊)、右邊一顆「›」往下一張;上半部照片、下半部資料、最下面「地圖 ↗」。
+     **只放 OSM 有的東西**:名稱、類別、地址、營業時間(有才放)。評分、價位 OSM 沒有,不做假的欄位。
+     照片:維基照片 → 沒有就那個座標的地圖小圖 → 圖磚也載不到就類別圖示。
+     維基要多問兩次(Wikidata、Commons 的作者),**不等它**:先畫地圖小圖,照片拿到再換上。
+     點卡片 = 選這個地點(跟以前點清單那一列一樣);「地圖 ↗」在卡片按鈕外面,點了只開地圖、不算選。 */
+  const CARD_W = 240, CARD_H = 128, CARD_Z = 15;
+  /* 類別:OSM 的 class/type(加上料理、宗教)轉中文。對不到的就不放這一行 —— 不要用「地點」這種沒說的字填 */
+  const CUISINE = { ramen: "拉麵店", sushi: "壽司店", udon: "烏龍麵店", soba: "蕎麥麵店", noodle: "麵店", yakiniku: "燒肉店", yakitori: "串燒店",
+    tempura: "天婦羅", tonkatsu: "豬排店", curry: "咖哩店", okonomiyaki: "大阪燒", takoyaki: "章魚燒", japanese: "日式料理", izakaya: "居酒屋",
+    chinese: "中式料理", korean: "韓式料理", italian: "義式料理", french: "法式料理", pizza: "披薩店", burger: "漢堡店", coffee_shop: "咖啡廳",
+    cake: "甜點店", dessert: "甜點店", ice_cream: "冰淇淋店", bakery: "麵包店", seafood: "海鮮料理", steak_house: "牛排館", wagashi: "和菓子店" };
+  const OSM_TYPE = {
+    amenity: { restaurant: "餐廳", cafe: "咖啡廳", fast_food: "速食店", bar: "酒吧", pub: "酒館", izakaya: "居酒屋", food_court: "美食街",
+      ice_cream: "冰淇淋店", place_of_worship: "宗教場所", theatre: "劇場", cinema: "電影院", library: "圖書館", hospital: "醫院", clinic: "診所",
+      pharmacy: "藥局", bank: "銀行", atm: "ATM", post_office: "郵局", toilets: "廁所", parking: "停車場", bus_station: "巴士總站",
+      ferry_terminal: "渡輪碼頭", public_bath: "澡堂", onsen: "溫泉", university: "大學", school: "學校", townhall: "公所", police: "警察局",
+      marketplace: "市場", arts_centre: "藝文中心", karaoke_box: "卡拉 OK" },
+    shop: { convenience: "便利商店", supermarket: "超市", department_store: "百貨公司", mall: "購物中心", clothes: "服飾店", books: "書店",
+      bakery: "麵包店", confectionery: "甜點店", pastry: "甜點店", gift: "禮品店", souvenir: "紀念品店", electronics: "電器行",
+      cosmetics: "藥妝店", chemist: "藥妝店", variety_store: "雜貨店", "100_yen": "百圓商店", alcohol: "酒類專賣", tea: "茶葉店",
+      coffee: "咖啡豆店", toys: "玩具店", anime: "動漫商店", games: "遊戲店", shoes: "鞋店", bag: "包包店", jewelry: "珠寶店" },
+    tourism: { attraction: "景點", museum: "博物館", gallery: "美術館", viewpoint: "觀景點", hotel: "飯店", hostel: "青年旅館",
+      guest_house: "民宿", motel: "旅館", apartment: "公寓式住宿", theme_park: "主題樂園", zoo: "動物園", aquarium: "水族館",
+      information: "旅遊服務處", artwork: "藝術品", picnic_site: "野餐區", camp_site: "露營地" },
+    railway: { station: "車站", halt: "車站", subway_entrance: "地鐵出入口", tram_stop: "電車站" },
+    public_transport: { station: "車站", stop_position: "站牌", platform: "月台" },
+    highway: { bus_stop: "公車站" },
+    aeroway: { aerodrome: "機場", terminal: "航廈" },
+    leisure: { park: "公園", garden: "庭園", stadium: "體育場", sports_centre: "運動中心", water_park: "水上樂園", amusement_arcade: "遊樂場",
+      playground: "遊戲場", nature_reserve: "自然保護區", beach_resort: "海水浴場", resort: "度假村" },
+    historic: { castle: "城", monument: "紀念碑", memorial: "紀念物", ruins: "遺跡", shrine: "神社", temple: "寺廟", building: "歷史建築" },
+    natural: { peak: "山", volcano: "火山", beach: "海灘", water: "湖泊", hot_spring: "溫泉", bay: "海灣", cape: "岬" },
+    waterway: { river: "河川", waterfall: "瀑布" },
+    place: { city: "城市", town: "市鎮", village: "村", suburb: "地區", quarter: "地區", neighbourhood: "街區", island: "島" },
+    boundary: { administrative: "行政區" },
+    building: { train_station: "車站", temple: "寺廟", shrine: "神社", church: "教會", hotel: "飯店", commercial: "商業大樓", retail: "商場" },
+  };
+  const RELIGION = { buddhist: "寺廟", shinto: "神社", christian: "教會" };
+  function hitCat(r) {
+    const x = r.extratags || {}, c = r.class || r.category, t = r.type;
+    if (c === "amenity" && t === "place_of_worship" && RELIGION[x.religion]) return RELIGION[x.religion];
+    const cu = String(x.cuisine || "").split(";")[0].trim();
+    if (c === "amenity" && /^(restaurant|fast_food|cafe)$/.test(t) && CUISINE[cu]) return CUISINE[cu];
+    return (OSM_TYPE[c] || {})[t] || "";
+  }
+  /* 圖磚也載不到時的那一格:類別圖示 + 顏色底(顏色照類別分組,用 Style 的 custom container) */
+  const CAT_ICON = [
+    [/拉麵|麵店|餐廳|料理|食|居酒屋|燒肉|串燒|壽司|天婦羅|豬排|咖哩|大阪燒|章魚燒|披薩|漢堡|海鮮|牛排/, "🍜", 1],
+    [/咖啡|甜點|冰淇淋|麵包|和菓子|茶/, "☕", 12],
+    [/寺廟|神社|教會|宗教/, "⛩️", 13],
+    [/車站|站牌|月台|地鐵|電車|公車|巴士|機場|航廈|渡輪/, "🚉", 9],
+    [/飯店|旅館|民宿|住宿|旅/, "🏨", 10],
+    [/公園|庭園|山|火山|海灘|湖泊|溫泉|海灣|岬|河川|瀑布|自然|島/, "🌳", 4],
+    [/店|商|市場|百貨|購物|超市|行/, "🛍️", 11],
+    [/博物館|美術館|景點|觀景|城|遺跡|紀念|劇場|樂園|動物園|水族館|藝/, "🏛️", 7],
+  ];
+  function catIcon(r) {
+    const c = hitCat(r), hit = CAT_ICON.find(([re]) => re.test(c)) || [null, "📍", 3];
+    return '<span class="ph-icon" style="background:var(--ds-sys-color-customs-custom-container-' + hit[2] + ', var(--surface-2))">' + hit[1] + "</span>";
+  }
+  /* 卡片上半部的地圖小圖。**一張卡只打一張圖磚**:算出那個點落在哪一塊,用位移把它挪進觀景窗;
+     挪到圖磚邊界就夾住 —— 點畫在它真正的位置上,寧可偏一點也不要為了置中而指到別的地方。
+     z 15(窗內約 1 公里):以前 56px 的小圖用 13,卡片窗大了四倍,近兩級才看得出街廓 */
+  function cardMap(r) {
+    const la = +r.lat, lo = +r.lon;
+    if (!isFinite(la) || !isFinite(lo)) return catIcon(r);
+    const fx = projX(lo, CARD_Z), fy = projY(la, CARD_Z);
+    const tx = Math.floor(fx), ty = Math.floor(fy);
+    const px = (fx - tx) * TILE, py = (fy - ty) * TILE;
+    const ox = Math.max(CARD_W - TILE, Math.min(0, Math.round(CARD_W / 2 - px)));
+    const oy = Math.max(CARD_H - TILE, Math.min(0, Math.round(CARD_H / 2 - py)));
+    return '<img class="tile" alt="" loading="lazy" src="https://tile.openstreetmap.org/' + CARD_Z + "/" + tx + "/" + ty +
+      '.png" style="left:' + ox + "px; top:" + oy + 'px"><i class="dot" style="left:' + Math.round(px + ox) + "px; top:" + Math.round(py + oy) + 'px"></i>';
+  }
+  const cardShot = r => '<img class="shot" alt="" loading="lazy" src="' + esc(commonsImg(r._wiki, 2 * CARD_W)) + '">';
+  /* 營業時間:OSM 的 opening_hours 原文(「Mo-Su 11:00-22:00」),只把星期幾和幾個常見字換成中文 */
+  const OH = { Mo: "一", Tu: "二", We: "三", Th: "四", Fr: "五", Sa: "六", Su: "日" };
+  const hitHours = r => {
+    const v = String((r.extratags || {}).opening_hours || "").trim();
+    if (!v) return "";
+    return v.replace(/\b(Mo|Tu|We|Th|Fr|Sa|Su)\b/g, m => "週" + OH[m]).replace(/\bPH\b/g, "國定假日").replace(/\boff\b/g, "休息")
+      .replace(/24\/7/g, "24 小時").replace(/;\s*/g, "; ");
+  };
+  const hitHTML = (id, r, i) => {
+    const name = hitName(r), cat = hitCat(r), hrs = hitHours(r);
+    return '<div class="hcard"><button type="button" class="hit" data-hit="' + id + '" data-i="' + i + '">' +
+      '<span class="ph">' + (r._wiki ? cardShot(r) : cardMap(r)) + "</span>" +
+      '<span class="cred"' + (r._cred ? "" : " hidden") + ">" + esc(r._cred || "") + "</span>" +
+      '<span class="txt"><b>' + esc(name) + "</b>" +
+      (cat ? '<span class="cat">' + esc(cat) + "</span>" : "") +
+      '<span class="at">' + esc(hitAddr(r)) + "</span>" +
+      (hrs ? '<span class="hrs">營業時間 ' + esc(hrs) + "</span>" : "") + "</span></button>" +
+      '<a class="hmap" href="' + esc(gmap(name, { la: +r.lat, lo: +r.lon })) + '" target="_blank" rel="noopener">地圖 ↗</a></div>';
+  };
+  /* 維基照片拿到了:把那張卡的地圖小圖換成照片,再去 Commons 問作者和授權(使用規定要標) */
+  function cardWiki(box, id, res) {
+    res.forEach((r, i) => {
+      const ph = r._wiki && box.querySelector('[data-hit="' + id + '"][data-i="' + i + '"] .ph');
+      if (ph && !ph.querySelector(".shot")) ph.innerHTML = cardShot(r);
+    });
+    return commonsCredits(res.filter(r => r._wiki && r._cred === undefined)).then(() => {
+      if (box._hits !== res) return;
+      res.forEach((r, i) => {
+        const c = r._cred && box.querySelector('[data-hit="' + id + '"][data-i="' + i + '"] .cred');
+        if (c) { c.textContent = r._cred; c.hidden = false; }
+      });
+    });
+  }
+  async function commonsCredits(rs) {
+    if (!rs.length) return;
+    const file = r => decodeURIComponent(String(r._wiki).split("/wiki/File:")[1] || "").replace(/_/g, " ");
+    const titles = Array.from(new Set(rs.map(file))).slice(0, 50);
+    const j = await fetch("https://commons.wikimedia.org/w/api.php?action=query&format=json&origin=*&prop=imageinfo&iiprop=extmetadata" +
+      "&iiextmetadatafilter=Artist|LicenseShortName&titles=" + titles.map(t => encodeURIComponent("File:" + t)).join("|")).then(x => x.json()).catch(() => null);
+    const by = {};
+    Object.values((j && j.query && j.query.pages) || {}).forEach(p => {
+      const m = (p.imageinfo && p.imageinfo[0] && p.imageinfo[0].extmetadata) || {};
+      const txt = v => { const t = document.createElement("div"); t.innerHTML = String((v && v.value) || ""); return t.textContent.replace(/\s+/g, " ").trim(); };
+      by[String(p.title || "").replace(/^File:/, "")] = ["Wikimedia Commons", txt(m.Artist), txt(m.LicenseShortName)].filter(Boolean).join(" · ");
+    });
+    /* 問不到作者也要標來源 —— 至少是「Wikimedia Commons」 */
+    rs.forEach(r => { r._cred = by[file(r)] || "Wikimedia Commons"; });
+  }
   function moreHitsOnScroll(box, id) {
-    const list = box.querySelector(".hits");
-    if (!list || !box._hits || box._hits.length <= HIT_PAGE) return;
+    const list = box.querySelector(".hits"), next = box.querySelector(".hnext");
+    if (!list) return;
     const more = () => {
-      const shown = list.querySelectorAll(".hit").length, all = box._hits;
-      if (shown >= all.length) return;
-      if (list.scrollTop + list.clientHeight < list.scrollHeight - 40) return;   /* 還沒捲到底 */
-      list.insertAdjacentHTML("beforeend", all.slice(shown, shown + HIT_PAGE).map((r, k) => hitHTML(id, r, shown + k)).join(""));
+      const all = box._hits || [], shown = list.querySelectorAll(".hit").length;
+      const nearEnd = list.scrollLeft + list.clientWidth >= list.scrollWidth - 2 * CARD_W;
+      if (nearEnd && shown < all.length) {
+        list.insertAdjacentHTML("beforeend", all.slice(shown, shown + HIT_PAGE).map((r, k) => hitHTML(id, r, shown + k)).join(""));
+      }
+      /* 已經是最後一張就收起「›」 */
+      if (next) next.hidden = list.scrollLeft + list.clientWidth >= list.scrollWidth - 4 && list.querySelectorAll(".hit").length >= all.length;
     };
     list.addEventListener("scroll", more, { passive: true });
-  }
-
-  /* **四則半是量出來的,不是用 CSS 猜的。** 每一列的高度不一樣(地址有的一行有的兩行、
-     有的有照片),寫死一個 px 值會在某些結果上剛好切在一列中間、或多露一整列。
-     所以量真的那幾列:前四列的高度相加,再加第五列的一半。
-     不到五列就不設上限 —— 那時候全部都看得到,捲動條只會是多餘的裝飾。 */
-  function capHits(box) {
-    const wrap = box.querySelector(".hits");
-    if (!wrap) return;
-    const rows = wrap.querySelectorAll(".hit");
-    if (rows.length <= 4) { wrap.style.maxHeight = ""; return; }
-    let h = 0;
-    for (let i = 0; i < 4; i++) h += rows[i].getBoundingClientRect().height;
-    h += rows[4].getBoundingClientRect().height / 2;
-    wrap.style.maxHeight = Math.round(h) + "px";
+    more();
   }
 
   /* 提示跟著段數走。**第 1 次不給提示** —— 那時候還沒有「找不到」這件事,
@@ -4988,9 +5089,26 @@
     }
     const go = ev.target.closest && ev.target.closest("[data-seek]");
     if (go) { runSeek(go.getAttribute("data-seek")); return; }
+    const nx = ev.target.closest && ev.target.closest("[data-hnext]");
+    if (nx) {
+      const list = nx.parentNode.querySelector(".hits"), c = list && list.querySelector(".hcard");
+      if (c) list.scrollBy({ left: c.getBoundingClientRect().width + 8, behavior: "smooth" });
+      return;
+    }
     const hit = ev.target.closest && ev.target.closest("[data-hit]");
     if (hit) { takeHit(hit.getAttribute("data-hit"), +hit.getAttribute("data-i")); }
   });
+  /* 卡片照片載不到:維基照片 → 退回地圖小圖;地圖小圖 → 類別圖示 */
+  document.addEventListener("error", ev => {
+    const img = ev.target, ph = img && img.tagName === "IMG" && img.closest(".hcard .ph");
+    if (!ph) return;
+    const hit = ph.closest("[data-hit]"), box = seekBox(hit.getAttribute("data-hit")), r = box && box._hits && box._hits[+hit.getAttribute("data-i")];
+    if (!r) return;
+    if (img.classList.contains("shot")) {
+      ph.innerHTML = cardMap(r);
+      const c = hit.querySelector(".cred"); if (c) c.hidden = true;
+    } else ph.innerHTML = catIcon(r);
+  }, true);
 
   /* Enter 搜尋,而不是邊打邊搜。Nominatim 的使用條款是一秒一次(`queued()` 排的就是它),
      而且邊打邊搜會把「東京」這種打到一半的字送出去。**按下去才查,是刻意的。** */

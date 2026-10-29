@@ -194,7 +194,7 @@ document.getElementById('f').onload = function(){
   // 改成一條 CSS:不管圖磚什麼時候到、到了幾張,它一律不顯示,沒有時間差。
   // 標記的位置、標籤的讓位這些「我的 CSS 管的事」照樣看得到。
   s.textContent += 'img[src*="tile.openstreetmap.org"]{visibility:hidden!important}'
-    + '.map,.seek-out .hit .thumb{background:#ececec!important}';
+    + '.map,.seek-out .hit .ph{background:#ececec!important}';
   setTimeout(function(){ try{ $4 }catch(e){} }, 1200);
 };
 </script>
@@ -459,6 +459,9 @@ shot 26-ai-composer       390  900 "(async function(){d.getElementById('ai-btn')
 # 通票(2026-10-12,Lulu 拿青春18きっぷ問):交通頁一張卡寫第一天 → 最後一天、共幾天、有票的人(只在交通頁,行程上沒有)
 shot 27-pass-card         390 1300 "(async function(){var nap=function(ms){return new Promise(function(r){w.setTimeout(r,ms)})};d.getElementById('tab-fly').click();await nap(100);d.querySelector('[data-flight-add]').click();await nap(80);var i=d.querySelector('#fl-kinds input[value=通票]');i.checked=true;i.dispatchEvent(new Event('change',{bubbles:true}));d.getElementById('fl-no').value='青春18きっぷ';d.getElementById('fl-airline').value='JR';d.getElementById('fl-depart').value='2026-10-04';d.getElementById('fl-arrive').value='2026-10-06';d.getElementById('fl-note').value='JR 全線普通・快速';d.querySelector('#fl-drivers input[value=chang_chiayu]').checked=true;d.getElementById('flight-form').requestSubmit();})();" \
                                   "#board-wrap .tleg:1+"
+# 一般搜的候選 = 橫向卡片(2026-10-29):假造 Nominatim(一筆有營業時間、一筆拉麵店、一筆車站),不打維基
+shot 28-osm-cards         390 900 "(async function(){var nap=function(ms){return new Promise(function(r){w.setTimeout(r,ms)})};var H=[{lat:'35.71477',lon:'139.79665',class:'amenity',type:'place_of_worship',display_name:'淺草寺, 浅草二丁目, 台東區, 東京都, 日本',extratags:{religion:'buddhist',opening_hours:'Mo-Su 06:00-17:00'}},{lat:'35.712',lon:'139.795',class:'amenity',type:'restaurant',display_name:'淺草拉麵, 浅草一丁目, 台東區, 東京都, 日本',extratags:{cuisine:'ramen'}},{lat:'35.7139',lon:'139.7775',class:'railway',type:'station',display_name:'上野站, 上野七丁目, 台東區, 東京都, 日本',extratags:{}}];var f=w.fetch;w.fetch=function(u,i){return /nominatim/.test(String(u))?Promise.resolve({ok:true,json:function(){return Promise.resolve(H)}}):f(u,i)};d.getElementById('tab-wish').click();await nap(80);d.getElementById('add-wish-btn').click();await nap(120);d.getElementById('wf-title').value='淺草';d.querySelector('[data-seek=wf-title]').click();})();" \
+                                  "#wf-title-out .hcard:3+"
 
 kill $SRV 2>/dev/null || true
 rm -rf "$H/.work"

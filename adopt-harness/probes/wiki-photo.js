@@ -31,7 +31,7 @@ return (async function () {
   for (var i = 0; i < 40 && !q("#wf-title-out .hit"); i++) await wait(100);
   await wait(300);
   out.問了 = { 帶extratags: asked.some(x => /nominatim/.test(x) && /extratags=1/.test(x)), 問了wikidata: asked.some(x => /wbgetentities/.test(x) && /Q615183/.test(x)) };
-  var th = qa("#wf-title-out .hit .thumb img").map(im => im.getAttribute("src"));
+  var th = qa("#wf-title-out .hit .ph img").map(im => im.getAttribute("src"));
   out.小圖 = th;
   ok("Nominatim 帶 extratags=1、有 wikidata 的那筆去 Wikidata 問了照片", out.問了.帶extratags && out.問了.問了wikidata, out.問了);
   ok("有維基照片的那筆換成照片,沒有的照舊是小地圖", /commons\.wikimedia\.org\/wiki\/Special:FilePath\/Sensoji_2023\.jpg/.test(th[0] || "") && /tile\.openstreetmap\.org/.test(th[1] || ""), th);

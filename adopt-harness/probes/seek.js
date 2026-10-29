@@ -110,10 +110,11 @@ var SIX = [0, 1, 2, 3, 4, 5].map(function (i) {
       /大阪/.test(first.querySelector(".at").textContent),
       first.textContent);
     /* 縮圖那一格:**放的是「它在哪」不是「它長什麼樣」**,理由(免費照片對真的店家
-       命中率 0%)寫在 `hitThumb()` 上面。這裡守的是它有畫出來、而且那個點畫在
+       命中率 0%)寫在 `cardMap()` 上面那段。這裡守的是它有畫出來、而且那個點畫在
        觀景窗**裡面** —— 點跑到框外就是「指到別的地方」,而那看起來跟沒有點一樣。 */
-    var th = first.querySelector(".thumb");
-    ok("候選左邊有地圖縮圖", !!th && !!th.querySelector("img"), first.innerHTML.slice(0, 200));
+    /* 2026-10-29 起候選是橫向卡片,地圖小圖是卡片上半部那一格 `.ph`(見 cardMap()) */
+    var th = first.querySelector(".ph");
+    ok("候選卡片上半部有地圖小圖", !!th && !!th.querySelector("img"), first.innerHTML.slice(0, 200));
     ok("縮圖只打一張圖磚(不是四張)", th.querySelectorAll("img").length === 1,
       th.querySelectorAll("img").length);
     var dot = th.querySelector(".dot"), tb = th.getBoundingClientRect(), db = dot && dot.getBoundingClientRect();
@@ -125,11 +126,11 @@ var SIX = [0, 1, 2, 3, 4, 5].map(function (i) {
     ok("三筆候選的縮圖各自指到不同的地方(不是同一張圖配同一個點)",
       (function () {
         var seen = {};
-        [].forEach.call(d.querySelectorAll('[data-hit="sf-title"] .thumb img'),
+        [].forEach.call(d.querySelectorAll('[data-hit="sf-title"] .ph img'),
           function (im) { seen[im.getAttribute("src")] = 1; });
         return Object.keys(seen).length >= 2;
       })(),
-      [].map.call(d.querySelectorAll('[data-hit="sf-title"] .thumb img'),
+      [].map.call(d.querySelectorAll('[data-hit="sf-title"] .ph img'),
         function (im) { return im.getAttribute("src"); }));
     /* **2026-10-02 起先鎖這一團的城市**(Lulu:盡量鎖在選的地區):第一次查帶 bounded=1、框是城市周圍約 50 公里;
        有結果就不再放寬。放寬那條(一筆都沒有)在 escalate.js 量 —— 那裡的樁一律回空的。 */
@@ -138,7 +139,7 @@ var SIX = [0, 1, 2, 3, 4, 5].map(function (i) {
     ok("但 viewbox 留著當加權", /viewbox=/.test(asked.join(" ")), asked);
     ok("而且帶了國家代碼", /countrycodes=jp/.test(asked.join(" ")), asked);
 
-    /* ---- 六筆的時候:最多露四則半,其餘用捲的 ---- */
+    /* ---- 六筆的時候:露出下一張的邊,其餘用捲的 ---- */
     asked.length = 0; reply = SIX;
     d.getElementById("sf-title").value = "teamLab";
     q('[data-seek="sf-title"]').click();
@@ -146,14 +147,13 @@ var SIX = [0, 1, 2, 3, 4, 5].map(function (i) {
     await sleep(120);
     var wrap = q("#sf-title-out .hits") || q(".seek-out .hits");
     ok("候選裝在一個自己會捲的容器裡", !!wrap, q(".seek-out").innerHTML.slice(0, 120));
-    var rows = wrap.querySelectorAll(".hit");
-    var want4h = 0;
-    for (var i4 = 0; i4 < 4; i4++) want4h += rows[i4].getBoundingClientRect().height;
-    want4h += rows[4].getBoundingClientRect().height / 2;
-    ok("**看得到的高度就是四則半**(露一半的那則在說「底下還有」)",
-      Math.abs(wrap.clientHeight - want4h) <= 2, { 量到: wrap.clientHeight, 該是: Math.round(want4h) });
-    ok("而且真的捲得動(六筆裝不進四則半)", wrap.scrollHeight > wrap.clientHeight + 4,
-      { 內容: wrap.scrollHeight, 看得到: wrap.clientHeight });
+    /* **2026-10-29 起是橫向卡片**(Lulu:跟強力搜的清單一樣):以前的「露四則半」換成「露出下一張的邊」,
+       同一件事 —— 露一截就是在說「右邊還有」。卡片的細節在 osm-cards.js 量。 */
+    var cs = wrap.querySelectorAll(".hcard"), wr = wrap.getBoundingClientRect(), c1 = cs[1] && cs[1].getBoundingClientRect();
+    ok("**看得到下一張的一部分**(露一截在說「右邊還有」)",
+      !!c1 && c1.left < wr.right - 20, { 清單右緣: Math.round(wr.right), 第二張左緣: c1 && Math.round(c1.left) });
+    ok("而且真的捲得動(六張裝不下)", wrap.scrollWidth > wrap.clientWidth + 4,
+      { 內容: wrap.scrollWidth, 看得到: wrap.clientWidth });
     var hintEl = q(".seek-out .hint");
     ok("那句提示排在候選後面", !!hintEl &&
       hintEl.getBoundingClientRect().top >= wrap.getBoundingClientRect().bottom - 1,

@@ -12,10 +12,10 @@ return (async function () {
   var n = () => qa('#stop-form [data-hit="sf-title"]').length;
   var hits = q("#stop-form .hits");
   out.一開始排幾筆 = n();
-  out.捲得動 = !!hits && hits.scrollHeight > hits.clientHeight;
+  out.捲得動 = !!hits && hits.scrollWidth > hits.clientWidth;   /* 2026-10-29 起是橫向卡片,左右捲 */
   /* 動態載入(2026-10-01,Lulu:每 8 筆一次):捲到底才接下一批 */
   out.每捲一次 = [];
-  for (var k = 0; k < 6; k++) { hits.scrollTop = hits.scrollHeight; hits.dispatchEvent(new w.Event("scroll")); await wait(60); out.每捲一次.push(n()); }
+  for (var k = 0; k < 6; k++) { hits.scrollLeft = hits.scrollWidth; hits.dispatchEvent(new w.Event("scroll")); await wait(60); out.每捲一次.push(n()); }
   if (out.要幾筆 !== "40") bad.push("要的是 " + out.要幾筆 + " 筆");
   if (out.一開始排幾筆 !== 8) bad.push("一開始排了 " + out.一開始排幾筆 + " 筆");
   if (out.每捲一次.join() !== "16,24,32,40,40,40") bad.push("捲到底接的批次不對 " + out.每捲一次.join());
