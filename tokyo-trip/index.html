@@ -56,15 +56,15 @@
        · outline（輸入框的框、Outlined 按鈕的框）對卡片底色只有 1.72，
          Material 3 要輸入框邊界至少 3:1。要改就改 Figma 的 outline，再同步這裡。 */
     /* ── Style（ds/sys/*）：顏色 ── 2026-10-29 Figma 把 ds/sys/shared/* 搬到 ds/sys/*，這裡跟著改名。
-       標「待定」的：網站的值跟 Figma Retro 不一樣，或 Figma 沒有這個名字 —— 先維持網站原值（畫面不變），等 Lulu 決定。 */
+       標「待定」的：網站的值跟 Figma Retro 不一樣 —— 先維持網站原值，等 Lulu 決定。 */
     --ds-sys-color-primary:#CB7551;                     /* color/retro/red-orange/400 */
     --ds-sys-color-on-primary:#FAFAF9;                  /* color/retro/red-orange/50 */
     --ds-sys-color-primary-container:#E6DCD8;           /* color/retro/red-orange/100 */
     --ds-sys-color-on-primary-container:#652D15;        /* color/retro/red-orange/800 */
-    --ds-sys-color-secondary:#A5887C;                   /* 待定：Figma 是 red-orange-muted/500 #927062 */
+    --ds-sys-color-secondary:#927062;                   /* color/retro/red-orange-muted/500 */
     --ds-sys-color-on-secondary:#FAFAFA;                /* color/retro/red-orange-muted/50 */
     --ds-sys-color-secondary-container:#C9C0BD;         /* color/retro/red-orange-muted/200 */
-    --ds-sys-color-on-secondary-container:#4D3B33;      /* 待定：Figma 是 red-orange/800 #652D15 */
+    --ds-sys-color-on-secondary-container:#652D15;      /* color/retro/red-orange/800 */
     --ds-sys-color-tertiary:#2891BD;                    /* color/retro/cyan-blue/500 */
     --ds-sys-color-on-tertiary:#FFFBEB;                 /* color/share/amber/50 */
     --ds-sys-color-tertiary-container:#D8E2E6;          /* color/retro/cyan-blue/100 */
@@ -73,15 +73,15 @@
     --ds-sys-color-on-error:#FAF9F9;                    /* color/retro/red/50 */
     --ds-sys-color-error-container:#E6D8D8;             /* color/retro/red/100 */
     --ds-sys-color-on-error-container:#BD2828;          /* color/retro/red/500 */
-    --ds-sys-color-surface:#FFF7ED;                     /* 待定：Figma 是 white #FFFFFF（網站一直刻意用 orange/50） */
+    --ds-sys-color-surface:#FFF7ED;                     /* 待定：Figma 是 white #FFFFFF（網站一直刻意用 orange/50；另外問 Lulu 中） */
     --ds-sys-color-surf-container-lowest:#FAFAFA;       /* color/retro/red-orange-muted/50 */
-    --ds-sys-color-surf-container-low:#F1F5F9;          /* 待定：Figma 是 red-orange-muted/100 #E1DDDC */
-    --ds-sys-color-surf-container:#F3F4F6;              /* 待定：Figma 是 red-orange-muted/200 #C9C0BD */
-    --ds-sys-color-surf-container-high:#E5E7EB;         /* 待定：Figma 是 red-orange-muted/300 #B5A39C */
-    --ds-sys-color-surf-container-highest:#E4E4E7;      /* 待定：Figma 是 red-orange-muted/400 #A5887C */
+    --ds-sys-color-surf-container-low:#E1DDDC;          /* color/retro/red-orange-muted/100 */
+    --ds-sys-color-surf-container:#C9C0BD;              /* color/retro/red-orange-muted/200 */
+    --ds-sys-color-surf-container-high:#B5A39C;         /* color/retro/red-orange-muted/300 */
+    --ds-sys-color-surf-container-highest:#A5887C;      /* color/retro/red-orange-muted/400 */
     --ds-sys-color-text-100:#652D15;                    /* color/retro/red-orange/800（原 on surface） */
-    --ds-sys-color-on-surface-var:#823A1C;              /* 待定：Figma 沒有這個名字；最接近的 text 200 是 #927062 */
-    --ds-sys-color-outline:#D7BCB1;                     /* 待定：Figma 沒有這個名字；outline 50/100/200/300 沒有同值的 */
+    --ds-sys-color-text-200:#927062;                    /* color/retro/red-orange-muted/500（原 on surface var） */
+    --ds-sys-color-outline-100:#E6DCD8;                 /* color/retro/red-orange/100（原 outline；Figma 的 divider subtle 也從 outline 換到這格） */
     --ds-sys-color-outline-200:#CE9A84;                 /* color/retro/red-orange/300（原 outline variant） */
     --ds-sys-color-inverse-surface:#27272A;             /* color/share/black/zinc/800 */
     --ds-sys-color-text-inverse-100:#F3F4F6;            /* color/share/black/gray/100（原 inverse on surface） */
@@ -91,8 +91,8 @@
     --ds-sys-color-on-disable-container:#A3A3A3;        /* color/share/black/neutral/400 */
     --ds-sys-color-customs-custom-1:#FCD34D;            /* color/share/amber/300 */
     --ds-sys-color-customs-custom-container-1:#FEF3C7;  /* color/share/amber/100 */
-    --ds-sys-color-on-custom-container-1:#92400E;       /* 待定：Figma 沒有這個名字；on custom 1 是 amber/950 #451A03 */
-    --ds-sys-color-on-custom-container-4:#166534;       /* 待定：Figma 沒有這個名字；on custom 4 是 green/950 #052E16 */
+    --ds-sys-color-customs-on-custom-1:#451A03;         /* color/share/amber/950（原 on custom container 1） */
+    --ds-sys-color-customs-on-custom-4:#052E16;         /* color/share/green/950（原 on custom container 4） */
     /* ── Style：尺寸（三個模式同值） ── */
     --ds-sys-spacing-xs:4px;                            /* spacing/100 */
     --ds-sys-spacing-sm:6px;                            /* spacing/150 */
@@ -143,17 +143,17 @@
     --surface:var(--ds-sys-color-surf-container-lowest);
     --surface-2:var(--ds-sys-color-surf-container-low);
     --ink:var(--ds-sys-color-text-100);
-    --ink-2:var(--ds-sys-color-on-surface-var);
-    --muted:var(--ds-sys-color-on-surface-var);   /* 原本對 outline；outline 改淺之後只剩 1.72，M3 的文字只用 on surface / on surface var */
+    --ink-2:var(--ds-sys-color-text-200);
+    --muted:var(--ds-sys-color-text-200);   /* 原本對 outline；outline 改淺之後只剩 1.72，M3 的文字只用 text 100 / text 200（原 on surface / on surface var） */
     --line:var(--ds-sys-color-outline-200);
     --line-soft:var(--ds-sys-color-surf-container-high);
     --accent:var(--ds-sys-color-primary);
     --accent-ink:var(--ds-sys-color-on-primary);
     --accent-soft:var(--ds-sys-color-primary-container);
     --neg:var(--ds-sys-color-error);
-    --warn:var(--ds-sys-color-on-custom-container-1);
+    --warn:var(--ds-sys-color-customs-on-custom-1);
     --warn-soft:var(--ds-sys-color-customs-custom-container-1);
-    --pos:var(--ds-sys-color-on-custom-container-4);
+    --pos:var(--ds-sys-color-customs-on-custom-4);
     --shadow:0 1px 2px rgba(20,26,45,.05), 0 8px 24px -14px rgba(20,26,45,.22);
     /* 航班板是「淺色畫面裡的深色元件」,對到 inverse surface 那一組。
        muted 和 line 在 Figma 沒有對應的角色,先維持原值。 */
@@ -1420,11 +1420,11 @@
     .btn{--btn-r:var(--ds-comp-btn-normal-md-radius); --btn-icon:var(--ds-comp-btn-normal-md-icon);
       position:relative; isolation:isolate; display:inline-flex; align-items:center; justify-content:center; gap:var(--ds-sys-spacing-xs);
       padding:var(--ds-sys-spacing-md) var(--ds-sys-spacing-xl);
-      border:var(--ds-sys-border-xs) solid var(--ds-sys-color-outline); border-radius:var(--btn-r);
+      border:var(--ds-sys-border-xs) solid var(--ds-sys-color-outline-100); border-radius:var(--btn-r);
       background:transparent; color:var(--ds-sys-color-primary);
       font-size:14px; font-weight:700; line-height:1.4; text-align:center; text-decoration:none; transition:box-shadow .15s;}
     .btn::after{content:""; position:absolute; inset:0; z-index:-1; border-radius:inherit; background:currentColor; opacity:0; pointer-events:none; transition:opacity .15s;}
-    .btn:hover{background:transparent; border-color:var(--ds-sys-color-outline);}
+    .btn:hover{background:transparent; border-color:var(--ds-sys-color-outline-100);}
     .btn:hover::after{opacity:.08;}
     .btn:focus-visible{outline:3px solid var(--ds-comp-focus-ring-color); outline-offset:2px; border-radius:var(--btn-r);}
     .btn:focus-visible::after,.btn:active::after{opacity:.10;}
@@ -1459,10 +1459,10 @@
 
     /* ---- Text field / Text area / Dropdown（.rm-input）---- */
     .rm-input{min-height:var(--ds-comp-field-height); padding:var(--ds-sys-spacing-2xl);
-      border:var(--ds-sys-border-xs) solid var(--ds-sys-color-outline); border-radius:var(--ds-comp-field-radius);
+      border:var(--ds-sys-border-xs) solid var(--ds-sys-color-outline-100); border-radius:var(--ds-comp-field-radius);
       background:var(--ds-sys-color-surf-container-lowest); color:var(--ds-sys-color-text-100);
       font-family:inherit; font-size:16px; line-height:1.5; transition:border-color .15s, box-shadow .15s;}
-    .rm-input::placeholder{color:var(--ds-sys-color-on-surface-var); opacity:1;}
+    .rm-input::placeholder{color:var(--ds-sys-color-text-200); opacity:1;}
     .rm-input:hover{border-color:var(--ds-sys-color-text-100);}
     /* focus 框 3px：外框 1px + 內陰影 2px，版面不會因為框變粗而跳動 */
     .rm-input:focus,.rm-input:focus-visible{outline:none; border-color:var(--ds-sys-color-primary); border-radius:var(--ds-comp-field-radius);
@@ -1482,7 +1482,7 @@
       transform:translateY(-50%); max-width:calc(100% - 2 * var(--ds-sys-spacing-2xl)); margin:0;
       padding:0 var(--ds-sys-spacing-xs); --notch:var(--ds-sys-color-surf-container-lowest);
       background:linear-gradient(transparent 50%, var(--notch) 50%);
-      font-size:12px; font-weight:400; line-height:1.4; color:var(--ds-sys-color-on-surface-var);
+      font-size:12px; font-weight:400; line-height:1.4; color:var(--ds-sys-color-text-200);
       white-space:nowrap; overflow:hidden; text-overflow:ellipsis; pointer-events:none;
       transition:top .15s, font-size .15s, transform .15s, color .15s;}
     .fld:has(.rm-input:placeholder-shown:not(:focus)) > .rm-label{top:calc(var(--ds-sys-spacing-2xl) + var(--ds-sys-border-xs)); transform:none;
@@ -1496,7 +1496,7 @@
     /* AI 對話框:打字、照片、拍照選圖同一個框(2026-10-12,Lulu)。框線畫在 .ai-box,跟上面 .rm-input 同一套
        (1px 外框、滑過變深、打字時主色＋內陰影補到 3px);裡面的 textarea 不畫框、不能拉大小(框整個一起長)。
        浮動標題看的還是 .fld 裡的 .rm-input,所以照樣浮在 .ai-box 的框線上,底色(notch)也一樣 */
-    .ai-box{border:var(--ds-sys-border-xs) solid var(--ds-sys-color-outline); border-radius:var(--ds-comp-field-radius);
+    .ai-box{border:var(--ds-sys-border-xs) solid var(--ds-sys-color-outline-100); border-radius:var(--ds-comp-field-radius);
       background:var(--ds-sys-color-surf-container-lowest); transition:border-color .15s, box-shadow .15s; cursor:text;}
     .ai-box:hover{border-color:var(--ds-sys-color-text-100);}
     .ai-box:has(> .rm-input:focus){border-color:var(--ds-sys-color-primary);
@@ -1510,7 +1510,7 @@
     .fld select.rm-input{appearance:none; -webkit-appearance:none; padding-right:calc(var(--ds-sys-spacing-2xl) * 2 + var(--ds-comp-field-icon));}
     .fld:has(> select.rm-input)::after,.fld:has(> .seek select.rm-input)::after{content:""; position:absolute; right:var(--ds-sys-spacing-2xl); top:calc(var(--ds-comp-field-height) / 2);
       width:var(--ds-comp-field-icon); height:var(--ds-comp-field-icon); transform:translateY(-50%); pointer-events:none;
-      background:var(--ds-sys-color-on-surface-var);
+      background:var(--ds-sys-color-text-200);
       -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E") center/contain no-repeat;
               mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E") center/contain no-repeat;}
     .fld:has(select.rm-input:focus)::after{transform:translateY(-50%) rotate(180deg);}
@@ -1524,7 +1524,7 @@
     .rm-chip{position:relative; isolation:isolate; display:inline-flex; align-items:center; gap:var(--ds-sys-spacing-md);
       min-height:var(--ds-comp-chip-md-height); padding:0 var(--ds-sys-spacing-xl);
       border:var(--ds-sys-border-xs) solid var(--ds-sys-color-outline-200); border-radius:var(--ds-comp-chip-radius);
-      background:transparent; color:var(--ds-sys-color-on-surface-var); box-shadow:none;
+      background:transparent; color:var(--ds-sys-color-text-200); box-shadow:none;
       font-family:inherit; font-size:14px; font-weight:400; line-height:1.4;}
     .rm-chip .i{width:var(--ds-comp-chip-md-icon); height:var(--ds-comp-chip-md-icon);}
     .rm-chip.rm-chip--selectable::after,.who .rm-chip::after{content:""; position:absolute; inset:0; z-index:-1; border-radius:inherit;

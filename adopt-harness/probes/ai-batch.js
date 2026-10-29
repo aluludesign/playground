@@ -111,7 +111,7 @@ return (async function () {
     var lr = bL.getBoundingClientRect(), mr = bM.getBoundingClientRect(), rr = bR.getBoundingClientRect(), barR = bM.parentElement.getBoundingClientRect(), ls = w.getComputedStyle(bL), ms = w.getComputedStyle(bM);
     var tok = v => { var i = d.createElement("i"); d.body.appendChild(i); i.style.color = "var(" + v + ")"; var c = w.getComputedStyle(i).color; i.remove(); return c; };
     out.左右鈕 = { 順序: lr.right <= mr.left && mr.right <= rr.left, 方的: Math.abs(lr.width - lr.height) <= 1 && Math.abs(rr.width - rr.height) <= 1, 一樣高: Math.abs(lr.height - mr.height) <= 1 && Math.abs(rr.height - mr.height) <= 1,
-      中間變短: mr.width < barR.width - lr.width - rr.width, 框: ls.borderTopColor === tok("--ds-sys-color-outline") && parseFloat(ls.borderTopWidth) > 0, 圖示色: ls.color === tok("--ds-sys-color-primary"),
+      中間變短: mr.width < barR.width - lr.width - rr.width, 框: ls.borderTopColor === tok("--ds-sys-color-outline-100") && parseFloat(ls.borderTopWidth) > 0, 圖示色: ls.color === tok("--ds-sys-color-primary"),
       圓角一樣: ls.borderTopLeftRadius === ms.borderTopLeftRadius, 有說明: !!bL.getAttribute("aria-label") && !!bR.getAttribute("aria-label") };
     ok("「全部存起來」左右各一顆圖示鈕:← 中 →、方的、跟中間一樣高、中間變短;Outlined 的框和字色、圓角跟中間一樣", Object.values(out.左右鈕).every(Boolean), out.左右鈕);
     await clickTab("flight-form", 0); await wait(500);

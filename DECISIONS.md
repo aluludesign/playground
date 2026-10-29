@@ -61,8 +61,11 @@ commit 之後回來把 hash 補上。還沒 commit 的先寫 `未進版控`。
   Figma 改了名字、值相同的照新名:on surface → `text-100`、inverse on surface → `text-inverse-100`、outline variant → `outline-200`、
   custom 1 → `customs-custom-1`。補上 Style 的 radius/border/icon/height 全套,樣式表裡寫死、剛好等值的圓角和框線粗細改用它們。
 - **為什麼**:「方案」轉 Lulu 10-29 的決定;同時要求 Retro 畫面完全不變。前後用 `probes/computed-all.js` 逐元素比 computed style,390/1440 五個分頁零差異。
-- **代價**:Figma Retro 的值跟網站不一樣、或 Figma 沒有這個名字的 11 個,**先維持網站原值**,註解標「待定」等 Lulu 決定:
-  secondary、on secondary container、surface、surf container low/—/high/highest、on surface var、outline、on custom container 1/4。
+- **後來(同一天)**:Lulu 說待定的「照 Figma 改」,10 個改成 Figma Retro 的值;Figma 已沒有的名字照對應角色改名:
+  on surface var → `text-200`、outline → `outline-100`(Figma 的 divider subtle 也是這樣換)、on custom container 1/4 → `customs-on-custom-1/4`。
+  只有 surface 維持 `#FFF7ED`(刻意的米色,另外問她中)。
+- **代價**:次要文字(text 200)對卡片 4.27,低於 4.5;輸入框/Outlined 按鈕的框(outline 100)對卡片 1.29(原本 1.72);
+  提醒字、正數金額變成接近黑色(amber/950、green/950)。照 Figma 接,要調就改 Figma 再同步。
   網站只有 Retro,Modern/Airbnb 的改動(focus ring、icon 刻度、底部分頁列)沒有對應的東西可改。
 
 ## 2026-10-19
