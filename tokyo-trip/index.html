@@ -14,7 +14,7 @@
      圖示不能再用內嵌的 emoji SVG —— 那個在分頁上很好用,但 iOS 加到主畫面時
      會拿它去縮,縮出來是一顆歪掉的小鐵塔配一大圈白邊。 -->
 <link rel="manifest" href="manifest.webmanifest">
-<meta name="theme-color" content="#FFF7ED">
+<meta name="theme-color" content="#FFFFFF">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -53,10 +53,9 @@
 
        已知、而且是刻意接受的（Lulu 選「照 Figma 現在的值接」）：
        · primary 上的字、primary 當文字色放在卡片上，對比 3.24，低於內文要的 4.5。
-       · outline（輸入框的框、Outlined 按鈕的框）對卡片底色只有 1.72，
+       · outline（輸入框的框、Outlined 按鈕的框；10-29 起是 outline 100）對卡片底色只有 1.29，
          Material 3 要輸入框邊界至少 3:1。要改就改 Figma 的 outline，再同步這裡。 */
-    /* ── Style（ds/sys/*）：顏色 ── 2026-10-29 Figma 把 ds/sys/shared/* 搬到 ds/sys/*，這裡跟著改名。
-       標「待定」的：網站的值跟 Figma Retro 不一樣 —— 先維持網站原值，等 Lulu 決定。 */
+    /* ── Style（ds/sys/*）：顏色 ── 2026-10-29 Figma 把 ds/sys/shared/* 搬到 ds/sys/*，這裡跟著改名。 */
     --ds-sys-color-primary:#CB7551;                     /* color/retro/red-orange/400 */
     --ds-sys-color-on-primary:#FAFAF9;                  /* color/retro/red-orange/50 */
     --ds-sys-color-primary-container:#E6DCD8;           /* color/retro/red-orange/100 */
@@ -73,7 +72,7 @@
     --ds-sys-color-on-error:#FAF9F9;                    /* color/retro/red/50 */
     --ds-sys-color-error-container:#E6D8D8;             /* color/retro/red/100 */
     --ds-sys-color-on-error-container:#BD2828;          /* color/retro/red/500 */
-    --ds-sys-color-surface:#FFF7ED;                     /* 待定：Figma 是 white #FFFFFF（網站一直刻意用 orange/50；另外問 Lulu 中） */
+    --ds-sys-color-surface:#FFFFFF;                     /* color/white（10-29 Lulu：不再刻意用米色 orange/50） */
     --ds-sys-color-surf-container-lowest:#FAFAFA;       /* color/retro/red-orange-muted/50 */
     --ds-sys-color-surf-container-low:#E1DDDC;          /* color/retro/red-orange-muted/100 */
     --ds-sys-color-surf-container:#C9C0BD;              /* color/retro/red-orange-muted/200 */
