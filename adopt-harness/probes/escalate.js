@@ -69,38 +69,43 @@ async function press(id) {
        —— 提示是那個流程的第一步,晚一次給就等於少一次機會。 */
     osm.length = 0; goo.length = 0; osmReply = [];
     inp.value = "泡溫泉";
-    await press("sf-title");
-    ok("第 1 次問免費那家(城市裡沒有 → 再放寬問一次,所以是 2 次)", osm.length === 2 && /bounded=1/.test(osm[0]) && osm[1].indexOf("bounded") < 0 && goo.length === 0, { osm: osm.length, google: goo.length });
-    ok("第 1 次搜完就給「加地點名」", boxText("sf-title").indexOf("加入地點名") >= 0, boxText("sf-title"));
-    ok("第 1 次**不問**要不要強力搜", boxText("sf-title").indexOf("強力搜") < 0, boxText("sf-title"));
-    ok("按鈕還是「搜尋」", btn("sf-title").textContent === "搜尋", btn("sf-title").textContent);
+    /* 2026-10-29 起:對話框的「搜尋」打開全螢幕地圖搜尋,之後的每一下都在那裡的搜尋框按 */
+    btn("sf-title").click();
+    await until(function () { return !d.getElementById("seek-screen").hidden && btn("ss-q").disabled; }, 40);
+    await until(function () { return !btn("ss-q").disabled; }, 200);
+    inp = d.getElementById("ss-q");
+    ok("第 1 次只問地圖畫面那一塊(bounded=1),0 筆也**不自動往外找**(2026-10-29)", osm.length === 1 && /bounded=1/.test(osm[0]) && goo.length === 0, { osm: osm.length, google: goo.length });
+    ok("0 筆 →「這個範圍找不到」＋「搜整個城市」", boxText("ss-q").indexOf("這個範圍找不到") >= 0 && !!d.querySelector("#ss-q-out [data-city]"), boxText("ss-q"));
+    ok("第 1 次搜完就給「加地點名」", boxText("ss-q").indexOf("加入地點名") >= 0, boxText("ss-q"));
+    ok("第 1 次**不問**要不要強力搜", boxText("ss-q").indexOf("強力搜") < 0, boxText("ss-q"));
+    ok("按鈕還是「搜尋」", btn("ss-q").textContent === "搜尋", btn("ss-q").textContent);
 
     // ---- 照提示加了字:段數**不可以**歸零 ----
     /* **這一條是 Lulu 回報「看不懂觸發點」的根因。** 第一版一改字就重來,
        而提示叫的正是「加地點名」—— 照做的人段數永遠回到 0,走不到那顆「好」。
        **提示叫人做的事,不可以讓他退回起點。** */
     inp.value = "泡溫泉 新宿";
-    await press("sf-title");
+    await press("ss-q");
     ok("加了字之後再搜,仍然是第 2 次(沒有因為改字歸零)",
-      boxText("sf-title").indexOf("還是沒有找到嗎") >= 0, boxText("sf-title"));
+      boxText("ss-q").indexOf("還是沒有找到嗎") >= 0, boxText("ss-q"));
     ok("而且這時候才問要不要強力搜",
-      !!d.querySelector('[data-arm="sf-title"]'), boxText("sf-title"));
+      !!d.querySelector('[data-arm="ss-q"]'), boxText("ss-q"));
     /* **那顆按鈕長在句子裡,不是旁邊。** 以前是「還是沒有找到嗎?試試強力搜?」
        後面接一顆獨立的「好」—— 要人先讀懂問題,再去別的地方找答案在哪。 */
     ok("而且它長在提示句子裡面(不是旁邊一顆「好」)",
-      !!d.querySelector('.seek-out .hint .seek-arm[data-arm="sf-title"]'),
+      !!d.querySelector('.seek-out .hint .seek-arm[data-arm="ss-q"]'),
       d.querySelector('.seek-out .hint') && d.querySelector('.seek-out .hint').innerHTML);
     ok("而且那三個字就是「強力搜」",
-      d.querySelector('[data-arm="sf-title"]').textContent === "強力搜",
-      d.querySelector('[data-arm="sf-title"]').textContent);
+      d.querySelector('[data-arm="ss-q"]').textContent === "強力搜",
+      d.querySelector('[data-arm="ss-q"]').textContent);
     ok("按鈕**還沒**變成強力搜(要先點頭)",
-      btn("sf-title").textContent === "搜尋", btn("sf-title").textContent);
+      btn("ss-q").textContent === "搜尋", btn("ss-q").textContent);
     ok("而且到這裡為止一次錢都沒花", goo.length === 0, { google: goo.length });
 
     // ---- 點句子裡那三個字才變,而且那一下不查東西 ----
-    d.querySelector('[data-arm="sf-title"]').click();
+    d.querySelector('[data-arm="ss-q"]').click();
     await sleep(60);
-    ok("點下去之後按鈕變成「強力搜」", btn("sf-title").textContent === "強力搜", btn("sf-title").textContent);
+    ok("點下去之後按鈕變成「強力搜」", btn("ss-q").textContent === "強力搜", btn("ss-q").textContent);
     /* **量的是 class,不是 backgroundColor。** `.btn` 有 `transition:background .15s`,
        所以 computed 讀到的是過場跑到一半的值 —— 而在虛擬時間下它可能一幀都沒跑,
        讀到的就是起始的白色。我為了這件事查了五輪,而**同一個陷阱幾小時前才寫進
@@ -108,29 +113,31 @@ async function press(id) {
 
        **顏色對不對由截圖回答**(第 14 張),斷言只管狀態有沒有切過去。 */
     ok("而且掛上了 seek-strong(橘色那一組的來源)",
-      btn("sf-title").classList.contains("seek-strong"), btn("sf-title").className);
+      btn("ss-q").classList.contains("seek-strong"), btn("ss-q").className);
     /* **上膛的是輸入框,不只是按鈕。** 眼睛和手指都在輸入框裡,
        只換右下角那顆小東西的話,狀態變了而看的人不在那裡。 */
     ok("而且輸入框也跟著上膛(seek-armed)", inp.classList.contains("seek-armed"), inp.className);
     ok("**點下去那一下不查任何東西**(花錢的是下一下)",
-      osm.length === 4 && goo.length === 0, { osm: osm.length, google: goo.length });
-    ok("而且它告訴你下一步做什麼", boxText("sf-title").indexOf("按「強力搜」") >= 0, boxText("sf-title"));
+      osm.length === 2 && goo.length === 0, { osm: osm.length, google: goo.length });
+    ok("而且它告訴你下一步做什麼", boxText("ss-q").indexOf("按「強力搜」") >= 0, boxText("ss-q"));
     ok("而且不再覆誦「好 ——」(按的那顆就在上一句話裡)",
-      boxText("sf-title").indexOf("好 ——") < 0, boxText("sf-title"));
+      boxText("ss-q").indexOf("好 ——") < 0, boxText("ss-q"));
 
     // ---- 按下強力搜 = Google 的 Places UI Kit 清單(2026-10-02;舊的伺服器那條拿掉了) ----
     /* 這裡沒有 Google 元件(假後端也不給瀏覽器金鑰),所以走的是「載不出來」那條。
        有元件的那條(清單、挑一家、編號存進 Notion)在 probes/uikit.js。 */
-    await press("sf-title");
+    await press("ss-q");
     ok("強力搜不再打舊的伺服器搜尋(resource=places)", goo.length === 0, { google: goo.length });
-    ok("而且那一下也不問免費那家", osm.length === 4, { osm: osm.length });
+    ok("而且那一下也不問免費那家", osm.length === 2, { osm: osm.length });
     ok("載不出 Google 清單 → 講「清單載入出現錯誤」,叫他稍後或重開再試(不講免費不免費)",
-      boxText("sf-title").indexOf("清單載入出現錯誤") >= 0 && boxText("sf-title").indexOf("免費") < 0, boxText("sf-title"));
+      boxText("ss-q").indexOf("清單載入出現錯誤") >= 0 && boxText("ss-q").indexOf("免費") < 0, boxText("ss-q"));
     ok("按鈕**留在**「強力搜」(這一下沒花到錢,不該逼他重走一輪)",
-      btn("sf-title").textContent === "強力搜", btn("sf-title").textContent);
-    ok("退路那句也在(他按到最後一段了)", boxText("sf-title").indexOf("也可以許願") >= 0, boxText("sf-title"));
+      btn("ss-q").textContent === "強力搜", btn("ss-q").textContent);
+    ok("退路那句也在(他按到最後一段了)", boxText("ss-q").indexOf("也可以許願") >= 0, boxText("ss-q"));
 
     // ---- 換表單不可以帶著段數 ----
+    d.getElementById("ss-x").click(); await sleep(60);
+    ok("✕ 回到加行程:那一欄的按鈕還是「強力搜」(段數跟著帶回去)", btn("sf-title").textContent === "強力搜", btn("sf-title").textContent);
     osm.length = 0; goo.length = 0;
     d.getElementById("add-wish-btn").click();
     await until(function () { return !q("#wish-form").hidden; });

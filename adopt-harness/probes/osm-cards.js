@@ -34,18 +34,18 @@ return (async function () {
   q("#wishbox") && (q("#wishbox").open = true);
   q("#add-wish-btn").click(); await wait(120);
   q("#wf-title").value = "淺草"; q('[data-seek="wf-title"]').click();
-  for (var i = 0; i < 40 && !q("#wf-title-out .hcard"); i++) await wait(50);
+  for (var i = 0; i < 40 && !q("#ss-q-out .hcard"); i++) await wait(50);
   /* 清單一出現:維基還沒回來,第一張是地圖小圖 */
-  var first = q('#wf-title-out [data-i="0"] .ph img');
+  var first = q('#ss-q-out [data-i="0"] .ph img');
   out.剛出現 = first && first.className;
   ok("清單不等維基:剛出現時第一張是地圖小圖", out.剛出現 === "tile", out.剛出現);
-  var list = q("#wf-title-out .hits"), cards = qa("#wf-title-out .hcard"), lr = list.getBoundingClientRect();
+  var list = q("#ss-q-out .hits"), cards = qa("#ss-q-out .hcard"), lr = list.getBoundingClientRect();
   var c0 = cards[0].getBoundingClientRect(), c1 = cards[1].getBoundingClientRect();
   out.排列 = { 張數: cards.length, 卡寬: Math.round(c0.width), 同一排: Math.round(c0.top) === Math.round(c1.top), 第二張露出: Math.round(Math.min(c1.right, lr.right) - c1.left), 清單寬: Math.round(lr.width), 橫捲: list.scrollWidth > list.clientWidth };
   ok("橫向一排、先 8 張、卡寬 240、看得到第二張的一部分(沒有整張)", out.排列.張數 === 8 && out.排列.卡寬 === 240 && out.排列.同一排 && out.排列.橫捲 &&
     out.排列.第二張露出 > 20 && (w.innerWidth > 700 || out.排列.第二張露出 < 240), out.排列);
   /* 卡片內容 */
-  var k = i => q('#wf-title-out .hcard:nth-child(' + (i + 1) + ')');
+  var k = i => q('#ss-q-out .hcard:nth-child(' + (i + 1) + ')');
   out.內容 = [0, 1, 2, 3].map(i => ({ 名: txt(k(i).querySelector("b")), 類: txt(k(i).querySelector(".cat")), 址: txt(k(i).querySelector(".at")), 時: txt(k(i).querySelector(".hrs")),
     圖: (k(i).querySelector(".ph img") || {}).className || (k(i).querySelector(".ph-icon") ? "icon" : ""), 地圖: (k(i).querySelector(".hmap") || {}).href || "" }));
   ok("類別轉中文:寺廟、拉麵店、車站、便利商店", out.內容.map(x => x.類).join(",") === "寺廟,拉麵店,車站,便利商店", out.內容.map(x => x.類));
@@ -60,17 +60,17 @@ return (async function () {
   ok("上半部照片(高 128)、下面資料、最下面地圖鈕", ph.height === 128 && ph.bottom <= tx.top + 1 && tx.bottom <= mp.top + 1, out.上下);
   /* 維基照片回來了 → 換成照片、標作者和授權 */
   await wait(1600);
-  var sh = q('#wf-title-out [data-i="0"] .ph img');
-  out.維基 = { 圖: sh && sh.className, src: sh && sh.getAttribute("src"), 標: txt(q('#wf-title-out [data-i="0"] .cred')), 其他張有標: qa('#wf-title-out .cred:not([hidden])').length };
+  var sh = q('#ss-q-out [data-i="0"] .ph img');
+  out.維基 = { 圖: sh && sh.className, src: sh && sh.getAttribute("src"), 標: txt(q('#ss-q-out [data-i="0"] .cred')), 其他張有標: qa('#ss-q-out .cred:not([hidden])').length };
   ok("維基照片拿到後換上,下面標「Wikimedia Commons · 作者 · 授權」;沒照片的不標", out.維基.圖 === "shot" && /Special:FilePath\/Sensoji_2023\.jpg\?width=480/.test(out.維基.src) &&
     out.維基.標 === "Wikimedia Commons · Jane Doe · CC BY-SA 4.0" && out.維基.其他張有標 === 1, out.維基);
   /* 圖磚載不到 → 類別圖示 */
-  var t2 = q('#wf-title-out [data-i="2"] .ph img.tile');
+  var t2 = q('#ss-q-out [data-i="2"] .ph img.tile');
   if (t2) { t2.src = "data:image/png;base64,AAAA"; await wait(300); }
-  out.圖磚壞 = txt(q('#wf-title-out [data-i="2"] .ph'));
-  ok("圖磚載不到 → 換成類別圖示(車站 🚉)", /🚉/.test(out.圖磚壞) && !!q('#wf-title-out [data-i="2"] .ph-icon'), out.圖磚壞);
+  out.圖磚壞 = txt(q('#ss-q-out [data-i="2"] .ph'));
+  ok("圖磚載不到 → 換成類別圖示(車站 🚉)", /🚉/.test(out.圖磚壞) && !!q('#ss-q-out [data-i="2"] .ph-icon'), out.圖磚壞);
   /* 「›」往下一張,捲到底再接 8 張,最後一張收起「›」 */
-  var nx = q("#wf-title-out .hnext"), x0 = list.scrollLeft;
+  var nx = q("#ss-q-out .hnext"), x0 = list.scrollLeft;
   out.下一張 = { 看得到: !!nx && !nx.hidden && nx.getClientRects().length > 0 };
   /* 無頭瀏覽器不跑 smooth 捲動的動畫:記下它要捲多少、改成立刻捲 */
   list.scrollBy = function (o) { out.下一張.要求 = o.behavior; Element.prototype.scrollBy.call(this, { left: o.left }); };
@@ -80,7 +80,7 @@ return (async function () {
   ok("右邊「›」看得到,按一下往右捲一張(約 248)", out.下一張.看得到 && out.下一張.捲了 >= 200 && out.下一張.捲了 <= 260, out.下一張);
   list.scrollLeft = list.scrollWidth; list.dispatchEvent(new Event("scroll")); await wait(200);
   list.scrollLeft = list.scrollWidth; list.dispatchEvent(new Event("scroll")); await wait(200);
-  out.到底 = { 張數: qa("#wf-title-out .hcard").length, 收起: nx.hidden };
+  out.到底 = { 張數: qa("#ss-q-out .hcard").length, 收起: nx.hidden };
   ok("捲到底接下一批(全部 13 張),最後一張時「›」收起來", out.到底.張數 === 13 && out.到底.收起, out.到底);
   /* 點「地圖 ↗」不算選;點卡片才選 */
   var before = q("#wf-title").value;
@@ -88,11 +88,14 @@ return (async function () {
   d.addEventListener("click", stop, true);
   k(1).querySelector(".hmap").click(); await wait(80);
   d.removeEventListener("click", stop, true);
-  out.點地圖 = { 欄: q("#wf-title").value, 清單還在: !!q("#wf-title-out .hcard") };
+  out.點地圖 = { 欄: q("#wf-title").value, 清單還在: !!q("#ss-q-out .hcard") };
   ok("點「地圖 ↗」:地點欄不變、清單還在", out.點地圖.欄 === before && out.點地圖.清單還在, out.點地圖);
-  k(1).querySelector("[data-hit]").click(); await wait(100);
+  /* 2026-10-29 起:點卡片只是選起來,「選這個」才帶回去(全螢幕地圖搜尋,細節在 map-search.js) */
+  k(1).querySelector("[data-hit]").click(); await wait(60);
+  ok("點卡片:選起來、還沒帶回去", q("#wf-title").value === before && k(1).classList.contains("on"), q("#wf-title").value);
+  k(1).querySelector(".htake").click(); await wait(100);
   out.點卡片 = { 欄: q("#wf-title").value, 狀態: txt(q("#wf-title-out")) };
-  ok("點卡片 = 選這個地點(地點欄填名字、已標定)", out.點卡片.欄 === "淺草拉麵" && /已標定/.test(out.點卡片.狀態), out.點卡片);
+  ok("「選這個」= 選這個地點(地點欄填名字、已標定)", out.點卡片.欄 === "淺草拉麵" && /已標定/.test(out.點卡片.狀態), out.點卡片);
   out.結論 = bad.length ? "✗ " + bad.join(" ;; ") : "全部通過"; out.errors = w.__errors || [];
   return out;
 })();

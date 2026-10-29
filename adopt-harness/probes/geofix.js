@@ -126,8 +126,10 @@ async function pickPlace(prefix, name, lat, lon) {
   var keep = osmReply;
   osmReply = [{ lat: String(lat), lon: String(lon), display_name: name + ", 東京都, 日本" }];
   q('[data-seek="' + prefix + '-title"]').click();
-  await until(function () { return d.querySelectorAll('[data-hit="' + prefix + '-title"]').length > 0; });
-  q('[data-hit="' + prefix + '-title"]').click();
+  /* 2026-10-29 起候選在全螢幕地圖搜尋(#ss-q-out):點卡片選起來,「選這個」帶回去 */
+  await until(function () { return d.querySelectorAll('[data-hit="ss-q"]').length > 0; });
+  var h = q('[data-hit="ss-q"]');
+  h.click(); h.parentNode.querySelector(".htake").click();
   await sleep(50);
   osmReply = keep;
   return name;

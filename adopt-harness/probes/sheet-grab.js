@@ -249,38 +249,39 @@ async function drag(dy) {
     await until(function () { return !d.getElementById("wish-add-overlay").hidden; });
     d.getElementById("wf-title").value = "溫泉";
     d.querySelector('[data-seek="wf-title"]').click();
-    await until(function () { return d.querySelectorAll('[data-hit="wf-title"]').length > 0; });
+    await until(function () { return d.querySelectorAll('[data-hit="ss-q"]').length > 0; });
     await sleep(300);
-    var ovr = d.getElementById("wish-add-overlay");
-    ok("六筆候選會讓這張表比畫面高(這一條的前提)",
-      d.getElementById("wish-form").getBoundingClientRect().height > w.innerHeight,
-      Math.round(d.getElementById("wish-form").getBoundingClientRect().height));
-    ok("而且那一層捲得動", ovr.scrollHeight > ovr.clientHeight,
-      { 內容: ovr.scrollHeight, 可見: ovr.clientHeight });
-    ovr.scrollTop = ovr.scrollHeight;
-    await sleep(200);
+    /* **2026-10-29 起候選不在表單裡了**(全螢幕地圖搜尋):以前這裡量的是「六筆候選把表單撐得比畫面高、那一層要捲得動」,
+       那個前提不存在了 —— 表單高度不再隨候選變。改問新畫面在 600 高的手機上:卡片區不蓋到搜尋框、地圖還露得出來、
+       卡片自己左右捲,而且「選這個」按得到。 */
+    var bar = d.getElementById("ss-bar").getBoundingClientRect(), panel = d.getElementById("ss-q-out").getBoundingClientRect();
+    ok("600 高:卡片區在搜尋框下面、中間還露得出地圖(至少 120px)", panel.top - bar.bottom >= 120 && panel.bottom <= w.innerHeight + 1,
+      { 搜尋框下緣: Math.round(bar.bottom), 卡片區上緣: Math.round(panel.top), 畫面: w.innerHeight });
     function reach(e) {
       var r = e.getBoundingClientRect();
       if (r.bottom < 0 || r.top > w.innerHeight) return false;
       var h = d.elementFromPoint(Math.round(r.left + r.width / 2), Math.round(r.top + r.height / 2));
       return !!h && (h === e || e.contains(h));
     }
-    ok("捲到底之後,送出鈕按得到", reach(d.getElementById("wf-submit")), "wf-submit");
-    /* 「你是誰」那一欄拿掉了(LINE 登入就知道是誰),改問它真的不在畫面上 */
+    var first = d.querySelector('[data-hit="ss-q"]');
+    first.click(); await sleep(80);
+    var take = first.parentNode.querySelector(".htake");
+    var outBox = d.getElementById("ss-q-out");
+    /* 卡片區自己捲(不用 scrollIntoView:它會連外面的頁面一起捲,後面量地圖的那幾條就量歪了) */
+    var tr = take.getBoundingClientRect(), orr = outBox.getBoundingClientRect();
+    if (tr.bottom > orr.bottom) outBox.scrollTop += tr.bottom - orr.bottom + 4;
+    await sleep(60);
+    ok("選起來之後「選這個」按得到", reach(take), "htake");
     ok("「你是誰」不再出現", d.getElementById("wf-f-by").hidden, "wf-f-by");
-    /* 候選清單自己也要有上限 —— 不然「要挑的」和「要按的」會互相擠掉。
-       **捲的那一層在 2026-09-24 換了**:以前是整個 `.seek-out`,現在是它裡面的
-       `.hits`(候選最多露四則半),因為那句「沒找到?」的提示移到候選後面,
-       而它必須留在捲動區外面才會一直看得到。
-       這一條不是壞了,是它問的那個容器換了人 —— 問裡面那層才是現在的事實。
-       **2026-10-29 候選改成橫向卡片**:高度固定是一張卡,多的往右捲 —— 問的是「自己左右捲」。 */
-    var so = d.getElementById("wish-form").querySelector(".seek-out .hits")
-      || d.getElementById("wish-form").querySelector(".seek-out");
-    ok("候選清單自己有上限、自己捲(橫向)", so.scrollWidth > so.clientWidth,
-      { 容器: so.className, 內容: so.scrollWidth, 可見: so.clientWidth });
+    var so = d.querySelector("#ss-q-out .hits");
+    ok("候選清單自己左右捲", !!so && so.scrollWidth > so.clientWidth,
+      so && { 內容: so.scrollWidth, 可見: so.clientWidth });
+    d.getElementById("ss-x").click(); await sleep(60);
     d.getElementById("wf-cancel").click();
     await sleep(200);
-    if (w.frameElement) { w.frameElement.style.height = frameH; await sleep(300); }
+    /* 高度換回來之後**自己發一次 resize**:無頭瀏覽器裡 iframe 改高度的 resize 有時晚好幾百毫秒才到,
+       清單 sheet 還停在 600 高的檔位,下面量「聚焦在可見範圍中央」就差了 76px(2026-10-29 量到,一半的次數) */
+    if (w.frameElement) { w.frameElement.style.height = frameH; w.dispatchEvent(new w.Event("resize")); await sleep(300); }
 
     /* ---- 點小卡聚焦,再點一次退出來 ----
        以前只有「選進去」沒有「退出來」:要看回整片願望,得去點別的地方或換分頁,

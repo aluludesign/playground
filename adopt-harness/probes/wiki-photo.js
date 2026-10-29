@@ -20,6 +20,8 @@ w.fetch = function (u, init) {
 };
 var PAGE = "https://commons.wikimedia.org/wiki/File:Sensoji_2023.jpg";
 var calls = (re, m) => (w.__calls || []).filter(c => re.test(c.url) && (!m || c.method === m));
+/* 2026-10-29 起候選在全螢幕地圖搜尋:點卡片選起來,「選這個」帶回去 */
+var take = i => { var h = q('#ss-q-out [data-hit][data-i="' + i + '"]'); h.click(); h.parentNode.querySelector(".htake").click(); };
 return (async function () {
   await wait(300);
   var out = {}, bad = [];
@@ -28,14 +30,14 @@ return (async function () {
   q("#wishbox") && (q("#wishbox").open = true);
   q("#add-wish-btn").click(); await wait(120);
   q("#wf-title").value = "淺草寺"; q('[data-seek="wf-title"]').click();
-  for (var i = 0; i < 40 && !q("#wf-title-out .hit"); i++) await wait(100);
+  for (var i = 0; i < 40 && !q("#ss-q-out .hit"); i++) await wait(100);
   await wait(300);
   out.問了 = { 帶extratags: asked.some(x => /nominatim/.test(x) && /extratags=1/.test(x)), 問了wikidata: asked.some(x => /wbgetentities/.test(x) && /Q615183/.test(x)) };
-  var th = qa("#wf-title-out .hit .ph img").map(im => im.getAttribute("src"));
+  var th = qa("#ss-q-out .hit .ph img").map(im => im.getAttribute("src"));
   out.小圖 = th;
   ok("Nominatim 帶 extratags=1、有 wikidata 的那筆去 Wikidata 問了照片", out.問了.帶extratags && out.問了.問了wikidata, out.問了);
   ok("有維基照片的那筆換成照片,沒有的照舊是小地圖", /commons\.wikimedia\.org\/wiki\/Special:FilePath\/Sensoji_2023\.jpg/.test(th[0] || "") && /tile\.openstreetmap\.org/.test(th[1] || ""), th);
-  q('#wf-title-out [data-hit][data-i="0"]').click(); await wait(100);
+  take(0); await wait(100);
   var w0 = calls(/resource=wishes/, "POST").length;
   q("#wish-form").requestSubmit(); await wait(500);
   var p = calls(/resource=wishes/, "POST").slice(w0)[0];
@@ -55,9 +57,9 @@ return (async function () {
   /* 挑沒照片的那一筆 → 不帶照片 */
   q("#add-wish-btn").click(); await wait(120);
   q("#wf-title").value = "淺草寺前"; q('[data-seek="wf-title"]').click();
-  for (var k = 0; k < 40 && !q("#wf-title-out .hit"); k++) await wait(100);
+  for (var k = 0; k < 40 && !q("#ss-q-out .hit"); k++) await wait(100);
   await wait(300);
-  q('#wf-title-out [data-hit][data-i="1"]').click(); await wait(100);
+  take(1); await wait(100);
   var w1 = calls(/resource=wishes/, "POST").length;
   q("#wish-form").requestSubmit(); await wait(500);
   var p2 = calls(/resource=wishes/, "POST").slice(w1)[0];
@@ -67,9 +69,9 @@ return (async function () {
   q("#tab-plan").click(); await wait(80);
   q("#add-stop-btn").click(); await wait(120);
   q("#sf-title").value = "淺草寺"; q('[data-seek="sf-title"]').click();
-  for (var m = 0; m < 40 && !q("#sf-title-out .hit"); m++) await wait(100);
+  for (var m = 0; m < 40 && !q("#ss-q-out .hit"); m++) await wait(100);
   await wait(300);
-  q('#sf-title-out [data-hit][data-i="0"]').click(); await wait(100);
+  take(0); await wait(100);
   if (q("#sf-time")) q("#sf-time").value = "10:00";
   var s0 = calls(/resource=itinerary/, "POST").length;
   q("#stop-form").requestSubmit(); await wait(600);
