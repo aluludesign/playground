@@ -76,6 +76,24 @@ return (async function () {
   ok("地圖上看不到別的行程/願望的點", qa("#ss-map .pin").every(p => /^h\d+$/.test(p.dataset.k)), qa("#ss-map .pin").map(p => p.dataset.k));
   ok("沒選之前看不到「選這個」", qa("#ss-q-out .htake").every(b => b.offsetParent === null), null);
 
+  /* 2b「全部已排」(2026-10-29):預設關著;開了六天已排的點畫上去(那天的顏色、第幾天),卡片不變;點它不會選;再按收掉 */
+  var chip = q("#ss-all"), nHit = qa("#ss-map .pin").length, nCard = qa("#ss-q-out .hcard").length;
+  out.全部已排 = { 預設: chip && chip.getAttribute("aria-pressed") };
+  chip.click(); await wait(80);
+  var plan = qa("#ss-map .pin.plan");
+  out.全部已排.開 = { 點: plan.length, 搜到的點: qa("#ss-map .pin:not(.plan)").length, 卡片: qa("#ss-q-out .hcard").length,
+    有顏色: plan.every(p => !!p.style.background), 編號是第幾天: plan.every(p => /^[1-9]$/.test(txt(p).replace(/\D.*$/, ""))), 按著: chip.getAttribute("aria-pressed") };
+  var pv = plan.filter(p => pinIn(p.dataset.k))[0];
+  if (pv) { tapPin(pv.dataset.k); await wait(80); }
+  out.全部已排.點了 = { 卡片亮: qa("#ss-q-out .hcard.on").length, 那顆亮: pv ? q('#ss-map .pin[data-k="' + pv.dataset.k + '"]').classList.contains("on") : null, 還開著: shown("seek-screen") };
+  chip.click(); await wait(80);
+  out.全部已排.關 = qa("#ss-map .pin.plan").length;
+  ok("「全部已排」預設關;開了畫出已排的點(那天的顏色、第幾天),搜到的點和卡片不變;點它不選卡片;再按收掉",
+    out.全部已排.預設 === "false" && out.全部已排.開.點 > 3 && out.全部已排.開.搜到的點 === nHit && out.全部已排.開.卡片 === nCard &&
+    out.全部已排.開.有顏色 && out.全部已排.開.編號是第幾天 && out.全部已排.開.按著 === "true" &&
+    (!pv || (out.全部已排.點了.卡片亮 === 0 && out.全部已排.點了.那顆亮 && out.全部已排.點了.還開著)) && out.全部已排.關 === 0, out.全部已排);
+  delete q("#seek-screen").dataset.picked;   /* 上面點了已排的點不算改過,保險起見清掉,後面的 Esc 測試才準 */
+
   /* 3 點卡片 = 選起來、地圖移過去,對話框不關 */
   q('#ss-q-out [data-hit="ss-q"][data-i="5"]').click(); await wait(80);
   var on = qa("#ss-q-out .hcard.on");
@@ -163,8 +181,8 @@ return (async function () {
   /* 13 縮放鈕、OSM 標示沒被搜尋框或卡片蓋住 */
   q('[data-seek="wf-title"]').click(); await until(() => q("#ss-q-out .hcard"));
   var hitAt = e => { var r = e.getBoundingClientRect(), t = d.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return t && (t === e || e.contains(t)); };
-  out.蓋住 = { 放大鈕: hitAt(q('#ss-map [data-zoom="1"]')), 標示: hitAt(q("#ss-map .attr a")), 搜尋框: hitAt(q("#ss-q")), 叉: hitAt(q("#ss-x")) };
-  ok("縮放鈕、OpenStreetMap 標示、搜尋框、✕ 都點得到", out.蓋住.放大鈕 && out.蓋住.標示 && out.蓋住.搜尋框 && out.蓋住.叉, out.蓋住);
+  out.蓋住 = { 放大鈕: hitAt(q('#ss-map [data-zoom="1"]')), 標示: hitAt(q("#ss-map .attr a")), 搜尋框: hitAt(q("#ss-q")), 叉: hitAt(q("#ss-x")), 全部已排: hitAt(q("#ss-all")) };
+  ok("縮放鈕、OpenStreetMap 標示、搜尋框、✕、全部已排都點得到", out.蓋住.放大鈕 && out.蓋住.標示 && out.蓋住.搜尋框 && out.蓋住.叉 && out.蓋住.全部已排, out.蓋住);
   var fs = parseFloat(getComputedStyle(q("#ss-q")).fontSize);
   ok("搜尋框字 ≥16px(iPhone 點下去才不會自己放大)", fs >= 16, fs);
   q("#ss-x").click(); await wait(50);

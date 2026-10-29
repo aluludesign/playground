@@ -1051,6 +1051,8 @@
     .ss-bar.nudge{animation:ov-nudge .3s;}
     /* 縮放鈕和 OSM 標示不能被搜尋框蓋住(標示是 OSM 的使用規定) */
     #seek-screen .map .mapzoom{top:calc(var(--ss-top, 60px) + 8px);}
+    #seek-screen .ss-all{position:absolute; left:12px; top:calc(var(--ss-top, 60px) + 10px); z-index:5; box-shadow:0 1px 4px rgba(0,0,0,.2);}
+    #seek-screen .ss-all[aria-pressed="true"]::before{background:var(--ds-sys-color-on-secondary-container); border-color:var(--ds-sys-color-surf-container-lowest);}
     #seek-screen .map .attr{top:var(--ss-top, 60px); bottom:auto; border-radius:0 0 0 4px;}
     #ss-q-out{position:absolute; left:0; right:0; bottom:0; z-index:6; margin:0; border:0; border-radius:16px 16px 0 0;
       max-height:62%; overflow-y:auto; overscroll-behavior:contain; padding-bottom:env(safe-area-inset-bottom, 0px);
@@ -1058,6 +1060,9 @@
     #ss-q-out .ss-city{margin-left:8px;}
     /* 搜到的點:全部標出來、編號跟卡片一樣。名字只在選起來的那顆旁邊出現,四十個名字擠在一起什麼都看不到 */
     #ss-map .pin{background:var(--color-accent); color:var(--color-accent-ink);}
+    /* 已排行程的點(「全部已排」開著):顏色是那一天的(inline),小一點、在搜到的點底下 */
+    #ss-map .pin.plan{z-index:1; transform:translate(-50%,-50%) scale(.85);}
+    #ss-map .pin.plan.on{z-index:5; transform:translate(-50%,-50%) scale(1.1);}
     #ss-map .pin .lab{display:none;}
     #ss-map .pin.on{z-index:5; transform:translate(-50%,-50%) scale(1.25);}
     #ss-map .pin.on .lab{display:block;}
@@ -1931,6 +1936,8 @@
     <button type="button" class="btn btn-sm" data-seek="ss-q">搜尋</button></div>
     <button type="button" class="ss-x" id="ss-x" aria-label="不選地點,回去">✕</button>
   </form>
+  <!-- 跟主地圖那顆「全部已排」同一個樣子;開了把六天已排的點畫在搜到的點底下 -->
+  <button type="button" class="rm-chip rm-chip--selectable lay ss-all" id="ss-all" aria-pressed="false">全部已排</button>
   <div class="seek-out" id="ss-q-out" hidden></div>
 </div>
 
@@ -4598,8 +4605,10 @@
     scr.hidden = false;
     scr.style.setProperty("--ss-top", el("ss-bar").offsetHeight + "px");
     const box = ssMap();
-    box._pts = []; box._focus = null;
-    box._onPin = k => ssSelect(+k.slice(1), true);
+    box._hitPts = []; box._focus = null;
+    ssPaintPts(box);
+    /* 搜到的點:選起來。已排行程的點:只是把名字亮出來看是哪一個,不能選(要的是新地點) */
+    box._onPin = k => { if (k[0] === "h") ssSelect(+k.slice(1), true); else { box._focus = k; paintMap(box); } };
     box._onMove = ssUserMoved;
     ssStartView(box);
     paintMap(box);
@@ -4623,19 +4632,49 @@
     out._hits = null; out._show = null; out.innerHTML = ""; out.hidden = true;
     /* 地圖也清空:藏起來的點留著的話,下次進來會先閃一下上一輪的結果 */
     const box = ssMap();
-    box._pts = []; box._focus = null; box.innerHTML = "";
+    box._pts = []; box._hitPts = []; box._focus = null; box.innerHTML = "";
   }
+
+  /* ---- 「全部已排」(2026-10-29,Lulu:搜尋地圖畫面也可以打開看全部已排行程的點)----
+     跟主地圖那顆同名同樣子;預設關著,開了記在這台手機。點的顏色和編號照主地圖「全部已排」:那一天的顏色、第幾天。
+     **只畫已經有座標的**,不為了這一層去查 Nominatim(搜尋那邊要用那一秒一次的額度)。
+     畫在搜到的點底下,而且不算「畫面裡的結果」—— 卡片只列搜到的。 */
+  let ssAll = false;
+  try { ssAll = localStorage.getItem("tokyo5-ss-all") === "1"; } catch (_) {}
+  function ssPlanPts() {
+    const out = [];
+    DAYS.forEach(d => dayList(d.date).forEach((x, i) => {
+      const at = pinOf(x);
+      if (!inJapan(at)) return;
+      out.push({ k: "p" + d.date + "-" + i, n: d.n, cls: "plan", color: d.color, on: d.on, la: at.la, lo: at.lo,
+        place: x.place || x.title, title: x.title, tip: "DAY " + d.n + " " + (x.time || "") + " " + x.title });
+    }));
+    return out;
+  }
+  function ssPaintPts(box) {
+    box._pts = (ssAll ? ssPlanPts() : []).concat(box._hitPts || []);
+    if (box._focus && !box._pts.some(p => p.k === box._focus)) box._focus = ssSel >= 0 ? "h" + ssSel : null;
+    el("ss-all").setAttribute("aria-pressed", String(ssAll));
+  }
+  el("ss-all").addEventListener("click", () => {
+    ssAll = !ssAll;
+    try { localStorage.setItem("tokyo5-ss-all", ssAll ? "1" : "0"); } catch (_) {}
+    const box = ssMap();
+    ssPaintPts(box);
+    paintMap(box);
+  });
 
   /* 搜到一批:全部標在地圖上。`fit`:「搜整個城市」的結果不一定在畫面裡,把畫面拉到框得住全部 */
   function ssShow(res, fit) {
     const box = ssMap();
     ssSel = -1;
     box._focus = null;
-    box._pts = res.map((r, i) => ({ k: "h" + i, n: i + 1, la: +r.lat, lo: +r.lon, title: hitName(r), place: hitName(r), tip: hitName(r) }))
+    const hp = box._hitPts = res.map((r, i) => ({ k: "h" + i, n: i + 1, la: +r.lat, lo: +r.lon, title: hitName(r), place: hitName(r), tip: hitName(r) }))
       .filter(p => isFinite(p.la) && isFinite(p.lo));
     const out = seekBox(SS);
     if (out && out.querySelector(".hcard")) ssCardsH = out.offsetHeight;
-    if (fit && box._pts.length) ssFit(box, box._pts.map(p => p.lo), box._pts.map(p => p.la), box._pts.length > 1 ? 16 : 15);
+    if (fit && hp.length) ssFit(box, hp.map(p => p.lo), hp.map(p => p.la), hp.length > 1 ? 16 : 15);
+    ssPaintPts(box);
     paintMap(box);
   }
   /* 這一筆現在在畫面裡看得到嗎(扣掉搜尋框和卡片) */
