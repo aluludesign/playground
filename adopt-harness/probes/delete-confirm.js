@@ -93,7 +93,7 @@ return (async function () {
     var root = w.getComputedStyle(d.documentElement), probe = d.createElement("i");
     d.body.appendChild(probe);
     var tok = v => { probe.style.color = "var(" + v + ")"; return w.getComputedStyle(probe).color; };
-    var errBg = tok("--ds-sys-shared-color-error"), onErr = tok("--ds-sys-shared-color-on-error");
+    var errBg = tok("--ds-sys-color-error"), onErr = tok("--ds-sys-color-on-error");
     probe.remove();
     var cs = w.getComputedStyle(q("#cf-ok"));
     var ref = q("#ft-save"), fo = q("#fund-top-overlay"), wasHidden = fo.hidden;
