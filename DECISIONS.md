@@ -54,7 +54,7 @@ commit 之後回來把 hash 補上。還沒 commit 的先寫 `未進版控`。
 
 ## 2026-10-29
 
-### `--ds-*` 跟著 Figma 改名,值先不動 · `未進版控`
+### `--ds-*` 跟著 Figma 改名,值先不動 · `3d92b02`
 
 - **決定**:Figma 把 Style 從 `ds/sys/shared/*` 搬到 `ds/sys/*`、Comps 改成只指 Style,網站照改:`--ds-sys-shared-*` → `--ds-sys-*`,
   `chip-height`/`chip-icon` → `chip-md-height`/`chip-md-icon`,Comps 改寫成 `var(--ds-sys-*)`(跟 Figma 一樣三層)。
