@@ -4,7 +4,7 @@
  * 看:兩張地圖(行程地圖、全螢幕搜尋)都縮得到 0、放得到 19,再按不會超過;
  *     每一張圖磚的 x、y 都在 0..2^z-1(超出去 OSM 回 404);世界比畫面窄時只畫一份、置中;
  *     點的位置跟投影算出來的一樣(0 級、19 級、跨換日線);拖曳、雙擊在兩端正常;
- *     「重新搜這個範圍」送出的 viewbox 經緯度都合法,而且最大只到這一團的城市(縮到全世界、拖到換日線都只搜城市)。 */
+ *     「重新搜這個範圍」送出的 viewbox:縮到全世界是 -180..180、跨換日線只送一邊、經緯度都合法。 */
 var q = s => d.querySelector(s), qa = s => Array.prototype.slice.call(d.querySelectorAll(s));
 var wait = ms => new Promise(r => w.setTimeout(r, ms));
 var real = w.fetch, asked = [];
@@ -87,8 +87,9 @@ return (async function () {
   q('[data-seek="ss-q"]').click();
   await until(() => asked.length > n0);
   out.全世界範圍 = box4(asked[asked.length - 1]);
-  /* 範圍最大只到這一團的城市(2026-10-30):縮到全世界也只搜城市框(約 1 度寬),結果拉進畫面 */
-  ok("0 級重新搜:viewbox 只到城市(約 1 度寬)、合法", legal(out.全世界範圍) && Math.abs(out.全世界範圍.右 - out.全世界範圍.左 - 1) < 0.01, out.全世界範圍);
+  /* 縮到全世界按「重新搜這個範圍」就是搜全世界(2026-10-30 Lulu),結果拉進畫面 */
+  ok("0 級重新搜:viewbox 是整個世界(-180..180)、合法、bounded=1", legal(out.全世界範圍) && out.全世界範圍.左 === -180 && out.全世界範圍.右 === 180 &&
+    param(asked[asked.length - 1], "bounded") === "1", out.全世界範圍);
   await until(() => sm._v.z > 5); await wait(300);
   out.拉進來 = { z: sm._v.z, 點偏: pinOff(sm, "h0", 139.78, 35.70) };
   ok("0 級搜到的結果:畫面拉到框得住結果", out.拉進來.z > 5 && out.拉進來.點偏 <= 2, out.拉進來);
@@ -110,7 +111,7 @@ return (async function () {
   q('[data-seek="ss-q"]').click();
   await until(() => asked.length > n0);
   out.換日線範圍 = box4(asked[asked.length - 1]);
-  ok("跨換日線(畫面整個在城市外)重新搜:viewbox 合法、就是城市框", legal(out.換日線範圍) && JSON.stringify(out.換日線範圍) === JSON.stringify(out.全世界範圍), out.換日線範圍);
+  ok("跨換日線重新搜:viewbox 合法、左 < 右(只送佔比較多的那一邊)", legal(out.換日線範圍) && (out.換日線範圍.左 === -180 || out.換日線範圍.右 === 180), out.換日線範圍);
   await wait(300);
 
   /* 放到 19 */

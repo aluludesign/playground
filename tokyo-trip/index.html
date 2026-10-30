@@ -4530,17 +4530,17 @@
   /* ---- 全螢幕地圖搜尋(2026-10-29,Lulu)----
      地點欄按「搜尋」→ 這個畫面:搜尋框、撐滿的地圖、下面一排卡片。結果全部標在地圖上,點和卡片同一個編號。
      - 點地圖上的點或點卡片 = **選起來**(兩邊一起亮);卡片上的「選這個」才帶回對話框。
-     - 只搜**畫面裡看得到的那一塊**(viewbox＋bounded=1)。拖動或縮放之後,卡片只列畫面裡的(只在搜到的裡面篩,不重搜),
-       搜尋鈕變「重新搜這個範圍」,按了才重搜 —— **地圖一動就搜不行**:Nominatim 的條款不准自動、連續地查。
-     - 畫面裡 0 筆 →「這個範圍找不到」＋「搜整個城市」,讓人自己按。
-     - 範圍最大只到這一團的城市(2026-10-30):畫面比城市大就只搜城市;「搜整個城市」0 筆 →「這個城市找不到」,不往外。
+     - 沒動過地圖按「搜尋」= 搜這一團的城市(viewbox＋bounded=1)。拖動或縮放之後,卡片只列畫面裡的(只在搜到的裡面篩,不重搜),
+       搜尋鈕變「重新搜這個範圍」,按了才照**畫面裡看得到的那一塊**搜(不限國家,縮到全世界就是全世界)——
+       **地圖一動就搜不行**:Nominatim 的條款不准自動、連續地查。每次搜完畫面拉到框住全部結果。
+     - 0 筆只給下一步那一顆,讓人自己按:畫面比城市小 →「搜整個城市」;城市(或畫面已蓋住城市)→「往外找」(不限城市、國家)。
      - ✕ = 不選地點,打的字留在地點欄(「泡溫泉」這種沒有固定地點的,就用這個名字)。
      - 強力搜照舊:Google 的清單出現在卡片那一區,**不在地圖上標點**(Google 的條款)。
      搜尋的那幾個狀態(段數、強力搜上膛)跟著搜尋框走:進來時從地點欄那一格帶過來,✕ 回去時帶回去。 */
   const SS = "ss-q";
   let ssFor = null, ssSel = -1, ssMoved = false;
-  /* 上一次送出去的範圍是不是整個城市(找不到時就不用再給「搜整個城市」) */
-  let ssWhole = false;
+  /* 上一次照畫面搜的時候,畫面是不是已經蓋住整個城市(找不到時就不給「搜整個城市」,直接給「往外找」) */
+  let ssWhole = false, ssScope = "";
   const hasCity = () => !!CITY && isFinite(CITY.lat) && isFinite(CITY.lon);
   const ssMap = () => el("ss-map");
   /* 地圖被蓋住的上下兩塊:上面是搜尋框,下面是卡片。`reserve`:搜尋的時候卡片可能還沒出來,先照卡片會佔的高度扣 */
@@ -4554,13 +4554,12 @@
   }
   const unX = (x, z) => x / Math.pow(2, z) * 360 - 180;
   const unY = (y, z) => Math.atan(Math.sinh(Math.PI * (1 - 2 * y / Math.pow(2, z)))) * 180 / Math.PI;
-  /* 畫面裡看得到的那一塊(經緯度):左、上、右、下。
-     **最大只到這一團的城市**(2026-10-30,Lulu):送出去的是畫面和 `cityView()` 的交集 ——
-     縮到全世界也只搜城市那一塊;畫面整個在城市外面,就搜城市。 */
+  /* 畫面裡看得到的那一塊(經緯度):左、上、右、下。**不跟城市框取交集、也不限國家**(2026-10-30,Lulu):
+     自己縮到全世界按「重新搜這個範圍」,就是要搜全世界。 */
   function ssBBox() {
     const box = ssMap(), v = box._v, w = box.clientWidth, h = box.clientHeight, c = ssCover(true);
     ssWhole = false;
-    if (!v) { ssWhole = hasCity(); return cityView(); }
+    if (!v) return cityView();
     const n = Math.pow(2, v.z);
     let x0 = v.cx - w / 2 / TILE, x1 = v.cx + w / 2 / TILE;
     /* 縮到看得到整圈地球 → 經度就是全部。
@@ -4570,19 +4569,22 @@
     else if (x0 < 0) { if (-x0 > x1) { x0 += n; x1 = n; } else x0 = 0; }
     else if (x1 > n) { if (x1 - n > n - x0) { x0 = 0; x1 -= n; } else x1 = n; }
     const y0 = Math.max(0, v.cy + (c.top - h / 2) / TILE), y1 = Math.min(n, v.cy + (h / 2 - c.bot) / TILE);
-    let b = [unX(x0, v.z), unY(y0, v.z), unX(x1, v.z), unY(y1, v.z)];
+    const b = [unX(x0, v.z), unY(y0, v.z), unX(x1, v.z), unY(y1, v.z)];
     if (hasCity()) {
       const cv = cityView().split(",").map(Number);
-      const cut = [Math.max(b[0], cv[0]), Math.min(b[1], cv[1]), Math.min(b[2], cv[2]), Math.max(b[3], cv[3])];
-      if (cut[0] >= cut[2] || cut[3] >= cut[1]) { ssWhole = true; return cityView(); }
-      ssWhole = cut.every((x, i) => x === cv[i]);
-      b = cut;
+      ssWhole = b[0] <= cv[0] && b[1] >= cv[1] && b[2] >= cv[2] && b[3] <= cv[3];
     }
     return b.map(x => x.toFixed(5)).join(",");
   }
   function seekView(q, view) {
     return queued(() => fetch("https://nominatim.openstreetmap.org/search?format=json" +
       "&limit=40&extratags=1&accept-language=zh-TW&bounded=1&viewbox=" + view +
+      "&q=" + encodeURIComponent(q)).then(r => r.json()).catch(() => null));
+  }
+  /* 「往外找」:不限城市、不限國家(不帶 countrycodes、bounded),城市框只當加權 —— 近的排前面 */
+  function seekWide(q) {
+    return queued(() => fetch("https://nominatim.openstreetmap.org/search?format=json" +
+      "&limit=40&extratags=1&accept-language=zh-TW" + (hasCity() ? "&viewbox=" + cityView() : "") +
       "&q=" + encodeURIComponent(q)).then(r => r.json()).catch(() => null));
   }
   /* 把一塊經緯度範圍放進畫面看得到的那一塊(扣掉搜尋框和卡片)。塞得下的最大縮放;`zMax`:只有一個點時不要貼到街區 */
@@ -4929,7 +4931,7 @@
     paintSeekBtn(id);
   }
 
-  /* `how === "city"`:全螢幕搜尋裡按了「搜整個城市」—— 不用畫面範圍,只搜城市那一塊(找不到就是找不到,不往外) */
+  /* `how`:全螢幕搜尋裡按了「搜整個城市」("city")或「往外找」("wide");沒有就看地圖動過沒有(見下面 ssScope) */
   async function runSeek(id, how) {
     const input = el(id);
     const q = input ? input.value.trim() : "";
@@ -4947,6 +4949,7 @@
     seekLast[id] = q;
     const strong = !!seekArmed[id] && !onSnapshot();
     seekTries[id] = (seekTries[id] || 0) + 1;
+    const moved = id === SS && ssMoved;   /* 動過地圖才照畫面搜(見下面 ssScope) */
     if (id === SS) ssMoved = false;   /* 這一次就是照現在的畫面搜的,按鈕回到「搜尋」 */
     /* **段數一加就重畫按鈕,不等查詢回來。** 等回來才畫的話,使用者按下去
        之後要盯著一顆沒反應的按鈕等一秒多,而他會再按一次。 */
@@ -4974,10 +4977,13 @@
     }
     let res;
     try {
-      /* 全螢幕搜尋:只搜地圖畫面裡看得到的那一塊(Nominatim 的 viewbox＋bounded=1) */
-      /* 「搜整個城市」就只搜城市那一塊(bounded=1):不放寬到整個國家、字串裡有別的地名也一樣(2026-10-30,Lulu) */
-      res = id !== SS ? await seekPlace(q) : how !== "city" ? await seekView(q, ssBBox())
-        : hasCity() ? (ssWhole = true, await seekView(q, cityView())) : await seekPlace(q);
+      /* 全螢幕搜尋(2026-10-30,Lulu)分三種:
+         - 沒動過地圖就按「搜尋」、或按「搜整個城市」→ 只搜城市(viewbox＋bounded=1)
+         - 動過地圖之後按「重新搜這個範圍」→ 照畫面搜(可以是全世界)
+         - 按「往外找」→ 不限城市、不限國家,城市框當加權。**要人自己按,不自動做** */
+      ssScope = id !== SS ? "" : how === "wide" ? "wide" : how === "city" || !moved || !hasCity() ? "city" : "view";
+      res = id !== SS ? await seekPlace(q) : ssScope === "wide" ? await seekWide(q)
+        : ssScope === "view" ? await seekView(q, ssBBox()) : hasCity() ? await seekView(q, cityView()) : await seekPlace(q);
     } finally {
       if (b0) b0.disabled = false;
     }
@@ -5023,11 +5029,14 @@
          於是那顆「好」沒被畫出來 —— 而「查無」正是最需要它的時刻。
          同一句話有兩個產生它的地方,就會有一個先過期。 */
       const nb = seekBox(id);
-      /* 畫面範圍裡 0 筆:講一聲,旁邊一顆「搜整個城市」讓人自己按 —— **不自動往外找**(2026-10-29,取代 10-02 的自動往外) */
-      const inView = id === SS && !ssWhole;
+      /* 0 筆:講一聲,旁邊只放**下一步**那一顆讓人自己按 —— **不自動往外找**
+         畫面(比城市小)→「搜整個城市」;城市、或畫面已經蓋住城市 →「往外找」;往外找也沒有 → 就是找不到 */
+      const sc = id === SS ? ssScope : "";
+      const next = sc === "view" && !ssWhole ? '<button type="button" class="btn btn-sm ss-city" data-city="1">搜整個城市</button>'
+        : sc === "view" || sc === "city" ? '<button type="button" class="btn btn-sm ss-city" data-wide="1">往外找</button>' : "";
       if (id === SS) ssShow([], false);
-      nb.innerHTML = '<div class="said hint">' + esc(inView ? "這個範圍找不到「" + q + "」。" : id === SS ? "這個城市找不到「" + q + "」。" : "「" + q + "」找不到。") +
-        (inView ? '<button type="button" class="btn btn-sm ss-city" data-city="1">搜整個城市</button>' : "") + "</div>" + hintHTML(id);
+      nb.innerHTML = '<div class="said hint">' + esc(sc === "view" ? "這個範圍找不到「" + q + "」。" : sc === "city" ? "這個城市找不到「" + q + "」。" : "「" + q + "」找不到。") +
+        next + "</div>" + hintHTML(id);
       nb.hidden = false;
       return;
     }
@@ -5413,6 +5422,7 @@
       return;
     }
     if (ev.target.closest && ev.target.closest("[data-city]")) { runSeek(SS, "city"); return; }
+    if (ev.target.closest && ev.target.closest("[data-wide]")) { runSeek(SS, "wide"); return; }
     const take = ev.target.closest && ev.target.closest("[data-take]");
     if (take) { ssTake(+take.getAttribute("data-take")); return; }
     if (ev.target.closest && ev.target.closest("#ss-x")) { closeSeekScreen(false); return; }

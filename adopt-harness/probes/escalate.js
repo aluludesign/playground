@@ -74,8 +74,8 @@ async function press(id) {
     await until(function () { return !d.getElementById("seek-screen").hidden && btn("ss-q").disabled; }, 40);
     await until(function () { return !btn("ss-q").disabled; }, 200);
     inp = d.getElementById("ss-q");
-    ok("第 1 次只問地圖畫面那一塊(bounded=1),0 筆也**不自動往外找**(2026-10-29)", osm.length === 1 && /bounded=1/.test(osm[0]) && goo.length === 0, { osm: osm.length, google: goo.length });
-    ok("0 筆 →「這個範圍找不到」＋「搜整個城市」", boxText("ss-q").indexOf("這個範圍找不到") >= 0 && !!d.querySelector("#ss-q-out [data-city]"), boxText("ss-q"));
+    ok("第 1 次只問這一團的城市(bounded=1),0 筆也**不自動往外找**(2026-10-30)", osm.length === 1 && /bounded=1/.test(osm[0]) && goo.length === 0, { osm: osm.length, google: goo.length });
+    ok("0 筆 →「這個城市找不到」＋「往外找」", boxText("ss-q").indexOf("這個城市找不到") >= 0 && !!d.querySelector("#ss-q-out [data-wide]"), boxText("ss-q"));
     ok("第 1 次搜完就給「加地點名」", boxText("ss-q").indexOf("加入地點名") >= 0, boxText("ss-q"));
     ok("第 1 次**不問**要不要強力搜", boxText("ss-q").indexOf("強力搜") < 0, boxText("ss-q"));
     ok("按鈕還是「搜尋」", btn("ss-q").textContent === "搜尋", btn("ss-q").textContent);
