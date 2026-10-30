@@ -4516,14 +4516,14 @@
     const rg = regionFor(q);
     if (rg === TRIP_REGION && !outsideHit(q) && CITY && isFinite(CITY.lat)) {
       const near = await queued(() => fetch("https://nominatim.openstreetmap.org/search?format=json" +
-        "&limit=40&extratags=1&accept-language=zh-TW&countrycodes=" + rg.cc + "&bounded=1&viewbox=" + cityView() +
+        "&limit=40&extratags=1&namedetails=1&accept-language=zh-TW&countrycodes=" + rg.cc + "&bounded=1&viewbox=" + cityView() +
         "&q=" + encodeURIComponent(q)).then(r => r.json()).catch(() => null));
       if (near && near.length) return near;
     }
     /* **免費搜不限 6 筆**(2026-10-01,Lulu):40 是 Nominatim 自己的上限。清單本來就會捲(露四則半),
        縮圖是捲到才載(loading="lazy"),筆數多了不會一次全載 */
     return queued(() => fetch("https://nominatim.openstreetmap.org/search?format=json" +
-      "&limit=40&extratags=1&accept-language=zh-TW&countrycodes=" + rg.cc + "&viewbox=" + rg.view +
+      "&limit=40&extratags=1&namedetails=1&accept-language=zh-TW&countrycodes=" + rg.cc + "&viewbox=" + rg.view +
       "&q=" + encodeURIComponent(q)).then(r => r.json()).catch(() => null));
   }
 
@@ -4578,13 +4578,13 @@
   }
   function seekView(q, view) {
     return queued(() => fetch("https://nominatim.openstreetmap.org/search?format=json" +
-      "&limit=40&extratags=1&accept-language=zh-TW&bounded=1&viewbox=" + view +
+      "&limit=40&extratags=1&namedetails=1&accept-language=zh-TW&bounded=1&viewbox=" + view +
       "&q=" + encodeURIComponent(q)).then(r => r.json()).catch(() => null));
   }
   /* 「往外找」:不限城市、不限國家(不帶 countrycodes、bounded),城市框只當加權 —— 近的排前面 */
   function seekWide(q) {
     return queued(() => fetch("https://nominatim.openstreetmap.org/search?format=json" +
-      "&limit=40&extratags=1&accept-language=zh-TW" + (hasCity() ? "&viewbox=" + cityView() : "") +
+      "&limit=40&extratags=1&namedetails=1&accept-language=zh-TW" + (hasCity() ? "&viewbox=" + cityView() : "") +
       "&q=" + encodeURIComponent(q)).then(r => r.json()).catch(() => null));
   }
   /* 把一塊經緯度範圍放進畫面看得到的那一塊(扣掉搜尋框和卡片)。塞得下的最大縮放;`zMax`:只有一個點時不要貼到街區 */
@@ -5008,6 +5008,9 @@
       seekSay(id, "連不上地名查詢服務 —— 網路好一點再試,或直接把地點打完整。", true);
       return;
     }
+    /* 名字和地址裡沒有打的那幾個字就不算(2026-10-30,Lulu):Nominatim 會把中文轉成拼音再比,
+       搜「唱歌」會給「常各庄村」(chang ge)。同一個字的繁簡、日文寫法算同一個字(見 sameChars) */
+    res = res.filter(r => sameChars(q, r));
     if (!res.length) {
       /* **誠實說查無,不要退而求其次給一個。** 那正是這個功能要取代的行為。 */
       if (strong) {
@@ -5117,6 +5120,26 @@
     building: { train_station: "車站", temple: "寺廟", shrine: "神社", church: "教會", hotel: "飯店", commercial: "商業大樓", retail: "商場" },
   };
   const RELIGION = { buddhist: "寺廟", shinto: "神社", christian: "教會" };
+  /* 繁體、簡體、日文新字體算同一個字。只收地名、店名常見的;沒收到的就當不同字 —— 那筆會被當成找不到,
+     不會把錯的地方塞給人。每一組第一個字是代表。 */
+  const HAN_SAME = ("淺浅 澤沢泽 廣広广 國国 驛駅 站 齋斎斋 櫻桜樱 濱浜滨 邊辺边 龍竜龙 藝芸艺 縣県县 區区 東东 車车 麵麺面 臺台 灣湾 鐵鉄铁 " +
+    "館馆 樂楽乐 學学 會会 廳庁厅 縄繩绳 戶戸户 黑黒 圓円圆 澀渋涩 嶋島岛 舊旧 寶宝 對対对 單単单 豐豊丰 萬万 與与 傳伝传 " +
+    "關関关 門门 開开 間间 閣阁 橋桥 樓楼 灘滩 鹽塩盐 溫温 湯汤 島岛 嶼屿 鄉郷乡 際际 場场 塲 歲歳岁 壽寿 惠恵 隱隠隐 " +
+    "龜亀龟 鶴鹤 鷹鷹鹰 鳥鸟 魚鱼 鮨 壽 葉叶 茶 華华 爲為为 處処处 號号 證証证 劍剣剑 圖図图 團団团 園园 圍囲围 " +
+    "觀観观 覺覚觉 體体 發発发 變変变 戀恋 聲声 賣売卖 讀読读 續続续 總総总 綠緑绿 線线 紅红 細细 經経经 結结 " +
+    "寫写 實実实 寺 廟庙 神 社 祇 稻稲 穗穂 嶺岭 峽峡 岳嶽 擧挙举 據拠据 擇択择 澤 濃浓 漢汉 滿満满 淚涙泪 " +
+    "飯饭 飲饮 餐 燒焼烧 煙烟 營営营 燈灯 爐炉 獨独 狹狭 猪豬 貓猫 銀银 錢銭钱 鎌镰 鏡镜 長长 陽阳 陰阴 隊队 " +
+    "雲云 電电 靜静 頂顶 順顺 須须 頭头 題题 風风 飛飞 馬马 驗験验 髮髪发 鬥闘斗 魯鲁 鮮鲜 鳴鸣 麥麦 黃黄 齒歯齿").split(" ");
+  const HAN_REP = {};
+  HAN_SAME.forEach(g => { for (const ch of g) if (!HAN_REP[ch]) HAN_REP[ch] = g[0]; });
+  const fold = t => String(t || "").toLowerCase().normalize("NFKC").replace(/[\s\-_.,，、·・'’()（）「」]/g, "")
+    .replace(/./gu, ch => HAN_REP[ch] || ch);
+  /* 打的每一段(空白分開)都要原字出現在這一筆的某個名字、地址或類別裡 */
+  function sameChars(q, r) {
+    const nd = r.namedetails || {};
+    const hay = fold([r.display_name, r.name, hitCat(r)].concat(Object.keys(nd).map(k => nd[k])).join("|"));
+    return String(q).split(/\s+/).filter(Boolean).every(w => hay.indexOf(fold(w)) >= 0);
+  }
   function hitCat(r) {
     const x = r.extratags || {}, c = r.class || r.category, t = r.type;
     if (c === "amenity" && t === "place_of_worship" && RELIGION[x.religion]) return RELIGION[x.religion];

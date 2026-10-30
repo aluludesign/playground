@@ -33,7 +33,7 @@ return (async function () {
   q("#tab-wish").click(); await wait(80);
   q("#wishbox") && (q("#wishbox").open = true);
   q("#add-wish-btn").click(); await wait(120);
-  q("#wf-title").value = "淺草"; q('[data-seek="wf-title"]').click();
+  q("#wf-title").value = "台東區";   /* 每一筆地址都有(2026-10-30 起沒那幾個字的結果會丟掉) */ q('[data-seek="wf-title"]').click();
   for (var i = 0; i < 40 && !q("#ss-q-out .hcard"); i++) await wait(50);
   /* 清單一出現:維基還沒回來,第一張是地圖小圖 */
   var first = q('#ss-q-out [data-i="0"] .ph img');

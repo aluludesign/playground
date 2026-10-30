@@ -205,6 +205,29 @@ return (async function () {
   out.蓋住城市 = { z: q("#ss-map")._v.z, 字: txt(q("#ss-q-out .said")), 鈕: btns() };
   ok("畫面已經蓋住整個城市、0 筆:「這個範圍找不到」、只有「往外找」", /這個範圍找不到/.test(out.蓋住城市.字) && out.蓋住城市.鈕.join() === "往外找", out.蓋住城市);
 
+  /* 9f 名字、地址沒有打的字就不算(2026-10-30):「唱歌」→ Nominatim 給「常各庄村」(拼音一樣)要丟掉;
+        繁簡日寫法算同一個字(淺草 = 浅草);namedetails 裡別的語言的名字也算 */
+  await wait(1300);
+  var sv2 = q("#ss-map")._v; sv2.cx = projX(139.6503, sv2.z); sv2.cy = projY(35.6762, sv2.z);
+  delete q("#seek-screen").dataset.picked;
+  reply = [{ lat: "39.2", lon: "118.9", class: "boundary", type: "administrative", name: "常各庄村", display_name: "常各庄村, 王滩镇, 乐亭县, 唐山市, 河北省, 中国", extratags: {}, namedetails: { name: "常各庄村" } }];
+  q("#ss-q").value = "唱歌"; q("#ss-x").click(); await wait(80);
+  q('[data-seek="wf-title"]').click(); await until(() => /找不到/.test(txt(q("#ss-q-out")))); await wait(200);
+  out.同音 = { 字: txt(q("#ss-q-out .said")), 卡片: qa("#ss-q-out .hcard").length, 點: qa("#ss-map .pin").length };
+  ok("搜「唱歌」只回「常各庄村」→ 當成找不到(沒有卡片、沒有點)", /找不到「唱歌」/.test(out.同音.字) && !out.同音.卡片 && !out.同音.點, out.同音);
+  await wait(1300);
+  reply = [{ lat: "35.7148", lon: "139.7967", class: "amenity", type: "place_of_worship", name: "浅草寺", display_name: "浅草寺, 浅草二丁目, 台東区, 東京都, 日本", extratags: {}, namedetails: { name: "浅草寺" } },
+           { lat: "35.6896", lon: "139.7006", class: "railway", type: "station", name: "Shinjuku", display_name: "Shinjuku, 東京都, 日本", extratags: {}, namedetails: { name: "Shinjuku", "name:zh-Hant": "新宿站" } }];
+  q("#ss-q").value = "淺草"; q('[data-seek="ss-q"]').click();
+  await until(() => q("#ss-q-out .hcard")); await wait(100);
+  out.異體 = qa("#ss-q-out .hcard b").map(txt);
+  ok("繁簡日寫法算同一個字:搜「淺草」留下「浅草寺」;沒有那幾個字的(新宿)丟掉", out.異體.length === 1 && /浅草寺/.test(out.異體[0]), out.異體);
+  await wait(1300);
+  q("#ss-q").value = "新宿站"; q('[data-seek="ss-q"]').click();
+  await until(() => q("#ss-q-out .hcard") && /Shinjuku|新宿/.test(txt(q("#ss-q-out .hcard b")))); await wait(100);
+  out.別名 = qa("#ss-q-out .hcard b").map(txt);
+  ok("namedetails 裡的中文名也算:搜「新宿站」留下 Shinjuku", out.別名.length === 1, out.別名);
+
   await wait(1300);
   reply = HITS; q("#ss-q").value = "拉麵"; q('[data-seek="ss-q"]').click();
   await until(() => q("#ss-q-out .hcard")); await wait(100);
