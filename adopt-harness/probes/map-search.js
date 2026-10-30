@@ -65,9 +65,23 @@ return (async function () {
   var u0 = asked[asked.length - 1];
   out.第一次查 = { bounded: param(u0, "bounded"), viewbox: param(u0, "viewbox"), 主地圖寬度: mainW && mainW.toFixed(4) };
   var vb = (out.第一次查.viewbox || "").split(",").map(Number);
-  /* 一進來的畫面 = 主畫面地圖同一個縮放:viewbox 寬 = 螢幕寬在那個縮放下的經度 */
-  ok("只搜畫面範圍:bounded=1、viewbox 寬 = 主畫面地圖同一個縮放下的整個螢幕寬", out.第一次查.bounded === "1" && vb.length === 4 && mainW &&
-    Math.abs(Math.abs(vb[2] - vb[0]) - mainW) < 1e-3, out.第一次查);
+  /* 一進來的畫面 = 主畫面地圖同一個縮放:viewbox 寬 = 螢幕寬在那個縮放下的經度。
+     桌機畫面比城市框寬 → 被城市框切掉(2026-10-30),切掉的那一邊在 9b 對城市框 */
+  out.第一次查.被切 = mainW && Math.abs(vb[2] - vb[0]) < mainW - 1e-3;
+  ok("只搜畫面範圍:bounded=1、viewbox 寬 = 主畫面地圖同一個縮放下的整個螢幕寬(比城市寬就被城市切掉)", out.第一次查.bounded === "1" && vb.length === 4 && mainW &&
+    (Math.abs(Math.abs(vb[2] - vb[0]) - mainW) < 1e-3 || out.第一次查.被切), out.第一次查);
+
+  /* 1b 搜完畫面自動框住全部結果(2026-10-30):全部在看得到的那一塊裡、再放大一級就塞不下(或到 16 級上限);按鈕還是「搜尋」 */
+  function fitted() {
+    var ps = qa("#ss-map .pin.hit").length ? qa("#ss-map .pin.hit") : qa('#ss-map .pin[data-k^="h"]');
+    var rs = ps.map(p => p.getBoundingClientRect()), v = visRect(), z = q("#ss-map")._v.z;
+    var xs = rs.map(r => r.left + r.width / 2), ys = rs.map(r => r.top + r.height / 2);
+    var sw = Math.max.apply(null, xs) - Math.min.apply(null, xs), sh = Math.max.apply(null, ys) - Math.min.apply(null, ys);
+    return { z: z, 點數: ps.length, 全在: ps.every(p => pinIn(p.dataset.k)),
+      再放大塞不下: z >= 16 || sw * 2 > (v.right - v.left) - 40 || sh * 2 > (v.bottom - v.top) - 40, 按鈕: txt(q('[data-seek="ss-q"]')) };
+  }
+  out.框住 = fitted();
+  ok("搜完畫面框住全部結果(最大縮放),按鈕還是「搜尋」", out.框住.點數 === 12 && out.框住.全在 && out.框住.再放大塞不下 && out.框住.按鈕 === "搜尋", out.框住);
 
   /* 2 點全部標上去,編號跟卡片一樣 */
   var pins = qa("#ss-map .pin");
@@ -135,17 +149,19 @@ return (async function () {
   out.拖 = { 畫面裡的點: inView, 卡片: cards, 有自動搜: asked.length !== nAsk };
   ok("拖動後卡片跟著畫面、沒有自動搜", (cards === inView || (!inView && !q("#ss-q-out .ss-none").hidden)) && !out.拖.有自動搜, out.拖);
 
-  /* 8 按「重新搜這個範圍」:用現在的畫面查 */
+  /* 8 按「重新搜這個範圍」:用現在的畫面查(搜完畫面會自己框住結果,所以畫面左邊在按之前量) */
+  var z = m._v.z, lonL = (m._v.cx - b.width / 2 / TILE) / Math.pow(2, z) * 360 - 180;
   q('[data-seek="ss-q"]').click();
   await until(() => asked.length > nAsk); await wait(150);
-  var u1 = asked[asked.length - 1], vb1 = param(u1, "viewbox").split(",").map(Number), v = visRect(), z = m._v.z;
-  var lonL = (m._v.cx - b.width / 2 / TILE) / Math.pow(2, z) * 360 - 180;
+  var u1 = asked[asked.length - 1], vb1 = param(u1, "viewbox").split(",").map(Number), v = visRect();
   out.重搜 = { bounded: param(u1, "bounded"), viewbox左: vb1[0].toFixed(4), 畫面左: lonL.toFixed(4), 比上次小: Math.abs(vb1[2] - vb1[0]) < Math.abs(vb[2] - vb[0]), 按鈕: txt(q('[data-seek="ss-q"]')) };
   ok("重搜用現在的畫面(bounded=1、viewbox 左邊 = 畫面左邊、放大後範圍變小),按鈕回到「搜尋」", out.重搜.bounded === "1" && out.重搜.viewbox左 === out.重搜.畫面左 && out.重搜.比上次小 && out.重搜.按鈕 === "搜尋", out.重搜);
 
   /* 9 0 筆 →「這個範圍找不到」＋「搜整個城市」(不自動往外) */
+  var v9 = JSON.stringify(q("#ss-map")._v);
   reply = []; q("#ss-q").value = "泡溫泉"; q('[data-seek="ss-q"]').click();
   await until(() => /這個範圍找不到/.test(txt(q("#ss-q-out")))); nAsk = asked.length; await wait(1300);
+  ok("0 筆畫面不動", JSON.stringify(q("#ss-map")._v) === v9, [v9, q("#ss-map")._v]);
   out.零筆 = { 字: txt(q("#ss-q-out .said")), 鈕: txt(q("#ss-q-out [data-city]")), 點: qa("#ss-map .pin").length, 自動往外: asked.length !== nAsk };
   ok("畫面裡 0 筆:講「這個範圍找不到」、旁邊「搜整個城市」、點清掉、沒有自動往外找", /這個範圍找不到「泡溫泉」/.test(out.零筆.字) && out.零筆.鈕 === "搜整個城市" && out.零筆.點 === 0 && !out.零筆.自動往外, out.零筆);
   reply = HITS; q("#ss-q").value = "拉麵"; nAsk = asked.length;
@@ -154,6 +170,22 @@ return (async function () {
   var u2 = asked[nAsk], vb2 = (param(u2, "viewbox") || "").split(",").map(Number);
   out.搜城市 = { viewbox寬: Math.abs(vb2[2] - vb2[0]).toFixed(2), 全部在畫面裡: qa("#ss-map .pin").every(p => pinIn(p.dataset.k)), 卡片數: qa("#ss-q-out .hcard").length };
   ok("「搜整個城市」用城市範圍(約 1 度寬)、結果全部框進畫面", out.搜城市.viewbox寬 === "1.00" && out.搜城市.全部在畫面裡 && out.搜城市.卡片數 === 8, out.搜城市);
+  /* 9b「搜整個城市」只搜城市(2026-10-30):城市外的地名也不往外找、不跳過城市;0 筆 →「這個城市找不到」、沒有按鈕 */
+  reply = []; q("#ss-q").value = "泡溫泉"; q('[data-seek="ss-q"]').click();
+  await until(() => q("#ss-q-out [data-city]")); await wait(300);
+  q("#ss-q").value = "京都車站"; nAsk = asked.length;
+  q("#ss-q-out [data-city]").click();
+  await until(() => /這個城市找不到/.test(txt(q("#ss-q-out")))); await wait(1300);
+  var u3 = asked[nAsk];
+  out.城市外 = { 字: txt(q("#ss-q-out .said")), 鈕: !!q("#ss-q-out [data-city]"), 查了幾次: asked.length - nAsk, bounded: param(u3, "bounded"), viewbox: param(u3, "viewbox") };
+  ok("「搜整個城市」搜城市外的地名:只查一次(城市框、bounded=1),講「這個城市找不到」、不再給按鈕",
+    out.城市外.查了幾次 === 1 && out.城市外.bounded === "1" && out.城市外.viewbox === param(u2, "viewbox") && /這個城市找不到「京都車站」/.test(out.城市外.字) && !out.城市外.鈕, out.城市外);
+  if (out.第一次查.被切) {
+    var cb = param(u2, "viewbox").split(",").map(Number);
+    ok("一進來被切掉的那一邊 = 城市框的邊", Math.abs(vb[0] - cb[0]) < 1e-3 || Math.abs(vb[2] - cb[2]) < 1e-3, { 第一次: vb, 城市: cb });
+  }
+  reply = HITS; q("#ss-q").value = "拉麵"; q('[data-seek="ss-q"]').click();
+  await until(() => q("#ss-q-out .hcard")); await wait(100);
 
   /* 10 選這個 → 回到對話框、地點填好 */
   q('#ss-q-out [data-hit="ss-q"][data-i="2"]').click(); await wait(50);

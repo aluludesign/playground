@@ -4533,11 +4533,15 @@
      - 只搜**畫面裡看得到的那一塊**(viewbox＋bounded=1)。拖動或縮放之後,卡片只列畫面裡的(只在搜到的裡面篩,不重搜),
        搜尋鈕變「重新搜這個範圍」,按了才重搜 —— **地圖一動就搜不行**:Nominatim 的條款不准自動、連續地查。
      - 畫面裡 0 筆 →「這個範圍找不到」＋「搜整個城市」,讓人自己按。
+     - 範圍最大只到這一團的城市(2026-10-30):畫面比城市大就只搜城市;「搜整個城市」0 筆 →「這個城市找不到」,不往外。
      - ✕ = 不選地點,打的字留在地點欄(「泡溫泉」這種沒有固定地點的,就用這個名字)。
      - 強力搜照舊:Google 的清單出現在卡片那一區,**不在地圖上標點**(Google 的條款)。
      搜尋的那幾個狀態(段數、強力搜上膛)跟著搜尋框走:進來時從地點欄那一格帶過來,✕ 回去時帶回去。 */
   const SS = "ss-q";
   let ssFor = null, ssSel = -1, ssMoved = false;
+  /* 上一次送出去的範圍是不是整個城市(找不到時就不用再給「搜整個城市」) */
+  let ssWhole = false;
+  const hasCity = () => !!CITY && isFinite(CITY.lat) && isFinite(CITY.lon);
   const ssMap = () => el("ss-map");
   /* 地圖被蓋住的上下兩塊:上面是搜尋框,下面是卡片。`reserve`:搜尋的時候卡片可能還沒出來,先照卡片會佔的高度扣 */
   let ssCardsH = 0;
@@ -4550,13 +4554,31 @@
   }
   const unX = (x, z) => x / Math.pow(2, z) * 360 - 180;
   const unY = (y, z) => Math.atan(Math.sinh(Math.PI * (1 - 2 * y / Math.pow(2, z)))) * 180 / Math.PI;
-  /* 畫面裡看得到的那一塊(經緯度):左、上、右、下 */
+  /* 畫面裡看得到的那一塊(經緯度):左、上、右、下。
+     **最大只到這一團的城市**(2026-10-30,Lulu):送出去的是畫面和 `cityView()` 的交集 ——
+     縮到全世界也只搜城市那一塊;畫面整個在城市外面,就搜城市。 */
   function ssBBox() {
     const box = ssMap(), v = box._v, w = box.clientWidth, h = box.clientHeight, c = ssCover(true);
-    if (!v) return cityView();
-    const x0 = v.cx - w / 2 / TILE, x1 = v.cx + w / 2 / TILE;
-    const y0 = v.cy + (c.top - h / 2) / TILE, y1 = v.cy + (h / 2 - c.bot) / TILE;
-    return [unX(x0, v.z), unY(y0, v.z), unX(x1, v.z), unY(y1, v.z)].map(x => x.toFixed(5)).join(",");
+    ssWhole = false;
+    if (!v) { ssWhole = hasCity(); return cityView(); }
+    const n = Math.pow(2, v.z);
+    let x0 = v.cx - w / 2 / TILE, x1 = v.cx + w / 2 / TILE;
+    /* 縮到看得到整圈地球 → 經度就是全部。
+       跨過換日線:Nominatim 的 viewbox 不會跨(它把兩個經度排大小,會變成另一邊那一大片),
+       所以只送畫面裡佔比較多的那一邊。另一邊搜不到,拖過去再按「重新搜這個範圍」。 */
+    if (x1 - x0 >= n) { x0 = 0; x1 = n; }
+    else if (x0 < 0) { if (-x0 > x1) { x0 += n; x1 = n; } else x0 = 0; }
+    else if (x1 > n) { if (x1 - n > n - x0) { x0 = 0; x1 -= n; } else x1 = n; }
+    const y0 = Math.max(0, v.cy + (c.top - h / 2) / TILE), y1 = Math.min(n, v.cy + (h / 2 - c.bot) / TILE);
+    let b = [unX(x0, v.z), unY(y0, v.z), unX(x1, v.z), unY(y1, v.z)];
+    if (hasCity()) {
+      const cv = cityView().split(",").map(Number);
+      const cut = [Math.max(b[0], cv[0]), Math.min(b[1], cv[1]), Math.min(b[2], cv[2]), Math.max(b[3], cv[3])];
+      if (cut[0] >= cut[2] || cut[3] >= cut[1]) { ssWhole = true; return cityView(); }
+      ssWhole = cut.every((x, i) => x === cv[i]);
+      b = cut;
+    }
+    return b.map(x => x.toFixed(5)).join(",");
   }
   function seekView(q, view) {
     return queued(() => fetch("https://nominatim.openstreetmap.org/search?format=json" +
@@ -4664,7 +4686,7 @@
     paintMap(box);
   });
 
-  /* 搜到一批:全部標在地圖上。`fit`:「搜整個城市」的結果不一定在畫面裡,把畫面拉到框得住全部 */
+  /* 搜到一批:全部標在地圖上。`fit`:把畫面拉到框得住全部的最大縮放(只有一個點時不貼到街區);0 筆畫面不動 */
   function ssShow(res, fit) {
     const box = ssMap();
     ssSel = -1;
@@ -4682,7 +4704,7 @@
     const box = ssMap(), v = box._v;
     if (!v) return true;
     const w = box.clientWidth, h = box.clientHeight, c = ssCover(false);
-    const x = w / 2 + (projX(+r.lon, v.z) - v.cx) * TILE, y = h / 2 + (projY(+r.lat, v.z) - v.cy) * TILE;
+    const x = w / 2 + (nearX(+r.lon, v) - v.cx) * TILE, y = h / 2 + (projY(+r.lat, v.z) - v.cy) * TILE;
     return x >= 0 && x <= w && y >= c.top && y <= h - c.bot;
   }
   /* 卡片只列畫面裡的。**只在搜到的裡面篩**,不重搜 */
@@ -4907,7 +4929,7 @@
     paintSeekBtn(id);
   }
 
-  /* `how === "city"`:全螢幕搜尋裡按了「搜整個城市」—— 不用畫面範圍,照以前那樣先城市、再放寬 */
+  /* `how === "city"`:全螢幕搜尋裡按了「搜整個城市」—— 不用畫面範圍,只搜城市那一塊(找不到就是找不到,不往外) */
   async function runSeek(id, how) {
     const input = el(id);
     const q = input ? input.value.trim() : "";
@@ -4953,7 +4975,9 @@
     let res;
     try {
       /* 全螢幕搜尋:只搜地圖畫面裡看得到的那一塊(Nominatim 的 viewbox＋bounded=1) */
-      res = id === SS && how !== "city" ? await seekView(q, ssBBox()) : await seekPlace(q);
+      /* 「搜整個城市」就只搜城市那一塊(bounded=1):不放寬到整個國家、字串裡有別的地名也一樣(2026-10-30,Lulu) */
+      res = id !== SS ? await seekPlace(q) : how !== "city" ? await seekView(q, ssBBox())
+        : hasCity() ? (ssWhole = true, await seekView(q, cityView())) : await seekPlace(q);
     } finally {
       if (b0) b0.disabled = false;
     }
@@ -5000,9 +5024,9 @@
          同一句話有兩個產生它的地方,就會有一個先過期。 */
       const nb = seekBox(id);
       /* 畫面範圍裡 0 筆:講一聲,旁邊一顆「搜整個城市」讓人自己按 —— **不自動往外找**(2026-10-29,取代 10-02 的自動往外) */
-      const inView = id === SS && how !== "city";
+      const inView = id === SS && !ssWhole;
       if (id === SS) ssShow([], false);
-      nb.innerHTML = '<div class="said hint">' + esc(inView ? "這個範圍找不到「" + q + "」。" : "「" + q + "」找不到。") +
+      nb.innerHTML = '<div class="said hint">' + esc(inView ? "這個範圍找不到「" + q + "」。" : id === SS ? "這個城市找不到「" + q + "」。" : "「" + q + "」找不到。") +
         (inView ? '<button type="button" class="btn btn-sm ss-city" data-city="1">搜整個城市</button>' : "") + "</div>" + hintHTML(id);
       nb.hidden = false;
       return;
@@ -5033,7 +5057,8 @@
     box._hits = res;
     box._show = null;
     moreHitsOnScroll(box, id);
-    if (id === SS) ssShow(res, how === "city");
+    /* 每次搜完都把畫面拉到剛好框住全部結果(2026-10-30,Lulu)—— 不算他動過地圖,按鈕還是「搜尋」 */
+    if (id === SS) ssShow(res, true);
     box._wiki = wikiForHits(res).then(() => {
       if (box._hits !== res) return;   /* 已經換了一批 */
       return cardWiki(box, id, res);
@@ -5560,7 +5585,24 @@
                        : { core: pts, far: [] };
   }
 
-  const Z_MIN = 8, Z_MAX = 18;
+  /* 0 = 整個世界一張圖磚,19 = tile.openstreetmap.org 給的最細一層(2026-10-30 Lulu:放到圖磚能給的極限) */
+  const Z_MIN = 0, Z_MAX = 19;
+
+  /* 縮得很小時世界比畫面還窄:那就整個世界置中、不重複,不然同一塊大陸排成一列、點只在其中一塊上。
+     世界比畫面寬時左右接起來(過了換日線還能繼續拖),中心收回 0..n 之間。
+     上下:世界比畫面矮就置中;比畫面高就不讓南北兩端拖進畫面裡(外面沒有圖磚,只有一片空白)。 */
+  function fixView(box) {
+    const v = box._v, w = box.clientWidth, h = box.clientHeight, n = Math.pow(2, v.z);
+    if (n * TILE <= w) v.cx = n / 2;
+    else v.cx = ((v.cx % n) + n) % n;
+    if (n * TILE <= h) v.cy = n / 2;
+    else v.cy = Math.max(h / 2 / TILE, Math.min(n - h / 2 / TILE, v.cy));
+  }
+  /* 經度換成 x 的時候取離畫面中心最近的那一份 —— 東京在換日線左邊、斐濟在右邊,拖過去時點要跟著在畫面上 */
+  function nearX(lo, v) {
+    const n = Math.pow(2, v.z), x = projX(lo, v.z);
+    return x + n * Math.round((v.cx - x) / n);
+  }
 
   /* 圖磚和標記都放在一層 .layer 裡。拖曳和捏合時只動這一層的 transform ——
      每次都重畫 innerHTML 的話圖磚會整個閃掉,手指還在螢幕上就看得出來。
@@ -5569,10 +5611,12 @@
     const v = box._v, pts = box._pts || [];
     const w = box.clientWidth, h = box.clientHeight;
     if (!v || !w || !h) return;
+    fixView(box);
     const left = w / 2 - v.cx * TILE, top = h / 2 - v.cy * TILE;
-    const n = Math.pow(2, v.z);
+    const n = Math.pow(2, v.z), one = n * TILE <= w;
     let html = '<div class="layer">';
     for (let tx = Math.floor(v.cx - w / 2 / TILE); tx <= Math.floor(v.cx + w / 2 / TILE); tx++) {
+      if (one && (tx < 0 || tx >= n)) continue;
       for (let ty = Math.floor(v.cy - h / 2 / TILE); ty <= Math.floor(v.cy + h / 2 / TILE); ty++) {
         if (ty < 0 || ty >= n) continue;
         html += '<img class="tile" alt="" src="https://tile.openstreetmap.org/' +
@@ -5588,7 +5632,7 @@
       html += '<a class="pin' + (p.cls ? " " + p.cls : "") + (p.ap && !p.ok ? " approx" : "") +
         (p.k === box._focus ? " on" : "") + '" data-k="' + esc(p.k) +
         '" href="' + gmap(p.place, p) + '" target="_blank" rel="noopener" style="left:' +
-        Math.round(left + projX(p.lo, v.z) * TILE) + "px; top:" + Math.round(top + projY(p.la, v.z) * TILE) +
+        Math.round(left + nearX(p.lo, v) * TILE) + "px; top:" + Math.round(top + projY(p.la, v.z) * TILE) +
         "px" + (p.color ? "; background:" + p.color : "") +
         (p.on ? "; color:" + p.on : "") +
         '" title="' + esc(p.tip) + '">' + esc(p.n) +
