@@ -133,7 +133,7 @@ async function press(id) {
       boxText("ss-q").indexOf("清單載入出現錯誤") >= 0 && boxText("ss-q").indexOf("免費") < 0, boxText("ss-q"));
     ok("按鈕**留在**「強力搜」(這一下沒花到錢,不該逼他重走一輪)",
       btn("ss-q").textContent === "強力搜", btn("ss-q").textContent);
-    ok("退路那句也在(他按到最後一段了)", boxText("ss-q").indexOf("也可以許願") >= 0, boxText("ss-q"));
+    ok("退路那句也在(他按到最後一段了)", /沒找到也可以(許願|直接用這個名字)/.test(boxText("ss-q")), boxText("ss-q"));
 
     // ---- 換表單不可以帶著段數 ----
     d.getElementById("ss-x").click(); await sleep(60);

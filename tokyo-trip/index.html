@@ -1058,6 +1058,7 @@
       max-height:62%; overflow-y:auto; overscroll-behavior:contain; padding-bottom:env(safe-area-inset-bottom, 0px);
       box-shadow:0 -1px 8px rgba(0,0,0,.18);}
     #ss-q-out .ss-city{margin-left:8px;}
+    #ss-q-out .ss-raw{display:flex; flex-wrap:wrap; align-items:center; gap:4px 8px;}
     /* 搜到的點:全部標出來、編號跟卡片一樣。名字只在選起來的那顆旁邊出現,四十個名字擠在一起什麼都看不到 */
     #ss-map .pin{background:var(--color-accent); color:var(--color-accent-ink);}
     /* 已排行程的點(「全部已排」開著):顏色是那一天的(inline),小一點、在搜到的點底下 */
@@ -4847,7 +4848,20 @@
 
   /* 花過錢之後才出現。**跟著每一次重畫一起帶出去**,不然它只活到下一句訊息為止。 */
   function seekTail(id) {
+    if (id === SS) return ssRawHTML();
     return seekUsedStrong[id] ? '<div class="said soft">' + esc(NOTE_OK_WITHOUT) + "</div>" : "";
+  }
+  /* 全螢幕搜尋**每次搜完都有**(找到、找不到、強力搜都一樣)一顆「直接許願「拉麵」」(2026-11-01,Lulu):
+     不選地點、回對話框、名稱欄填這個詞 —— 跟左上 ✕ 做的一樣,只是看得到。
+     行程那幾欄(se／sf／ai)寫「直接用」。詞最多 5 個字,多的用 … */
+  const WISH_FIELDS = ["wf-title", "we-title"];
+  function ssRawHTML() {
+    const q = el(SS).value.trim();
+    if (!q || !ssFor) return "";
+    const cs = [...q], short = cs.length > 5 ? cs.slice(0, 5).join("") + "…" : q;
+    const wish = WISH_FIELDS.indexOf(ssFor) >= 0;
+    return '<div class="said soft ss-raw">' + esc(wish ? NOTE_OK_WITHOUT : "沒找到也可以直接用這個名字,只是不會出現在地圖上。") +
+      '<button type="button" class="btn btn-sm" data-raw="' + esc(q) + '">' + esc((wish ? "直接許願「" : "直接用「") + short + "」") + "</button></div>";
   }
 
   function seekSay(id, msg, hint) {
@@ -5052,7 +5066,7 @@
         : sc === "view" || sc === "city" ? '<button type="button" class="btn btn-sm ss-city" data-wide="1">往外找</button>' : "";
       if (id === SS) ssShow([], false);
       nb.innerHTML = '<div class="said hint">' + esc(sc === "view" ? "這個範圍找不到「" + q + "」。" : sc === "city" ? "這個城市找不到「" + q + "」。" : "「" + q + "」找不到。") +
-        next + "</div>" + hintHTML(id);
+        next + "</div>" + hintHTML(id) + (id === SS ? seekTail(id) : "");
       nb.hidden = false;
       return;
     }
@@ -5532,6 +5546,8 @@
     const take = ev.target.closest && ev.target.closest("[data-take]");
     if (take) { ssTake(+take.getAttribute("data-take")); return; }
     if (ev.target.closest && ev.target.closest("#ss-x")) { closeSeekScreen(false); return; }
+    const raw = ev.target.closest && ev.target.closest("[data-raw]");
+    if (raw) { el(SS).value = raw.getAttribute("data-raw"); closeSeekScreen(false); return; }
     const nx = ev.target.closest && ev.target.closest("[data-hnext]");
     if (nx) {
       const list = nx.parentNode.querySelector(".hits"), c = list && list.querySelector(".hcard");

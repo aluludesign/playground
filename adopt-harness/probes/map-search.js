@@ -198,7 +198,7 @@ return (async function () {
 
   /* 9e 縮到畫面蓋住整個城市、0 筆 →「這個範圍找不到」＋只有「往外找」 */
   var sv = q("#ss-map")._v; sv.cx = projX(139.6503, sv.z); sv.cy = projY(35.6762, sv.z);   /* 上一步框到京都了,拉回東京 */
-  for (var zz = 0; zz < 8; zz++) q('#ss-map [data-zoom="-1"]').click();
+  for (var zz = 0; zz < 9; zz++) q('#ss-map [data-zoom="-1"]').click();
   await wait(1300);
   nAsk = asked.length; q('[data-seek="ss-q"]').click();
   await until(() => asked.length > nAsk && /這個範圍找不到/.test(txt(q("#ss-q-out")))); await wait(100);
@@ -261,6 +261,23 @@ return (async function () {
   q("#ss-x").click(); await wait(80);
   out.叉 = { 關了: !shown("seek-screen"), 欄: q("#wf-title").value, 沒標定: !/已標定/.test(txt(q("#wf-title-out"))) };
   ok("✕:回到對話框、地點欄留「泡溫泉」、沒有標定", out.叉.關了 && out.叉.欄 === "泡溫泉" && out.叉.沒標定, out.叉);
+
+  /* 11b 每次搜完都有「直接許願「…」」(2026-11-01):找到、找不到都有;詞超過 5 個字用 …;按了 = 回對話框、名稱填這個詞、沒標定 */
+  reply = HITS; q("#wf-title").value = "麵屋"; q('[data-seek="wf-title"]').click(); await until(() => q("#ss-q-out .hcard")); await wait(100);
+  var rawB = () => q("#ss-q-out [data-raw]");
+  out.直接許願 = { 有結果: rawB() && txt(rawB()), 說明: txt(q("#ss-q-out .ss-raw")) };
+  await wait(1300);
+  reply = []; q("#ss-q").value = "好吃的麵屋店家"; q('[data-seek="ss-q"]').click();
+  await until(() => /找不到/.test(txt(q("#ss-q-out")))); await wait(100);
+  out.直接許願.沒結果 = rawB() && txt(rawB());
+  q("#ss-q").value = "改過的字";   /* 按鈕帶的是搜的那個詞,不是框裡後來改的 */
+  rawB().click(); await wait(80);
+  out.直接許願.按了 = { 關了: !shown("seek-screen"), 對話框: shown("wish-add-overlay"), 欄: q("#wf-title").value, 沒標定: !/已標定/.test(txt(q("#wf-title-out"))) };
+  ok("每次搜完都有「直接許願」:有結果「直接許願「麵屋」」、沒結果「直接許願「好吃的麵屋…」」,旁邊有「沒找到也可以許願」",
+     out.直接許願.有結果 === "直接許願「麵屋」" && out.直接許願.沒結果 === "直接許願「好吃的麵屋…」" && /沒找到也可以許願/.test(out.直接許願.說明), out.直接許願);
+  ok("按「直接許願」:回到許願視窗、名稱 = 好吃的麵屋店家、沒有標定", out.直接許願.按了.關了 && out.直接許願.按了.對話框 &&
+     out.直接許願.按了.欄 === "好吃的麵屋店家" && out.直接許願.按了.沒標定, out.直接許願.按了);
+  await wait(1300); reply = HITS; q("#wf-title").value = "麵屋";
 
   /* 12 沒改過 Esc 就關(只關搜尋畫面,對話框還在) */
   q('[data-seek="wf-title"]').click(); await until(() => q("#ss-q-out .hcard"));
