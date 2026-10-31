@@ -75,7 +75,7 @@ return (async function () {
   /* 2 全螢幕搜尋地圖 */
   q("#tab-wish").click(); await wait(80);
   q("#add-wish-btn").click(); await wait(150);
-  q("#wf-title").value = "拉麵"; q('[data-seek="wf-title"]').click();
+  q("#wf-title").value = "麵屋"; q('[data-seek="wf-title"]').click();
   await until(() => q("#ss-q-out .hcard"));
   var sm = q("#ss-map");
   for (var i = 0; i < 25; i++) zoomBtn(sm, -1);

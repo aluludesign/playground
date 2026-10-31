@@ -4932,6 +4932,7 @@
   }
 
   /* `how`:全螢幕搜尋裡按了「搜整個城市」("city")或「往外找」("wide");沒有就看地圖動過沒有(見下面 ssScope) */
+  const seekTurn = {};
   async function runSeek(id, how) {
     const input = el(id);
     const q = input ? input.value.trim() : "";
@@ -4976,17 +4977,28 @@
       return;
     }
     let res;
+    /* 同義詞會多查兩次(每次排隊 1.1 秒),中間又按了一次搜尋的話,舊的那輪晚回來不能蓋掉新的 */
+    const turn = seekTurn[id] = (seekTurn[id] || 0) + 1;
     try {
       /* 全螢幕搜尋(2026-10-30,Lulu)分三種:
          - 沒動過地圖就按「搜尋」、或按「搜整個城市」→ 只搜城市(viewbox＋bounded=1)
          - 動過地圖之後按「重新搜這個範圍」→ 照畫面搜(可以是全世界)
          - 按「往外找」→ 不限城市、不限國家,城市框當加權。**要人自己按,不自動做** */
       ssScope = id !== SS ? "" : how === "wide" ? "wide" : how === "city" || !moved || !hasCity() ? "city" : "view";
-      res = id !== SS ? await seekPlace(q) : ssScope === "wide" ? await seekWide(q)
-        : ssScope === "view" ? await seekView(q, ssBBox()) : hasCity() ? await seekView(q, cityView()) : await seekPlace(q);
+      const view = ssScope === "view" ? ssBBox() : "";
+      const look = s => id !== SS ? seekPlace(s) : ssScope === "wide" ? seekWide(s)
+        : ssScope === "view" ? seekView(s, view) : hasCity() ? seekView(s, cityView()) : seekPlace(s);
+      res = await look(q);
+      /* 同義的寫法也查(2026-10-31,Lulu):Nominatim 不會因為「東京車站」回「東京駅」,只能換字再問一次。
+         最多多問兩次(SYN 每組前面的寫法優先),一樣走 queued 排隊 */
+      if (res) for (const alt of synAlts(q)) {
+        const more = await look(alt);
+        if (more && more.length) res = res.concat(more);
+      }
     } finally {
       if (b0) b0.disabled = false;
     }
+    if (seekTurn[id] !== turn) return;
     /* **出錯的時候不卸下上膛,而那是刻意的。**
        下面「只給用一次」卸的是**花掉的那一次**;這兩條路一毛錢都沒花到 ——
        `res.錯` 是伺服器明講的拒絕(例如金鑰沒設),`!res` 是連不上。
@@ -5008,9 +5020,10 @@
       seekSay(id, "連不上地名查詢服務 —— 網路好一點再試,或直接把地點打完整。", true);
       return;
     }
-    /* 名字和地址裡沒有打的那幾個字就不算(2026-10-30,Lulu):Nominatim 會把中文轉成拼音再比,
-       搜「唱歌」會給「常各庄村」(chang ge)。同一個字的繁簡、日文寫法算同一個字(見 sameChars) */
-    res = res.filter(r => sameChars(q, r));
+    /* **一筆都不刪,只排順序**(2026-10-31,Lulu):完全符合 → 同義寫法 → 其他 → 同音異字(見 rankHits)。
+       卡片和地圖編號都照這個順序;同音的也框進地圖 */
+    res = await rankHits(q, res);
+    if (seekTurn[id] !== turn) return;
     if (!res.length) {
       /* **誠實說查無,不要退而求其次給一個。** 那正是這個功能要取代的行為。 */
       if (strong) {
@@ -5120,8 +5133,8 @@
     building: { train_station: "車站", temple: "寺廟", shrine: "神社", church: "教會", hotel: "飯店", commercial: "商業大樓", retail: "商場" },
   };
   const RELIGION = { buddhist: "寺廟", shinto: "神社", christian: "教會" };
-  /* 繁體、簡體、日文新字體算同一個字。只收地名、店名常見的;沒收到的就當不同字 —— 那筆會被當成找不到,
-     不會把錯的地方塞給人。每一組第一個字是代表。 */
+  /* 繁體、簡體、日文新字體算同一個字(soundAlike 比字之前先換成代表字)。只收地名、店名常見的;
+     沒收到的就當不同字。每一組第一個字是代表。 */
   const HAN_SAME = ("淺浅 澤沢泽 廣広广 國国 驛駅 站 齋斎斋 櫻桜樱 濱浜滨 邊辺边 龍竜龙 藝芸艺 縣県县 區区 東东 車车 麵麺面 臺台 灣湾 鐵鉄铁 " +
     "館馆 樂楽乐 學学 會会 廳庁厅 縄繩绳 戶戸户 黑黒 圓円圆 澀渋涩 嶋島岛 舊旧 寶宝 對対对 單単单 豐豊丰 萬万 與与 傳伝传 " +
     "關関关 門门 開开 間间 閣阁 橋桥 樓楼 灘滩 鹽塩盐 溫温 湯汤 島岛 嶼屿 鄉郷乡 際际 場场 塲 歲歳岁 壽寿 惠恵 隱隠隐 " +
@@ -5134,11 +5147,81 @@
   HAN_SAME.forEach(g => { for (const ch of g) if (!HAN_REP[ch]) HAN_REP[ch] = g[0]; });
   const fold = t => String(t || "").toLowerCase().normalize("NFKC").replace(/[\s\-_.,，、·・'’()（）「」]/g, "")
     .replace(/./gu, ch => HAN_REP[ch] || ch);
-  /* 打的每一段(空白分開)都要原字出現在這一筆的某個名字、地址或類別裡 */
-  function sameChars(q, r) {
+  /* 同義的寫法(2026-10-31,Lulu):搜「東京車站」也要找得到「東京駅」。一組裡的寫法互相算同義;
+     比之前先 fold,所以繁簡日寫法不用重複列。**每組前面的寫法先拿去多查**(synAlts 最多兩個),所以日文、常見的放前面 */
+  const SYN = [
+    ["車站", "駅", "站"], ["拉麵", "ラーメン", "らーめん", "中華そば"], ["唱歌", "カラオケ", "卡拉OK", "KTV"],
+    ["神社", "神宮", "大社"], ["寺", "寺院", "寺廟"], ["公園", "パーク", "庭園"], ["百貨", "デパート", "百貨店", "百貨公司"],
+    ["超市", "スーパー", "超級市場"], ["便利商店", "コンビニ", "超商", "便利店"], ["機場", "空港"], ["咖啡", "カフェ", "珈琲"],
+    ["壽司", "すし", "鮨"], ["烤肉", "焼肉"], ["飯店", "ホテル", "酒店"], ["藥妝", "ドラッグストア", "薬局"],
+    ["溫泉", "温泉"], ["居酒屋", "酒場"], ["甜點", "スイーツ"], ["蛋糕", "ケーキ"],
+  ];
+  const SYN_F = SYN.map(g => g.map(fold));
+  /* 打的字裡最長的那個同義詞,換成同組別的寫法 → 要多查的字串(原本的不算)。`n`:最多幾個 */
+  function synAlts(q, n) {
+    const ws = String(q).split(/\s+/).filter(Boolean).map(fold);
+    let best = null;
+    ws.forEach((w, wi) => SYN_F.forEach((g, gi) => g.forEach((t, ti) => {
+      const i = w.indexOf(t);
+      if (i >= 0 && (!best || t.length > best.t.length)) best = { g: SYN[gi].filter((x, xi) => xi !== ti), t: t, wi: wi, i: i };
+    })));
+    if (!best) return [];
+    /* 換上去的用原本的寫法(「駅」不是 fold 過的「驛」),送去 Nominatim 的就是日文那個字 */
+    return best.g.slice(0, n || 2).map(t => ws.map((w, wi) =>
+      wi === best.wi ? w.slice(0, best.i) + t + w.slice(best.i + best.t.length) : w).join(" "));
+  }
+  /* 排順序,不刪(2026-10-31,Lulu)。同一層照 Nominatim 原本的順序(sort 是穩定的):
+     0 完全符合:名字(含各語言)有打的字(繁簡日寫法算同一個)
+     1 同義寫法:把同義詞換掉之後符合(東京駅、カラオケ)
+     2 其他:不符合也不是同音(一蘭)
+     3 同音異字:soundAlike(常各庄村)
+     同義詞多查的那幾次會撈到重複的,先照 OSM 編號去掉 */
+  async function rankHits(q, res) {
+    const seen = {};
+    res = res.filter(r => { const k = r.osm_id ? r.osm_type + r.osm_id : r.lat + "," + r.lon + "," + r.name; return seen[k] ? false : (seen[k] = true); });
+    const py = /\p{Script=Han}{2}/u.test(fold(q)) ? await loadPinyin() : null;
+    const words = s => String(s).split(/\s+/).filter(Boolean).map(fold);
+    const want = [words(q)].concat(synAlts(q, 99).map(words));   /* words() 會 fold,同義詞換上去的原寫法在這裡統一 */
+    const tier = r => {
+      const nd = r.namedetails || {};
+      const names = fold([r.name].concat(Object.keys(nd).map(k => nd[k])).filter(Boolean).join("|"));
+      const has = ws => ws.every(w => names.indexOf(w) >= 0);
+      return has(want[0]) ? 0 : want.slice(1).some(has) ? 1 : py && soundAlike(q, r, py) ? 3 : 2;
+    };
+    return res.map((r, i) => ({ r: r, t: tier(r), i: i })).sort((a, b) => a.t - b.t || a.i - b.i).map(x => x.r);
+  }
+  /* 讀音對得上、字一個都沒有 → true(排到最後一層)。打的每個字,名字(含各語言)裡都找得到同音的漢字,
+     可是打的字一個也沒出現 —— 那就是 Nominatim 拿拼音湊出來的:「唱歌」→「常各庄村」,
+     或拆開湊的「葛飾区立常盤中学校」(葛 ge、常 chang)。
+     **有一個原字就不算**:只差一個字的多半是上面對照表沒收到的繁簡寫法,不是同音的別處。
+     只看兩個字以上的段落(單字的同音字太多);讀音表查不到的字一律當對不上 —— 拿不準就不往後排 */
+  function soundAlike(q, r, py) {
+    const runs = fold(q).match(/\p{Script=Han}{2,}/gu) || [];
     const nd = r.namedetails || {};
-    const hay = fold([r.display_name, r.name, hitCat(r)].concat(Object.keys(nd).map(k => nd[k])).join("|"));
-    return String(q).split(/\s+/).filter(Boolean).every(w => hay.indexOf(fold(w)) >= 0);
+    const names = fold([r.name].concat(Object.keys(nd).map(k => nd[k])).filter(Boolean).join("|"));
+    const heard = new Set([...names].map(ch => py[ch]).filter(Boolean));
+    return runs.some(w => {
+      const wc = [...w];
+      return wc.every(ch => names.indexOf(ch) < 0) && wc.every(ch => py[ch] && heard.has(py[ch]));
+    });
+  }
+  /* 讀音表(pinyin.js)搜尋時才載。載不到就回 null,那一輪全部留著 */
+  let pinyinP = null;
+  function loadPinyin() {
+    return pinyinP || (pinyinP = new Promise(done => {
+      const s = document.createElement("script");
+      s.src = "pinyin.js";
+      s.onload = () => {
+        const py = {};
+        String(window.PINYIN || "").split(" ").forEach(g => {
+          const k = (g.match(/^[a-z]+/) || [""])[0];
+          for (const ch of g.slice(k.length)) py[ch] = k;
+        });
+        done(py);
+      };
+      s.onerror = () => { pinyinP = null; done(null); };
+      document.head.appendChild(s);
+    }));
   }
   function hitCat(r) {
     const x = r.extratags || {}, c = r.class || r.category, t = r.type;

@@ -65,10 +65,10 @@ async function press(id) {
 
     // ---- 第 1 次:免費,而且搜完就給「加地點名」 ----
     /* **提示在第 1 次搜完就出現,不是第 2 次。** Lulu 的流程是
-       「打泡溫泉 → 搜 → 沒找到?試試加入地點名 → 照做 → 再搜 → 要不要強力搜?」
+       「打泡湯 → 搜 → 沒找到?試試加入地點名 → 照做 → 再搜 → 要不要強力搜?」
        —— 提示是那個流程的第一步,晚一次給就等於少一次機會。 */
     osm.length = 0; goo.length = 0; osmReply = [];
-    inp.value = "泡溫泉";
+    inp.value = "泡湯";
     /* 2026-10-29 起:對話框的「搜尋」打開全螢幕地圖搜尋,之後的每一下都在那裡的搜尋框按 */
     btn("sf-title").click();
     await until(function () { return !d.getElementById("seek-screen").hidden && btn("ss-q").disabled; }, 40);
@@ -84,7 +84,7 @@ async function press(id) {
     /* **這一條是 Lulu 回報「看不懂觸發點」的根因。** 第一版一改字就重來,
        而提示叫的正是「加地點名」—— 照做的人段數永遠回到 0,走不到那顆「好」。
        **提示叫人做的事,不可以讓他退回起點。** */
-    inp.value = "泡溫泉 新宿";
+    inp.value = "泡湯 新宿";
     await press("ss-q");
     ok("加了字之後再搜,仍然是第 2 次(沒有因為改字歸零)",
       boxText("ss-q").indexOf("還是沒有找到嗎") >= 0, boxText("ss-q"));

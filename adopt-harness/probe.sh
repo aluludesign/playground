@@ -143,7 +143,7 @@ PAGE=${PAGE:-/index.html}
   echo '};</script>'
 } > "$H/.work/_p.html"
 
-"$CHROME" --headless=new --disable-gpu --no-sandbox --virtual-time-budget=25000 \
+"$CHROME" --headless=new --disable-gpu --no-sandbox --virtual-time-budget=${BUDGET:-25000} \
   --dump-dom "http://localhost:$PORT/_p.html" 2>/dev/null \
   | python3 -c '
 import sys, re, html

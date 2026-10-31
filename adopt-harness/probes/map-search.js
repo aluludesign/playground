@@ -54,14 +54,14 @@ return (async function () {
   q("#tab-wish").click(); await wait(80);
   q("#add-wish-btn").click(); await wait(150);
   var mv0 = q("#map")._v, mainW = mv0 ? w.innerWidth / TILE / Math.pow(2, mv0.z) * 360 : null;
-  q("#wf-title").value = "拉麵"; q('[data-seek="wf-title"]').click();
+  q("#wf-title").value = "麵屋"; q('[data-seek="wf-title"]').click();
   await until(() => q("#ss-q-out .hcard"));
 
   /* 1 進來了 */
   var scr = q("#seek-screen"), sr = scr.getBoundingClientRect(), mr = q("#ss-map").getBoundingClientRect();
   out.進來 = { 開: shown("seek-screen"), 對話框還在: shown("wish-add-overlay"), 字: q("#ss-q").value, 撐滿: [Math.round(mr.width), Math.round(mr.height), w.innerWidth, w.innerHeight],
     最上面: d.elementFromPoint(w.innerWidth / 2, Math.round(visRect().top + 40)).closest("#ss-map") ? "地圖" : "別的" };
-  ok("按搜尋 → 全螢幕(地圖撐滿)、字帶過來、原本對話框留著", out.進來.開 && out.進來.對話框還在 && out.進來.字 === "拉麵" &&
+  ok("按搜尋 → 全螢幕(地圖撐滿)、字帶過來、原本對話框留著", out.進來.開 && out.進來.對話框還在 && out.進來.字 === "麵屋" &&
     Math.round(mr.width) === w.innerWidth && Math.round(mr.height) === w.innerHeight && out.進來.最上面 === "地圖", out.進來);
   var u0 = asked[asked.length - 1];
   out.第一次查 = { bounded: param(u0, "bounded"), viewbox: param(u0, "viewbox"), countrycodes: param(u0, "countrycodes") };
@@ -164,8 +164,8 @@ return (async function () {
   var u9 = asked[nAsk];
   ok("0 筆畫面不動", JSON.stringify(q("#ss-map")._v) === v9, [v9, q("#ss-map")._v]);
   out.零筆 = { 字: txt(q("#ss-q-out .said")), 鈕: btns(), 點: qa("#ss-map .pin").length, 查了幾次: asked.length - nAsk, 範圍: param(u9, "viewbox") };
-  ok("畫面裡 0 筆:講「這個範圍找不到」、只有「搜整個城市」、點清掉、只查一次(畫面範圍)", /這個範圍找不到「泡溫泉」/.test(out.零筆.字) && out.零筆.鈕.join() === "搜整個城市" &&
-    out.零筆.點 === 0 && out.零筆.查了幾次 === 1 && out.零筆.範圍 !== CV, out.零筆);
+  ok("畫面裡 0 筆:講「這個範圍找不到」、只有「搜整個城市」、點清掉、查兩次(泡溫泉＋泡温泉,都是畫面範圍)", /這個範圍找不到「泡溫泉」/.test(out.零筆.字) && out.零筆.鈕.join() === "搜整個城市" &&
+    out.零筆.點 === 0 && out.零筆.查了幾次 === 2 && out.零筆.範圍 !== CV, out.零筆);
 
   /* 9b「搜整個城市」:城市框、bounded=1,城市外的地名也一樣;0 筆 →「這個城市找不到」＋只有「往外找」 */
   q("#ss-q").value = "京都車站"; nAsk = asked.length;
@@ -173,8 +173,8 @@ return (async function () {
   await until(() => /這個城市找不到/.test(txt(q("#ss-q-out")))); await wait(1300);
   var u3 = asked[nAsk];
   out.城市外 = { 字: txt(q("#ss-q-out .said")), 鈕: btns(), 查了幾次: asked.length - nAsk, bounded: param(u3, "bounded"), viewbox: param(u3, "viewbox") };
-  ok("「搜整個城市」0 筆:只查一次(城市框、bounded=1),講「這個城市找不到」、只剩「往外找」",
-    out.城市外.查了幾次 === 1 && out.城市外.bounded === "1" && out.城市外.viewbox === CV && /這個城市找不到「京都車站」/.test(out.城市外.字) && out.城市外.鈕.join() === "往外找", out.城市外);
+  ok("「搜整個城市」0 筆:查三次(京都車站＋京都駅＋京都站,城市框、bounded=1),講「這個城市找不到」、只剩「往外找」",
+    out.城市外.查了幾次 === 3 && out.城市外.bounded === "1" && out.城市外.viewbox === CV && /這個城市找不到「京都車站」/.test(out.城市外.字) && out.城市外.鈕.join() === "往外找", out.城市外);
 
   /* 9c「往外找」:不帶 bounded、countrycodes,城市框當加權;結果框進畫面 */
   var KYOTO = [{ lat: "34.98580", lon: "135.75880", class: "railway", type: "station", display_name: "京都車站, 下京區, 京都市, 日本", extratags: {} },
@@ -205,31 +205,44 @@ return (async function () {
   out.蓋住城市 = { z: q("#ss-map")._v.z, 字: txt(q("#ss-q-out .said")), 鈕: btns() };
   ok("畫面已經蓋住整個城市、0 筆:「這個範圍找不到」、只有「往外找」", /這個範圍找不到/.test(out.蓋住城市.字) && out.蓋住城市.鈕.join() === "往外找", out.蓋住城市);
 
-  /* 9f 名字、地址沒有打的字就不算(2026-10-30):「唱歌」→ Nominatim 給「常各庄村」(拼音一樣)要丟掉;
-        繁簡日寫法算同一個字(淺草 = 浅草);namedetails 裡別的語言的名字也算 */
+  /* 9f 一筆都不刪,只排順序(2026-10-31):完全符合 → 同義寫法 → 其他 → 同音異字;同義詞多查兩次;同音的也框進地圖 */
   await wait(1300);
   var sv2 = q("#ss-map")._v; sv2.cx = projX(139.6503, sv2.z); sv2.cy = projY(35.6762, sv2.z);
   delete q("#seek-screen").dataset.picked;
-  reply = [{ lat: "39.2", lon: "118.9", class: "boundary", type: "administrative", name: "常各庄村", display_name: "常各庄村, 王滩镇, 乐亭县, 唐山市, 河北省, 中国", extratags: {}, namedetails: { name: "常各庄村" } }];
+  var P = (name, nd, lat, lon) => ({ lat: lat || "35.70", lon: lon || "139.78", class: "amenity", type: "bar", name: name, display_name: name + ", 東京都, 日本", extratags: {}, namedetails: nd || { name: name } });
+  var names = () => qa("#ss-q-out .hcard b").map(txt);
+  reply = [P("常各庄村", 0, "39.2", "118.9")];
   q("#ss-q").value = "唱歌"; q("#ss-x").click(); await wait(80);
-  q('[data-seek="wf-title"]').click(); await until(() => /找不到/.test(txt(q("#ss-q-out")))); await wait(200);
-  out.同音 = { 字: txt(q("#ss-q-out .said")), 卡片: qa("#ss-q-out .hcard").length, 點: qa("#ss-map .pin").length };
-  ok("搜「唱歌」只回「常各庄村」→ 當成找不到(沒有卡片、沒有點)", /找不到「唱歌」/.test(out.同音.字) && !out.同音.卡片 && !out.同音.點, out.同音);
+  nAsk = asked.length;
+  q('[data-seek="wf-title"]').click(); await until(() => q("#ss-q-out .hcard")); await wait(200);
+  out.只有同音 = { 卡片: names(), 點: qa("#ss-map .pin").length, 查了: asked.slice(nAsk).map(u => param(u, "q")) };
+  ok("搜「唱歌」只回「常各庄村」→ 照樣列出來(不刪),而且「カラオケ」「卡拉OK」也查了", out.只有同音.卡片.join() === "常各庄村" && out.只有同音.點 === 1 &&
+     out.只有同音.查了.join() === "唱歌,カラオケ,卡拉OK", out.只有同音);
   await wait(1300);
-  reply = [{ lat: "35.7148", lon: "139.7967", class: "amenity", type: "place_of_worship", name: "浅草寺", display_name: "浅草寺, 浅草二丁目, 台東区, 東京都, 日本", extratags: {}, namedetails: { name: "浅草寺" } },
-           { lat: "35.6896", lon: "139.7006", class: "railway", type: "station", name: "Shinjuku", display_name: "Shinjuku, 東京都, 日本", extratags: {}, namedetails: { name: "Shinjuku", "name:zh-Hant": "新宿站" } }];
+  reply = [P("常各庄村", 0, "39.2", "118.9"), P("葛飾区立常盤中学校"), P("Big Echo", { name: "ビッグエコー", "name:en": "Big Echo" }), P("カラオケ館"), P("唱歌教室")];
+  q("#ss-q").value = "唱歌"; q('[data-seek="ss-q"]').click();
+  await until(() => qa("#ss-q-out .hcard").length === 5); await wait(1300);
+  out.唱歌 = { 卡片: names(), 點: qa("#ss-map .pin").length, z: q("#ss-map")._v.z };
+  ok("搜「唱歌」排序:唱歌教室(完全)→ カラオケ館(同義)→ Big Echo(其他)→ 常各庄村、葛飾…(同音,照原順序)",
+     out.唱歌.卡片.join() === "唱歌教室,カラオケ館,Big Echo,常各庄村,葛飾区立常盤中学校", out.唱歌);
+  ok("同音的也框進地圖(中國那一點也看得到 → 縮得很遠)", out.唱歌.點 === 5 && out.唱歌.z <= 6, out.唱歌);
+  await wait(1300);
+  reply = [P("一蘭 渋谷店"), P("東京駅", { name: "東京駅", "name:en": "Tokyo Station" }, "35.681", "139.767"), P("東京車站大飯店")];
+  nAsk = asked.length;
+  q("#ss-q").value = "東京車站"; q('[data-seek="ss-q"]').click();
+  await until(() => qa("#ss-q-out .hcard").length === 3); await wait(100);
+  out.東京車站 = { 卡片: names(), 查了: asked.slice(nAsk).map(u => param(u, "q")) };
+  ok("搜「東京車站」:也查「東京駅」「東京站」;東京車站大飯店 → 東京駅 → 一蘭(重複的只算一次)",
+     out.東京車站.卡片.join() === "東京車站大飯店,東京駅,一蘭 渋谷店" && out.東京車站.查了.join() === "東京車站,東京駅,東京站", out.東京車站);
+  await wait(1300);
+  reply = [P("Shinjuku", { name: "Shinjuku", "name:zh-Hant": "新宿站" }), P("浅草寺", 0, "35.7148", "139.7967")];
   q("#ss-q").value = "淺草"; q('[data-seek="ss-q"]').click();
-  await until(() => q("#ss-q-out .hcard")); await wait(100);
-  out.異體 = qa("#ss-q-out .hcard b").map(txt);
-  ok("繁簡日寫法算同一個字:搜「淺草」留下「浅草寺」;沒有那幾個字的(新宿)丟掉", out.異體.length === 1 && /浅草寺/.test(out.異體[0]), out.異體);
-  await wait(1300);
-  q("#ss-q").value = "新宿站"; q('[data-seek="ss-q"]').click();
-  await until(() => q("#ss-q-out .hcard") && /Shinjuku|新宿/.test(txt(q("#ss-q-out .hcard b")))); await wait(100);
-  out.別名 = qa("#ss-q-out .hcard b").map(txt);
-  ok("namedetails 裡的中文名也算:搜「新宿站」留下 Shinjuku", out.別名.length === 1, out.別名);
+  await until(() => qa("#ss-q-out .hcard").length === 2); await wait(100);
+  out.淺草 = names();
+  ok("搜「淺草」:日文寫法的浅草寺排第一(完全符合),新宿留著排後面", out.淺草.join() === "浅草寺,Shinjuku", out.淺草);
 
   await wait(1300);
-  reply = HITS; q("#ss-q").value = "拉麵"; q('[data-seek="ss-q"]').click();
+  reply = HITS; q("#ss-q").value = "麵屋"; q('[data-seek="ss-q"]').click();
   await until(() => q("#ss-q-out .hcard")); await wait(100);
 
   /* 10 選這個 → 回到對話框、地點填好 */
