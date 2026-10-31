@@ -56,7 +56,7 @@ return (async function () {
   q("#ph-close").click(); await wait(60);
   /* 挑沒照片的那一筆 → 不帶照片 */
   q("#add-wish-btn").click(); await wait(120);
-  q("#wf-title").value = "淺草寺前"; q('[data-seek="wf-title"]').click();
+  q("#wf-title").value = "淺草寺";   /* 兩筆都有「淺草寺」三個字(2026-10-30 起沒那幾個字的結果會丟掉) */ q('[data-seek="wf-title"]').click();
   for (var k = 0; k < 40 && !q("#ss-q-out .hit"); k++) await wait(100);
   await wait(300);
   take(1); await wait(100);

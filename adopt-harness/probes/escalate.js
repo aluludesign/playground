@@ -65,17 +65,17 @@ async function press(id) {
 
     // ---- 第 1 次:免費,而且搜完就給「加地點名」 ----
     /* **提示在第 1 次搜完就出現,不是第 2 次。** Lulu 的流程是
-       「打泡溫泉 → 搜 → 沒找到?試試加入地點名 → 照做 → 再搜 → 要不要強力搜?」
+       「打泡湯 → 搜 → 沒找到?試試加入地點名 → 照做 → 再搜 → 要不要強力搜?」
        —— 提示是那個流程的第一步,晚一次給就等於少一次機會。 */
     osm.length = 0; goo.length = 0; osmReply = [];
-    inp.value = "泡溫泉";
+    inp.value = "泡湯";
     /* 2026-10-29 起:對話框的「搜尋」打開全螢幕地圖搜尋,之後的每一下都在那裡的搜尋框按 */
     btn("sf-title").click();
     await until(function () { return !d.getElementById("seek-screen").hidden && btn("ss-q").disabled; }, 40);
     await until(function () { return !btn("ss-q").disabled; }, 200);
     inp = d.getElementById("ss-q");
-    ok("第 1 次只問地圖畫面那一塊(bounded=1),0 筆也**不自動往外找**(2026-10-29)", osm.length === 1 && /bounded=1/.test(osm[0]) && goo.length === 0, { osm: osm.length, google: goo.length });
-    ok("0 筆 →「這個範圍找不到」＋「搜整個城市」", boxText("ss-q").indexOf("這個範圍找不到") >= 0 && !!d.querySelector("#ss-q-out [data-city]"), boxText("ss-q"));
+    ok("第 1 次只問這一團的城市(bounded=1),0 筆也**不自動往外找**(2026-10-30)", osm.length === 1 && /bounded=1/.test(osm[0]) && goo.length === 0, { osm: osm.length, google: goo.length });
+    ok("0 筆 →「這個城市找不到」＋「往外找」", boxText("ss-q").indexOf("這個城市找不到") >= 0 && !!d.querySelector("#ss-q-out [data-wide]"), boxText("ss-q"));
     ok("第 1 次搜完就給「加地點名」", boxText("ss-q").indexOf("加入地點名") >= 0, boxText("ss-q"));
     ok("第 1 次**不問**要不要強力搜", boxText("ss-q").indexOf("強力搜") < 0, boxText("ss-q"));
     ok("按鈕還是「搜尋」", btn("ss-q").textContent === "搜尋", btn("ss-q").textContent);
@@ -84,7 +84,7 @@ async function press(id) {
     /* **這一條是 Lulu 回報「看不懂觸發點」的根因。** 第一版一改字就重來,
        而提示叫的正是「加地點名」—— 照做的人段數永遠回到 0,走不到那顆「好」。
        **提示叫人做的事,不可以讓他退回起點。** */
-    inp.value = "泡溫泉 新宿";
+    inp.value = "泡湯 新宿";
     await press("ss-q");
     ok("加了字之後再搜,仍然是第 2 次(沒有因為改字歸零)",
       boxText("ss-q").indexOf("還是沒有找到嗎") >= 0, boxText("ss-q"));
@@ -133,7 +133,7 @@ async function press(id) {
       boxText("ss-q").indexOf("清單載入出現錯誤") >= 0 && boxText("ss-q").indexOf("免費") < 0, boxText("ss-q"));
     ok("按鈕**留在**「強力搜」(這一下沒花到錢,不該逼他重走一輪)",
       btn("ss-q").textContent === "強力搜", btn("ss-q").textContent);
-    ok("退路那句也在(他按到最後一段了)", boxText("ss-q").indexOf("也可以許願") >= 0, boxText("ss-q"));
+    ok("退路那句也在(他按到最後一段了)", /沒找到也可以(許願|直接用這個名字)/.test(boxText("ss-q")), boxText("ss-q"));
 
     // ---- 換表單不可以帶著段數 ----
     d.getElementById("ss-x").click(); await sleep(60);

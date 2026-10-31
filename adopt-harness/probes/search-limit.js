@@ -7,7 +7,7 @@ w.fetch = (u => function (x, i) { if (/nominatim/.test(String(x))) { asked.push(
 return (async function () {
   var out = {}, bad = [];
   q("#add-stop-btn").click(); await wait(80);
-  q("#sf-title").value = "拉麵"; q('[data-seek="sf-title"]').click(); await wait(1500);
+  q("#sf-title").value = "麵屋"; q('[data-seek="sf-title"]').click(); await wait(1500);
   out.要幾筆 = (/[?&]limit=(\d+)/.exec(asked[0] || "") || [])[1];
   var n = () => qa('#ss-q-out [data-hit="ss-q"]').length;
   var hits = q("#ss-q-out .hits");   /* 2026-10-29 起在全螢幕地圖搜尋的卡片區 */
