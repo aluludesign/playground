@@ -5185,7 +5185,7 @@
       wi === best.wi ? w.slice(0, best.i) + t + w.slice(best.i + best.t.length) : w).join(" "));
   }
   /* 排順序,不刪(2026-10-31,Lulu)。同一層照 Nominatim 原本的順序(sort 是穩定的):
-     0 完全符合:名字(含各語言)有打的字(繁簡日寫法算同一個)
+     0 完全符合:名字(含各語言)、類別或地址有打的字(繁簡日寫法算同一個)
      1 同義寫法:把同義詞換掉之後符合(東京駅、カラオケ)
      2 其他:不符合也不是同音(一蘭)
      3 同音異字:soundAlike(常各庄村)
@@ -5196,10 +5196,12 @@
     const py = /\p{Script=Han}{2}/u.test(fold(q)) ? await loadPinyin() : null;
     const words = s => String(s).split(/\s+/).filter(Boolean).map(fold);
     const want = [words(q)].concat(synAlts(q, 99).map(words));   /* words() 會 fold,同義詞換上去的原寫法在這裡統一 */
+    /* 比對的不只名字,卡片上那兩行也算(2026-11-01,Lulu):類別(「拉麵店」,hitCat 照 OSM 的分類翻的)和地址。
+       「札幌 拉麵」:札幌在地址、拉麵在類別 → 完全符合。營業時間不算。同音那層還是只看名字 */
     const tier = r => {
       const nd = r.namedetails || {};
-      const names = fold([r.name].concat(Object.keys(nd).map(k => nd[k])).filter(Boolean).join("|"));
-      const has = ws => ws.every(w => names.indexOf(w) >= 0);
+      const hay = fold([r.name].concat(Object.keys(nd).map(k => nd[k]), hitCat(r), r.display_name).filter(Boolean).join("|"));
+      const has = ws => ws.every(w => hay.indexOf(w) >= 0);
       return has(want[0]) ? 0 : want.slice(1).some(has) ? 1 : py && soundAlike(q, r, py) ? 3 : 2;
     };
     return res.map((r, i) => ({ r: r, t: tier(r), i: i })).sort((a, b) => a.t - b.t || a.i - b.i).map(x => x.r);

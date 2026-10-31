@@ -240,6 +240,13 @@ return (async function () {
   await until(() => qa("#ss-q-out .hcard").length === 2); await wait(100);
   out.淺草 = names();
   ok("搜「淺草」:日文寫法的浅草寺排第一(完全符合),新宿留著排後面", out.淺草.join() === "浅草寺,Shinjuku", out.淺草);
+  await wait(1300);
+  var yam = P("山岡家", 0, "43.1", "141.35"); yam.type = "restaurant"; yam.extratags = { cuisine: "ramen" }; yam.display_name = "山岡家, 東区, 札幌市, 北海道, 日本";
+  reply = [P("一休"), yam];
+  q("#ss-q").value = "札幌 拉麵"; q('[data-seek="ss-q"]').click();
+  await until(() => qa("#ss-q-out .hcard").length === 2); await wait(100);
+  out.類別地址 = names();
+  ok("卡片上的類別和地址也算(2026-11-01):「札幌 拉麵」→ 山岡家(地址有札幌、類別是拉麵店)排第一", out.類別地址.join() === "山岡家,一休", out.類別地址);
 
   await wait(1300);
   reply = HITS; q("#ss-q").value = "麵屋"; q('[data-seek="ss-q"]').click();
