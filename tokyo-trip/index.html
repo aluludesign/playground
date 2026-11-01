@@ -1059,6 +1059,20 @@
       box-shadow:0 -1px 8px rgba(0,0,0,.18);}
     #ss-q-out .ss-city{margin-left:8px;}
     #ss-q-out .ss-raw{display:flex; flex-wrap:wrap; align-items:center; gap:4px 8px;}
+    /* 搜尋提示:疊在搜尋框正下方、地圖和卡片上面。手機整排寬,桌機對齊搜尋框(left/width 由 sugShow 算) */
+    .ss-sug{position:absolute; left:0; right:0; top:var(--ss-top, 60px); z-index:8; max-height:min(60vh, 440px); overflow-y:auto;
+      overscroll-behavior:contain; background:var(--surface); border-radius:0 0 16px 16px; box-shadow:0 6px 12px rgba(0,0,0,.2);}
+    .ss-sug[hidden]{display:none;}
+    .ss-sug .sug{display:flex; align-items:center; gap:12px; width:100%; padding:8px 16px; margin:0;
+      border:0; border-top:var(--ds-sys-border-xs) solid var(--line-soft); background:none; color:var(--ink); font:inherit; text-align:left; cursor:pointer;}
+    .ss-sug .sug:first-child{border-top:0;}
+    .ss-sug .sug:hover,.ss-sug .sug:focus-visible{background:var(--surface-2);}
+    .ss-sug .sth{flex:none; width:40px; height:40px; border-radius:8px; overflow:hidden; display:flex;}
+    .ss-sug .sth img{width:100%; height:100%; object-fit:cover; display:block;}
+    .ss-sug .sth .ph-icon{width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-size:20px;}
+    .ss-sug .stx{display:flex; flex-direction:column; gap:2px; min-width:0;}
+    .ss-sug .sug b{font-weight:600; font-size:15px; line-height:1.35; overflow-wrap:anywhere;}
+    .ss-sug .sug small{font-size:12px; line-height:1.3; color:var(--muted);}
     /* 搜到的點:全部標出來、編號跟卡片一樣。名字只在選起來的那顆旁邊出現,四十個名字擠在一起什麼都看不到 */
     #ss-map .pin{background:var(--color-accent); color:var(--color-accent-ink);}
     /* 已排行程的點(「全部已排」開著):顏色是那一天的(inline),小一點、在搜到的點底下 */
@@ -1937,6 +1951,8 @@
     <button type="button" class="btn btn-sm" data-seek="ss-q">搜尋</button></div>
     <button type="button" class="ss-x" id="ss-x" aria-label="不選地點,回去">✕</button>
   </form>
+  <!-- 邊打字邊出的提示(2026-11-02,Lulu):全站選過的地點、這支手機搜過的字、相似詞。只用 App 自己的資料,打字時不連網 -->
+  <div class="ss-sug" id="ss-sug" role="listbox" aria-label="搜尋提示" hidden></div>
   <!-- 跟主地圖那顆「全部已排」同一個樣子;開了把六天已排的點畫在搜到的點底下 -->
   <button type="button" class="rm-chip rm-chip--selectable lay ss-all" id="ss-all" aria-pressed="false">全部已排</button>
   <div class="seek-out" id="ss-q-out" hidden></div>
@@ -2596,8 +2612,8 @@
   });
   /* by:從願望排進來的那一筆記著是誰許的 —— 有它才退得回願望區 */
   const stopFromRow = r => ({ id: r.id, day: r.day, time: r.time || "", title: r.title, place: r.place || "", note: r.note || "", by: r.by || "", placeId: r.placeId || "",
-    photo: r.photo || "", photoAt: r.place || "" });
-  const stopToRow = s => ({ title: s.title, day: s.day, time: s.time, place: s.place, note: s.note, kind: "其他", placeId: pidOf(s.place) || s.placeId || "", photo: photoOf(s) });
+    photo: r.photo || "", photoAt: r.place || "", geo: r.geo || null });
+  const stopToRow = s => ({ title: s.title, day: s.day, time: s.time, place: s.place, note: s.note, kind: "其他", placeId: pidOf(s.place) || s.placeId || "", photo: photoOf(s), geo: geoOf(s) });
 
   /* --- 本機 --- */
   function loadLocal() {
@@ -2985,7 +3001,7 @@
     state.wishes.push(w); renderWishes();
     if (!online) { saveLocal(); return; }
     try {
-      const { row } = await api("?resource=wishes", { method: "POST", body: JSON.stringify(Object.assign({}, w, { placeId: pidOf(w.place), photo: photoOf(w, "") })) });
+      const { row } = await api("?resource=wishes", { method: "POST", body: JSON.stringify(Object.assign({}, w, { placeId: pidOf(w.place), photo: photoOf(w, ""), geo: geoOf(w, "") })) });
       const k = state.wishes.indexOf(w);
       if (k > -1) state.wishes[k] = row;
       renderWishes();
@@ -3047,7 +3063,7 @@
     try {
       const { row } = await api("?resource=wishes&id=" + encodeURIComponent(id), {
         method: "PATCH",
-        body: JSON.stringify({ title: w.title, place: w.place, note: w.note, by: w.by, votes: w.votes || [], placeId: pidOf(w.place) || w.placeId || "", photo: photoOf(w, before.place) }),
+        body: JSON.stringify({ title: w.title, place: w.place, note: w.note, by: w.by, votes: w.votes || [], placeId: pidOf(w.place) || w.placeId || "", photo: photoOf(w, before.place), geo: geoOf(w, before.place) }),
       });
       const k = state.wishes.findIndex(x => x.id === id);
       if (k > -1) state.wishes[k] = row;
@@ -3075,7 +3091,7 @@
     const k = state.wishes.findIndex(x => x.id === id);
     if (k < 0) return;
     const w = state.wishes.splice(k, 1)[0];
-    const stop = { id: w.id, day: day, time: time, title: w.title, place: w.place || "", note: w.note || "", by: w.by || "", placeId: w.placeId || "", photo: w.photo || "", photoAt: w.place || "" };
+    const stop = { id: w.id, day: day, time: time, title: w.title, place: w.place || "", note: w.note || "", by: w.by || "", placeId: w.placeId || "", photo: w.photo || "", photoAt: w.place || "", geo: w.geo || null };
     state.stops.push(stop);
     renderWishes(); render();
     if (!online) { saveLocal(); checkPlace(stop, "wish-msg"); return; }
@@ -3120,6 +3136,7 @@
        放在 api() 那層各存各的話,其中一個失敗就會留下一份殘缺的副本。 */
     saveSnap();
     mergeOutbox();
+    setTimeout(() => geoBackfill().catch(() => {}), 3000);
   }
 
   let pullTimer = null;
@@ -4517,14 +4534,14 @@
     const rg = regionFor(q);
     if (rg === TRIP_REGION && !outsideHit(q) && CITY && isFinite(CITY.lat)) {
       const near = await queued(() => fetch("https://nominatim.openstreetmap.org/search?format=json" +
-        "&limit=40&extratags=1&namedetails=1&accept-language=zh-TW&countrycodes=" + rg.cc + "&bounded=1&viewbox=" + cityView() +
+        "&limit=40&extratags=1&namedetails=1&addressdetails=1&accept-language=zh-TW&countrycodes=" + rg.cc + "&bounded=1&viewbox=" + cityView() +
         "&q=" + encodeURIComponent(q)).then(r => r.json()).catch(() => null));
       if (near && near.length) return near;
     }
     /* **免費搜不限 6 筆**(2026-10-01,Lulu):40 是 Nominatim 自己的上限。清單本來就會捲(露四則半),
        縮圖是捲到才載(loading="lazy"),筆數多了不會一次全載 */
     return queued(() => fetch("https://nominatim.openstreetmap.org/search?format=json" +
-      "&limit=40&extratags=1&namedetails=1&accept-language=zh-TW&countrycodes=" + rg.cc + "&viewbox=" + rg.view +
+      "&limit=40&extratags=1&namedetails=1&addressdetails=1&accept-language=zh-TW&countrycodes=" + rg.cc + "&viewbox=" + rg.view +
       "&q=" + encodeURIComponent(q)).then(r => r.json()).catch(() => null));
   }
 
@@ -4579,13 +4596,13 @@
   }
   function seekView(q, view) {
     return queued(() => fetch("https://nominatim.openstreetmap.org/search?format=json" +
-      "&limit=40&extratags=1&namedetails=1&accept-language=zh-TW&bounded=1&viewbox=" + view +
+      "&limit=40&extratags=1&namedetails=1&addressdetails=1&accept-language=zh-TW&bounded=1&viewbox=" + view +
       "&q=" + encodeURIComponent(q)).then(r => r.json()).catch(() => null));
   }
   /* 「往外找」:不限城市、不限國家(不帶 countrycodes、bounded),城市框只當加權 —— 近的排前面 */
   function seekWide(q) {
     return queued(() => fetch("https://nominatim.openstreetmap.org/search?format=json" +
-      "&limit=40&extratags=1&namedetails=1&accept-language=zh-TW" + (hasCity() ? "&viewbox=" + cityView() : "") +
+      "&limit=40&extratags=1&namedetails=1&addressdetails=1&accept-language=zh-TW" + (hasCity() ? "&viewbox=" + cityView() : "") +
       "&q=" + encodeURIComponent(q)).then(r => r.json()).catch(() => null));
   }
   /* 把一塊經緯度範圍放進畫面看得到的那一塊(扣掉搜尋框和卡片)。塞得下的最大縮放;`zMax`:只有一個點時不要貼到街區 */
@@ -4639,6 +4656,7 @@
     paintMap(box);
     initMapGestures(box);
     paintSeekBtn(SS);
+    loadHints();
     runSeek(SS);
   }
   /* `taken`:剛剛選了一個(「選這個」或 Google 清單)—— 地點欄已經填好,不用把搜尋框的字帶回去 */
@@ -4652,6 +4670,7 @@
       seekMark(id, el(id).value.trim());
     }
     ssFor = null; ssSel = -1;
+    sugHide();
     el("seek-screen").hidden = true;
     const out = seekBox(SS);
     out._hits = null; out._show = null; out.innerHTML = ""; out.hidden = true;
@@ -4769,7 +4788,7 @@
 
   /* display_name 是「名字, 街, 區, 市, 縣, 郵遞區號, 國家」。第一截當名字,其餘當地址 ——
      兩個都要給:光看名字分不出兩間同名的鬼太郎茶屋,那正是要人挑的理由。 */
-  const hitName = r => String(r.display_name || "").split(",")[0].trim();
+  const hitName = r => r._n || String(r.display_name || "").split(",")[0].trim();
   const hitAddr = r => String(r.display_name || "").split(",").slice(1).join(",").trim();
 
   /* 候選左邊那張小圖。**放的是「它在哪」,不是「它長什麼樣」,而那是量出來的。**
@@ -4864,6 +4883,132 @@
       '<button type="button" class="btn btn-sm" data-raw="' + esc(q) + '">' + esc((wish ? "直接許願「" : "直接用「") + short + "」") + "</button></div>";
   }
 
+  /* ---- 搜尋提示(2026-11-02,Lulu)----
+     全螢幕搜尋框打 1 個字以上,下面就出提示,最多 8 筆。**只用 App 自己的資料** —— Nominatim 的使用條款不准拿它做邊打邊查。
+     三種來源:
+       地點   全站所有團從地圖選出來的地點(resource=hints,伺服器去重;不含是哪一團、誰、哪一天)。
+              點了直接當一筆結果標在地圖上、選起來並框住,不再查 Nominatim。
+       搜過   這支手機搜過的字(localStorage)。點了填進搜尋框、照平常搜。
+       相似   SYN 相似詞表(打「拉」→「拉麵」「ラーメン」)。點了一樣填進去搜。
+     排序照搜尋的規則:名字有打的字 → 同義寫法 → 其他(國家、縣市、種類有打的字,2 個字以上才算);
+     同一層裡搜過的字先、再來地點(離這一團的城市近的先)、再來相似詞。
+     每一列最左邊一張小縮圖(2026-11-02,Lulu),最多一張:當初搜尋卡片抓到的那張公開照片(維基,存在「照片」欄);
+     沒有就放種類圖示。**成員自己傳的附圖一律不放**,自己這一團的也不放。縮圖 lazy 載入。
+     Google(強力搜)選的地點不在裡面:伺服器不存它的資料,手機上的也不拿來給提示(Google 的座標不能畫在這張 OSM 地圖上)。
+     強力搜上膛時照樣出提示,但點了什麼都是填字、走強力搜。
+     Enter、搜尋、點外面、✕ 都會收起來。 */
+  const HINT_LS = "trippps-hints", HIST_LS = "trippps-ss-hist", SUG_MAX = 8;
+  let hintRows = null, hintAt = 0, sugItems = [];
+  /* 全站的地點清單:進全螢幕搜尋時看一次,三十分鐘內抓過就用這台手機存著的那份 */
+  function loadHints() {
+    if (hintRows === null) {
+      hintRows = [];
+      try { const v = JSON.parse(localStorage.getItem(HINT_LS) || "null"); if (v && Array.isArray(v.rows)) { hintRows = v.rows; hintAt = +v.at || 0; } } catch (_) {}
+    }
+    if (!online || onSnapshot() || Date.now() - hintAt < 30 * 60 * 1000) return;
+    hintAt = Date.now();
+    api("?resource=hints").then(b => {
+      if (!b || !Array.isArray(b.rows)) return;
+      hintRows = b.rows;
+      try { localStorage.setItem(HINT_LS, JSON.stringify({ at: hintAt, rows: b.rows })); } catch (_) {}
+    }).catch(() => { hintAt = 0; });
+  }
+  function histGet() {
+    try { const v = JSON.parse(localStorage.getItem(HIST_LS) || "[]"); return Array.isArray(v) ? v.filter(x => typeof x === "string" && x) : []; } catch (_) { return []; }
+  }
+  function histAdd(q) {
+    const h = histGet().filter(x => fold(x) !== fold(q));
+    h.unshift(q);
+    try { localStorage.setItem(HIST_LS, JSON.stringify(h.slice(0, 30))); } catch (_) {}
+  }
+  const geoLine = p => [p.c, p.s, p.k].filter(Boolean).join("・");
+  function sugList(typed) {
+    const t = fold(typed);
+    if (!t) return [];
+    /* 同義:打的字是某個相似詞的一部分(「拉」→ 拉麵那組),或打的字裡有一個相似詞(「東京車站」→「東京駅」) */
+    const synG = SYN_F.map((g, gi) => gi).filter(gi => SYN_F[gi].some(x => x.indexOf(t) >= 0));
+    const alt = [];
+    synG.forEach(gi => SYN_F[gi].forEach(x => { if (x.indexOf(t) < 0) alt.push(x); }));
+    synAlts(typed, 99).forEach(a => alt.push(fold(a)));
+    const tierOf = (f, small) => f.indexOf(t) >= 0 ? 0 : alt.some(x => f.indexOf(x) >= 0) ? 1
+      : small && t.length >= 2 && (small.indexOf(t) >= 0 || alt.some(x => small.indexOf(x) >= 0)) ? 2 : -1;
+    const c = hasCity() ? CITY : null, cos = c ? Math.cos(c.lat * Math.PI / 180) : 1;
+    const out = [], seen = {};
+    const add = (it, key) => { if (it.tier >= 0 && !seen[key]) { seen[key] = true; out.push(it); } };
+    /* 這一團自己的地點先放(剛存的、全站清單還沒抓到的也有),再接全站的;同名同座標的算同一個,公開照片互相補 */
+    const own = (state.stops || []).concat(state.wishes || []).filter(r => r && r.place && r.geo && !r.placeId)
+      .map(r => ({ n: r.place, la: r.geo.la, lo: r.geo.lo, c: r.geo.c, s: r.geo.s, k: r.geo.k, ph: r.photo || "" }));
+    const byKey = {}, places = [];
+    own.concat(hintRows || []).forEach(p => {
+      if (!p || !p.n || !isFinite(p.la) || !isFinite(p.lo)) return;
+      const k = String(p.n).toLowerCase() + "@" + (+p.la).toFixed(3) + "," + (+p.lo).toFixed(3);
+      if (byKey[k]) { if (!byKey[k].ph && p.ph) byKey[k].ph = p.ph; return; }
+      places.push(byKey[k] = Object.assign({}, p));
+    });
+    histGet().filter(h => fold(h) !== t).slice(0, 30).forEach((h, i) => add({ type: "h", rank: 0, tier: tierOf(fold(h)), i: i, text: h }, "w" + fold(h)));
+    places.forEach((p, i) => {
+      const d = c ? Math.pow(p.la - c.lat, 2) + Math.pow((p.lo - c.lon) * cos, 2) : 0;
+      add({ type: "p", rank: 1, tier: tierOf(fold(p.n), fold(geoLine(p))), i: d, p: p }, "p" + i);
+    });
+    synG.forEach(gi => SYN[gi].forEach((w, wi) => { if (SYN_F[gi][wi] !== t) add({ type: "s", rank: 2, tier: SYN_F[gi][wi].indexOf(t) >= 0 ? 0 : 1, i: gi * 10 + wi, text: w }, "w" + SYN_F[gi][wi]); }));
+    out.sort((a, b) => a.tier - b.tier || a.rank - b.rank || a.i - b.i);
+    /* 搜過的、相似詞各最多 3 筆,不要把地點擠掉 */
+    const cap = { h: 3, s: 3, p: SUG_MAX };
+    return out.filter(it => cap[it.type]-- > 0).slice(0, SUG_MAX);
+  }
+  /* 一列一張:公開照片 → 沒有就種類圖示。搜過的字、相似詞用固定的小圖示 */
+  function sugThumb(it) {
+    if (it.type !== "p") return '<span class="ph-icon" style="background:var(--surface-2)">' + (it.type === "h" ? "🕘" : "🔍") + "</span>";
+    return it.p.ph ? '<img alt="" loading="lazy" src="' + esc(commonsImg(it.p.ph, 96)) + '">' : catIcon({ _k: it.p.k || "" });
+  }
+  function sugHide() {
+    const box = el("ss-sug");
+    if (box && !box.hidden) { box.hidden = true; box.innerHTML = ""; }
+    sugItems = [];
+    const inp = el(SS);
+    if (inp) inp.removeAttribute("aria-expanded");
+  }
+  function sugShow() {
+    const box = el("ss-sug"), inp = el(SS);
+    if (!box || el("seek-screen").hidden) return;
+    const typed = inp.value.trim();
+    sugItems = typed ? sugList(typed) : [];
+    if (!sugItems.length) { sugHide(); return; }
+    box.innerHTML = sugItems.map((it, i) => '<button type="button" class="sug" role="option" data-sug="' + i + '"><span class="sth">' + sugThumb(it) +
+      '</span><span class="stx"><b>' + esc(it.type === "p" ? it.p.n : it.text) + "</b><small>" +
+      esc(it.type === "p" ? geoLine(it.p) || "選過的地點" : it.type === "h" ? "搜過" : "相似的說法") + "</small></span></button>").join("");
+    /* 桌機:對齊搜尋框;手機:整排 */
+    const scr = el("seek-screen").getBoundingClientRect(), seek = inp.closest(".seek").getBoundingClientRect();
+    if (scr.width >= 600) { box.style.left = (seek.left - scr.left) + "px"; box.style.right = "auto"; box.style.width = seek.width + "px"; }
+    else { box.style.left = ""; box.style.right = ""; box.style.width = ""; }
+    box.hidden = false;
+    inp.setAttribute("aria-expanded", "true");
+  }
+  function sugTake(i) {
+    const it = sugItems[i];
+    sugHide();
+    if (!it) return;
+    const inp = el(SS);
+    /* 搜過的字、相似詞,或強力搜上膛:填進去,照平常搜(上膛就是走強力搜那條路) */
+    if (it.type !== "p" || (seekArmed[SS] && !onSnapshot())) { inp.value = it.type === "p" ? it.p.n : it.text; runSeek(SS); return; }
+    /* 地點:已經有座標,直接當成一筆結果。還在飛的那一輪搜尋作廢,不然它晚回來會把這張蓋掉 */
+    const p = it.p;
+    inp.value = p.n;
+    seekTurn[SS] = (seekTurn[SS] || 0) + 1;
+    const r = { lat: String(p.la), lon: String(p.lo), _n: p.n, display_name: [p.n, p.s, p.c].filter(Boolean).join(", "),
+      _k: p.k || "", _geo: { la: p.la, lo: p.lo, c: p.c || "", s: p.s || "", k: p.k || "" } };
+    if (p.ph) r._wiki = p.ph;
+    seekList(SS, [r]);
+    ssSelect(0, false);
+    paintMap(ssMap());
+  }
+  el(SS).addEventListener("input", sugShow);
+  document.addEventListener("click", ev => {
+    const t = ev.target.closest && ev.target.closest("[data-sug]");
+    if (t) { sugTake(+t.getAttribute("data-sug")); return; }
+    if (!(ev.target.closest && ev.target.closest("#ss-sug, #" + SS))) sugHide();
+  });
+
   function seekSay(id, msg, hint) {
     const box = seekBox(id);
     /* `hint === "ok"` 那一段拿掉了 —— 它畫的是舊的那顆「好」按鈕,而**沒有任何
@@ -4951,6 +5096,7 @@
     const input = el(id);
     const q = input ? input.value.trim() : "";
     if (!q) { seekSay(id, "先打幾個字,再按搜尋。"); return; }
+    if (id === SS) { sugHide(); histAdd(q); }
     /* **一次只跑一個。** 免費那家排在 1100ms 的佇列上(Nominatim 的使用條款),
        所以連按會讓好幾個查詢同時在飛,而先回來的會把後回來的蓋掉 ——
        使用者看到的是「我按了最後一次,畫面卻是前一次的結果」。
@@ -5076,6 +5222,11 @@
        現在跑完就退回一般搜,再按是免費的第 1 段;要再花一次錢,
        得重新走完兩次沒挑到、再點一次句子裡那三個字。 */
     if (strong) { seekReset(id); seekUsedStrong[id] = true; }
+    seekList(id, res);
+  }
+
+  /* 候選卡片畫出來(搜完、或點了搜尋提示裡的地點)。`res` 已經排好順序 */
+  function seekList(id, res) {
     const box = seekBox(id);
     /* **提示排在候選後面,而候選自己捲。**(Lulu 的決定,2026-09-24)
        它以前排在前面,理由是:候選有六筆的時候,排在最後的它會在螢幕外,
@@ -5240,11 +5391,20 @@
     }));
   }
   function hitCat(r) {
+    if (r._k !== undefined) return r._k;   /* 從搜尋提示點進來的:種類是存著的那一份 */
     const x = r.extratags || {}, c = r.class || r.category, t = r.type;
     if (c === "amenity" && t === "place_of_worship" && RELIGION[x.religion]) return RELIGION[x.religion];
     const cu = String(x.cuisine || "").split(";")[0].trim();
     if (c === "amenity" && /^(restaurant|fast_food|cafe)$/.test(t) && CUISINE[cu]) return CUISINE[cu];
     return (OSM_TYPE[c] || {})[t] || "";
+  }
+  /* 選的當下就把地點資訊記起來(2026-11-02,搜尋提示):座標、國家、縣市(搜尋多帶 addressdetails,不用多查一次)、種類 */
+  const ADDR_REGION = a => a.state || a.province || a.county || a.city || a.region || "";
+  function hitGeo(r) {
+    if (r._geo) return r._geo;
+    const a = r.address || {}, la = +r.lat, lo = +r.lon;
+    if (!isFinite(la) || !isFinite(lo)) return null;
+    return { la: la, lo: lo, c: a.country || "", s: ADDR_REGION(a), k: hitCat(r) };
   }
   /* 圖磚也載不到時的那一格:類別圖示 + 顏色底(顏色照類別分組,用 Style 的 custom container) */
   const CAT_ICON = [
@@ -5468,6 +5628,50 @@
     const was = before !== undefined ? before : (s.photoAt !== undefined ? s.photoAt : s.place);
     return s && s.photo && was === s.place ? s.photo : "";
   }
+  /* 這一筆要存的地點資訊(2026-11-02,搜尋提示):這支手機從地圖選過這個地點、選的時候記了 → 那份;
+     從 Google 選的 → 清掉(不存 Google 的);地點沒改 → 不送(伺服器原樣留著);改成手打的字 → 清掉。
+     舊的「選過、但那時還沒記地點資訊」也清掉,等 geoBackfill 補 */
+  /* 舊的地點補地點資訊(2026-11-02,Lulu):這支手機從地圖(OSM)選過的才補 —— 手打的、Google 的都不補。
+     座標是選的時候記下的;國家、縣市、種類用 Nominatim reverse 問(走 queued(),1 秒 1 次),問到就記在這台手機,不再問。
+     一次最多 3 筆(排在搜尋前面會讓人等),下一次讀資料再接著補;補過、補不到的這次開 App 都不再試 */
+  const geoAsked = {};
+  let geoBusy = false;
+  async function geoBackfill() {
+    if (geoBusy || !online || onSnapshot()) return;
+    const todo = (state.stops || []).concat(state.wishes || []).filter(r => r && r.id && r.place && !r.geo && !r.placeId && !geoAsked[r.id])
+      .filter(r => { const at = pins[r.place]; return at && at.by === "pick" && !at.pid && isFinite(at.la) && isFinite(at.lo); }).slice(0, 3);
+    if (!todo.length) return;
+    geoBusy = true;
+    try {
+      const rows = [];
+      for (const r of todo) {
+        geoAsked[r.id] = true;
+        const at = pins[r.place];
+        let g = at.geo;
+        if (!g) {
+          const rev = await queued(() => fetch("https://nominatim.openstreetmap.org/reverse?format=json&zoom=18&addressdetails=1&extratags=1&namedetails=1" +
+            "&accept-language=zh-TW&lat=" + at.la + "&lon=" + at.lo).then(x => x.json()).catch(() => null));
+          if (!rev || rev.error) continue;
+          /* reverse 回的是那個座標上的東西,不一定是這個地點(可能是隔壁那棟)—— 名字對得上才拿它的種類 */
+          const nd = rev.namedetails || {}, mine = fold(r.place);
+          const same = [rev.name].concat(Object.keys(nd).map(k => nd[k])).filter(Boolean).map(fold).some(n => n && (n.indexOf(mine) >= 0 || mine.indexOf(n) >= 0));
+          const a = rev.address || {};
+          g = at.geo = { la: at.la, lo: at.lo, c: a.country || "", s: ADDR_REGION(a), k: same ? hitCat(rev) : "" };
+          savePins();
+        }
+        r.geo = g;
+        rows.push({ id: r.id, geo: g });
+      }
+      if (rows.length) await api("?resource=geofill", { method: "POST", body: JSON.stringify({ rows: rows }) });
+    } finally { geoBusy = false; }
+  }
+  function geoOf(s, before) {
+    if (!s) return undefined;
+    const was = before !== undefined ? before : (s.photoAt !== undefined ? s.photoAt : s.place);
+    const at = s.place && pins[s.place];
+    if (at && at.by === "pick") return at.pid ? "" : at.geo || (was === s.place ? undefined : "");
+    return was === s.place ? undefined : "";
+  }
 
 
   /* 選了一個:地點欄換成那個名字,座標**同時**寫進快取,所以這一筆從此不會再被查。
@@ -5484,7 +5688,7 @@
     const ov = input.closest(".overlay"); if (ov) ov.dataset.picked = "1";
     /* `at` 是地址那一行,狀態列要印它 —— **「已標定」光講名字不夠**:
        使用者剛剛才從三間同名的裡面挑了一間,他要看到的是自己挑的是哪一間。 */
-    pins[name] = { la: +r.lat, lo: +r.lon, by: "pick", at: hitAddr(r), photo: r._wiki || "" };
+    pins[name] = { la: +r.lat, lo: +r.lon, by: "pick", at: hitAddr(r), photo: r._wiki || "", geo: hitGeo(r) };
     savePins();
     if (r._wiki === undefined && box._wiki) box._wiki.then(() => {
       if (pins[name] && pins[name].by === "pick" && pins[name].la === +r.lat) { pins[name].photo = r._wiki || ""; savePins(); }

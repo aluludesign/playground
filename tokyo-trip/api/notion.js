@@ -68,6 +68,19 @@ async function hasCidCol() {
   return cidCol.has;
 }
 
+/* 「行程」表有沒有「地點資訊」這一欄(2026-11-02,搜尋提示)。跟上面「送出編號」一樣:**有才寫**,
+   沒有這一欄就寫進去的話,Notion 會把整筆拒絕,行程、願望都存不了 */
+let geoCol = { has: false, at: 0 };
+let hintCache = { rows: null, at: 0 };
+async function hasGeoCol() {
+  if (Date.now() - geoCol.at < 10 * 60 * 1000) return geoCol.has;
+  try {
+    const d = await notion("/databases/" + DB.itinerary);
+    geoCol = { has: !!(d.properties && d.properties["地點資訊"]), at: Date.now() };
+  } catch (_) { geoCol = { has: false, at: Date.now() }; }
+  return geoCol.has;
+}
+
 /* (2026-10-02)舊的 Google 地名查詢(Geocoding、Places Text Search、Place Photo)整個拿掉了:
    強力搜改用前端的 Places UI Kit(見 index.html)。那三支違反 Google 條款
    (Google 的座標畫在 OpenStreetMap 上、沒有 30 天期限、照片沒標作者),伺服器那把金鑰也就不需要了。 */
@@ -170,6 +183,24 @@ const COMMONS = /^https:\/\/commons\.wikimedia\.org\/wiki\/File:[^\s"'<>]{1,400}
 const photoUrl = p => (p && p.url && COMMONS.test(p.url) ? p.url : "");
 const photoProp = v => ({ url: COMMONS.test(String(v || "")) ? String(v) : null });
 
+/* **地點資訊**(2026-11-02,Lulu:全站搜尋提示):從地圖(OpenStreetMap)選出來的地點才有 ——
+   座標、國家、縣市、種類,存成一段 JSON。手打的地點沒有;有 Google 地點編號的也不存(Google 的條款不准把它的資料存起來給別人看)。
+   { la, lo, c: 國家, s: 縣市, k: 種類 } */
+const clip = (v, n) => String(v == null ? "" : v).replace(/[\u0000-\u001f]/g, "").trim().slice(0, n);
+function geoClean(v) {
+  if (!v || typeof v !== "object") return null;
+  const la = Number(v.la), lo = Number(v.lo);
+  if (!Number.isFinite(la) || !Number.isFinite(lo) || Math.abs(la) > 90 || Math.abs(lo) > 180) return null;
+  return { la: Math.round(la * 1e5) / 1e5, lo: Math.round(lo * 1e5) / 1e5, c: clip(v.c, 40), s: clip(v.s, 40), k: clip(v.k, 20) };
+}
+const geoOut = p => { try { return geoClean(JSON.parse(txt(p) || "null")); } catch (_) { return null; } };
+/* 寫進去的值:`geo` 沒送 = 不動;送了空的、或這一筆有 Google 地點編號 = 清掉 */
+function geoProp(b) {
+  if (b.geo === undefined && !b.placeId) return undefined;
+  const g = b.placeId ? null : geoClean(b.geo);
+  return { rich_text: richText(g ? JSON.stringify(g) : "") };
+}
+
 function stopOut(page) {
   const p = page.properties;
   return {
@@ -185,6 +216,7 @@ function stopOut(page) {
     /* Google 的地點編號(2026-10-02,Places UI Kit):從 Google 清單挑的才有。可以永久存 —— 座標不行(只能 30 天,手機自己記) */
     placeId: p["地點編號"] ? txt(p["地點編號"]) : "",
     photo: photoUrl(p["照片"]),
+    geo: geoOut(p["地點資訊"]),
   };
 }
 function stopIn(b) {
@@ -196,6 +228,8 @@ function stopIn(b) {
   };
   if (b.placeId !== undefined) props["地點編號"] = { rich_text: richText(String(b.placeId || "").slice(0, 200)) };
   if (b.photo !== undefined) props["照片"] = photoProp(b.photo);
+  const geo = geoProp(b);
+  if (geo) props["地點資訊"] = geo;
   if (b.day) props["日期"] = { date: { start: b.day } };
   /* **退回願望區 = 把日期清掉**(2026-09-30):沒有日期的那一列就是願望,許願人和票都還在 */
   else if (b.day === null) props["日期"] = { date: null };
@@ -218,12 +252,15 @@ function wishOut(page) {
     by: txt(p["許願人"]),
     placeId: p["地點編號"] ? txt(p["地點編號"]) : "",
     photo: photoUrl(p["照片"]),
+    geo: geoOut(p["地點資訊"]),
     createdAt: page.created_time,
   };
 }
 function wishIn(b) {
   /* 絕對不寫「日期」—— 一寫上去它就變成行程,而排行程要有「管行程」的權限 */
+  const geo = geoProp(b);
   return {
+    ...(geo ? { "地點資訊": geo } : {}),
     "項目": { title: richText(b.title || "想去的地方") },
     "地點": { rich_text: richText(b.place) },
     "備註": { rich_text: richText(b.note) },
@@ -1074,8 +1111,78 @@ module.exports = async (req, res) => {
     }
   }
 
+  /* ---------- 搜尋提示(2026-11-02,Lulu)----------
+     GET → **全站所有團**從地圖選出來的地點,去重後的一份清單:名字、座標、國家、縣市、種類,
+     和公開的照片(「照片」欄的維基網址,跟搜尋卡片同一個來源)。成員自己傳的附圖**不給** —— 那是私人照片。
+     比對在手機上做,打字時不連網。**不給**是哪一團、誰加的、哪一天、這一筆的 id ——
+     別團的人只看得到「有人去過這個地方」。手打的(沒有地點資訊)和 Google 的(有地點編號)不在裡面。
+     要登入才拿得到;一台機器十分鐘重抓一次 */
+  if (resource === "hints") {
+    if (!allow("GET")) return;
+    if (!me) return stop({ status: 401, why: "login", error: "請先用 LINE 登入" });
+    try {
+      if (!hintCache.rows || Date.now() - hintCache.at > 10 * 60 * 1000) {
+        if (!(await hasGeoCol())) hintCache = { rows: [], at: Date.now() };
+        else {
+          const seen = {}, rows = [];
+          let cursor;
+          do {
+            const page = await notion("/databases/" + DB.itinerary + "/query", { method: "POST", body: JSON.stringify({
+              page_size: 100, start_cursor: cursor, filter: { property: "地點資訊", rich_text: { is_not_empty: true } } }) });
+            page.results.forEach(r => {
+              const p = r.properties || {}, n = clip(txt(p["地點"]), 80), g = geoOut(p["地點資訊"]);
+              if (!n || !g || (p["地點編號"] && txt(p["地點編號"]))) return;
+              const k = n.toLowerCase() + "@" + g.la.toFixed(3) + "," + g.lo.toFixed(3);
+              const ph = photoUrl(p["照片"]);
+              if (seen[k]) { if (ph && !seen[k].ph) seen[k].ph = ph; return; }
+              const row = seen[k] = { n: n, la: g.la, lo: g.lo, c: g.c, s: g.s, k: g.k };
+              if (ph) row.ph = ph;
+              rows.push(row);
+            });
+            cursor = page.has_more ? page.next_cursor : null;
+          } while (cursor);
+          hintCache = { rows: rows, at: Date.now() };
+        }
+      }
+      return res.status(200).json({ rows: hintCache.rows });
+    } catch (e) { return fail(e); }
+  }
+
+  /* ---------- 補地點資訊(2026-11-02)----------
+     POST { rows: [{ id, geo }] } → 舊的行程、願望補上地點資訊。只有手機記得「這是從地圖選的」才送得來
+     (座標是選的時候手機記下的,國家、縣市是手機用 Nominatim reverse 補的,照 1 秒 1 次排隊)。
+     這一團的成員都能補 —— 它不改內容,只補一欄空的;已經有的、有 Google 地點編號的、沒有地點的,一律不動 */
+  if (resource === "geofill") {
+    if (!allow("POST")) return;
+    try {
+      const c = await context(q.t);
+      if (c.stop) return stop(c.stop);
+      if (!(await hasGeoCol())) return res.status(200).json({ ok: true, done: 0 });
+      let done = 0;
+      for (const x of (Array.isArray(body.rows) ? body.rows : []).slice(0, 10)) {
+        const g = geoClean(x && x.geo);
+        if (!g || !/^[0-9a-f-]{32,36}$/i.test(String(x.id || ""))) continue;
+        let page;
+        try { page = await notion("/pages/" + x.id); } catch (e) { if (e.status === 404) continue; throw e; }
+        const db = String((page.parent && page.parent.database_id) || "").replace(/-/g, "");
+        const p = page.properties || {};
+        if (page.archived || db !== DB.itinerary.replace(/-/g, "") || txt(p["團"]) !== c.code) continue;
+        if (!txt(p["地點"]) || txt(p["地點資訊"]) || (p["地點編號"] && txt(p["地點編號"]))) continue;
+        await notion("/pages/" + page.id, { method: "PATCH", body: JSON.stringify({ properties: { "地點資訊": { rich_text: richText(JSON.stringify(g)) } } }) });
+        done++;
+      }
+      return res.status(200).json({ ok: true, done });
+    } catch (e) { return fail(e); }
+  }
+
   const shape = SHAPES[resource];
   if (!shape) return res.status(400).json({ error: "不認識的資料表:" + resource });
+  /* 「地點資訊」那一欄還沒開的話就不寫它(見 hasGeoCol) */
+  const shapeIn = async b => {
+    const props = shape.in(b);
+    if (props["地點資訊"] && !(await hasGeoCol())) delete props["地點資訊"];
+    return props;
+  };
 
   /* 哪一張表對應團主開的哪一個開關。**沒列在這裡的東西成員一律動不了** ——
      新增一張表的人要自己決定它屬於哪一塊,而不是預設放行。 */
@@ -1151,7 +1258,7 @@ module.exports = async (req, res) => {
       const mineId = c.mine.id;
       if (c.trip.ended) return res.status(403).json({ why: "ended", error: "這一團已經結束了,不能再許願或投票" });
       if (method === "POST") {
-        const props = shape.in({ ...body, by: mineId, votes: ids(body.votes).filter(v => v === mineId) });
+        const props = await shapeIn({ ...body, by: mineId, votes: ids(body.votes).filter(v => v === mineId) });
         const page = await notion("/pages", { method: "POST",
           body: JSON.stringify({ parent: { database_id: shape.db }, properties: withTrip(props) }) });
         await log("許願", me2 + " 許願:" + said(body.title || "想去的地方"));
@@ -1178,9 +1285,9 @@ module.exports = async (req, res) => {
           const want = ids(body.votes).indexOf(mineId) >= 0;
           votes = now.votes.filter(v => v !== mineId).concat(want ? [mineId] : []);
         }
-        const props = shape.in({
+        const props = await shapeIn({
           title: keep(body.title, now.title), place: keep(body.place, now.place),
-          note: keep(body.note, now.note), by: now.by, votes, placeId: keep(body.placeId, now.placeId),
+          note: keep(body.note, now.note), by: now.by, votes, placeId: keep(body.placeId, now.placeId), geo: body.geo,
         });
         const saved = await notion("/pages/" + page.id, { method: "PATCH", body: JSON.stringify({ properties: props }) });
         /* 改願望、刪願望、+1 都不通知(Lulu 2026-10-02):只講「誰許了什麼願」 */
@@ -1199,7 +1306,7 @@ module.exports = async (req, res) => {
       if (bad) return res.status(400).json({ error: bad, why: "split" });
     }
     if (method === "POST") {
-      const props = withTrip(shape.in(body));
+      const props = withTrip(await shapeIn(body));
       /* **手機離線時記的帳,連上網才送**(見 index.html「還沒送出的花費」)。在地鐵裡送到一半斷線,
          手機不知道這裡收到沒有,會再送一次 —— 靠「送出編號」認出同一筆,不記成兩筆。
          「花費」表還沒有這一欄的時候照舊直接建(重送的那一刻有機會重複,但不會壞)。 */
@@ -1238,7 +1345,7 @@ module.exports = async (req, res) => {
       if (!page) return gone();
       const was = shape.out(page);
       /* 照片掛不上去一樣不擋(AI 讀到一段已經有的交通,改它的時候帶著照片) */
-      const props = shape.in(body);
+      const props = await shapeIn(body);
       let saved, photoLost = false;
       try {
         saved = await notion("/pages/" + page.id, { method: "PATCH", body: JSON.stringify({ properties: props }) });
