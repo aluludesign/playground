@@ -4554,13 +4554,13 @@
      - 沒動過地圖按「搜尋」= 搜這一團的城市(viewbox＋bounded=1)。拖動或縮放之後,卡片只列畫面裡的(只在搜到的裡面篩,不重搜),
        搜尋鈕變「重新搜這個範圍」,按了才照**畫面裡看得到的那一塊**搜(不限國家,縮到全世界就是全世界)——
        **地圖一動就搜不行**:Nominatim 的條款不准自動、連續地查。每次搜完畫面拉到框住全部結果。
-     - 0 筆只給下一步那一顆,讓人自己按:畫面比城市小 →「搜整個城市」;城市(或畫面已蓋住城市)→「往外找」(不限城市、國家)。
+     - 0 筆只給下一步那一顆,讓人自己按:畫面比城市小 →「重新搜尋{城市}」;城市(或畫面已蓋住城市)→「往外找」(不限城市、國家)。
      - ✕ = 不選地點,打的字留在地點欄(「泡溫泉」這種沒有固定地點的,就用這個名字)。
      - 強力搜照舊:Google 的清單出現在卡片那一區,**不在地圖上標點**(Google 的條款)。
      搜尋的那幾個狀態(段數、強力搜上膛)跟著搜尋框走:進來時從地點欄那一格帶過來,✕ 回去時帶回去。 */
   const SS = "ss-q";
   let ssFor = null, ssSel = -1, ssMoved = false;
-  /* 上一次照畫面搜的時候,畫面是不是已經蓋住整個城市(找不到時就不給「搜整個城市」,直接給「往外找」) */
+  /* 上一次照畫面搜的時候,畫面是不是已經蓋住整個城市(找不到時就不給「重新搜尋{城市}」,直接給「往外找」) */
   let ssWhole = false, ssScope = "";
   const hasCity = () => !!CITY && isFinite(CITY.lat) && isFinite(CITY.lon);
   const ssMap = () => el("ss-map");
@@ -5094,7 +5094,7 @@
     paintSeekBtn(id);
   }
 
-  /* `how`:全螢幕搜尋裡按了「搜整個城市」("city")或「往外找」("wide");沒有就看地圖動過沒有(見下面 ssScope) */
+  /* `how`:全螢幕搜尋裡按了「重新搜尋{城市}」("city")或「往外找」("wide");沒有就看地圖動過沒有(見下面 ssScope) */
   const seekTurn = {};
   async function runSeek(id, how) {
     const input = el(id);
@@ -5145,7 +5145,7 @@
     const turn = seekTurn[id] = (seekTurn[id] || 0) + 1;
     try {
       /* 全螢幕搜尋(2026-10-30,Lulu)分三種:
-         - 沒動過地圖就按「搜尋」、或按「搜整個城市」→ 只搜城市(viewbox＋bounded=1)
+         - 沒動過地圖就按「搜尋」、或按「重新搜尋{城市}」→ 只搜城市(viewbox＋bounded=1)
          - 動過地圖之後按「重新搜這個範圍」→ 照畫面搜(可以是全世界)
          - 按「往外找」→ 不限城市、不限國家,城市框當加權。**要人自己按,不自動做** */
       ssScope = id !== SS ? "" : how === "wide" ? "wide" : how === "city" || !moved || !hasCity() ? "city" : "view";
@@ -5210,9 +5210,11 @@
          同一句話有兩個產生它的地方,就會有一個先過期。 */
       const nb = seekBox(id);
       /* 0 筆:講一聲,旁邊只放**下一步**那一顆讓人自己按 —— **不自動往外找**
-         畫面(比城市小)→「搜整個城市」;城市、或畫面已經蓋住城市 →「往外找」;往外找也沒有 → 就是找不到 */
+         畫面(比城市小)→「重新搜尋{城市}」;城市、或畫面已經蓋住城市 →「往外找」;往外找也沒有 → 就是找不到 */
       const sc = id === SS ? ssScope : "";
-      const next = sc === "view" && !ssWhole ? '<button type="button" class="btn btn-sm ss-city" data-city="1">搜整個城市</button>'
+      /* 「重新搜尋東京」:用這一團設定的城市名稱(2026-11-04 Lulu);沒設就說「這個城市」 */
+      const cityName = String(trip && trip.city || "").trim();
+      const next = sc === "view" && !ssWhole ? '<button type="button" class="btn btn-sm ss-city" data-city="1">' + esc("重新搜尋" + (cityName || "這個城市")) + "</button>"
         : sc === "view" || sc === "city" ? '<button type="button" class="btn btn-sm ss-city" data-wide="1">往外找</button>' : "";
       if (id === SS) ssShow([], false);
       nb.innerHTML = '<div class="said hint">' + esc(sc === "view" ? "這個範圍找不到「" + q + "」。" : sc === "city" ? "這個城市找不到「" + q + "」。" : "「" + q + "」找不到。") +

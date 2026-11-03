@@ -4,7 +4,7 @@
  * 看:按搜尋 → 全螢幕(搜尋框＋✕、撐滿的地圖、下面卡片),只搜畫面範圍(viewbox＋bounded=1);
  *     結果全部標在地圖上、編號跟卡片一樣;點卡片/點點 = 選起來(兩邊一起亮),「選這個」才帶回去;
  *     縮放後卡片只列畫面裡的、按鈕變「重新搜這個範圍」(不自動搜);第一次搜 = 城市;0 筆只給下一步那一顆
- *     (「搜整個城市」→「往外找」→ 找不到);「往外找」不限國家;
+ *     (「重新搜尋{城市}」→「往外找」→ 找不到);「往外找」不限國家;
  *     ✕ = 不選地點、打的字留著;Esc 照對話框的關閉規則。 */
 var q = s => d.querySelector(s), qa = s => Array.prototype.slice.call(d.querySelectorAll(s));
 var wait = ms => new Promise(r => w.setTimeout(r, ms));
@@ -157,7 +157,7 @@ return (async function () {
   out.重搜 = { bounded: param(u1, "bounded"), viewbox左: vb1[0].toFixed(4), 畫面左: lonL.toFixed(4), 比上次小: Math.abs(vb1[2] - vb1[0]) < Math.abs(vb[2] - vb[0]), 按鈕: txt(q('[data-seek="ss-q"]')) };
   ok("重搜用現在的畫面(bounded=1、viewbox 左邊 = 畫面左邊、比城市小),按鈕回到「搜尋」", out.重搜.bounded === "1" && out.重搜.viewbox左 === out.重搜.畫面左 && out.重搜.比上次小 && out.重搜.按鈕 === "搜尋", out.重搜);
 
-  /* 9 動過地圖、畫面比城市小、0 筆 →「這個範圍找不到」＋只有「搜整個城市」;畫面不動;不自動往外 */
+  /* 9 動過地圖、畫面比城市小、0 筆 →「這個範圍找不到」＋只有「重新搜尋東京」;畫面不動;不自動往外 */
   var btns = () => qa("#ss-q-out [data-city], #ss-q-out [data-wide]").map(txt);   /* 「強力搜」是三段式提示那一顆,不算 */
   q('#ss-map [data-zoom="1"]').click(); await wait(80); await calm();
   var v9 = JSON.stringify(q("#ss-map")._v);
@@ -166,16 +166,16 @@ return (async function () {
   var u9 = asked[nAsk];
   ok("0 筆畫面不動", JSON.stringify(q("#ss-map")._v) === v9, [v9, q("#ss-map")._v]);
   out.零筆 = { 字: txt(q("#ss-q-out .said")), 鈕: btns(), 點: qa("#ss-map .pin").length, 查了幾次: asked.length - nAsk, 範圍: param(u9, "viewbox") };
-  ok("畫面裡 0 筆:講「這個範圍找不到」、只有「搜整個城市」、點清掉、查兩次(泡溫泉＋泡温泉,都是畫面範圍)", /這個範圍找不到「泡溫泉」/.test(out.零筆.字) && out.零筆.鈕.join() === "搜整個城市" &&
+  ok("畫面裡 0 筆:講「這個範圍找不到」、只有「重新搜尋東京」(這一團的城市)、點清掉、查兩次(泡溫泉＋泡温泉,都是畫面範圍)", /這個範圍找不到「泡溫泉」/.test(out.零筆.字) && out.零筆.鈕.join() === "重新搜尋東京" &&
     out.零筆.點 === 0 && out.零筆.查了幾次 === 2 && out.零筆.範圍 !== CV, out.零筆);
 
-  /* 9b「搜整個城市」:城市框、bounded=1,城市外的地名也一樣;0 筆 →「這個城市找不到」＋只有「往外找」 */
+  /* 9b「重新搜尋東京」:城市框、bounded=1,城市外的地名也一樣;0 筆 →「這個城市找不到」＋只有「往外找」 */
   q("#ss-q").value = "京都車站"; nAsk = asked.length;
   q("#ss-q-out [data-city]").click();
   await until(() => /這個城市找不到/.test(txt(q("#ss-q-out")))); await wait(1300);
   var u3 = asked[nAsk];
   out.城市外 = { 字: txt(q("#ss-q-out .said")), 鈕: btns(), 查了幾次: asked.length - nAsk, bounded: param(u3, "bounded"), viewbox: param(u3, "viewbox") };
-  ok("「搜整個城市」0 筆:查三次(京都車站＋京都駅＋京都站,城市框、bounded=1),講「這個城市找不到」、只剩「往外找」",
+  ok("「重新搜尋東京」0 筆:查三次(京都車站＋京都駅＋京都站,城市框、bounded=1),講「這個城市找不到」、只剩「往外找」",
     out.城市外.查了幾次 === 3 && out.城市外.bounded === "1" && out.城市外.viewbox === CV && /這個城市找不到「京都車站」/.test(out.城市外.字) && out.城市外.鈕.join() === "往外找", out.城市外);
 
   /* 9c「往外找」:不帶 bounded、countrycodes,城市框當加權;結果框進畫面 */

@@ -138,7 +138,7 @@ var SIX = [0, 1, 2, 3, 4, 5].map(function (i) {
     /* **2026-10-02 起先鎖這一團的城市**(Lulu:盡量鎖在選的地區):第一次查帶 bounded=1、框是城市周圍約 50 公里;
        有結果就不再放寬。放寬那條(一筆都沒有)在 escalate.js 量 —— 那裡的樁一律回空的。 */
     /* **2026-10-29 起先搜地圖畫面範圍**(全螢幕地圖搜尋):bounded=1、viewbox 是畫面那一塊;有結果就不放寬。
-       「搜整個城市」那條(城市框、國家代碼)在 map-search.js 量 */
+       「重新搜尋{城市}」那條(城市框、國家代碼)在 map-search.js 量 */
     ok("只搜地圖畫面那一塊(bounded=1、帶 viewbox),有結果就不放寬", asked.length === 1 && /bounded=1/.test(asked[0]) &&
       /viewbox=1[34]\d\.\d+,3\d\.\d+,1[34]\d\.\d+,3\d\.\d+/.test(asked[0]), asked);
 
