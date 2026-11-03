@@ -20,16 +20,18 @@ var TILE = 256;
 var projX = (lo, z) => (lo + 180) / 360 * Math.pow(2, z);
 var projY = (la, z) => { var r = la * Math.PI / 180; return (1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * Math.pow(2, z); };
 var param = (u, k) => { var m = String(u).match(new RegExp("[?&]" + k + "=([^&]*)")); return m ? decodeURIComponent(m[1]) : null; };
+/* 換畫面會平移過去(glide):量之前等它走完 */
+var calm = box => until(() => !box._anim, 40);
 async function until(f, n) { for (var i = 0; i < (n || 60); i++) { if (f()) return true; await wait(50); } return false; }
 /* 圖磚:全部合法?有沒有重複?世界那一份蓋不蓋得住畫面 */
 function tiles(box) {
   var v = box._v, n = Math.pow(2, v.z), seen = {}, badT = [], dup = 0;
-  qa("#" + box.id + " img.tile").forEach(t => {
+  qa("#" + box.id + " .layer:not(.under) img.tile").forEach(t => {
     var m = t.getAttribute("src").match(/\/(\d+)\/(-?\d+)\/(-?\d+)\.png$/);
     if (!m || +m[1] !== v.z || +m[2] < 0 || +m[2] >= n || +m[3] < 0 || +m[3] >= n) badT.push(t.getAttribute("src"));
     var key = m && m[2] + "/" + m[3]; if (seen[key]) dup++; seen[key] = 1;
   });
-  return { z: v.z, 張數: qa("#" + box.id + " img.tile").length, 不合法: badT.slice(0, 3), 重複: dup };
+  return { z: v.z, 張數: qa("#" + box.id + " .layer:not(.under) img.tile").length, 不合法: badT.slice(0, 3), 重複: dup };
 }
 /* 點畫在哪(相對地圖左上)vs 投影算出來的位置(取離中心最近那一份) */
 function pinOff(box, k, lo, la) {
@@ -60,15 +62,17 @@ return (async function () {
   var mm = q("#map");
   if (mm && mm._v) {
     for (var i = 0; i < 25; i++) zoomBtn(mm, -1);
+    await calm(mm);
     out.行程縮到底 = tiles(mm);
     ok("行程地圖縮得到 0,圖磚全合法、不重複(世界只畫一份)", out.行程縮到底.z === 0 && !out.行程縮到底.不合法.length && !out.行程縮到底.重複 && out.行程縮到底.張數 === 1, out.行程縮到底);
-    drag(mm, 60, 30);
+    drag(mm, 60, 30); await calm(mm);
     out.行程0拖 = { 中心: [mm._v.cx, mm._v.cy], 圖磚: tiles(mm) };
     ok("0 級拖了也不會把世界拖走(還是置中)", mm._v.cx === 0.5 && mm._v.cy === 0.5 && !out.行程0拖.圖磚.不合法.length, out.行程0拖);
     for (var i = 0; i < 25; i++) zoomBtn(mm, 1);
+    await calm(mm);
     out.行程放到底 = tiles(mm);
     ok("行程地圖放得到 19,圖磚全合法", out.行程放到底.z === 19 && !out.行程放到底.不合法.length && out.行程放到底.張數 > 0, out.行程放到底);
-    dbl(mm);
+    dbl(mm); await calm(mm);
     ok("19 級雙擊不會超過 19", mm._v.z === 19, mm._v.z);
   } else out.行程地圖 = "這個寬度沒有畫(略過)";
 
@@ -79,6 +83,7 @@ return (async function () {
   await until(() => q("#ss-q-out .hcard"));
   var sm = q("#ss-map");
   for (var i = 0; i < 25; i++) zoomBtn(sm, -1);
+  await calm(sm);
   out.搜尋0 = tiles(sm);
   out.搜尋0.點偏 = pinOff(sm, "h0", 139.78, 35.70);
   ok("搜尋地圖縮得到 0,圖磚合法、只一份;點的位置對", out.搜尋0.z === 0 && !out.搜尋0.不合法.length && !out.搜尋0.重複 && out.搜尋0.點偏 !== null && out.搜尋0.點偏 <= 2, out.搜尋0);
@@ -94,12 +99,15 @@ return (async function () {
   out.拉進來 = { z: sm._v.z, 點偏: pinOff(sm, "h0", 139.78, 35.70) };
   ok("0 級搜到的結果:畫面拉到框得住結果", out.拉進來.z > 5 && out.拉進來.點偏 <= 2, out.拉進來);
   for (var i = 0; i < 25; i++) zoomBtn(sm, -1);
-  dbl(sm); await wait(50);
+  await calm(sm);
+  dbl(sm); await calm(sm);
   ok("0 級雙擊放大到 1", sm._v.z === 1, sm._v.z);
 
   /* 跨換日線:3 級、畫面中心放在 179°E 附近,往右拖過去 */
   for (var i = 0; i < 2; i++) zoomBtn(sm, 1);
+  await calm(sm);
   for (; sm._v.z > 3;) zoomBtn(sm, -1);
+  await calm(sm);
   sm._v.cx = projX(179, sm._v.z); sm._v.cy = projY(35.7, sm._v.z);
   drag(sm, -20, 0);
   out.換日線 = tiles(sm);
@@ -116,6 +124,7 @@ return (async function () {
 
   /* 放到 19 */
   for (var i = 0; i < 25; i++) zoomBtn(sm, 1);
+  await calm(sm);
   sm._v.cx = projX(139.784, 19); sm._v.cy = projY(35.704, 19);
   drag(sm, 10, 10);
   out.搜尋19 = tiles(sm);

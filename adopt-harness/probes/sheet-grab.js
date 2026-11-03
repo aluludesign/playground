@@ -295,6 +295,8 @@ async function drag(dy) {
     for (var wi = 0; wi < wrows.length; wi++) {
       wrows[wi].click();
       await sleep(500);
+      /* 地圖會平移過去(glide):等它走完再量 */
+      for (var g = 0; g < 40 && d.getElementById("map")._anim; g++) await sleep(50);
       if (d.getElementById("map")._focus) { target = wrows[wi]; break; }
     }
     ok("點小卡 → 地圖聚焦到那一個點,那一列亮起來",

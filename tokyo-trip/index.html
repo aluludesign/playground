@@ -607,6 +607,9 @@
     .map:active{cursor:grabbing;}
     /* 拖曳／捏合時只動這一層的 transform,不重畫,圖磚才不會閃 */
     .map .layer{position:absolute; inset:0; transform-origin:0 0;}
+    /* 換畫面平移的時候(glide):圖釘暫時搬到這一層,不跟著圖磚縮放 */
+    .map .pins{position:absolute; inset:0; z-index:2; pointer-events:none;}
+    .map .pins .pin{pointer-events:auto;}
     /* **底圖降飽和到 0.6**(Lulu 2026-10-02 從六種濾鏡比較裡挑的 D3)。OSM 原本的綠和粉紅太搶,
        行程的點跳不出來;0.6 還認得出公園和主要道路。只套圖磚 —— 標記在同一層但不是 .tile,
        候選清單的縮圖她說不用套。驗收:adopt-harness/probes/tile-filter.js */
@@ -4719,7 +4722,7 @@
     if (out && out.querySelector(".hcard")) ssCardsH = out.offsetHeight;
     if (fit && hp.length) ssFit(box, hp.map(p => p.lo), hp.map(p => p.la), hp.length > 1 ? 16 : 15);
     ssPaintPts(box);
-    paintMap(box);
+    glide(box);
   }
   /* 這一筆現在在畫面裡看得到嗎(扣掉搜尋框和卡片) */
   function ssInView(r) {
@@ -4777,7 +4780,7 @@
       box._v.cx = projX(+r.lon, box._v.z);
       box._v.cy = projY(+r.lat, box._v.z) - (c.top - c.bot) / 2 / TILE;
     }
-    paintMap(box);
+    glide(box);
   }
   function ssTake(i) {
     const id = ssFor, out = seekBox(SS);
@@ -5002,7 +5005,6 @@
     if (p.ph) r._wiki = p.ph;
     seekList(SS, [r]);
     ssSelect(0, false);
-    paintMap(ssMap());
   }
   el(SS).addEventListener("input", sugShow);
   document.addEventListener("click", ev => {
@@ -5951,6 +5953,8 @@
     const v = box._v, pts = box._pts || [];
     const w = box.clientWidth, h = box.clientHeight;
     if (!v || !w || !h) return;
+    /* 中途有人直接重畫(換圖層、改視窗大小…)→ 動畫停掉,直接是終點 */
+    if (box._anim) { cancelAnimationFrame(box._anim.raf); box._anim = null; }
     fixView(box);
     const left = w / 2 - v.cx * TILE, top = h / 2 - v.cy * TILE;
     const n = Math.pow(2, v.z), one = n * TILE <= w;
@@ -5984,6 +5988,8 @@
     /* OSM 的圖磚要求標示出處 */
     html += '<span class="attr">\u00a9 <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a></span>';
     box.innerHTML = html;
+    box._ref = { z: v.z, cx: v.cx, cy: v.cy };
+    box.querySelector(".layer")._ref = box._ref;
     layoutLabels(box);
   }
 
@@ -6012,7 +6018,8 @@
   }
 
   /* 以容器裡的某一點為中心縮放 —— 捏合和雙擊都要,不然畫面會從中心跳開 */
-  function zoomAt(box, dz, px, py) {
+  /* 動畫中途再按(滾輪連續滾、連按 ＋)→ 從終點再算一級,畫面從現在的樣子接著走 */
+  function zoomAt(box, dz, px, py, now) {
     const v = box._v;
     if (!v) return;
     const z = Math.max(Z_MIN, Math.min(Z_MAX, v.z + dz));
@@ -6024,8 +6031,122 @@
     v.cx = (v.cx + ox) * k - ox;
     v.cy = (v.cy + oy) * k - oy;
     v.z = z;
-    paintMap(box);
+    if (now) paintMap(box); else glide(box);
     if (box._onMove) box._onMove();
+  }
+
+  /* ---- 換畫面時平移過去(2026-11-03 Lulu)----
+     程式自己移動畫面(搜完框住、點卡片或提示、＋／−、雙擊、滾輪、點清單那一列、換一天)不要直接跳:
+     中心和縮放同時漸變,ease-out、300～450ms。手指拖、雙指捏照舊即時跟手,不經過這裡。
+     - `box._v` 一開始就是終點:圖釘位置、「重新搜這個範圍」、哪些卡片在畫面裡,全部照終點算,
+       動畫只是畫面上的樣子,不會算錯;自動移動也不呼叫 _onMove,不算使用者動過。
+     - 終點那一層先畫好,用 CSS transform 從起點的樣子走過去。舊的那一層(上一級的圖磚)留在底下一起動,
+       撐住新圖磚還沒載入的地方,新圖磚載好才拿掉 —— 不會閃白。
+     - 圖釘動畫中搬到不縮放的 .pins 那層,每一格算位置,不會跟著圖磚變大變小。
+     - 中途又來一次移動 → 從現在畫面上的樣子接著走;中途手指按下去 → 停在現在的樣子(縮放取最近的整數級)。
+     - 太遠(往外找跳到別的國家)→ 不飛,新的那層淡入、舊的在底下撐著。
+     - prefers-reduced-motion → 直接跳過去。 */
+  const stillMap = () => !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  const wrapU = d => d - Math.round(d);   /* 經度方向:繞地球一圈回來,取近的那邊 */
+  const uOf = v => v.cx / Math.pow(2, v.z), tOf = v => v.cy / Math.pow(2, v.z);
+  /* 現在畫面上看起來的樣子(動畫中途縮放是小數) */
+  const viewNow = box => box._anim ? box._anim.at : box._ref || null;
+  /* 一層(畫的時候是 L._ref 那個樣子)要怎麼變形,才會看起來像 V */
+  function warp(box, L, V) {
+    const R = L._ref, w = box.clientWidth, h = box.clientHeight, s = Math.pow(2, V.z - R.z);
+    const vcx = (uOf(R) + wrapU(uOf(V) - uOf(R))) * Math.pow(2, V.z);
+    return { s: s, x: w / 2 * (1 - s) + (s * R.cx - vcx) * TILE, y: h / 2 * (1 - s) + (s * R.cy - V.cy) * TILE };
+  }
+  function warpAll(box, V) {
+    [].forEach.call(box.querySelectorAll(".layer"), L => {
+      if (!L._ref) return;
+      const m = warp(box, L, V);
+      L.style.transform = "translate(" + m.x + "px," + m.y + "px) scale(" + m.s + ")";
+      if (L.classList.contains("under")) return;
+      const P = box.querySelector(".pins");
+      if (P) [].forEach.call(P.children, p => { p.style.left = (m.s * p._x + m.x) + "px"; p.style.top = (m.s * p._y + m.y) + "px"; });
+    });
+  }
+  function glide(box) {
+    const from = viewNow(box), old = [].slice.call(box.querySelectorAll(".layer"));
+    paintMap(box);
+    const to = box._ref, top = box.querySelector(".layer");
+    if (!from || !to || !top || !old.length || old.indexOf(top) >= 0 || !box.clientWidth || !box.clientHeight) return;
+    const du = wrapU(uOf(to) - uOf(from)), dt = tOf(to) - tOf(from), dz = to.z - from.z;
+    const far = Math.hypot(du, dt) * Math.pow(2, Math.min(from.z, to.z)) * TILE, big = Math.max(box.clientWidth, box.clientHeight);
+    if (Math.abs(dz) < 1e-3 && far < 0.5) return;
+    /* 舊的那幾層留在底下撐著(最多兩層),先擺成起點的樣子 */
+    old.slice(0, -2).forEach(L => L.remove());
+    old.slice(-2).forEach(L => {
+      L.classList.add("under");
+      [].forEach.call(L.querySelectorAll(".pin"), p => p.remove());
+      L.style.opacity = "";
+      box.insertBefore(L, top);
+    });
+    const done = () => { box._anim = null; warpAll(box, to); unwarp(box, top); dropUnder(box, top); };
+    if (stillMap() || far > 3 * big || Math.abs(dz) > 5) {
+      warpAll(box, from);
+      top.style.transform = "";
+      if (stillMap()) { dropUnder(box, top); return; }
+      /* 太遠:不飛,淡入 */
+      top.style.opacity = "0";
+      const t0 = performance.now(), a = box._anim = { at: to, raf: 0 };
+      const step = () => {
+        if (box._anim !== a) return;
+        const k = Math.max(0, Math.min(1, (performance.now() - t0) / 350));
+        top.style.opacity = String(1 - Math.pow(1 - k, 3));
+        if (k < 1) a.raf = requestAnimationFrame(step); else { top.style.opacity = ""; box._anim = null; dropUnder(box, top); }
+      };
+      a.raf = requestAnimationFrame(step);
+      setTimeout(step, 400);   /* 分頁在背景時 rAF 不跑,時間到了照樣收尾 */
+      return;
+    }
+    /* 圖釘搬到不縮放的那一層 */
+    const P = document.createElement("div");
+    P.className = "pins";
+    [].forEach.call(top.querySelectorAll(".pin"), p => { p._x = parseFloat(p.style.left); p._y = parseFloat(p.style.top); P.appendChild(p); });
+    top.parentNode.insertBefore(P, top.nextSibling);
+    const dur = 300 + 150 * Math.min(1, far / big + Math.abs(dz) / 4), t0 = performance.now();
+    const a = box._anim = { at: from, raf: 0, done: done };
+    warpAll(box, from);
+    /* 用 performance.now(),不用 rAF 給的時間:那是這一格開始的時間,可能比 t0 還早,算出負的進度 */
+    const step = () => {
+      if (box._anim !== a) return;
+      const k = Math.max(0, Math.min(1, (performance.now() - t0) / dur)), e = 1 - Math.pow(1 - k, 3), z = from.z + dz * e, n = Math.pow(2, z);
+      a.at = { z: z, cx: (uOf(from) + du * e) * n, cy: (tOf(from) + dt * e) * n };
+      if (k < 1) { warpAll(box, a.at); a.raf = requestAnimationFrame(step); } else done();
+    };
+    a.raf = requestAnimationFrame(step);
+    setTimeout(step, dur + 50);   /* 分頁在背景時 rAF 不跑,時間到了照樣收尾 */
+  }
+  /* 動畫走完:終點那層回到不變形,圖釘搬回去 */
+  function unwarp(box, top) {
+    top.style.transform = "";
+    const P = box.querySelector(".pins");
+    if (!P) return;
+    [].slice.call(P.children).forEach(p => { p.style.left = p._x + "px"; p.style.top = p._y + "px"; top.appendChild(p); });
+    P.remove();
+  }
+  /* 新圖磚都載好(或等了 3 秒)才拿掉底下撐著的舊圖磚 */
+  function dropUnder(box, top) {
+    const t0 = Date.now();
+    const check = () => {
+      if (!top.isConnected || box.querySelector(".layer:not(.under)") !== top) return;
+      if (Date.now() - t0 < 3000 && [].some.call(top.querySelectorAll("img.tile"), i => !i.complete)) { setTimeout(check, 120); return; }
+      [].forEach.call(box.querySelectorAll(".layer.under"), L => L.remove());
+    };
+    check();
+  }
+  /* 手指按下去時動畫還在走:停在現在畫面上的樣子。縮放取最近的整數級,以按下去那一點為準 */
+  function settle(box, px, py) {
+    const a = box._anim;
+    if (!a) return;
+    cancelAnimationFrame(a.raf);
+    box._anim = null;
+    const V = a.at, w = box.clientWidth, h = box.clientHeight, z = Math.round(V.z), k = Math.pow(2, z - V.z);
+    const ox = (px - w / 2) / TILE, oy = (py - h / 2) / TILE;
+    box._v = { z: z, cx: (V.cx + ox) * k - ox, cy: (V.cy + oy) * k - oy };
+    paintMap(box);
   }
 
   /* 桌機滑過某一列 → 地圖上對應的那個點跳出來。只換 class,不重畫整張圖 ——
@@ -6117,7 +6238,7 @@
        那個點就會浮到可見範圍的中央。蓋住 0 的時候(桌機)這一項是 0,行為不變。 */
     box._v.cy = projY(at.la, box._v.z) + mapCoveredBottom(box) / 2 / TILE;
     box._focus = key;
-    paintMap(box);
+    glide(box);
     return true;
   }
 
@@ -6127,7 +6248,7 @@
     box._wired = true;
     const pt = new Map();
     let mode = null, from = null, moved = 0, lastTap = 0, downPin = null;
-    const layer = () => box.querySelector(".layer");
+    const layer = () => box.querySelector(".layer:not(.under)");
     const mid = () => {
       const a = [...pt.values()];
       return { x: (a[0].x + a[1].x) / 2, y: (a[0].y + a[1].y) / 2,
@@ -6142,7 +6263,12 @@
       if (ev.target.closest(".mapzoom") || ev.target.closest(".attr")) return;
       /* 按在哪個標記上要先記下來。下面會抓走 pointer capture,click 的目標就變成
          容器而不是那個 <a> —— 連結不會自己開,得自己開。 */
-      downPin = ev.target.closest(".pin");
+      /* 平移動畫還在走就停在現在的樣子,手指從這裡接著拖;底下撐著的舊圖磚拿掉(它不會跟著手指動) */
+      const at = local(ev), hit = ev.target.closest(".pin"), hk = hit && hit.dataset.k;
+      settle(box, at.x, at.y);
+      [].forEach.call(box.querySelectorAll(".layer.under"), L => L.remove());
+      /* 停下來會重畫,按到的那顆換成重畫後的同一顆 */
+      downPin = hit && !hit.isConnected ? box.querySelector('.pin[data-k="' + CSS.escape(hk) + '"]') : hit;
       pt.set(ev.pointerId, local(ev));
       try { box.setPointerCapture(ev.pointerId); } catch (_) {}
       if (pt.size === 1) { mode = "pan"; from = local(ev); moved = 0; }
@@ -6182,7 +6308,7 @@
         const s = from.d ? m.d / from.d : 1;
         box._v.cx -= (m.x - from.x) / TILE;
         box._v.cy -= (m.y - from.y) / TILE;
-        zoomAt(box, Math.round(Math.log(s) / Math.LN2), m.x, m.y);
+        zoomAt(box, Math.round(Math.log(s) / Math.LN2), m.x, m.y, true);
         if (Math.round(Math.log(s) / Math.LN2) === 0) paintMap(box);
         if (box._onMove) box._onMove();
       } else if (mode === "pan") {
@@ -6279,7 +6405,7 @@
     /* 這是「回到預設視角」—— 點變了才重算,不然你拉到一半被拉回去 */
     box._v = { z: z, cx: (Math.max.apply(null, xs) + Math.min.apply(null, xs)) / 2,
                      cy: (Math.max.apply(null, ys) + Math.min.apply(null, ys)) / 2 + cov / 2 / TILE };
-    paintMap(box);
+    glide(box);
     initMapGestures(box);
 
   }
