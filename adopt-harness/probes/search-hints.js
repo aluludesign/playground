@@ -55,21 +55,26 @@ return (async function () {
   out.進來 = { 抓清單: hintsAsked, 提示開著: shown("ss-sug"), 搜過: hist.slice(0, 3) };
   ok("進全螢幕搜尋抓一次全站清單、還沒打字不出提示、「麵屋」記進搜過的字", hintsAsked === 1 && !shown("ss-sug") && hist[0] === "麵屋", out.進來);
 
-  /* 2 打「拉」:名字有「拉」的 → 同義(ラーメン)；搜過的、相似詞各最多 3;不連網 */
+  /* 2 打「拉」(1 個字):只出名字有「拉」的地點和搜過的字,不比對相似詞;不連網 */
   var n0 = asked.length;
   await type("拉");
   out.拉 = items();
   var names = out.拉.map(x => x.名);
   ok("打「拉」就出提示、最多 8 筆、打字時沒有連網", shown("ss-sug") && out.拉.length > 0 && out.拉.length <= 8 && typingNet === 0 && asked.length === n0, { n: out.拉.length, typingNet: typingNet });
-  ok("「拉」:搜過的「拉麵 新宿」、地點「拉麵博物館」、相似詞「拉麵」都在;同義的「ラーメン山岡家」排在名字有「拉」的後面",
-     names.indexOf("拉麵 新宿") >= 0 && names.indexOf("拉麵博物館") >= 0 && names.indexOf("拉麵") >= 0 && names.indexOf("ラーメン") >= 0 &&
-     names.indexOf("ラーメン山岡家") > names.indexOf("拉麵博物館"), out.拉);
+  ok("「拉」:搜過的「拉麵 新宿」、地點「拉麵博物館」都在", names.indexOf("拉麵 新宿") >= 0 && names.indexOf("拉麵博物館") >= 0, out.拉);
+  ok("「拉」只打 1 個字:不出相似詞(拉麵、ラーメン、卡拉OK、唱歌),也不靠相似詞帶出ラーメン山岡家",
+     out.拉.every(x => x.小 !== "相似的說法") && ["拉麵", "ラーメン", "卡拉OK", "唱歌", "ラーメン山岡家"].every(n => names.indexOf(n) < 0), names);
   var mu = out.拉.filter(x => x.名 === "拉麵博物館")[0];
-  ok("地點那一行小字 = 國家・縣市・種類;搜過的寫「搜過」、相似詞寫「相似的說法」",
-     mu && mu.小 === "日本・神奈川縣・博物館" && out.拉.filter(x => x.名 === "拉麵 新宿")[0].小 === "搜過" && out.拉.filter(x => x.名 === "拉麵")[0].小 === "相似的說法", out.拉);
-  /* 「拉」也是「卡拉OK」的一部分,所以同一組的「唱歌」算同義:排在名字有「拉」的那些後面 */
-  ok("同義的(唱歌、ラーメン山岡家)排在名字有「拉」的(拉麵博物館、卡拉OK)後面",
-     names.indexOf("唱歌") > names.indexOf("卡拉OK") && names.indexOf("唱歌") > names.indexOf("拉麵博物館"), names);
+  ok("地點那一行小字 = 國家・縣市・種類;搜過的寫「搜過」",
+     mu && mu.小 === "日本・神奈川縣・博物館" && out.拉.filter(x => x.名 === "拉麵 新宿")[0].小 === "搜過", out.拉);
+
+  /* 2b 打「拉麵」(2 個字):相似詞出來,同義的排在名字有「拉麵」的後面 */
+  await type("拉麵");
+  out.拉麵 = items();
+  names = out.拉麵.map(x => x.名);
+  ok("「拉麵」:相似詞「ラーメン」寫「相似的說法」;同義的「ラーメン山岡家」排在「拉麵博物館」後面",
+     out.拉麵.filter(x => x.名 === "ラーメン").length === 1 && out.拉麵.filter(x => x.名 === "ラーメン")[0].小 === "相似的說法" &&
+     names.indexOf("拉麵博物館") >= 0 && names.indexOf("ラーメン山岡家") > names.indexOf("拉麵博物館") && names.indexOf("唱歌") < 0, out.拉麵);
 
   /* 3 打「車站」:東京駅、大阪駅都靠同義出來,離這一團的城市(東京)近的先 */
   await type("車站");

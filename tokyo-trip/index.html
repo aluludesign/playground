@@ -4925,11 +4925,13 @@
   function sugList(typed) {
     const t = fold(typed);
     if (!t) return [];
-    /* 同義:打的字是某個相似詞的一部分(「拉」→ 拉麵那組),或打的字裡有一個相似詞(「東京車站」→「東京駅」) */
-    const synG = SYN_F.map((g, gi) => gi).filter(gi => SYN_F[gi].some(x => x.indexOf(t) >= 0));
+    /* 同義:打的字是某個相似詞的一部分(「拉麵」→ ラーメン那組),或打的字裡有一個相似詞(「東京車站」→「東京駅」)。
+       只打 1 個字不比對相似詞,不然「拉」會因為卡拉OK冒出「唱歌」 */
+    const syn = t.length >= 2;
+    const synG = syn ? SYN_F.map((g, gi) => gi).filter(gi => SYN_F[gi].some(x => x.indexOf(t) >= 0)) : [];
     const alt = [];
     synG.forEach(gi => SYN_F[gi].forEach(x => { if (x.indexOf(t) < 0) alt.push(x); }));
-    synAlts(typed, 99).forEach(a => alt.push(fold(a)));
+    if (syn) synAlts(typed, 99).forEach(a => alt.push(fold(a)));
     const tierOf = (f, small) => f.indexOf(t) >= 0 ? 0 : alt.some(x => f.indexOf(x) >= 0) ? 1
       : small && t.length >= 2 && (small.indexOf(t) >= 0 || alt.some(x => small.indexOf(x) >= 0)) ? 2 : -1;
     const c = hasCity() ? CITY : null, cos = c ? Math.cos(c.lat * Math.PI / 180) : 1;
