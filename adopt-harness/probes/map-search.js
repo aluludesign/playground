@@ -136,8 +136,8 @@ return (async function () {
   var inView = qa("#ss-map .pin").filter(p => pinIn(p.dataset.k)).map(p => p.dataset.k.slice(1)).sort().join();
   var cards = qa("#ss-q-out .hit").map(b => b.dataset.i).sort().join();
   out.放大 = { 前: before, 後: qa("#ss-q-out .hcard").length, 畫面裡的點: inView, 卡片: cards, 按鈕: txt(q('[data-seek="ss-q"]')), 有自動搜: asked.length !== nAsk,
-    沒有的提示: q("#ss-q-out .ss-none") && !q("#ss-q-out .ss-none").hidden };
-  ok("放大後卡片 = 畫面裡看得到的那幾個點(變少)、按鈕「重新搜這個範圍」、沒有自動搜", out.放大.後 < out.放大.前 && (cards === inView || (!inView && out.放大.沒有的提示)) &&
+    清單收起來: q("#ss-q-out .hits").hidden };
+  ok("放大後卡片 = 畫面裡看得到的那幾個點(變少)、按鈕「重新搜這個範圍」、沒有自動搜", out.放大.後 < out.放大.前 && (cards === inView || (!inView && out.放大.清單收起來)) &&
     out.放大.按鈕 === "重新搜這個範圍" && !out.放大.有自動搜, out.放大);
 
   /* 7 拖一下:同樣只篩不搜 */
@@ -147,7 +147,14 @@ return (async function () {
   inView = qa("#ss-map .pin").filter(p => pinIn(p.dataset.k)).map(p => p.dataset.k.slice(1)).sort().join();
   cards = qa("#ss-q-out .hit").map(b => b.dataset.i).sort().join();
   out.拖 = { 畫面裡的點: inView, 卡片: cards, 有自動搜: asked.length !== nAsk };
-  ok("拖動後卡片跟著畫面、沒有自動搜", (cards === inView || (!inView && !q("#ss-q-out .ss-none").hidden)) && !out.拖.有自動搜, out.拖);
+  ok("拖動後卡片跟著畫面、沒有自動搜", (cards === inView || (!inView && q("#ss-q-out .hits").hidden)) && !out.拖.有自動搜, out.拖);
+
+  /* 7b 拖到一個點都看不到:不講「拖回去看看」(2026-11-04 拿掉),清單整條收起來、不留空行 */
+  for (var dd = 0; dd < 6 && qa("#ss-map .pin").some(p => pinIn(p.dataset.k)); dd++) { m.dispatchEvent(pe("pointerdown", cx, cy)); m.dispatchEvent(pe("pointermove", cx + 300, cy)); m.dispatchEvent(pe("pointerup", cx + 300, cy)); await wait(60); }
+  var hl = q("#ss-q-out .hits");
+  out.拖光 = { 畫面裡的點: qa("#ss-map .pin").filter(p => pinIn(p.dataset.k)).length, 有那句: /拖回去看看/.test(txt(q("#ss-q-out"))), 舊元素: !!q("#ss-q-out .ss-none"),
+    清單收起來: hl.hidden, 清單高: hl.getBoundingClientRect().height };
+  ok("畫面裡沒有結果:沒有「拖回去看看」那句、清單收起來(高 0)", out.拖光.畫面裡的點 === 0 && !out.拖光.有那句 && !out.拖光.舊元素 && out.拖光.清單收起來 && out.拖光.清單高 === 0, out.拖光);
 
   /* 8 按「重新搜這個範圍」:用現在的畫面查(搜完畫面會自己框住結果,所以畫面左邊在按之前量) */
   var z = m._v.z, lonL = (m._v.cx - b.width / 2 / TILE) / Math.pow(2, z) * 360 - 180;

@@ -4612,7 +4612,7 @@
   function ssFit(box, lons, lats, zMax, reserve) {
     const w = box.clientWidth, h = box.clientHeight, c = ssCover(reserve), vh = h - c.top - c.bot;
     let z = zMax;
-    for (; z > Z_MIN; z--) {
+    for (; z > zMin(box); z--) {
       const xs = lons.map(lo => projX(lo, z)), ys = lats.map(la => projY(la, z));
       if ((Math.max.apply(null, xs) - Math.min.apply(null, xs)) * TILE <= w - 40 &&
           (Math.max.apply(null, ys) - Math.min.apply(null, ys)) * TILE <= vh - 40) break;
@@ -4742,10 +4742,8 @@
     out._show = show;
     list.innerHTML = "";
     list.scrollLeft = 0;
-    let none = out.querySelector(".ss-none");
-    if (!none) { none = document.createElement("div"); none.className = "said ss-none"; list.parentNode.insertBefore(none, list); }
-    none.textContent = "畫面裡沒有搜到的地點 —— 拖回去看看,或按上面的「重新搜這個範圍」。";
-    none.hidden = show.length > 0;
+    /* 畫面裡一個都沒有:清單整條收起來,不留空行(2026-11-04 Lulu 拿掉「拖回去看看」那句) */
+    list.hidden = !show.length;
     if (out._more) out._more();
   }
   function ssUserMoved() {
@@ -5929,14 +5927,23 @@
                        : { core: pts, far: [] };
   }
 
-  /* 0 = 整個世界一張圖磚,19 = tile.openstreetmap.org 給的最細一層(2026-10-30 Lulu:放到圖磚能給的極限) */
-  const Z_MIN = 0, Z_MAX = 19;
+  /* 19 = tile.openstreetmap.org 給的最細一層(2026-10-30 Lulu:放到圖磚能給的極限) */
+  const Z_MAX = 19;
+  /* **縮到最小也要填滿地圖框**(2026-11-04 Lulu):最小那一級 = 世界的寬、高都蓋得住地圖框的最小整數級。
+     跟著框的大小算,視窗大小改變、轉向時重畫就會重算(fixView 把太小的縮放拉上來) */
+  function zMin(box) {
+    const m = Math.max(box.clientWidth, box.clientHeight);
+    return m > TILE ? Math.min(Z_MAX, Math.ceil(Math.log2(m / TILE))) : 0;
+  }
 
-  /* 縮得很小時世界比畫面還窄:那就整個世界置中、不重複,不然同一塊大陸排成一列、點只在其中一塊上。
+  /* 縮放低於 zMin(框變大了、或舊的畫面)→ 拉到 zMin,中心照比例換算。
      世界比畫面寬時左右接起來(過了換日線還能繼續拖),中心收回 0..n 之間。
-     上下:世界比畫面矮就置中;比畫面高就不讓南北兩端拖進畫面裡(外面沒有圖磚,只有一片空白)。 */
+     上下:不讓南北兩端拖進畫面裡(外面沒有圖磚,只有一片空白)。
+     世界比畫面窄就置中那兩條是保險:有 zMin 之後不會發生(框還沒排版、寬高是 0 的時候除外)。 */
   function fixView(box) {
-    const v = box._v, w = box.clientWidth, h = box.clientHeight, n = Math.pow(2, v.z);
+    const v = box._v, w = box.clientWidth, h = box.clientHeight, zm = zMin(box);
+    if (v.z < zm) { const k = Math.pow(2, zm - v.z); v.cx *= k; v.cy *= k; v.z = zm; }
+    const n = Math.pow(2, v.z);
     if (n * TILE <= w) v.cx = n / 2;
     else v.cx = ((v.cx % n) + n) % n;
     if (n * TILE <= h) v.cy = n / 2;
@@ -6024,7 +6031,7 @@
   function zoomAt(box, dz, px, py, now) {
     const v = box._v;
     if (!v) return;
-    const z = Math.max(Z_MIN, Math.min(Z_MAX, v.z + dz));
+    const z = Math.max(zMin(box), Math.min(Z_MAX, v.z + dz));
     if (z === v.z) return;
     const k = Math.pow(2, z - v.z);
     const w = box.clientWidth, h = box.clientHeight;
@@ -6251,6 +6258,13 @@
     const pt = new Map();
     let mode = null, from = null, moved = 0, lastTap = 0, downPin = null;
     const layer = () => box.querySelector(".layer:not(.under)");
+    /* 上下拖:不能拖到露出世界的南北兩端外面 */
+    const panDy = dy => {
+      const v = box._v;
+      if (!v) return dy;
+      const n = Math.pow(2, v.z), hh = box.clientHeight / 2 / TILE;
+      return Math.max((v.cy - n + hh) * TILE, Math.min((v.cy - hh) * TILE, dy));
+    };
     const mid = () => {
       const a = [...pt.values()];
       return { x: (a[0].x + a[1].x) / 2, y: (a[0].y + a[1].y) / 2,
@@ -6283,11 +6297,12 @@
       const L = layer();
       if (!L) return;
       if (mode === "pan") {
-        const n = local(ev), dx = n.x - from.x, dy = n.y - from.y;
+        const n = local(ev), dx = n.x - from.x, dy = panDy(n.y - from.y);
         moved = Math.max(moved, Math.abs(dx) + Math.abs(dy));
         L.style.transform = "translate(" + dx + "px," + dy + "px)";
       } else if (pt.size === 2) {
-        const m = mid(), s = from.d ? m.d / from.d : 1;
+        /* 捏小也不能小過最小那一級(不然旁邊露出空白) */
+        const m = mid(), s = Math.max(from.d ? m.d / from.d : 1, box._v ? Math.pow(2, zMin(box) - box._v.z) : 0);
         moved = 99;
         L.style.transform = "translate(" + (m.x - from.x) + "px," + (m.y - from.y) + "px) " +
           "scale(" + s + ")";
@@ -6328,7 +6343,7 @@
           else lastTap = now;
         } else {
           box._v.cx -= (n.x - from.x) / TILE;
-          box._v.cy -= (n.y - from.y) / TILE;
+          box._v.cy -= panDy(n.y - from.y) / TILE;
           paintMap(box);
           if (box._onMove) box._onMove();
         }
@@ -6382,7 +6397,7 @@
 
     /* **取景跟 `focusPin` 一樣,只算看得到的那一塊。** 手機上清單 sheet 蓋住下半部,
        照整個元素取景的話,當天的點有一半落在 sheet 後面。
-       sheet 拉到幾乎全滿時看得到的只剩一條縫,拿那條縫取景會一路縮到 Z_MIN ——
+       sheet 拉到幾乎全滿時看得到的只剩一條縫,拿那條縫取景會一路縮到最小那一級 ——
        那時地圖本來就看不到,照整個元素算,拉下來的時候才是對的樣子。 */
     let cov = mapCoveredBottom(box);
     if (h - cov < 120) cov = 0;
@@ -6392,7 +6407,7 @@
        周圍已排的點全被推到畫面外,就看不出它跟什麼東西近。 */
     let z = fit.length > 1 ? 16 : 14;
     if (fit.length > 1) {
-      for (; z > Z_MIN; z--) {
+      for (; z > zMin(box); z--) {
         const xs = fit.map(p => projX(p.lo, z)), ys = fit.map(p => projY(p.la, z));
         if ((Math.max.apply(null, xs) - Math.min.apply(null, xs)) * TILE < w - 40 &&
             (Math.max.apply(null, ys) - Math.min.apply(null, ys)) * TILE < vh - 40) break;
@@ -9484,6 +9499,8 @@
        只有視窗窄到裝不下時才讓步 —— 那正是 `stepPx()` 裡那個 0.82 在做的事。 */
     if (drawK) applyDrawer(stepPx(drawK));
     repaintMap();
+    /* 全螢幕搜尋的地圖也重畫:框的大小變了,最小那一級(zMin)要重算 */
+    if (!el("seek-screen").hidden && ssMap()._v) paintMap(ssMap());
   });
 
   function closeMapSheet() {
