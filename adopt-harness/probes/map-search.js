@@ -4,7 +4,7 @@
  * 看:按搜尋 → 全螢幕(搜尋框＋✕、撐滿的地圖、下面卡片),只搜畫面範圍(viewbox＋bounded=1);
  *     結果全部標在地圖上、編號跟卡片一樣;點卡片/點點 = 選起來(兩邊一起亮),「選這個」才帶回去;
  *     縮放後卡片只列畫面裡的、按鈕變「重新搜這個範圍」(不自動搜);第一次搜 = 城市;0 筆只給下一步那一顆
- *     (「搜整個城市」→「往外找」→ 找不到);「往外找」不限國家;
+ *     (「重新搜尋{城市}」→「往外找」→ 找不到);「往外找」不限國家;
  *     ✕ = 不選地點、打的字留著;Esc 照對話框的關閉規則。 */
 var q = s => d.querySelector(s), qa = s => Array.prototype.slice.call(d.querySelectorAll(s));
 var wait = ms => new Promise(r => w.setTimeout(r, ms));
@@ -41,6 +41,8 @@ function pinIn(k) {
   var b = p.getBoundingClientRect(), x = b.left + b.width / 2, y = b.top + b.height / 2, v = visRect();
   return x >= v.left && x <= v.right && y >= v.top && y <= v.bottom;
 }
+/* 換畫面會平移過去(glide):量之前等它走完 */
+var calm = () => until(() => !q("#ss-map")._anim, 40);
 async function until(f, n) { for (var i = 0; i < (n || 60); i++) { if (f()) return true; await wait(50); } return false; }
 /* 無頭瀏覽器不跑平滑捲動:換成直接捲過去 */
 var rawTo = w.Element.prototype.scrollTo;
@@ -55,7 +57,7 @@ return (async function () {
   q("#add-wish-btn").click(); await wait(150);
   var mv0 = q("#map")._v, mainW = mv0 ? w.innerWidth / TILE / Math.pow(2, mv0.z) * 360 : null;
   q("#wf-title").value = "麵屋"; q('[data-seek="wf-title"]').click();
-  await until(() => q("#ss-q-out .hcard"));
+  await until(() => q("#ss-q-out .hcard")); await calm();
 
   /* 1 進來了 */
   var scr = q("#seek-screen"), sr = scr.getBoundingClientRect(), mr = q("#ss-map").getBoundingClientRect();
@@ -107,7 +109,7 @@ return (async function () {
   delete q("#seek-screen").dataset.picked;   /* 上面點了已排的點不算改過,保險起見清掉,後面的 Esc 測試才準 */
 
   /* 3 點卡片 = 選起來、地圖移過去,對話框不關 */
-  q('#ss-q-out [data-hit="ss-q"][data-i="5"]').click(); await wait(80);
+  q('#ss-q-out [data-hit="ss-q"][data-i="5"]').click(); await wait(80); await calm();
   var on = qa("#ss-q-out .hcard.on");
   out.點卡片 = { 亮的卡: on.map(c => c.querySelector("[data-i]").dataset.i), 亮的點: qa("#ss-map .pin.on").map(p => p.dataset.k), 點在畫面裡: pinIn("h5"),
     選這個: on[0] && on[0].querySelector(".htake").offsetParent !== null, 還開著: shown("seek-screen"), 名字: txt(q("#ss-map .pin.on .lab")) };
@@ -129,13 +131,13 @@ return (async function () {
 
   /* 6 放大:卡片只列畫面裡的、按鈕變「重新搜這個範圍」、不自動搜 */
   var nAsk = asked.length, before = qa("#ss-q-out .hcard").length;
-  q('#ss-map [data-zoom="1"]').click(); await wait(80);
-  q('#ss-map [data-zoom="1"]').click(); await wait(120);
+  q('#ss-map [data-zoom="1"]').click(); await wait(80); await calm();
+  q('#ss-map [data-zoom="1"]').click(); await wait(120); await calm();
   var inView = qa("#ss-map .pin").filter(p => pinIn(p.dataset.k)).map(p => p.dataset.k.slice(1)).sort().join();
   var cards = qa("#ss-q-out .hit").map(b => b.dataset.i).sort().join();
   out.放大 = { 前: before, 後: qa("#ss-q-out .hcard").length, 畫面裡的點: inView, 卡片: cards, 按鈕: txt(q('[data-seek="ss-q"]')), 有自動搜: asked.length !== nAsk,
-    沒有的提示: q("#ss-q-out .ss-none") && !q("#ss-q-out .ss-none").hidden };
-  ok("放大後卡片 = 畫面裡看得到的那幾個點(變少)、按鈕「重新搜這個範圍」、沒有自動搜", out.放大.後 < out.放大.前 && (cards === inView || (!inView && out.放大.沒有的提示)) &&
+    清單收起來: q("#ss-q-out .hits").hidden };
+  ok("放大後卡片 = 畫面裡看得到的那幾個點(變少)、按鈕「重新搜這個範圍」、沒有自動搜", out.放大.後 < out.放大.前 && (cards === inView || (!inView && out.放大.清單收起來)) &&
     out.放大.按鈕 === "重新搜這個範圍" && !out.放大.有自動搜, out.放大);
 
   /* 7 拖一下:同樣只篩不搜 */
@@ -145,7 +147,14 @@ return (async function () {
   inView = qa("#ss-map .pin").filter(p => pinIn(p.dataset.k)).map(p => p.dataset.k.slice(1)).sort().join();
   cards = qa("#ss-q-out .hit").map(b => b.dataset.i).sort().join();
   out.拖 = { 畫面裡的點: inView, 卡片: cards, 有自動搜: asked.length !== nAsk };
-  ok("拖動後卡片跟著畫面、沒有自動搜", (cards === inView || (!inView && !q("#ss-q-out .ss-none").hidden)) && !out.拖.有自動搜, out.拖);
+  ok("拖動後卡片跟著畫面、沒有自動搜", (cards === inView || (!inView && q("#ss-q-out .hits").hidden)) && !out.拖.有自動搜, out.拖);
+
+  /* 7b 拖到一個點都看不到:不講「拖回去看看」(2026-11-04 拿掉),清單整條收起來、不留空行 */
+  for (var dd = 0; dd < 6 && qa("#ss-map .pin").some(p => pinIn(p.dataset.k)); dd++) { m.dispatchEvent(pe("pointerdown", cx, cy)); m.dispatchEvent(pe("pointermove", cx + 300, cy)); m.dispatchEvent(pe("pointerup", cx + 300, cy)); await wait(60); }
+  var hl = q("#ss-q-out .hits");
+  out.拖光 = { 畫面裡的點: qa("#ss-map .pin").filter(p => pinIn(p.dataset.k)).length, 有那句: /拖回去看看/.test(txt(q("#ss-q-out"))), 舊元素: !!q("#ss-q-out .ss-none"),
+    清單收起來: hl.hidden, 清單高: hl.getBoundingClientRect().height };
+  ok("畫面裡沒有結果:沒有「拖回去看看」那句、清單收起來(高 0)", out.拖光.畫面裡的點 === 0 && !out.拖光.有那句 && !out.拖光.舊元素 && out.拖光.清單收起來 && out.拖光.清單高 === 0, out.拖光);
 
   /* 8 按「重新搜這個範圍」:用現在的畫面查(搜完畫面會自己框住結果,所以畫面左邊在按之前量) */
   var z = m._v.z, lonL = (m._v.cx - b.width / 2 / TILE) / Math.pow(2, z) * 360 - 180;
@@ -155,25 +164,25 @@ return (async function () {
   out.重搜 = { bounded: param(u1, "bounded"), viewbox左: vb1[0].toFixed(4), 畫面左: lonL.toFixed(4), 比上次小: Math.abs(vb1[2] - vb1[0]) < Math.abs(vb[2] - vb[0]), 按鈕: txt(q('[data-seek="ss-q"]')) };
   ok("重搜用現在的畫面(bounded=1、viewbox 左邊 = 畫面左邊、比城市小),按鈕回到「搜尋」", out.重搜.bounded === "1" && out.重搜.viewbox左 === out.重搜.畫面左 && out.重搜.比上次小 && out.重搜.按鈕 === "搜尋", out.重搜);
 
-  /* 9 動過地圖、畫面比城市小、0 筆 →「這個範圍找不到」＋只有「搜整個城市」;畫面不動;不自動往外 */
+  /* 9 動過地圖、畫面比城市小、0 筆 →「這個範圍找不到」＋只有「重新搜尋東京」;畫面不動;不自動往外 */
   var btns = () => qa("#ss-q-out [data-city], #ss-q-out [data-wide]").map(txt);   /* 「強力搜」是三段式提示那一顆,不算 */
-  q('#ss-map [data-zoom="1"]').click(); await wait(80);
+  q('#ss-map [data-zoom="1"]').click(); await wait(80); await calm();
   var v9 = JSON.stringify(q("#ss-map")._v);
   reply = []; q("#ss-q").value = "泡溫泉"; nAsk = asked.length; q('[data-seek="ss-q"]').click();
   await until(() => /這個範圍找不到/.test(txt(q("#ss-q-out")))); await wait(1300);
   var u9 = asked[nAsk];
   ok("0 筆畫面不動", JSON.stringify(q("#ss-map")._v) === v9, [v9, q("#ss-map")._v]);
   out.零筆 = { 字: txt(q("#ss-q-out .said")), 鈕: btns(), 點: qa("#ss-map .pin").length, 查了幾次: asked.length - nAsk, 範圍: param(u9, "viewbox") };
-  ok("畫面裡 0 筆:講「這個範圍找不到」、只有「搜整個城市」、點清掉、查兩次(泡溫泉＋泡温泉,都是畫面範圍)", /這個範圍找不到「泡溫泉」/.test(out.零筆.字) && out.零筆.鈕.join() === "搜整個城市" &&
+  ok("畫面裡 0 筆:講「這個範圍找不到」、只有「重新搜尋東京」(這一團的城市)、點清掉、查兩次(泡溫泉＋泡温泉,都是畫面範圍)", /這個範圍找不到「泡溫泉」/.test(out.零筆.字) && out.零筆.鈕.join() === "重新搜尋東京" &&
     out.零筆.點 === 0 && out.零筆.查了幾次 === 2 && out.零筆.範圍 !== CV, out.零筆);
 
-  /* 9b「搜整個城市」:城市框、bounded=1,城市外的地名也一樣;0 筆 →「這個城市找不到」＋只有「往外找」 */
+  /* 9b「重新搜尋東京」:城市框、bounded=1,城市外的地名也一樣;0 筆 →「這個城市找不到」＋只有「往外找」 */
   q("#ss-q").value = "京都車站"; nAsk = asked.length;
   q("#ss-q-out [data-city]").click();
   await until(() => /這個城市找不到/.test(txt(q("#ss-q-out")))); await wait(1300);
   var u3 = asked[nAsk];
   out.城市外 = { 字: txt(q("#ss-q-out .said")), 鈕: btns(), 查了幾次: asked.length - nAsk, bounded: param(u3, "bounded"), viewbox: param(u3, "viewbox") };
-  ok("「搜整個城市」0 筆:查三次(京都車站＋京都駅＋京都站,城市框、bounded=1),講「這個城市找不到」、只剩「往外找」",
+  ok("「重新搜尋東京」0 筆:查三次(京都車站＋京都駅＋京都站,城市框、bounded=1),講「這個城市找不到」、只剩「往外找」",
     out.城市外.查了幾次 === 3 && out.城市外.bounded === "1" && out.城市外.viewbox === CV && /這個城市找不到「京都車站」/.test(out.城市外.字) && out.城市外.鈕.join() === "往外找", out.城市外);
 
   /* 9c「往外找」:不帶 bounded、countrycodes,城市框當加權;結果框進畫面 */
@@ -181,7 +190,7 @@ return (async function () {
                { lat: "34.98700", lon: "135.75950", class: "railway", type: "station", display_name: "京都車站八條口, 下京區, 京都市, 日本", extratags: {} }];
   reply = KYOTO; nAsk = asked.length;
   q("#ss-q-out [data-wide]").click();
-  await until(() => q("#ss-q-out .hcard")); await wait(150);
+  await until(() => q("#ss-q-out .hcard")); await calm(); await wait(150);
   var u4 = asked[nAsk];
   out.往外找 = { bounded: param(u4, "bounded"), countrycodes: param(u4, "countrycodes"), viewbox: param(u4, "viewbox"), 卡片: qa("#ss-q-out .hcard").length,
     全在畫面裡: qa("#ss-map .pin").every(p => pinIn(p.dataset.k)), 按鈕: txt(q('[data-seek="ss-q"]')) };
@@ -199,6 +208,7 @@ return (async function () {
   /* 9e 縮到畫面蓋住整個城市、0 筆 →「這個範圍找不到」＋只有「往外找」 */
   var sv = q("#ss-map")._v; sv.cx = projX(139.6503, sv.z); sv.cy = projY(35.6762, sv.z);   /* 上一步框到京都了,拉回東京 */
   for (var zz = 0; zz < 9; zz++) q('#ss-map [data-zoom="-1"]').click();
+  await calm();
   await wait(1300);
   nAsk = asked.length; q('[data-seek="ss-q"]').click();
   await until(() => asked.length > nAsk && /這個範圍找不到/.test(txt(q("#ss-q-out")))); await wait(100);
@@ -214,7 +224,7 @@ return (async function () {
   reply = [P("常各庄村", 0, "39.2", "118.9")];
   q("#ss-q").value = "唱歌"; q("#ss-x").click(); await wait(80);
   nAsk = asked.length;
-  q('[data-seek="wf-title"]').click(); await until(() => q("#ss-q-out .hcard")); await wait(200);
+  q('[data-seek="wf-title"]').click(); await until(() => q("#ss-q-out .hcard")); await calm(); await wait(200);
   out.只有同音 = { 卡片: names(), 點: qa("#ss-map .pin").length, 查了: asked.slice(nAsk).map(u => param(u, "q")) };
   ok("搜「唱歌」只回「常各庄村」→ 照樣列出來(不刪),而且「カラオケ」「卡拉OK」也查了", out.只有同音.卡片.join() === "常各庄村" && out.只有同音.點 === 1 &&
      out.只有同音.查了.join() === "唱歌,カラオケ,卡拉OK", out.只有同音);
@@ -250,7 +260,7 @@ return (async function () {
 
   await wait(1300);
   reply = HITS; q("#ss-q").value = "麵屋"; q('[data-seek="ss-q"]').click();
-  await until(() => q("#ss-q-out .hcard")); await wait(100);
+  await until(() => q("#ss-q-out .hcard")); await calm(); await wait(100);
 
   /* 10 選這個 → 回到對話框、地點填好 */
   q('#ss-q-out [data-hit="ss-q"][data-i="2"]').click(); await wait(50);
@@ -263,14 +273,14 @@ return (async function () {
   ok("挑過之後,對話框點外面/Esc 關不掉", shown("wish-add-overlay"), null);
 
   /* 11 ✕ = 不選地點,打的字留著 */
-  q('[data-seek="wf-title"]').click(); await until(() => q("#ss-q-out .hcard"));
+  q('[data-seek="wf-title"]').click(); await until(() => q("#ss-q-out .hcard")); await calm();
   q("#ss-q").value = "泡溫泉";
   q("#ss-x").click(); await wait(80);
   out.叉 = { 關了: !shown("seek-screen"), 欄: q("#wf-title").value, 沒標定: !/已標定/.test(txt(q("#wf-title-out"))) };
   ok("✕:回到對話框、地點欄留「泡溫泉」、沒有標定", out.叉.關了 && out.叉.欄 === "泡溫泉" && out.叉.沒標定, out.叉);
 
   /* 11b 每次搜完都有「直接許願「…」」(2026-11-01):找到、找不到都有;詞超過 5 個字用 …;按了 = 回對話框、名稱填這個詞、沒標定 */
-  reply = HITS; q("#wf-title").value = "麵屋"; q('[data-seek="wf-title"]').click(); await until(() => q("#ss-q-out .hcard")); await wait(100);
+  reply = HITS; q("#wf-title").value = "麵屋"; q('[data-seek="wf-title"]').click(); await until(() => q("#ss-q-out .hcard")); await calm(); await wait(100);
   var rawB = () => q("#ss-q-out [data-raw]");
   out.直接許願 = { 有結果: rawB() && txt(rawB()), 說明: txt(q("#ss-q-out .ss-raw")) };
   await wait(1300);
@@ -287,13 +297,13 @@ return (async function () {
   await wait(1300); reply = HITS; q("#wf-title").value = "麵屋";
 
   /* 12 沒改過 Esc 就關(只關搜尋畫面,對話框還在) */
-  q('[data-seek="wf-title"]').click(); await until(() => q("#ss-q-out .hcard"));
+  q('[data-seek="wf-title"]').click(); await until(() => q("#ss-q-out .hcard")); await calm();
   esc(); await wait(60);
   out.Esc沒改 = { 搜尋關了: !shown("seek-screen"), 對話框還在: shown("wish-add-overlay") };
   ok("沒改過:Esc 只關搜尋畫面", out.Esc沒改.搜尋關了 && out.Esc沒改.對話框還在, out.Esc沒改);
 
   /* 13 縮放鈕、OSM 標示沒被搜尋框或卡片蓋住 */
-  q('[data-seek="wf-title"]').click(); await until(() => q("#ss-q-out .hcard"));
+  q('[data-seek="wf-title"]').click(); await until(() => q("#ss-q-out .hcard")); await calm();
   var hitAt = e => { var r = e.getBoundingClientRect(), t = d.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return t && (t === e || e.contains(t)); };
   out.蓋住 = { 放大鈕: hitAt(q('#ss-map [data-zoom="1"]')), 標示: hitAt(q("#ss-map .attr a")), 搜尋框: hitAt(q("#ss-q")), 叉: hitAt(q("#ss-x")), 全部已排: hitAt(q("#ss-all")) };
   ok("縮放鈕、OpenStreetMap 標示、搜尋框、✕、全部已排都點得到", out.蓋住.放大鈕 && out.蓋住.標示 && out.蓋住.搜尋框 && out.蓋住.叉 && out.蓋住.全部已排, out.蓋住);

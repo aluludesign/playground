@@ -48,6 +48,8 @@ let lost = false;
 let writes = 0;
 /* 「花費」表有沒有「送出編號」那一欄(離線記帳重送不重複要靠它)。預設沒有 = 正式站現在的樣子 */
 let cidColumn = false;
+/* 「行程」表有沒有「地點資訊」那一欄(2026-11-02,搜尋提示)。預設沒有 = 還沒在 Notion 開那一欄的樣子 */
+let geoColumn = false;
 
 /* 寫進去的格式(`{ rich_text: [{ text: { content } }] }`)換成讀出來的格式
    (`{ rich_text: [{ plain_text }] }`)—— 真的 Notion 就是這樣,兩邊不對稱。 */
@@ -70,6 +72,7 @@ function matches(page, f) {
   if (f.and) return f.and.every(x => matches(page, x));
   const p = page.properties[f.property];
   if (f.title) return plain(p) === f.title.equals;
+  if (f.rich_text && f.rich_text.is_not_empty) return plain(p) !== "";
   if (f.rich_text) return plain(p) === f.rich_text.equals;
   if (f.date && f.date.is_empty) return !(p && p.date && p.date.start);
   throw new Error("假 Notion 不認得這個 filter: " + JSON.stringify(f));
@@ -95,7 +98,8 @@ async function fakeFetch(u, init) {
   }
   let m = /\/databases\/([0-9a-f]+)$/.exec(url);
   if (m && method === "GET") {
-    return reply(200, { id: dash(m[1]), properties: cidColumn && m[1] === DB.expenses ? { "送出編號": { type: "rich_text" } } : {} });
+    return reply(200, { id: dash(m[1]), properties: cidColumn && m[1] === DB.expenses ? { "送出編號": { type: "rich_text" } }
+      : geoColumn && m[1] === DB.itinerary ? { "地點資訊": { type: "rich_text" } } : {} });
   }
   m = /\/databases\/([0-9a-f]+)\/query$/.exec(url);
   if (m) {
@@ -487,6 +491,54 @@ const memberRow = (code, sub) => rowsIn(DB.members).find(p => plain(p.properties
   r = await call(LINE_B, "POST", { resource: "wishes", t: T1 }, { title: "東京鐵塔", place: "東京鐵塔", photo: CPH + '" onerror="x' });
   ok("網址裡夾引號(想塞進 <img>)→ 存成空的", r.code === 200 && r.body.row.photo === "", r.body);
   await call(LINE_B, "DELETE", { resource: "wishes", t: T1, id: wid });
+
+  /* ================= 搜尋提示(2026-11-02):地點資訊、全站清單、補舊的 ================= */
+  const GEO = { la: 35.68123456, lo: 139.7671, c: "日本", s: "東京都", k: "車站" };
+  r = await call(LINE_B, "POST", { resource: "wishes", t: T1 }, { title: "東京駅", place: "東京駅", geo: GEO });
+  ok("Notion 還沒開「地點資訊」那一欄:照樣存得進去(只是不寫那一欄)", r.code === 200 && !r.body.row.geo &&
+    !rowsIn(DB.itinerary).find(p => p.id === r.body.row.id).properties["地點資訊"], r.body);
+  r = await call(LINE_A, "GET", { resource: "hints" });
+  ok("沒有那一欄 → 提示清單是空的", r.code === 200 && r.body.rows.length === 0, r.body);
+  await call(LINE_B, "DELETE", { resource: "wishes", t: T1, id: r.body.rows.length ? "" : rowsIn(DB.itinerary).find(p => plain(p.properties["地點"]) === "東京駅").id });
+  geoColumn = true;
+  r = await call(LINE_B, "POST", { resource: "wishes", t: T1 }, { title: "東京駅", place: "東京駅", geo: GEO, photo: CPH });
+  ok("願望帶著地點資訊存進去、讀得回來(座標留 5 位)", r.code === 200 && r.body.row.geo && r.body.row.geo.la === 35.68123 &&
+    r.body.row.geo.s === "東京都" && r.body.row.geo.k === "車站", r.body);
+  const gw = r.body.row.id;
+  r = await call(LINE_A, "POST", { resource: "itinerary", t: T1 }, { title: "一蘭", day: "2026-10-05", place: "一蘭 新宿 G", placeId: "ChIJ_geo", geo: GEO });
+  ok("有 Google 地點編號 → 地點資訊不存", r.code === 200 && !r.body.row.geo, r.body);
+  r = await call(LINE_B, "POST", { resource: "wishes", t: T1 }, { title: "亂寫", place: "亂寫", geo: { la: 999, lo: 1 } });
+  ok("座標不合理 → 不存", r.code === 200 && !r.body.row.geo, r.body);
+  const bw = r.body.row.id;
+  r = await call(LINE_B, "POST", { resource: "wishes", t: T1 }, { title: "阿嬤家", place: "阿嬤家" });
+  const grandma = r.body.row.id;
+  r = await call(LINE_C, "POST", { resource: "itinerary", t: T2 }, { title: "東京駅", day: "2026-11-01", place: "東京駅", geo: Object.assign({}, GEO, { la: 35.68124 }) });
+  const c2 = r.body.row && r.body.row.id;
+  r = await call(null, "GET", { resource: "hints" });
+  ok("提示清單:沒登入拿不到", r.code === 401, r.body);
+  r = await call(LINE_C, "GET", { resource: "hints" });
+  const hs = r.body.rows || [], hj = JSON.stringify(r.body);
+  ok("別團的人拿得到全站清單:東京駅 兩團各一筆、同名同座標只剩一筆,帶公開照片", r.code === 200 &&
+    hs.filter(h => h.n === "東京駅").length === 1 && hs.find(h => h.n === "東京駅").ph === CPH && hs.find(h => h.n === "東京駅").s === "東京都", hs);
+  ok("手打的(阿嬤家)、Google 的(一蘭 新宿 G)、亂寫的都不在清單裡", !/阿嬤家|一蘭 新宿 G|亂寫/.test(hj), hs);
+  ok("清單裡沒有哪一團、哪一筆、誰:只有 n la lo c s k ph", hs.every(h => Object.keys(h).every(k => ["n", "la", "lo", "c", "s", "k", "ph"].includes(k))) &&
+    hj.indexOf(T1) < 0 && hj.indexOf(T2) < 0 && hj.indexOf(gw) < 0 && hj.indexOf(gw.replace(/-/g, "")) < 0 && hj.indexOf(D_ID) < 0, hj);
+  /* 補舊的:這一團的成員(D,沒有任何權限)也能補,只補空的那一欄 */
+  r = await call(LINE_D, "POST", { resource: "geofill", t: T1 }, { rows: [{ id: grandma, geo: GEO }] });
+  ok("成員補地點資訊:沒有權限的成員也補得了", r.code === 200 && r.body.done === 1, r.body);
+  r = await call(LINE_D, "POST", { resource: "geofill", t: T1 }, { rows: [{ id: grandma, geo: Object.assign({}, GEO, { s: "改掉" }) }, { id: gw, geo: GEO }] });
+  ok("已經有地點資訊的不動", r.body.done === 0 && plain(rowsIn(DB.itinerary).find(p => p.id === grandma).properties["地點資訊"]).indexOf("改掉") < 0, r.body);
+  r = await call(LINE_C, "POST", { resource: "geofill", t: T2 }, { rows: [{ id: bw, geo: GEO }] });
+  ok("別團的那一筆補不了", r.body.done === 0 && !plain(rowsIn(DB.itinerary).find(p => p.id === bw).properties["地點資訊"]), r.body);
+  r = await call(LINE_C, "POST", { resource: "geofill", t: T1 }, { rows: [{ id: bw, geo: GEO }] });
+  ok("不是這一團的人 → 403", r.code === 403, r.body);
+  r = await call(LINE_B, "PATCH", { resource: "wishes", t: T1, id: gw }, { place: "東京駅 八重洲口", geo: "" });
+  ok("地點改成手打的字 → 地點資訊清掉", r.code === 200 && !r.body.row.geo, r.body.row);
+  r = await call(LINE_B, "PATCH", { resource: "wishes", t: T1, id: grandma }, { votes: [] });
+  ok("+1(沒送 geo)不會把地點資訊清掉", r.code === 200 && r.body.row.geo && r.body.row.geo.s === "東京都", r.body.row);
+  for (const id of [gw, bw, grandma]) await call(LINE_B, "DELETE", { resource: "wishes", t: T1, id });
+  if (c2) await call(LINE_C, "DELETE", { resource: "itinerary", t: T2, id: c2 });
+  geoColumn = false;
   process.env.GOOGLE_MAPS_BROWSER_KEY = "AIza-test";
   r = await call(null, "GET", { resource: "mapskey" });
   ok("沒登入拿不到瀏覽器金鑰", r.code === 401, r.body);

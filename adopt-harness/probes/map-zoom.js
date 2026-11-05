@@ -1,9 +1,9 @@
 /* 地圖縮放 0～19 級(2026-10-30,Lulu:放到 OSM 圖磚能給的極限)。Nominatim 假造。
  *   WIDTH=390 ./probe.sh probes/map-zoom.js
  *   WIDTH=1440 ./probe.sh probes/map-zoom.js
- * 看:兩張地圖(行程地圖、全螢幕搜尋)都縮得到 0、放得到 19,再按不會超過;
+ * 看:兩張地圖(行程地圖、全螢幕搜尋)都縮得到「蓋滿框的最小那一級」(2026-11-04,之前是 0)、放得到 19,再按不會超過;
  *     每一張圖磚的 x、y 都在 0..2^z-1(超出去 OSM 回 404);世界比畫面窄時只畫一份、置中;
- *     點的位置跟投影算出來的一樣(0 級、19 級、跨換日線);拖曳、雙擊在兩端正常;
+ *     點的位置跟投影算出來的一樣(最小那一級、19 級、跨換日線);拖曳、雙擊在兩端正常;
  *     「重新搜這個範圍」送出的 viewbox:縮到全世界是 -180..180、跨換日線只送一邊、經緯度都合法。 */
 var q = s => d.querySelector(s), qa = s => Array.prototype.slice.call(d.querySelectorAll(s));
 var wait = ms => new Promise(r => w.setTimeout(r, ms));
@@ -20,16 +20,26 @@ var TILE = 256;
 var projX = (lo, z) => (lo + 180) / 360 * Math.pow(2, z);
 var projY = (la, z) => { var r = la * Math.PI / 180; return (1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * Math.pow(2, z); };
 var param = (u, k) => { var m = String(u).match(new RegExp("[?&]" + k + "=([^&]*)")); return m ? decodeURIComponent(m[1]) : null; };
+/* 換畫面會平移過去(glide):量之前等它走完 */
+var calm = box => until(() => !box._anim, 40);
+/* 縮到最小也要填滿地圖框(2026-11-04 Lulu):最小那一級 = 世界寬、高都蓋得住框的最小整數級 */
+var zMin = box => { var m = Math.max(box.clientWidth, box.clientHeight); return m > TILE ? Math.ceil(Math.log2(m / TILE)) : 0; };
+/* 圖磚有沒有蓋滿整個框(四邊都沒有露出空白) */
+function fills(box) {
+  var ts = qa("#" + box.id + " .layer:not(.under) img.tile"), L = Infinity, T = Infinity, R = -Infinity, B = -Infinity;
+  ts.forEach(t => { var x = parseFloat(t.style.left), y = parseFloat(t.style.top); L = Math.min(L, x); T = Math.min(T, y); R = Math.max(R, x + TILE); B = Math.max(B, y + TILE); });
+  return { 左: L, 上: T, 右: R - box.clientWidth, 下: B - box.clientHeight, 滿: ts.length > 0 && L <= 0 && T <= 0 && R >= box.clientWidth && B >= box.clientHeight };
+}
 async function until(f, n) { for (var i = 0; i < (n || 60); i++) { if (f()) return true; await wait(50); } return false; }
 /* 圖磚:全部合法?有沒有重複?世界那一份蓋不蓋得住畫面 */
 function tiles(box) {
   var v = box._v, n = Math.pow(2, v.z), seen = {}, badT = [], dup = 0;
-  qa("#" + box.id + " img.tile").forEach(t => {
+  qa("#" + box.id + " .layer:not(.under) img.tile").forEach(t => {
     var m = t.getAttribute("src").match(/\/(\d+)\/(-?\d+)\/(-?\d+)\.png$/);
     if (!m || +m[1] !== v.z || +m[2] < 0 || +m[2] >= n || +m[3] < 0 || +m[3] >= n) badT.push(t.getAttribute("src"));
     var key = m && m[2] + "/" + m[3]; if (seen[key]) dup++; seen[key] = 1;
   });
-  return { z: v.z, 張數: qa("#" + box.id + " img.tile").length, 不合法: badT.slice(0, 3), 重複: dup };
+  return { z: v.z, 張數: qa("#" + box.id + " .layer:not(.under) img.tile").length, 不合法: badT.slice(0, 3), 重複: dup };
 }
 /* 點畫在哪(相對地圖左上)vs 投影算出來的位置(取離中心最近那一份) */
 function pinOff(box, k, lo, la) {
@@ -60,15 +70,18 @@ return (async function () {
   var mm = q("#map");
   if (mm && mm._v) {
     for (var i = 0; i < 25; i++) zoomBtn(mm, -1);
+    await calm(mm);
     out.行程縮到底 = tiles(mm);
-    ok("行程地圖縮得到 0,圖磚全合法、不重複(世界只畫一份)", out.行程縮到底.z === 0 && !out.行程縮到底.不合法.length && !out.行程縮到底.重複 && out.行程縮到底.張數 === 1, out.行程縮到底);
-    drag(mm, 60, 30);
-    out.行程0拖 = { 中心: [mm._v.cx, mm._v.cy], 圖磚: tiles(mm) };
-    ok("0 級拖了也不會把世界拖走(還是置中)", mm._v.cx === 0.5 && mm._v.cy === 0.5 && !out.行程0拖.圖磚.不合法.length, out.行程0拖);
+    out.行程縮到底.最小級 = zMin(mm); out.行程縮到底.蓋滿 = fills(mm);
+    ok("行程地圖縮到最小 = 蓋得住框的那一級,圖磚全合法、不重複、四邊沒有空白", out.行程縮到底.z === zMin(mm) && !out.行程縮到底.不合法.length && !out.行程縮到底.重複 && out.行程縮到底.蓋滿.滿, out.行程縮到底);
+    drag(mm, 60, 400); await calm(mm);
+    out.行程最小拖 = { 圖磚: tiles(mm), 蓋滿: fills(mm) };
+    ok("最小那一級往下拖到底:上面不露出空白(拖不出世界的北邊)", !out.行程最小拖.圖磚.不合法.length && out.行程最小拖.蓋滿.滿, out.行程最小拖);
     for (var i = 0; i < 25; i++) zoomBtn(mm, 1);
+    await calm(mm);
     out.行程放到底 = tiles(mm);
     ok("行程地圖放得到 19,圖磚全合法", out.行程放到底.z === 19 && !out.行程放到底.不合法.length && out.行程放到底.張數 > 0, out.行程放到底);
-    dbl(mm);
+    dbl(mm); await calm(mm);
     ok("19 級雙擊不會超過 19", mm._v.z === 19, mm._v.z);
   } else out.行程地圖 = "這個寬度沒有畫(略過)";
 
@@ -79,27 +92,31 @@ return (async function () {
   await until(() => q("#ss-q-out .hcard"));
   var sm = q("#ss-map");
   for (var i = 0; i < 25; i++) zoomBtn(sm, -1);
+  await calm(sm);
   out.搜尋0 = tiles(sm);
   out.搜尋0.點偏 = pinOff(sm, "h0", 139.78, 35.70);
-  ok("搜尋地圖縮得到 0,圖磚合法、只一份;點的位置對", out.搜尋0.z === 0 && !out.搜尋0.不合法.length && !out.搜尋0.重複 && out.搜尋0.點偏 !== null && out.搜尋0.點偏 <= 2, out.搜尋0);
+  out.搜尋0.最小級 = zMin(sm); out.搜尋0.蓋滿 = fills(sm);
+  ok("搜尋地圖縮到最小 = 蓋得住框的那一級,圖磚合法、四邊沒有空白;點的位置對", out.搜尋0.z === zMin(sm) && !out.搜尋0.不合法.length && out.搜尋0.蓋滿.滿 && out.搜尋0.點偏 !== null && out.搜尋0.點偏 <= 2, out.搜尋0);
   ok("縮小之後搜尋鈕變「重新搜這個範圍」", /重新搜這個範圍/.test(q('[data-seek="ss-q"]').textContent), q('[data-seek="ss-q"]').textContent);
   var n0 = asked.length;
   q('[data-seek="ss-q"]').click();
   await until(() => asked.length > n0);
   out.全世界範圍 = box4(asked[asked.length - 1]);
-  /* 縮到全世界按「重新搜這個範圍」就是搜全世界(2026-10-30 Lulu),結果拉進畫面 */
-  ok("0 級重新搜:viewbox 是整個世界(-180..180)、合法、bounded=1", legal(out.全世界範圍) && out.全世界範圍.左 === -180 && out.全世界範圍.右 === 180 &&
-    param(asked[asked.length - 1], "bounded") === "1", out.全世界範圍);
+  /* 縮到最小按「重新搜這個範圍」= 照畫面搜(框比世界小,所以不再是整個世界),結果拉進畫面 */
+  ok("最小那一級重新搜:viewbox 合法、bounded=1", legal(out.全世界範圍) && param(asked[asked.length - 1], "bounded") === "1", out.全世界範圍);
   await until(() => sm._v.z > 5); await wait(300);
   out.拉進來 = { z: sm._v.z, 點偏: pinOff(sm, "h0", 139.78, 35.70) };
-  ok("0 級搜到的結果:畫面拉到框得住結果", out.拉進來.z > 5 && out.拉進來.點偏 <= 2, out.拉進來);
+  ok("最小那一級搜到的結果:畫面拉到框得住結果", out.拉進來.z > 5 && out.拉進來.點偏 <= 2, out.拉進來);
   for (var i = 0; i < 25; i++) zoomBtn(sm, -1);
-  dbl(sm); await wait(50);
-  ok("0 級雙擊放大到 1", sm._v.z === 1, sm._v.z);
+  await calm(sm);
+  dbl(sm); await calm(sm);
+  ok("最小那一級雙擊放大一級", sm._v.z === zMin(sm) + 1, [sm._v.z, zMin(sm)]);
 
   /* 跨換日線:3 級、畫面中心放在 179°E 附近,往右拖過去 */
   for (var i = 0; i < 2; i++) zoomBtn(sm, 1);
+  await calm(sm);
   for (; sm._v.z > 3;) zoomBtn(sm, -1);
+  await calm(sm);
   sm._v.cx = projX(179, sm._v.z); sm._v.cy = projY(35.7, sm._v.z);
   drag(sm, -20, 0);
   out.換日線 = tiles(sm);
@@ -116,6 +133,7 @@ return (async function () {
 
   /* 放到 19 */
   for (var i = 0; i < 25; i++) zoomBtn(sm, 1);
+  await calm(sm);
   sm._v.cx = projX(139.784, 19); sm._v.cy = projY(35.704, 19);
   drag(sm, 10, 10);
   out.搜尋19 = tiles(sm);
@@ -126,6 +144,16 @@ return (async function () {
   await until(() => asked.length > n0);
   out.街區範圍 = box4(asked[asked.length - 1]);
   ok("19 級重新搜:viewbox 合法、很小(< 0.01 度)", legal(out.街區範圍) && out.街區範圍.右 - out.街區範圍.左 < 0.01, out.街區範圍);
+
+  /* 框變大(轉向、拉大視窗):縮到最小再把框放大 → 重畫時最小那一級重算,還是蓋滿 */
+  for (var i = 0; i < 25; i++) zoomBtn(sm, -1);
+  await calm(sm);
+  var z0 = sm._v.z;
+  sm.style.width = "2600px"; sm.style.maxWidth = "none";
+  w.dispatchEvent(new w.Event("resize")); await wait(100);
+  out.框變大 = { 之前: z0, 之後: sm._v.z, 最小級: zMin(sm), 蓋滿: fills(sm) };
+  ok("框變大之後重算最小那一級(縮放拉上來)、四邊還是蓋滿", out.框變大.之後 === zMin(sm) && zMin(sm) > z0 && out.框變大.蓋滿.滿, out.框變大);
+  sm.style.width = ""; sm.style.maxWidth = "";
 
   out.結論 = bad.length ? "✗ " + bad.join(" ;; ") : "全部通過"; out.errors = w.__errors || [];
   return out;
