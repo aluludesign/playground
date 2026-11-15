@@ -1,0 +1,37 @@
+/* 只給「變數展示頁」用的版面樣式，不是設計系統的一部分。 */
+.tk-page { font-family: "Noto Sans TC", Inter, system-ui, sans-serif; color: #2a2421; max-width: 1100px; }
+.tk-page h1 { font-size: 26px; margin: 0 0 4px; }
+.tk-page .lead { color: #6b5f59; margin: 0 0 24px; line-height: 1.6; }
+.tk { margin: 0 0 40px; }
+.tk h2 { font-size: 18px; margin: 0 0 6px; padding-bottom: 6px; border-bottom: 1px solid #e6dcd8; }
+.tk .note { color: #6b5f59; font-size: 13px; margin: 6px 0 10px; line-height: 1.6; }
+.tk table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.tk th { text-align: left; font-weight: 600; color: #6b5f59; padding: 8px 10px; border-bottom: 1px solid #e6dcd8; white-space: nowrap; }
+.tk td { padding: 8px 10px; border-bottom: 1px solid #f1ebe8; vertical-align: middle; }
+.tk td.nm { font-weight: 600; white-space: nowrap; }
+.tk td.pv { min-width: 120px; max-width: 280px; overflow: hidden; }
+.tk td.al { color: #6b5f59; font-size: 12px; }
+.tk code { font-family: "Space Mono", ui-monospace, monospace; font-size: 12px; }
+.tk code.var { color: #823a1c; }
+.tk .muted { color: #c9c0bd; }
+
+.sw { display: inline-block; width: 40px; height: 28px; border-radius: 6px; box-shadow: inset 0 0 0 1px rgb(0 0 0 / .08); vertical-align: middle;
+  background-image: linear-gradient(45deg,#eee 25%,transparent 25%,transparent 75%,#eee 75%),linear-gradient(45deg,#eee 25%,transparent 25%,transparent 75%,#eee 75%); background-size: 8px 8px; background-position: 0 0,4px 4px; }
+.sw[style*="background:var"] { background-image: none; }
+.sw.op { background: #823a1c; }
+.sw.lg { width: 100%; height: 40px; }
+.rd { display: inline-block; width: 56px; height: 40px; background: #e6dcd8; border: 1px solid #ce9a84; }
+.bd { display: inline-block; width: 56px; height: 32px; border-style: solid; border-color: #cb7551; border-radius: 4px; }
+.bl { display: inline-block; width: 56px; height: 40px; position: relative; }
+.bl i { position: absolute; inset: 8px; background: #cb7551; border-radius: 4px; }
+.sh { display: inline-block; width: 48px; height: 32px; background: #fff; border: 1px solid #e6dcd8; border-radius: 4px; }
+.sq { display: inline-block; background: #cb7551; border-radius: 3px; vertical-align: middle; }
+.bar { display: inline-block; height: 12px; background: #cb7551; border-radius: 2px; vertical-align: middle; max-width: 260px; }
+
+.pal-row { display: grid; grid-template-columns: 170px 1fr; gap: 12px; align-items: start; padding: 8px 0; border-bottom: 1px solid #f1ebe8; }
+.pal-name { font-size: 13px; font-weight: 600; padding-top: 10px; word-break: break-all; }
+.pal-chips { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 6px; }
+.chip { font-size: 11px; display: grid; gap: 2px; }
+.chip b { font-weight: 600; }
+.chip small { font-family: "Space Mono", monospace; color: #6b5f59; font-size: 10px; }
+@media (max-width: 640px) { .pal-row { grid-template-columns: 1fr; } .tk table { display: block; overflow-x: auto; } }
