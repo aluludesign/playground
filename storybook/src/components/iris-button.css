@@ -35,7 +35,7 @@
   --iris-font-size: var(--ds-sys-font-size-label-md);
   --iris-line-height: 18px;
   --iris-tracking: 0.05em;
-  --iris-ease: cubic-bezier(0.33, 1, 0.68, 1); /* easeOutCubic：起步快、收尾慢，看起來比較順 */
+  --iris-ease: cubic-bezier(0.25, 1, 0.5, 1); /* = demo 的 --ease-tactile */
   /* 按下時內層的 padding（Figma 11/17 版：Default／Small 是 lg，lg 是 2xl；外框不變） */
   --iris-layer-pad-pressed: var(--ds-sys-spacing-lg);
 
@@ -51,10 +51,12 @@
   font: inherit;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  /* 按下／放開時外框位置（margin）和陰影都用補間慢慢變，不要一格跳過去 */
+  /* 照 demo 的 .steel-sheen-surface：陰影與縮放都用補間；按住時長大的 margin 也一起補間 */
   transition:
-    box-shadow 0.24s var(--iris-ease),
-    margin 0.24s var(--iris-ease);
+    box-shadow 0.15s ease-out,
+    transform 0.15s ease-out,
+    margin 0.2s var(--iris-ease);
+  will-change: transform;
 }
 .ds-iris-btn--sm {
   --iris-gap: var(--ds-sys-spacing-xs);
@@ -86,7 +88,7 @@
   background:
     linear-gradient(160deg, #7aacf552 0%, #d7afdc52 32%, #fac37852 68%, #82e6c352 100%),
     #ffffff;
-  transition: padding 0.24s var(--iris-ease);
+  transition: padding 0.2s var(--iris-ease);
 }
 /* 主高光＋虹光帶：跟著 --sheen-x/y 流動。inset:-50% 讓錨點跑到元件外，邊界才不會有硬白邊。 */
 .ds-iris-btn__layer::before,
@@ -235,21 +237,20 @@
 .ds-iris-btn.is-disabled .ds-iris-btn__layer::after,
 .ds-iris-btn.is-disabled .ds-iris-btn__flash { display: none; }
 
-/* 點擊時的觸覺回饋：內層輕輕凹一下再彈回。
-   11/17 她說按下去不要整顆白一下 —— demo 的 pressFlash 會提亮＋白色光暈，這裡拿掉，只留凹陷。 */
-.ds-iris-btn.is-press-flash .ds-iris-btn__layer { animation: ds-iris-press 0.42s cubic-bezier(0.37, 0, 0.63, 1); }
-/* 影格拉多一點、時間拉長一點，凹下去和彈回來都是連續的弧線，不會頓一下 */
+/* 點擊時的觸覺回饋 = demo 的 .steel-press-flash：
+   點一下就對「整顆按鈕」跑一段固定 0.3 秒的縮放（transform），放開得再快也會完整播完，
+   而且 transform 不重排版面，每一格都是連續的。
+   只拿掉 demo 裡的提亮與白色光暈（11/17 她說按下去不要整顆白一下）。 */
+.ds-iris-btn.is-press-flash { animation: ds-iris-press 0.3s var(--iris-ease) forwards; }
 @keyframes ds-iris-press {
   0%   { transform: scale(1); }
-  20%  { transform: scale(0.988); }
-  40%  { transform: scale(0.978); }
-  60%  { transform: scale(0.982); }
-  80%  { transform: scale(0.993); }
+  35%  { transform: scale(0.965); }
+  75%  { transform: scale(0.985); }
   100% { transform: scale(1); }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .ds-iris-btn__flash { animation: none; opacity: 0; }
-  .ds-iris-btn.is-press-flash .ds-iris-btn__layer { animation: none; }
+  .ds-iris-btn.is-press-flash { animation: none; }
   .ds-iris-btn, .ds-iris-btn__layer { transition: none; }
 }
