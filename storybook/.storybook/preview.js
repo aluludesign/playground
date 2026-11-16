@@ -1,3 +1,4 @@
+import "../src/fonts.css";
 import "../src/generated/tokens.css";
 import "../src/token-pages.css";
 
