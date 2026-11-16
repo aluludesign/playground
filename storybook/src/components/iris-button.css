@@ -35,7 +35,7 @@
   --iris-font-size: var(--ds-sys-font-size-label-md);
   --iris-line-height: 18px;
   --iris-tracking: 0.05em;
-  /* 按下時內層多長一階 */
+  /* 按下時內層的 padding（Figma 11/17 版：Default／Small 是 lg，lg 是 2xl；外框不變） */
   --iris-layer-pad-pressed: var(--ds-sys-spacing-lg);
 
   box-sizing: border-box;
@@ -56,11 +56,11 @@
   --iris-gap: var(--ds-sys-spacing-xs);
   --iris-icon: var(--ds-comp-btn-normal-sm-icon);
   --iris-font-size: var(--ds-sys-font-size-label-sm);
-  --iris-line-height: normal;
+  --iris-line-height: 1; /* Figma 的 label/sm 行高是 auto，文字框量起來 12px */
 }
 .ds-iris-btn--lg {
   --iris-layer-pad: var(--ds-sys-spacing-xl);
-  --iris-layer-pad-pressed: var(--ds-sys-spacing-xl);
+  --iris-layer-pad-pressed: var(--ds-sys-spacing-2xl);
   --iris-font-size: var(--ds-sys-font-size-label-lg);
   --iris-line-height: 20px;
   --iris-tracking: 0.04em;
@@ -187,11 +187,10 @@
 .ds-iris-btn.is-hover {
   box-shadow: var(--ds-elevation-component-md); /* Figma：Elevation/component/md */
 }
-/* 按下：外框與內層各長一階（照 Figma）。用負 margin 抵掉長出來的尺寸，旁邊的東西才不會被推動。 */
+/* 按下：外框不變，內層 padding 變大（照 Figma 11/17 版）。用負 margin 抵掉長出來的尺寸，旁邊的東西才不會被推動。 */
 .ds-iris-btn:active,
 .ds-iris-btn.is-pressed {
-  padding: var(--ds-sys-spacing-xs);
-  margin: calc(var(--ds-sys-spacing-2xs) - var(--ds-sys-spacing-xs) - (var(--iris-layer-pad-pressed) - var(--iris-layer-pad)));
+  margin: calc(var(--iris-layer-pad) - var(--iris-layer-pad-pressed));
   box-shadow: var(--ds-elevation-component-sm);
 }
 .ds-iris-btn:active .ds-iris-btn__layer,

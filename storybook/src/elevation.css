@@ -4,28 +4,33 @@
  *
  *   box-shadow: var(--ds-elevation-component-sm);
  *   text-shadow: var(--ds-elevation-text-xs);
+ *
+ * 關於 spread：Figma 只有在 frame 開了「Clip content」時陰影的 spread 才會生效，
+ * 我們的元件都沒開，所以在 Figma 裡看到的其實是 spread 0 的樣子。
+ * CSS 的 spread 一定會算，照抄數值會比 Figma 大一圈（11/17 她說「陰影怎麼這麼大片」就是這個）。
+ * 所以這裡一律 spread 0，跟 Figma 畫出來的一樣；Figma 那邊設的 spread 寫在旁邊註解。
  */
 :root {
-  /* Elevation/component/sm：元件平常（Material 3 level 1，兩層一樣的陰影） */
+  /* Elevation/component/sm：元件平常（兩層一樣的陰影；Figma spread = shadow/length/2xs，不生效） */
   --ds-elevation-component-sm:
-    var(--ds-sys-shared-none, 0px) var(--ds-sys-border-xs) var(--ds-sys-blur-2xs) var(--ds-sys-shadow-length-2xs) var(--ds-sys-shadow-md),
-    var(--ds-sys-shared-none, 0px) var(--ds-sys-border-xs) var(--ds-sys-blur-2xs) var(--ds-sys-shadow-length-2xs) var(--ds-sys-shadow-md);
+    0 var(--ds-sys-border-xs) var(--ds-sys-blur-2xs) 0 var(--ds-sys-shadow-md),
+    0 var(--ds-sys-border-xs) var(--ds-sys-blur-2xs) 0 var(--ds-sys-shadow-md);
 
-  /* Elevation/component/md：元件 hover（offsetY 2 在 Figma 沒綁變數；第二層的 spread 也沒綁） */
+  /* Elevation/component/md：元件 hover（offsetY 2 在 Figma 沒綁變數；Figma spread = shadow/length/md，不生效） */
   --ds-elevation-component-md:
-    0 2px var(--ds-sys-blur-xs) var(--ds-sys-shadow-length-md) var(--ds-sys-shadow-md),
-    0 2px var(--ds-sys-blur-xs) 8px var(--ds-sys-shadow-md);
+    0 2px var(--ds-sys-blur-xs) 0 var(--ds-sys-shadow-md),
+    0 2px var(--ds-sys-blur-xs) 0 var(--ds-sys-shadow-md);
 
-  /* Elevation/text/xs：文字陰影。CSS 的 text-shadow 沒有 spread，Figma 那邊的 spread 10 套不上 */
+  /* Elevation/text/xs：文字陰影。text-shadow 本來就沒有 spread */
   --ds-elevation-text-xs: 0 0.5px 1.5px #0000007a;
 
-  /* Elevation/surface/soft：柔和環境光（demo.html shadow-soft） */
+  /* Elevation/surface/soft：柔和環境光（demo.html shadow-soft；Figma spread = shadow/length/2xs，不生效） */
   --ds-elevation-surface-soft:
-    var(--ds-foun-shadow-length-0) var(--ds-foun-shadow-length-50) var(--ds-sys-blur-md) var(--ds-sys-shadow-length-2xs) var(--ds-foun-color-retro-red-orange-700-alpha-16);
+    var(--ds-foun-shadow-length-0) var(--ds-foun-shadow-length-50) var(--ds-sys-blur-md) 0 var(--ds-foun-color-retro-red-orange-700-alpha-16);
 
-  /* Elevation/surface/medium：實體懸浮光（demo.html shadow-medium） */
+  /* Elevation/surface/medium：實體懸浮光（demo.html shadow-medium；Figma spread = shadow/length/xs，不生效） */
   --ds-elevation-surface-medium:
-    var(--ds-foun-shadow-length-0) var(--ds-foun-shadow-length-100) var(--ds-sys-blur-lg) var(--ds-sys-shadow-length-xs) var(--ds-foun-color-retro-red-orange-700-alpha-32);
+    var(--ds-foun-shadow-length-0) var(--ds-foun-shadow-length-100) var(--ds-sys-blur-lg) 0 var(--ds-foun-color-retro-red-orange-700-alpha-32);
 
   /* Elevation/surface/hard-md：復古硬派投影 5px 5px 0 */
   --ds-elevation-surface-hard-md:

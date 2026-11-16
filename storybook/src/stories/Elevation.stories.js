@@ -13,7 +13,7 @@ const render = () => {
   const el = document.createElement("div");
   el.className = "tk-page";
   el.innerHTML = `<h1>陰影樣式</h1>
-<p class="lead">對應 Figma 的 Effect styles。Figma 的陰影顏色透明度不能綁變數，所以那邊用 effect style 收；這裡做成 CSS 變數，綁了變數的數值都指回 token。元件一律套這些，不各自寫數值。</p>
+<p class="lead">對應 Figma 的 Effect styles。Figma 的陰影顏色透明度不能綁變數，所以那邊用 effect style 收；這裡做成 CSS 變數，綁了變數的數值都指回 token。元件一律套這些，不各自寫數值。<br>Figma 只有在 frame 開了「Clip content」時陰影的 spread 才會生效，我們的元件都沒開，所以這裡一律用 spread 0，畫出來才會跟 Figma 一樣；表格裡的 spread 是 Figma 上設的值。</p>
 <section class="tk"><table><thead><tr><th>Figma 樣式</th><th>預覽</th><th>用在</th><th>Figma 數值（x y blur spread · 顏色）</th><th>CSS 變數</th></tr></thead><tbody>
 ${ITEMS.map(
   (i) => `<tr>
