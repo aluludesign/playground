@@ -1,0 +1,281 @@
+/* Dynamic Iris —— 許願用的 AI 按鈕
+ *
+ * 外框、尺寸、文字、陰影、各狀態、內層底色：照 Figma「Dynamic Iris」（node 161670:6577），全部吃 token；
+ *   陰影套 src/elevation.css 的 Elevation/component/sm、md。
+ * 動態：照 design-system/demo.html 的「⚡ 動態虹光 + 閃動白光」（.sheen-iridescent + .sheen-flash-white），
+ *   11/17 她要底色換回 Figma 那組、動態保留。
+ *   虹光跟著 sheen.js 寫在 :root 的 --sheen-* 流動（滑鼠、捲動、手機傾斜），
+ *   白光每 3.2 秒滑過一次，不需要 JS。
+ *
+ * 結構：
+ *   <button class="ds-iris-btn [ds-iris-btn--sm|--lg]">
+ *     <span class="ds-iris-btn__surface"><span class="ds-iris-btn__flash"></span></span>
+ *     <span class="ds-iris-btn__layer">
+ *       <svg class="ds-iris-btn__icon">…</svg>
+ *       <span class="ds-iris-btn__label">Make wishes</span>
+ *     </span>
+ *   </button>
+ *
+ * 為什麼外框和底色不畫在按鈕／內容本身上：
+ *   Figma 的 Pressed 是「內層長大一圈」。如果用 padding 做，按下去的每一格都要重排版面，
+ *   文字和 icon 會在像素之間跳，桌機上看起來就是抖（11/17 她說網頁版放大縮小會抖、手機很順）。
+ *   所以外框（::before）和底色（__surface）各自是一層絕對定位的背景，按住時只讓這兩層往外長，
+ *   文字和 icon 完全不動、按鈕佔的位置也不變。
+ */
+
+/* 反光引擎的執行期狀態（不是設計 token）。沒有載 sheen.js 時就停在正中間。 */
+:root {
+  --sheen-x: 50%;
+  --sheen-y: 50%;
+  --sheen-angle: 135deg;
+  --sheen-intensity: 0.55;
+  --sheen-specular: 0.75;
+  --iri-saturate: 2;
+}
+
+.ds-iris-btn {
+  /* 各尺寸會改的值 */
+  --iris-layer-pad: var(--ds-sys-spacing-md);
+  --iris-gap: var(--ds-sys-spacing-sm);
+  --iris-icon: var(--ds-comp-btn-normal-md-icon);
+  --iris-font-size: var(--ds-sys-font-size-label-md);
+  --iris-line-height: 18px;
+  --iris-tracking: 0.05em;
+  /* 按下時內層的 padding（Figma 11/17 版：Default／Small 是 lg，lg 是 2xl；外框粗細不變） */
+  --iris-layer-pad-pressed: var(--ds-sys-spacing-lg);
+  --iris-ease: cubic-bezier(0.25, 1, 0.5, 1); /* = demo 的 --ease-tactile */
+  /* 外框到底色的距離：外框線 + 外層 padding（Figma 是 strokes included in layout） */
+  --iris-ring: calc(var(--ds-sys-border-xs) + var(--ds-sys-spacing-2xs));
+  /* 這一刻要往外長多少；按住時變成 pressed − 平常 */
+  --iris-grow: 0px;
+
+  position: relative;
+  isolation: isolate;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  padding: var(--iris-ring);
+  border: 0;
+  border-radius: var(--ds-comp-btn-normal-full-radius);
+  background: none;
+  color: var(--ds-sys-color-text-100);
+  font: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.15s ease-out; /* 照 demo 的 .steel-sheen-surface */
+}
+.ds-iris-btn--sm {
+  --iris-gap: var(--ds-sys-spacing-xs);
+  --iris-icon: var(--ds-comp-btn-normal-sm-icon);
+  --iris-font-size: var(--ds-sys-font-size-label-sm);
+  --iris-line-height: 1; /* Figma 的 label/sm 行高是 auto，文字框量起來 12px */
+}
+.ds-iris-btn--lg {
+  --iris-layer-pad: var(--ds-sys-spacing-xl);
+  --iris-layer-pad-pressed: var(--ds-sys-spacing-2xl);
+  --iris-font-size: var(--ds-sys-font-size-label-lg);
+  --iris-line-height: 20px;
+  --iris-tracking: 0.04em;
+}
+
+/* ── 外框：surface 底、outline-100 線、Elevation/component/sm 陰影 ── */
+.ds-iris-btn::before {
+  content: "";
+  position: absolute;
+  inset: calc(-1 * var(--iris-grow));
+  z-index: -2;
+  box-sizing: border-box;
+  border: var(--ds-sys-border-xs) solid var(--ds-sys-color-outline-100);
+  border-radius: inherit;
+  background: var(--ds-sys-color-surface);
+  box-shadow: var(--ds-elevation-component-sm);
+  transition:
+    inset 0.2s var(--iris-ease),
+    box-shadow 0.15s ease-out;
+}
+
+/* ── 底色：照 Figma（白底＋32% 粉彩漸層），上面疊 demo 的流動虹光與白光 ── */
+.ds-iris-btn__surface {
+  position: absolute;
+  inset: calc(var(--iris-ring) - var(--iris-grow));
+  z-index: -1;
+  overflow: hidden;
+  isolation: isolate;
+  border-radius: inherit;
+  /* Figma state-layer：白色＋一層 32% 的藍→粉→橘→薄荷。
+     Figma 的漸層是左上到右下的對角（gradientTransform [[.59,.41],[-.41,.59]]），
+     換成這個長寬比的按鈕大約是 160deg。 */
+  background:
+    linear-gradient(160deg, #7aacf552 0%, #d7afdc52 32%, #fac37852 68%, #82e6c352 100%),
+    #ffffff;
+  transition: inset 0.2s var(--iris-ease);
+}
+/* 主高光＋虹光帶：跟著 --sheen-x/y 流動。inset:-50% 讓錨點跑到元件外，邊界才不會有硬白邊。 */
+.ds-iris-btn__surface::before,
+.ds-iris-btn__surface::after {
+  content: "";
+  position: absolute;
+  inset: -50%;
+  pointer-events: none;
+  mix-blend-mode: overlay;
+}
+.ds-iris-btn__surface::before {
+  z-index: 2;
+  background:
+    radial-gradient(
+      circle 220px at var(--sheen-x) var(--sheen-y),
+      rgba(255, 255, 255, calc(var(--sheen-specular) * 0.75)) 0%,
+      rgba(255, 255, 255, calc(var(--sheen-specular) * 0.3)) 30%,
+      rgba(255, 255, 255, 0) 70%
+    ),
+    linear-gradient(
+      var(--sheen-angle),
+      rgba(255, 255, 255, 0) 0%,
+      rgba(122, 172, 245, 0.25) calc(var(--sheen-x) - 22%),
+      rgba(225, 150, 240, 0.30) calc(var(--sheen-x) - 10%),
+      rgba(255, 255, 255, calc(var(--sheen-intensity) * 0.8)) var(--sheen-x),
+      rgba(250, 195, 120, 0.32) calc(var(--sheen-x) + 10%),
+      rgba(130, 230, 195, 0.22) calc(var(--sheen-x) + 22%),
+      rgba(255, 255, 255, 0) 100%
+    );
+  opacity: 0.85;
+  filter: contrast(105%) saturate(var(--iri-saturate));
+}
+/* 副反射環：與主高光垂直的拉絲光帶 */
+.ds-iris-btn__surface::after {
+  z-index: 3;
+  background: linear-gradient(
+    calc(var(--sheen-angle) + 90deg),
+    transparent 0%,
+    transparent 36%,
+    rgba(255, 255, 255, 0.25) 50%,
+    transparent 64%,
+    transparent 100%
+  );
+  opacity: calc(var(--sheen-intensity) * 0.6);
+}
+
+/* ── 閃動白光：寬而霧的一團光，3.2 秒滑過一次 ── */
+.ds-iris-btn__flash {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  border-radius: inherit;
+  mix-blend-mode: overlay;
+  background: linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0) 32%,
+    rgba(255, 255, 255, 0.12) 38%,
+    rgba(255, 255, 255, 0.38) 43%,
+    rgba(255, 255, 255, 0.7) 48%,
+    rgba(255, 255, 255, 0.8) 50%,
+    rgba(255, 255, 255, 0.7) 52%,
+    rgba(255, 255, 255, 0.38) 57%,
+    rgba(255, 255, 255, 0.12) 62%,
+    rgba(255, 255, 255, 0) 68%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  background-size: 400% 100%;
+  background-position: 100% 0;
+  opacity: 0;
+  animation: ds-iris-flash 3.2s cubic-bezier(0.25, 1, 0.5, 1) 0.6s infinite;
+}
+@keyframes ds-iris-flash {
+  0%   { background-position: 100% 0; opacity: 0; }
+  2%   { opacity: 1; }
+  28%  { opacity: 1; }
+  30%  { background-position: 0 0; opacity: 0; }
+  100% { background-position: 0 0; opacity: 0; }
+}
+
+/* ── 內容：icon＋文字。padding 永遠不變，按下去也不會動 ── */
+.ds-iris-btn__layer {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--iris-gap);
+  padding: var(--iris-layer-pad);
+}
+.ds-iris-btn__icon {
+  flex: none;
+  width: var(--iris-icon);
+  height: var(--iris-icon);
+  fill: currentColor;
+}
+.ds-iris-btn__label {
+  font-family: var(--ds-sys-font-family-label);
+  font-weight: 700; /* label 的 semi-bold 樣式用的是源泉圓體 B */
+  font-size: var(--iris-font-size);
+  line-height: var(--iris-line-height);
+  letter-spacing: var(--iris-tracking);
+  white-space: nowrap;
+}
+
+/* ── 狀態 ──
+   .is-hover／.is-pressed／.is-focus 是給文件頁固定顯示用的，真的按鈕靠偽類。 */
+.ds-iris-btn:hover::before,
+.ds-iris-btn.is-hover::before {
+  box-shadow: var(--ds-elevation-component-md); /* Figma：Elevation/component/md */
+}
+/* 按住：外框和底色往外長一圈（照 Figma 11/17 版），文字不動、旁邊的東西也不會被推動 */
+.ds-iris-btn:active,
+.ds-iris-btn.is-pressed {
+  --iris-grow: calc(var(--iris-layer-pad-pressed) - var(--iris-layer-pad));
+}
+.ds-iris-btn:active::before,
+.ds-iris-btn.is-pressed::before {
+  box-shadow: var(--ds-elevation-component-sm);
+}
+/* 聚焦：外圈 primary 的 focus ring，跟按鈕隔一個 2xs */
+.ds-iris-btn:focus { outline: none; }
+.ds-iris-btn:focus-visible,
+.ds-iris-btn.is-focus {
+  outline: var(--ds-sys-border-md) solid var(--ds-sys-color-primary);
+  outline-offset: var(--ds-sys-spacing-2xs);
+}
+.ds-iris-btn:focus-visible::before,
+.ds-iris-btn.is-focus::before { box-shadow: none; } /* Figma 的 Focused 沒有套陰影 */
+
+/* 停用：沒有虹光、沒有白光、沒有陰影、按了也不會長 */
+.ds-iris-btn:disabled,
+.ds-iris-btn.is-disabled {
+  --iris-grow: 0px;
+  cursor: not-allowed;
+  color: var(--ds-sys-color-on-disable);
+}
+.ds-iris-btn:disabled::before,
+.ds-iris-btn.is-disabled::before {
+  background: var(--ds-sys-color-disabled);
+  border-color: var(--ds-sys-color-on-disable);
+  box-shadow: none;
+}
+.ds-iris-btn:disabled .ds-iris-btn__surface,
+.ds-iris-btn.is-disabled .ds-iris-btn__surface { background: var(--ds-sys-color-disabled); }
+.ds-iris-btn:disabled .ds-iris-btn__surface::before,
+.ds-iris-btn:disabled .ds-iris-btn__surface::after,
+.ds-iris-btn:disabled .ds-iris-btn__flash,
+.ds-iris-btn.is-disabled .ds-iris-btn__surface::before,
+.ds-iris-btn.is-disabled .ds-iris-btn__surface::after,
+.ds-iris-btn.is-disabled .ds-iris-btn__flash { display: none; }
+
+/* 點擊時的觸覺回饋 = demo 的 .steel-press-flash：
+   點一下就對「整顆按鈕」跑一段固定 0.3 秒的縮放（transform），放開得再快也會完整播完，
+   而且 transform 不重排版面，每一格都是連續的。
+   只拿掉 demo 裡的提亮與白色光暈（11/17 她說按下去不要整顆白一下）。 */
+.ds-iris-btn.is-press-flash { animation: ds-iris-press 0.3s var(--iris-ease) forwards; }
+@keyframes ds-iris-press {
+  0%   { transform: scale(1); }
+  35%  { transform: scale(0.965); }
+  75%  { transform: scale(0.985); }
+  100% { transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ds-iris-btn__flash { animation: none; opacity: 0; }
+  .ds-iris-btn.is-press-flash { animation: none; }
+  .ds-iris-btn,
+  .ds-iris-btn::before,
+  .ds-iris-btn__surface { transition: none; }
+}
