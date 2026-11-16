@@ -18,11 +18,11 @@ function kindOf(t) {
   if (/\/font\/size\//.test(n)) return "fontSize";
   if (/\/font\/weight\//.test(n)) return "fontWeight";
   if (/family/.test(n)) return "fontFamily";
-  if (/radius|raduis/.test(n)) return "radius";
+  if (/radius/.test(n)) return "radius";
   if (/\/border\/|outline-width|divider\/size|focus-ring\/border/.test(n)) return "border";
   if (/\/opacity\//.test(n)) return "opacity";
   if (/\/blur\//.test(n)) return "blur";
-  if (/shadow\/length|shdow\/length/.test(n)) return "shadow";
+  if (/shadow\/length/.test(n)) return "shadow";
   if (/\/icon/.test(n) || /active-icon/.test(n)) return "square";
   if (/\/device\//.test(n)) return "device";
   return "bar";

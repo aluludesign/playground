@@ -764,14 +764,14 @@ S:color/customs/on custom 13|C|@F:color/retro/rose/950
 S:color/customs/custom 14|C|@F:color/share/red/200
 S:color/customs/custom container 14|C|@F:color/share/red/100
 S:color/customs/on custom 14|C|@F:color/share/red/400
-S:shdow/length/2xs|F|@F:shadow/length/25
-S:shdow/length/xs|F|@F:shadow/length/50
-S:shdow/length/sm|F|@F:shadow/length/62-5
-S:shdow/length/md|F|@F:shadow/length/100
-S:shdow/length/lg|F|@F:shadow/length/150
-S:shdow/length/xl|F|@F:shadow/length/200
-S:shdow/md|C|@F:color/retro/red-orange/700-alpha-16
-S:shdow/lg|C|@F:color/retro/red-orange/700-alpha-32
+S:shadow/length/2xs|F|@F:shadow/length/25
+S:shadow/length/xs|F|@F:shadow/length/50
+S:shadow/length/sm|F|@F:shadow/length/62-5
+S:shadow/length/md|F|@F:shadow/length/100
+S:shadow/length/lg|F|@F:shadow/length/150
+S:shadow/length/xl|F|@F:shadow/length/200
+S:shadow/md|C|@F:color/retro/red-orange/700-alpha-16
+S:shadow/lg|C|@F:color/retro/red-orange/700-alpha-32
 S:blur/2xs|F|@F:blur/50
 S:blur/xs|F|@F:blur/100
 S:blur/sm|F|@F:blur/200
@@ -846,6 +846,6 @@ C:divider/color/subtle|C|@S:color/outline 100
 C:divider/color/strong|C|@S:color/outline 200
 C:divider/color/neutral|C|@S:color/outline neutral
 C:bottom nav/active-icon|F|@S:icon/xl
-C:bottom nav/raduis|F|@S:radius/full
+C:bottom nav/radius|F|@S:radius/full
 C:bottom nav/padding-top-bottom|F|@S:spacing/lg
 C:bottom nav/padding-r-l|F|@S:spacing/2xl
