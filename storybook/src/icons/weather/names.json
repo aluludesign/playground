@@ -1,0 +1,152 @@
+[
+ {
+  "type": "sun",
+  "zh": "太陽",
+  "en": "Sun"
+ },
+ {
+  "type": "drop",
+  "zh": "水滴",
+  "en": "Drop"
+ },
+ {
+  "type": "sunny",
+  "zh": "晴天",
+  "en": "Sunny"
+ },
+ {
+  "type": "clear_night",
+  "zh": "晴朗夜晚",
+  "en": "Clear night"
+ },
+ {
+  "type": "partly_cloudy_day",
+  "zh": "晴時多雲",
+  "en": "Partly cloudy (day)"
+ },
+ {
+  "type": "partly_cloudy_night",
+  "zh": "夜間多雲",
+  "en": "Partly cloudy (night)"
+ },
+ {
+  "type": "cloudy",
+  "zh": "多雲",
+  "en": "Cloudy"
+ },
+ {
+  "type": "overcast",
+  "zh": "陰天",
+  "en": "Overcast"
+ },
+ {
+  "type": "drizzle",
+  "zh": "毛毛雨",
+  "en": "Drizzle"
+ },
+ {
+  "type": "rain",
+  "zh": "雨",
+  "en": "Rain"
+ },
+ {
+  "type": "heavy_rain",
+  "zh": "大雨",
+  "en": "Heavy rain"
+ },
+ {
+  "type": "sun_shower",
+  "zh": "晴天陣雨",
+  "en": "Sun shower (day)"
+ },
+ {
+  "type": "night_shower",
+  "zh": "夜間陣雨",
+  "en": "Shower (night)"
+ },
+ {
+  "type": "thunder",
+  "zh": "打雷／乾雷暴",
+  "en": "Thunder / lightning"
+ },
+ {
+  "type": "thunderstorm",
+  "zh": "雷雨",
+  "en": "Thunderstorm with rain"
+ },
+ {
+  "type": "snow",
+  "zh": "雪",
+  "en": "Snow"
+ },
+ {
+  "type": "heavy_snow",
+  "zh": "大雪",
+  "en": "Heavy snow"
+ },
+ {
+  "type": "sleet",
+  "zh": "雨夾雪",
+  "en": "Sleet"
+ },
+ {
+  "type": "hail",
+  "zh": "冰雹",
+  "en": "Hail"
+ },
+ {
+  "type": "freezing_rain",
+  "zh": "凍雨",
+  "en": "Freezing rain"
+ },
+ {
+  "type": "fog",
+  "zh": "霧",
+  "en": "Fog"
+ },
+ {
+  "type": "mist",
+  "zh": "薄霧",
+  "en": "Mist"
+ },
+ {
+  "type": "haze",
+  "zh": "霾",
+  "en": "Haze"
+ },
+ {
+  "type": "wind",
+  "zh": "風",
+  "en": "Wind"
+ },
+ {
+  "type": "strong_wind",
+  "zh": "強風",
+  "en": "Strong wind (gale)"
+ },
+ {
+  "type": "dust",
+  "zh": "沙塵暴",
+  "en": "Dust / sandstorm"
+ },
+ {
+  "type": "tornado",
+  "zh": "龍捲風",
+  "en": "Tornado"
+ },
+ {
+  "type": "hot",
+  "zh": "炎熱",
+  "en": "Hot"
+ },
+ {
+  "type": "cold",
+  "zh": "寒冷",
+  "en": "Cold"
+ },
+ {
+  "type": "rainbow",
+  "zh": "彩虹",
+  "en": "Rainbow"
+ }
+]
