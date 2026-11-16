@@ -30,8 +30,8 @@ export const 圓角 = () => page(table(p("radius/"), { title: "圓角" }));
 export const 框線 = () => page(table(p("border/"), { title: "框線粗細" }));
 export const 陰影 = () =>
   page(
-    table(p("shdow/length/"), { title: "陰影位移" }),
-    table(p("shdow/", /length/), { title: "陰影顏色" }),
+    table(p("shadow/length/"), { title: "陰影位移" }),
+    table(p("shadow/", /length/), { title: "陰影顏色" }),
     table(p("blur/"), { title: "模糊" }),
   );
 export const 透明度 = () => page(table(p("opacity/"), { title: "透明度" }));
