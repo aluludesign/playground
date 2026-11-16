@@ -1,5 +1,6 @@
 import "../src/fonts.css";
 import "../src/generated/tokens.css";
+import "../src/elevation.css";
 import "../src/token-pages.css";
 
 /** @type { import('@storybook/html').Preview } */

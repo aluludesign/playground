@@ -1,0 +1,33 @@
+/* 陰影樣式 —— 對應 Figma 的 Effect styles「Elevation/…」。
+ * Figma 的陰影顏色透明度不能綁變數，所以那邊用 effect style 收；這裡做成 CSS 變數，
+ * 綁了變數的數值都指回 token，沒綁的照 Figma 寫死。元件一律套這些，不各自寫數值。
+ *
+ *   box-shadow: var(--ds-elevation-component-sm);
+ *   text-shadow: var(--ds-elevation-text-xs);
+ */
+:root {
+  /* Elevation/component/sm：元件平常（Material 3 level 1，兩層一樣的陰影） */
+  --ds-elevation-component-sm:
+    var(--ds-sys-shared-none, 0px) var(--ds-sys-border-xs) var(--ds-sys-blur-2xs) var(--ds-sys-shadow-length-2xs) var(--ds-sys-shadow-md),
+    var(--ds-sys-shared-none, 0px) var(--ds-sys-border-xs) var(--ds-sys-blur-2xs) var(--ds-sys-shadow-length-2xs) var(--ds-sys-shadow-md);
+
+  /* Elevation/component/md：元件 hover（offsetY 2 在 Figma 沒綁變數；第二層的 spread 也沒綁） */
+  --ds-elevation-component-md:
+    0 2px var(--ds-sys-blur-xs) var(--ds-sys-shadow-length-md) var(--ds-sys-shadow-md),
+    0 2px var(--ds-sys-blur-xs) 8px var(--ds-sys-shadow-md);
+
+  /* Elevation/text/xs：文字陰影。CSS 的 text-shadow 沒有 spread，Figma 那邊的 spread 10 套不上 */
+  --ds-elevation-text-xs: 0 0.5px 1.5px #0000007a;
+
+  /* Elevation/surface/soft：柔和環境光（demo.html shadow-soft） */
+  --ds-elevation-surface-soft:
+    var(--ds-foun-shadow-length-0) var(--ds-foun-shadow-length-50) var(--ds-sys-blur-md) var(--ds-sys-shadow-length-2xs) var(--ds-foun-color-retro-red-orange-700-alpha-16);
+
+  /* Elevation/surface/medium：實體懸浮光（demo.html shadow-medium） */
+  --ds-elevation-surface-medium:
+    var(--ds-foun-shadow-length-0) var(--ds-foun-shadow-length-100) var(--ds-sys-blur-lg) var(--ds-sys-shadow-length-xs) var(--ds-foun-color-retro-red-orange-700-alpha-32);
+
+  /* Elevation/surface/hard-md：復古硬派投影 5px 5px 0 */
+  --ds-elevation-surface-hard-md:
+    var(--ds-foun-shadow-length-62-5) var(--ds-foun-shadow-length-62-5) var(--ds-foun-blur-0) var(--ds-foun-shadow-length-0) var(--ds-foun-color-retro-red-orange-muted-700);
+}

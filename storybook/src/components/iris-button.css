@@ -1,8 +1,9 @@
 /* Dynamic Iris —— 許願用的 AI 按鈕
  *
- * 外框、尺寸、文字、陰影、各狀態：照 Figma「Dynamic Iris」（node 161670:6577），全部吃 token。
- * 內層的漸層與動態：照 design-system/demo.html 的「⚡ 動態虹光 + 閃動白光」
- *   = .gradient-iridescent-steel + .sheen-iridescent + .sheen-flash-white。
+ * 外框、尺寸、文字、陰影、各狀態、內層底色：照 Figma「Dynamic Iris」（node 161670:6577），全部吃 token；
+ *   陰影套 src/elevation.css 的 Elevation/component/sm、md。
+ * 動態：照 design-system/demo.html 的「⚡ 動態虹光 + 閃動白光」（.sheen-iridescent + .sheen-flash-white），
+ *   11/17 她要底色換回 Figma 那組、動態保留。
  *   虹光跟著 sheen.js 寫在 :root 的 --sheen-* 流動（滑鼠、捲動、手機傾斜），
  *   白光每 3.2 秒滑過一次，不需要 JS。
  *
@@ -45,10 +46,7 @@
   border-radius: var(--ds-comp-btn-normal-full-radius);
   background: var(--ds-sys-color-surface);
   color: var(--ds-sys-color-text-100);
-  /* Figma 疊了兩層一樣的陰影 */
-  box-shadow:
-    0 var(--ds-sys-border-xs) var(--ds-sys-blur-2xs) var(--ds-sys-shadow-length-2xs) var(--ds-sys-shadow-md),
-    0 var(--ds-sys-border-xs) var(--ds-sys-blur-2xs) var(--ds-sys-shadow-length-2xs) var(--ds-sys-shadow-md);
+  box-shadow: var(--ds-elevation-component-sm); /* Figma：Elevation/component/sm */
   font: inherit;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
@@ -68,7 +66,7 @@
   --iris-tracking: 0.04em;
 }
 
-/* ── 內層：Version C 微虹光鋼面 ── */
+/* ── 內層：底色照 Figma（白底＋32% 粉彩漸層），上面疊 demo 的流動虹光與白光 ── */
 .ds-iris-btn__layer {
   position: relative;
   overflow: hidden;
@@ -78,8 +76,12 @@
   gap: var(--iris-gap);
   padding: var(--iris-layer-pad);
   border-radius: var(--ds-comp-btn-normal-full-radius);
-  background: linear-gradient(135deg, #F6F8FB 0%, #E0E5F0 16%, #B8CBD8 36%, #B2B6C6 52%, #D8CDC2 70%, #C3CBD2 84%, #88919A 100%);
-  box-shadow: inset 0 1.5px 1px rgba(255, 255, 255, 0.85), inset 0 -2px 1.5px rgba(42, 48, 56, 0.28);
+  /* Figma state-layer：白色＋一層 32% 的藍→粉→橘→薄荷。
+     Figma 的漸層是左上到右下的對角（gradientTransform [[.59,.41],[-.41,.59]]），
+     換成這個長寬比的按鈕大約是 160deg。 */
+  background:
+    linear-gradient(160deg, #7aacf552 0%, #d7afdc52 32%, #fac37852 68%, #82e6c352 100%),
+    #ffffff;
 }
 /* 主高光＋虹光帶：跟著 --sheen-x/y 流動。inset:-50% 讓錨點跑到元件外，邊界才不會有硬白邊。 */
 .ds-iris-btn__layer::before,
@@ -183,18 +185,14 @@
    .is-hover／.is-pressed／.is-focus 是給文件頁固定顯示用的，真的按鈕靠偽類。 */
 .ds-iris-btn:hover,
 .ds-iris-btn.is-hover {
-  box-shadow:
-    0 var(--ds-sys-spacing-2xs) var(--ds-sys-blur-xs) var(--ds-sys-shadow-length-md) var(--ds-sys-shadow-md),
-    0 var(--ds-sys-spacing-2xs) var(--ds-sys-blur-xs) var(--ds-sys-shadow-length-md) var(--ds-sys-shadow-md);
+  box-shadow: var(--ds-elevation-component-md); /* Figma：Elevation/component/md */
 }
 /* 按下：外框與內層各長一階（照 Figma）。用負 margin 抵掉長出來的尺寸，旁邊的東西才不會被推動。 */
 .ds-iris-btn:active,
 .ds-iris-btn.is-pressed {
   padding: var(--ds-sys-spacing-xs);
   margin: calc(var(--ds-sys-spacing-2xs) - var(--ds-sys-spacing-xs) - (var(--iris-layer-pad-pressed) - var(--iris-layer-pad)));
-  box-shadow:
-    0 var(--ds-sys-border-xs) var(--ds-sys-blur-2xs) var(--ds-sys-shadow-length-2xs) var(--ds-sys-shadow-md),
-    0 var(--ds-sys-border-xs) var(--ds-sys-blur-2xs) var(--ds-sys-shadow-length-2xs) var(--ds-sys-shadow-md);
+  box-shadow: var(--ds-elevation-component-sm);
 }
 .ds-iris-btn:active .ds-iris-btn__layer,
 .ds-iris-btn.is-pressed .ds-iris-btn__layer {
@@ -206,6 +204,7 @@
 .ds-iris-btn.is-focus {
   outline: var(--ds-sys-border-md) solid var(--ds-sys-color-primary);
   outline-offset: var(--ds-sys-spacing-2xs);
+  box-shadow: none; /* Figma 的 Focused 沒有套陰影 */
 }
 
 /* 停用：沒有虹光、沒有白光、沒有陰影 */
