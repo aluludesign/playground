@@ -9,7 +9,7 @@ export default {
     controls: { disable: true },
     actions: { disable: true },
     options: {
-      storySort: { order: ["說明", "Foundations", "Style", "Comps", "Icons"] },
+      storySort: { order: ["說明", "Foundations", "Style", "Comps", "Components", "Icons"] },
     },
   },
 };

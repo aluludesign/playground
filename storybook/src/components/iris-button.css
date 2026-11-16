@@ -1,0 +1,248 @@
+/* Dynamic Iris —— 許願用的 AI 按鈕
+ *
+ * 外框、尺寸、文字、陰影、各狀態：照 Figma「Dynamic Iris」（node 161670:6577），全部吃 token。
+ * 內層的漸層與動態：照 design-system/demo.html 的「⚡ 動態虹光 + 閃動白光」
+ *   = .gradient-iridescent-steel + .sheen-iridescent + .sheen-flash-white。
+ *   虹光跟著 sheen.js 寫在 :root 的 --sheen-* 流動（滑鼠、捲動、手機傾斜），
+ *   白光每 3.2 秒滑過一次，不需要 JS。
+ *
+ * 結構：
+ *   <button class="ds-iris-btn [ds-iris-btn--sm|--lg]">
+ *     <span class="ds-iris-btn__layer">
+ *       <span class="ds-iris-btn__flash"></span>
+ *       <svg class="ds-iris-btn__icon">…</svg>
+ *       <span class="ds-iris-btn__label">Make wishes</span>
+ *     </span>
+ *   </button>
+ */
+
+/* 反光引擎的執行期狀態（不是設計 token）。沒有載 sheen.js 時就停在正中間。 */
+:root {
+  --sheen-x: 50%;
+  --sheen-y: 50%;
+  --sheen-angle: 135deg;
+  --sheen-intensity: 0.55;
+  --sheen-specular: 0.75;
+  --iri-saturate: 2;
+}
+
+.ds-iris-btn {
+  /* 各尺寸會改的值 */
+  --iris-layer-pad: var(--ds-sys-spacing-md);
+  --iris-gap: var(--ds-sys-spacing-sm);
+  --iris-icon: var(--ds-comp-btn-normal-md-icon);
+  --iris-font-size: var(--ds-sys-font-size-label-md);
+  --iris-line-height: 18px;
+  --iris-tracking: 0.05em;
+  /* 按下時內層多長一階 */
+  --iris-layer-pad-pressed: var(--ds-sys-spacing-lg);
+
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  padding: var(--ds-sys-spacing-2xs);
+  border: var(--ds-sys-border-xs) solid var(--ds-sys-color-outline-100);
+  border-radius: var(--ds-comp-btn-normal-full-radius);
+  background: var(--ds-sys-color-surface);
+  color: var(--ds-sys-color-text-100);
+  /* Figma 疊了兩層一樣的陰影 */
+  box-shadow:
+    0 var(--ds-sys-border-xs) var(--ds-sys-blur-2xs) var(--ds-sys-shadow-length-2xs) var(--ds-sys-shadow-md),
+    0 var(--ds-sys-border-xs) var(--ds-sys-blur-2xs) var(--ds-sys-shadow-length-2xs) var(--ds-sys-shadow-md);
+  font: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: box-shadow 0.15s ease-out;
+}
+.ds-iris-btn--sm {
+  --iris-gap: var(--ds-sys-spacing-xs);
+  --iris-icon: var(--ds-comp-btn-normal-sm-icon);
+  --iris-font-size: var(--ds-sys-font-size-label-sm);
+  --iris-line-height: normal;
+}
+.ds-iris-btn--lg {
+  --iris-layer-pad: var(--ds-sys-spacing-xl);
+  --iris-layer-pad-pressed: var(--ds-sys-spacing-xl);
+  --iris-font-size: var(--ds-sys-font-size-label-lg);
+  --iris-line-height: 20px;
+  --iris-tracking: 0.04em;
+}
+
+/* ── 內層：Version C 微虹光鋼面 ── */
+.ds-iris-btn__layer {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--iris-gap);
+  padding: var(--iris-layer-pad);
+  border-radius: var(--ds-comp-btn-normal-full-radius);
+  background: linear-gradient(135deg, #F6F8FB 0%, #E0E5F0 16%, #B8CBD8 36%, #B2B6C6 52%, #D8CDC2 70%, #C3CBD2 84%, #88919A 100%);
+  box-shadow: inset 0 1.5px 1px rgba(255, 255, 255, 0.85), inset 0 -2px 1.5px rgba(42, 48, 56, 0.28);
+}
+/* 主高光＋虹光帶：跟著 --sheen-x/y 流動。inset:-50% 讓錨點跑到元件外，邊界才不會有硬白邊。 */
+.ds-iris-btn__layer::before,
+.ds-iris-btn__layer::after {
+  content: "";
+  position: absolute;
+  inset: -50%;
+  pointer-events: none;
+  mix-blend-mode: overlay;
+}
+.ds-iris-btn__layer::before {
+  z-index: 2;
+  background:
+    radial-gradient(
+      circle 220px at var(--sheen-x) var(--sheen-y),
+      rgba(255, 255, 255, calc(var(--sheen-specular) * 0.75)) 0%,
+      rgba(255, 255, 255, calc(var(--sheen-specular) * 0.3)) 30%,
+      rgba(255, 255, 255, 0) 70%
+    ),
+    linear-gradient(
+      var(--sheen-angle),
+      rgba(255, 255, 255, 0) 0%,
+      rgba(122, 172, 245, 0.25) calc(var(--sheen-x) - 22%),
+      rgba(225, 150, 240, 0.30) calc(var(--sheen-x) - 10%),
+      rgba(255, 255, 255, calc(var(--sheen-intensity) * 0.8)) var(--sheen-x),
+      rgba(250, 195, 120, 0.32) calc(var(--sheen-x) + 10%),
+      rgba(130, 230, 195, 0.22) calc(var(--sheen-x) + 22%),
+      rgba(255, 255, 255, 0) 100%
+    );
+  opacity: 0.85;
+  filter: contrast(105%) saturate(var(--iri-saturate));
+}
+/* 副反射環：與主高光垂直的拉絲光帶 */
+.ds-iris-btn__layer::after {
+  z-index: 3;
+  background: linear-gradient(
+    calc(var(--sheen-angle) + 90deg),
+    transparent 0%,
+    transparent 36%,
+    rgba(255, 255, 255, 0.25) 50%,
+    transparent 64%,
+    transparent 100%
+  );
+  opacity: calc(var(--sheen-intensity) * 0.6);
+}
+
+/* ── 閃動白光：寬而霧的一團光，3.2 秒滑過一次 ── */
+.ds-iris-btn__flash {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  border-radius: inherit;
+  mix-blend-mode: overlay;
+  background: linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0) 32%,
+    rgba(255, 255, 255, 0.12) 38%,
+    rgba(255, 255, 255, 0.38) 43%,
+    rgba(255, 255, 255, 0.7) 48%,
+    rgba(255, 255, 255, 0.8) 50%,
+    rgba(255, 255, 255, 0.7) 52%,
+    rgba(255, 255, 255, 0.38) 57%,
+    rgba(255, 255, 255, 0.12) 62%,
+    rgba(255, 255, 255, 0) 68%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  background-size: 400% 100%;
+  background-position: 100% 0;
+  opacity: 0;
+  animation: ds-iris-flash 3.2s cubic-bezier(0.25, 1, 0.5, 1) 0.6s infinite;
+}
+@keyframes ds-iris-flash {
+  0%   { background-position: 100% 0; opacity: 0; }
+  2%   { opacity: 1; }
+  28%  { opacity: 1; }
+  30%  { background-position: 0 0; opacity: 0; }
+  100% { background-position: 0 0; opacity: 0; }
+}
+
+/* 內容騎在反光之上 */
+.ds-iris-btn__icon,
+.ds-iris-btn__label { position: relative; z-index: 10; }
+.ds-iris-btn__icon {
+  flex: none;
+  width: var(--iris-icon);
+  height: var(--iris-icon);
+  fill: currentColor;
+}
+.ds-iris-btn__label {
+  font-family: var(--ds-sys-font-family-label);
+  font-weight: 700; /* label 的 semi-bold 樣式用的是源泉圓體 B */
+  font-size: var(--iris-font-size);
+  line-height: var(--iris-line-height);
+  letter-spacing: var(--iris-tracking);
+  white-space: nowrap;
+}
+
+/* ── 狀態 ──
+   .is-hover／.is-pressed／.is-focus 是給文件頁固定顯示用的，真的按鈕靠偽類。 */
+.ds-iris-btn:hover,
+.ds-iris-btn.is-hover {
+  box-shadow:
+    0 var(--ds-sys-spacing-2xs) var(--ds-sys-blur-xs) var(--ds-sys-shadow-length-md) var(--ds-sys-shadow-md),
+    0 var(--ds-sys-spacing-2xs) var(--ds-sys-blur-xs) var(--ds-sys-shadow-length-md) var(--ds-sys-shadow-md);
+}
+/* 按下：外框與內層各長一階（照 Figma）。用負 margin 抵掉長出來的尺寸，旁邊的東西才不會被推動。 */
+.ds-iris-btn:active,
+.ds-iris-btn.is-pressed {
+  padding: var(--ds-sys-spacing-xs);
+  margin: calc(var(--ds-sys-spacing-2xs) - var(--ds-sys-spacing-xs) - (var(--iris-layer-pad-pressed) - var(--iris-layer-pad)));
+  box-shadow:
+    0 var(--ds-sys-border-xs) var(--ds-sys-blur-2xs) var(--ds-sys-shadow-length-2xs) var(--ds-sys-shadow-md),
+    0 var(--ds-sys-border-xs) var(--ds-sys-blur-2xs) var(--ds-sys-shadow-length-2xs) var(--ds-sys-shadow-md);
+}
+.ds-iris-btn:active .ds-iris-btn__layer,
+.ds-iris-btn.is-pressed .ds-iris-btn__layer {
+  padding: var(--iris-layer-pad-pressed);
+}
+/* 聚焦：外圈 primary 的 focus ring，跟按鈕隔一個 2xs */
+.ds-iris-btn:focus { outline: none; }
+.ds-iris-btn:focus-visible,
+.ds-iris-btn.is-focus {
+  outline: var(--ds-sys-border-md) solid var(--ds-sys-color-primary);
+  outline-offset: var(--ds-sys-spacing-2xs);
+}
+
+/* 停用：沒有虹光、沒有白光、沒有陰影 */
+.ds-iris-btn:disabled,
+.ds-iris-btn.is-disabled {
+  cursor: not-allowed;
+  background: var(--ds-sys-color-disabled);
+  border-color: var(--ds-sys-color-on-disable);
+  color: var(--ds-sys-color-on-disable);
+  box-shadow: none;
+  padding: var(--ds-sys-spacing-2xs);
+  margin: 0;
+}
+.ds-iris-btn:disabled .ds-iris-btn__layer,
+.ds-iris-btn.is-disabled .ds-iris-btn__layer {
+  background: var(--ds-sys-color-disabled);
+  box-shadow: none;
+  padding: var(--iris-layer-pad);
+}
+.ds-iris-btn:disabled .ds-iris-btn__layer::before,
+.ds-iris-btn:disabled .ds-iris-btn__layer::after,
+.ds-iris-btn:disabled .ds-iris-btn__flash,
+.ds-iris-btn.is-disabled .ds-iris-btn__layer::before,
+.ds-iris-btn.is-disabled .ds-iris-btn__layer::after,
+.ds-iris-btn.is-disabled .ds-iris-btn__flash { display: none; }
+
+/* 點擊時的觸覺回饋（demo 的 pressFlash）：金屬先凹一下、亮一下 */
+.ds-iris-btn.is-press-flash .ds-iris-btn__layer { animation: ds-iris-press 0.3s cubic-bezier(0.25, 1, 0.5, 1); }
+@keyframes ds-iris-press {
+  0%   { transform: scale(1);     filter: brightness(1) contrast(100%); }
+  35%  { transform: scale(0.965); filter: brightness(1.22) contrast(108%) drop-shadow(0 0 6px rgba(255, 255, 255, 0.85)); }
+  75%  { transform: scale(0.985); filter: brightness(1.08) contrast(102%); }
+  100% { transform: scale(1);     filter: brightness(1) contrast(100%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ds-iris-btn__flash { animation: none; opacity: 0; }
+  .ds-iris-btn.is-press-flash .ds-iris-btn__layer { animation: none; }
+  .ds-iris-btn { transition: none; }
+}
