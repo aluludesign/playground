@@ -14,8 +14,10 @@ const STATES = [
 ];
 
 const USAGE = `<button type="button" class="ds-iris-btn">            <!-- 尺寸：加 ds-iris-btn--sm 或 ds-iris-btn--lg -->
-  <span class="ds-iris-btn__layer">
+  <span class="ds-iris-btn__surface">                      <!-- 底色＋流動虹光 -->
     <span class="ds-iris-btn__flash"></span>                <!-- 閃動白光 -->
+  </span>
+  <span class="ds-iris-btn__layer">
     <svg class="ds-iris-btn__icon" viewBox="0 0 24 24">…</svg>
     <span class="ds-iris-btn__label">Make wishes</span>
   </span>

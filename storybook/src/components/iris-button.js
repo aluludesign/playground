@@ -15,7 +15,7 @@ export function irisButtonHTML({ label = "Make wishes", size = "default", leadin
   if (size === "sm") cls.push("ds-iris-btn--sm");
   if (size === "lg") cls.push("ds-iris-btn--lg");
   if (state) cls.push("is-" + state);
-  return `<button type="button" class="${cls.join(" ")}"${disabled ? " disabled" : ""}${!showText ? ` aria-label="${esc(label)}"` : ""}><span class="ds-iris-btn__layer"><span class="ds-iris-btn__flash"></span>${leadingIcon ? AUTO_AWESOME : ""}${showText ? `<span class="ds-iris-btn__label">${esc(label)}</span>` : ""}</span></button>`;
+  return `<button type="button" class="${cls.join(" ")}"${disabled ? " disabled" : ""}${!showText ? ` aria-label="${esc(label)}"` : ""}><span class="ds-iris-btn__surface"><span class="ds-iris-btn__flash"></span></span><span class="ds-iris-btn__layer">${leadingIcon ? AUTO_AWESOME : ""}${showText ? `<span class="ds-iris-btn__label">${esc(label)}</span>` : ""}</span></button>`;
 }
 
 /** 讓頁面上的虹光開始流動，並幫 .ds-iris-btn 接上點擊回饋 */
