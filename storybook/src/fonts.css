@@ -1,0 +1,9 @@
+/* 源泉圓體、全瀨體（兩個都是 SIL OFL 授權）。檔案只含 Storybook 頁面用到的字，由 scripts/subset-fonts.sh 產生。
+   名稱要跟 Figma 變數的值一樣，token 才指得到。 */
+@font-face { font-family: "GenSenRounded2 TW"; font-weight: 200; font-display: swap; src: url("./fonts/gensen-rounded2-tw-EL.woff2") format("woff2"); }
+@font-face { font-family: "GenSenRounded2 TW"; font-weight: 300; font-display: swap; src: url("./fonts/gensen-rounded2-tw-L.woff2") format("woff2"); }
+@font-face { font-family: "GenSenRounded2 TW"; font-weight: 400; font-display: swap; src: url("./fonts/gensen-rounded2-tw-R.woff2") format("woff2"); }
+@font-face { font-family: "GenSenRounded2 TW"; font-weight: 500; font-display: swap; src: url("./fonts/gensen-rounded2-tw-M.woff2") format("woff2"); }
+@font-face { font-family: "GenSenRounded2 TW"; font-weight: 700; font-display: swap; src: url("./fonts/gensen-rounded2-tw-B.woff2") format("woff2"); }
+@font-face { font-family: "GenSenRounded2 TW"; font-weight: 900; font-display: swap; src: url("./fonts/gensen-rounded2-tw-H.woff2") format("woff2"); }
+@font-face { font-family: "cjkFonts"; font-weight: 400; font-display: swap; src: url("./fonts/cjkfonts-allseto.woff2") format("woff2"); }
