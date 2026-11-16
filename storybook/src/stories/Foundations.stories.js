@@ -12,7 +12,7 @@ export const 顏色 = () =>
   );
 export const 字型 = () =>
   page(
-    table(p("font/", /\/(size|weight)\//), { title: "字體", note: "源泉圓體（GenSenRounded2 TW）和全瀨體（cjkFonts）還沒有網頁字型檔，預覽暫時用替代字顯示。" }),
+    table(p("font/", /\/(size|weight)\//), { title: "字體", note: "源泉圓體（GenSenRounded2 TW）和全瀨體（cjkFonts）已附網頁字型檔，但只含這份文件用到的字。" }),
     table(p("font/size/"), { title: "字級" }),
     table(p("font/weight/"), { title: "字重" }),
   );
