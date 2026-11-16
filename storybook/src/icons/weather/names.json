@@ -1,5 +1,15 @@
 [
  {
+  "type": "sun",
+  "zh": "太陽",
+  "en": "Sun"
+ },
+ {
+  "type": "drop",
+  "zh": "水滴",
+  "en": "Drop"
+ },
+ {
   "type": "sunny",
   "zh": "晴天",
   "en": "Sunny"
