@@ -38,7 +38,7 @@ export const 全部狀態 = {
     page(
       `<h1>AI 按鈕（Dynamic Iris）</h1>
 <p class="lead">許願用的 AI 按鈕。外框、尺寸、文字、陰影、各狀態和內層底色照 Figma「Dynamic Iris」；動態照 demo 的「⚡ 動態虹光 + 閃動白光」——<br>
-虹光跟著滑鼠、捲動（手機上是傾斜）流動，白光每 3.2 秒滑過一次，點下去金屬會凹一下、亮一下。<br>
+虹光跟著滑鼠、捲動（手機上是傾斜）流動，白光每 3.2 秒滑過一次，點下去會輕輕凹一下。<br>
 下面 Hovered／Focused／Pressed 是固定顯示的樣子；實際的按鈕直接移上去、按 Tab、按住就會看到。</p>
 <section class="tk">
 <table class="iris-matrix"><thead><tr><th></th>${STATES.map((s) => `<th>${s.label}</th>`).join("")}</tr></thead>

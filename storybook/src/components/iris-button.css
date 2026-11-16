@@ -230,13 +230,14 @@
 .ds-iris-btn.is-disabled .ds-iris-btn__layer::after,
 .ds-iris-btn.is-disabled .ds-iris-btn__flash { display: none; }
 
-/* 點擊時的觸覺回饋（demo 的 pressFlash）：金屬先凹一下、亮一下 */
+/* 點擊時的觸覺回饋：內層輕輕凹一下再彈回。
+   11/17 她說按下去不要整顆白一下 —— demo 的 pressFlash 會提亮＋白色光暈，這裡拿掉，只留凹陷。 */
 .ds-iris-btn.is-press-flash .ds-iris-btn__layer { animation: ds-iris-press 0.3s cubic-bezier(0.25, 1, 0.5, 1); }
 @keyframes ds-iris-press {
-  0%   { transform: scale(1);     filter: brightness(1) contrast(100%); }
-  35%  { transform: scale(0.965); filter: brightness(1.22) contrast(108%) drop-shadow(0 0 6px rgba(255, 255, 255, 0.85)); }
-  75%  { transform: scale(0.985); filter: brightness(1.08) contrast(102%); }
-  100% { transform: scale(1);     filter: brightness(1) contrast(100%); }
+  0%   { transform: scale(1); }
+  35%  { transform: scale(0.965); }
+  75%  { transform: scale(0.985); }
+  100% { transform: scale(1); }
 }
 
 @media (prefers-reduced-motion: reduce) {

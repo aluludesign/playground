@@ -95,15 +95,13 @@ export function startSheen(win = window) {
   );
 }
 
-/** 按鈕的觸覺回饋：金屬先凹下去、亮一下，callback 延後 160ms 才跑 */
+/** 按鈕的觸覺回饋：先凹下去再彈回，callback 延後 160ms 才跑 */
 export function pressFlash(el, callback) {
   const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   if (el && !reduce) {
     el.classList.remove("is-press-flash");
     void el.offsetWidth;
-    el.classList.add("is-press-flash");
-    el.style.setProperty("--sheen-specular", "1.05");
-    setTimeout(() => el.style.removeProperty("--sheen-specular"), 260);
+    el.classList.add("is-press-flash"); // 只凹一下，不再提亮高光（她不要按下去整顆白一下）
   }
   if (typeof callback === "function") setTimeout(callback, reduce ? 0 : 160);
 }
