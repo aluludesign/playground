@@ -1,7 +1,7 @@
 import { iconPage } from "../icon-page.js";
 
 // 一般 icon：Figma「icon」區塊（node 162443:14521）的 13 組 component set，
-// 每組 outlined／solid／duotone／sticker（peoploe_plus 的線條版在 Figma 叫 Style3）。
+// 每組 outlined／solid／duotone／sticker。
 // 檔案由 Figma 匯出，只保留 component 本身（拿掉外層 section 的底色與虛線框）。
 // 名稱照 Figma 原樣（含 peoploe、calender、triangel、start 等拼法）。
 const raw = import.meta.glob("../icons/general/*.svg", { query: "?raw", import: "default", eager: true });
@@ -32,7 +32,7 @@ const render = () =>
     sizes: [16, 24, 32, 48],
     defaultSize: 32,
     items: ITEMS.map((k) => ({ key: k, title: k, code: `icon/${k}` })),
-    styles: [{ key: "outlined" }, { key: "Style3" }, { key: "solid" }, { key: "duotone" }, { key: "sticker" }],
+    styles: [{ key: "outlined" }, { key: "solid" }, { key: "duotone" }, { key: "sticker" }],
     svg: (name, style) => raw[`../icons/general/${file(name, style)}`],
     file,
     zipName: "trippps_icons",
