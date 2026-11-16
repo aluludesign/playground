@@ -1,0 +1,17 @@
+{
+  "name": "trippps-storybook",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "tokens": "node scripts/build-tokens.mjs",
+    "dev": "npm run tokens && storybook dev -p 6006",
+    "build": "npm run tokens && storybook build -o dist"
+  },
+  "devDependencies": {
+    "@storybook/addon-essentials": "8.6.18",
+    "@storybook/blocks": "8.6.18",
+    "@storybook/html-vite": "8.6.18",
+    "storybook": "8.6.18",
+    "vite": "6.4.6"
+  }
+}

@@ -1,0 +1,851 @@
+# Figma 變數匯出（Trippps，fileKey IBf6o1WsPQkgjllDyunIAc）
+# Foundations＝default 模式；Style、Comps＝Retro 模式。
+# 每行：名稱|型別(F數字 C顏色 S字串)|值；值以 @ 開頭代表指向另一個變數。
+# 名稱前綴：F: = ds/foun/  S: = ds/sys/  C: = ds/comp/
+# 這支檔案是 Figma 的快照，改 Figma 之後要重新匯出（見 README）。
+## Foundations
+F:font/default/family/sans|S|Inter
+F:font/default/family/sans-zhTW|S|Noto Sans TC
+F:font/default/family/serif|S|n/a
+F:font/default/family/code|S|Space Mono
+F:font/retro/family/serif|S|Fraunces
+F:font/retro/family/sans|S|GenSenRounded2 TW
+F:font/default/family/handwriting-zhTW|S|cjkFonts
+F:font/size/10|F|10
+F:font/size/12|F|12
+F:font/size/14|F|14
+F:font/size/16|F|16
+F:font/size/18|F|18
+F:font/size/20|F|20
+F:font/size/24|F|24
+F:font/size/28|F|28
+F:font/size/32|F|32
+F:font/size/40|F|40
+F:font/size/48|F|48
+F:font/size/56|F|56
+F:font/size/72|F|72
+F:font/size/104|F|104
+F:font/weight/thin|F|100
+F:font/weight/extra-light|F|200
+F:font/weight/light|F|300
+F:font/weight/regular|F|400
+F:font/weight/medium|F|500
+F:font/weight/semi-bold|F|600
+F:font/weight/bold|F|700
+F:font/weight/extra-bold|F|800
+F:font/weight/black|F|900
+F:device/320|F|320
+F:device/390|F|390
+F:device/414|F|414
+F:device/640|F|640
+F:device/768|F|768
+F:device/960|F|960
+F:device/1024|F|1024
+F:device/1280|F|1280
+F:device/1440|F|1440
+F:device/1536|F|1536
+F:device/1920|F|1920
+F:device/2160|F|2160
+F:device/2560|F|2560
+F:device/3840|F|3840
+F:device/5120|F|5120
+F:spacing/50|F|2
+F:spacing/100|F|4
+F:spacing/150|F|6
+F:spacing/200|F|8
+F:spacing/250|F|10
+F:spacing/300|F|12
+F:spacing/400|F|16
+F:spacing/500|F|20
+F:spacing/600|F|24
+F:spacing/800|F|32
+F:spacing/1000|F|40
+F:spacing/1100|F|44
+F:spacing/1200|F|48
+F:spacing/1400|F|56
+F:spacing/1500|F|60
+F:spacing/1600|F|64
+F:spacing/1800|F|72
+F:spacing/2000|F|80
+F:spacing/2200|F|88
+F:spacing/2400|F|96
+F:spacing/3000|F|120
+F:radius/50|F|2
+F:radius/100|F|4
+F:radius/150|F|6
+F:radius/200|F|8
+F:radius/300|F|12
+F:radius/400|F|16
+F:radius/500|F|20
+F:radius/600|F|24
+F:radius/800|F|32
+F:radius/1000|F|40
+F:radius/1100|F|44
+F:radius/1500|F|60
+F:radius/2200|F|88
+F:radius/3000|F|120
+F:radius/full|F|9999
+F:border/100|F|1
+F:border/200|F|2
+F:border/300|F|3
+F:border/400|F|4
+F:border/600|F|6
+F:border/800|F|8
+F:border/1200|F|12
+F:shadow/length/0|F|0
+F:shadow/length/25|F|2
+F:shadow/length/50|F|4
+F:shadow/length/62-5|F|5
+F:shadow/length/100|F|8
+F:shadow/length/150|F|12
+F:shadow/length/200|F|16
+F:shadow/length/700|F|60
+F:opacity/100|F|8
+F:opacity/200|F|16
+F:opacity/300|F|24
+F:opacity/400|F|32
+F:opacity/600|F|48
+F:opacity/800|F|64
+F:opacity/1000|F|80
+F:opacity/1100|F|88
+F:blur/0|F|0
+F:blur/50|F|4
+F:blur/100|F|8
+F:blur/200|F|16
+F:blur/250|F|20
+F:blur/300|F|24
+F:blur/375|F|30
+F:blur/400|F|32
+F:blur/700|F|60
+F:icon/size/150|F|12
+F:icon/size/200|F|16
+F:icon/size/250|F|20
+F:icon/size/300|F|24
+F:icon/size/350|F|28
+F:icon/size/400|F|32
+F:icon/size/450|F|36
+F:icon/size/500|F|40
+F:icon/size/600|F|48
+F:icon/size/800|F|64
+F:icon/size/1000|F|80
+F:icon/size/1250|F|100
+F:icon/size/2000|F|160
+F:color/white|C|#ffffff
+F:color/black|C|#000000
+F:color/share/black/slate/50|C|#f8fafc
+F:color/share/black/slate/100|C|#f1f5f9
+F:color/share/black/slate/200|C|#e2e8f0
+F:color/share/black/slate/300|C|#cbd5e1
+F:color/share/black/slate/400|C|#94a3b8
+F:color/share/black/slate/500|C|#64748b
+F:color/share/black/slate/600|C|#475569
+F:color/share/black/slate/700|C|#334155
+F:color/share/black/slate/800|C|#1e293b
+F:color/share/black/slate/900|C|#0f172a
+F:color/share/black/slate/950|C|#020617
+F:color/share/black/gray/50|C|#f9fafb
+F:color/share/black/gray/100|C|#f3f4f6
+F:color/share/black/gray/200|C|#e5e7eb
+F:color/share/black/gray/300|C|#d1d5db
+F:color/share/black/gray/400|C|#9ca3af
+F:color/share/black/gray/500|C|#6b7280
+F:color/share/black/gray/600|C|#4b5563
+F:color/share/black/gray/700|C|#374151
+F:color/share/black/gray/800|C|#1f2937
+F:color/share/black/gray/900|C|#111827
+F:color/share/black/gray/950|C|#030712
+F:color/share/black/zinc/50|C|#fafafa
+F:color/share/black/zinc/100|C|#f4f4f5
+F:color/share/black/zinc/200|C|#e4e4e7
+F:color/share/black/zinc/300|C|#d4d4d8
+F:color/share/black/zinc/400|C|#a1a1aa
+F:color/share/black/zinc/500|C|#71717a
+F:color/share/black/zinc/600|C|#52525b
+F:color/share/black/zinc/700|C|#3f3f46
+F:color/share/black/zinc/800|C|#27272a
+F:color/share/black/zinc/900|C|#18181b
+F:color/share/black/zinc/950|C|#09090b
+F:color/share/black/neutral/50|C|#fafafa
+F:color/share/black/neutral/100|C|#f5f5f5
+F:color/share/black/neutral/200|C|#e5e5e5
+F:color/share/black/neutral/300|C|#d4d4d4
+F:color/share/black/neutral/400|C|#a3a3a3
+F:color/share/black/neutral/500|C|#737373
+F:color/share/black/neutral/600|C|#525252
+F:color/share/black/neutral/700|C|#404040
+F:color/share/black/neutral/800|C|#262626
+F:color/share/black/neutral/900|C|#171717
+F:color/share/black/neutral/950|C|#0a0a0a
+F:color/share/black/stone/50|C|#fafaf9
+F:color/share/black/stone/100|C|#f5f5f4
+F:color/share/black/stone/200|C|#e7e5e4
+F:color/share/black/stone/300|C|#d6d3d1
+F:color/share/black/stone/400|C|#a8a29e
+F:color/share/black/stone/500|C|#78716c
+F:color/share/black/stone/600|C|#57534e
+F:color/share/black/stone/700|C|#44403c
+F:color/share/black/stone/800|C|#292524
+F:color/share/black/stone/900|C|#1c1917
+F:color/share/black/stone/950|C|#0c0a09
+F:color/share/red/50|C|#fef2f2
+F:color/share/red/100|C|#fee2e2
+F:color/share/red/200|C|#fecaca
+F:color/share/red/300|C|#fca5a5
+F:color/share/red/400|C|#f87171
+F:color/share/red/500|C|#ef4444
+F:color/share/red/600|C|#dc2626
+F:color/share/red/700|C|#b91c1c
+F:color/share/red/800|C|#991b1b
+F:color/share/red/900|C|#7f1d1d
+F:color/share/red/950|C|#450a0a
+F:color/share/orange/50|C|#fff7ed
+F:color/share/orange/100|C|#ffedd5
+F:color/share/orange/200|C|#fed7aa
+F:color/share/orange/300|C|#fdba74
+F:color/share/orange/400|C|#fb923c
+F:color/share/orange/500|C|#f97316
+F:color/share/orange/600|C|#ea580c
+F:color/share/orange/700|C|#c2410c
+F:color/share/orange/800|C|#9a3412
+F:color/share/orange/900|C|#7c2d12
+F:color/share/orange/950|C|#431407
+F:color/share/amber/50|C|#f2f1ed
+F:color/share/amber/100|C|#fef3c7
+F:color/share/amber/200|C|#fde68a
+F:color/share/amber/300|C|#fcd34d
+F:color/share/amber/400|C|#fbbf24
+F:color/share/amber/500|C|#f59e0b
+F:color/share/amber/600|C|#d97706
+F:color/share/amber/700|C|#b45309
+F:color/share/amber/800|C|#92400e
+F:color/share/amber/900|C|#78350f
+F:color/share/amber/950|C|#451a03
+F:color/share/yellow/50|C|#fefce8
+F:color/share/yellow/100|C|#fef9c3
+F:color/share/yellow/200|C|#fef08a
+F:color/share/yellow/300|C|#fde047
+F:color/share/yellow/400|C|#facc15
+F:color/share/yellow/500|C|#eab308
+F:color/share/yellow/600|C|#ca8a04
+F:color/share/yellow/700|C|#a16207
+F:color/share/yellow/800|C|#854d0e
+F:color/share/yellow/900|C|#713f12
+F:color/share/yellow/950|C|#422006
+F:color/share/lime/50|C|#f7fee7
+F:color/share/lime/100|C|#ecfccb
+F:color/share/lime/200|C|#d9f99d
+F:color/share/lime/300|C|#bef264
+F:color/share/lime/400|C|#a3e635
+F:color/share/lime/500|C|#84cc16
+F:color/share/lime/600|C|#65a30d
+F:color/share/lime/700|C|#4d7c0f
+F:color/share/lime/800|C|#3f6212
+F:color/share/lime/900|C|#365314
+F:color/share/lime/950|C|#1a2e05
+F:color/share/green/50|C|#f0fdf4
+F:color/share/green/100|C|#dcfce7
+F:color/share/green/200|C|#bbf7d0
+F:color/share/green/300|C|#86efac
+F:color/share/green/400|C|#4ade80
+F:color/share/green/500|C|#22c55e
+F:color/share/green/600|C|#16a34a
+F:color/share/green/700|C|#15803d
+F:color/share/green/800|C|#166534
+F:color/share/green/900|C|#14532d
+F:color/share/green/950|C|#052e16
+F:color/share/emerald/50|C|#ecfdf5
+F:color/share/emerald/100|C|#d1fae5
+F:color/share/emerald/200|C|#a7f3d0
+F:color/share/emerald/300|C|#6ee7b7
+F:color/share/emerald/400|C|#34d399
+F:color/share/emerald/500|C|#10b981
+F:color/share/emerald/600|C|#059669
+F:color/share/emerald/700|C|#047857
+F:color/share/emerald/800|C|#065f46
+F:color/share/emerald/900|C|#064e3b
+F:color/share/emerald/950|C|#022c22
+F:color/share/teal/50|C|#f0fdfa
+F:color/share/teal/100|C|#ccfbf1
+F:color/share/teal/200|C|#99f6e4
+F:color/share/teal/300|C|#5eead4
+F:color/share/teal/400|C|#2dd4bf
+F:color/share/teal/500|C|#14b8a6
+F:color/share/teal/600|C|#0d9488
+F:color/share/teal/700|C|#0f766e
+F:color/share/teal/800|C|#115e59
+F:color/share/teal/900|C|#134e4a
+F:color/share/teal/950|C|#042f2e
+F:color/share/cyan/50|C|#ecfeff
+F:color/share/cyan/100|C|#cffafe
+F:color/share/cyan/200|C|#a5f3fc
+F:color/share/cyan/300|C|#67e8f9
+F:color/share/cyan/400|C|#22d3ee
+F:color/share/cyan/500|C|#06b6d4
+F:color/share/cyan/600|C|#0891b2
+F:color/share/cyan/700|C|#0e7490
+F:color/share/cyan/800|C|#155e75
+F:color/share/cyan/900|C|#164e63
+F:color/share/cyan/950|C|#083344
+F:color/share/sky/50|C|#f0f9ff
+F:color/share/sky/100|C|#e0f2fe
+F:color/share/sky/200|C|#bae6fd
+F:color/share/sky/300|C|#7dd3fc
+F:color/share/sky/400|C|#38bdf8
+F:color/share/sky/500|C|#0ea5e9
+F:color/share/sky/600|C|#0284c7
+F:color/share/sky/700|C|#0369a1
+F:color/share/sky/800|C|#075985
+F:color/share/sky/900|C|#0c4a6e
+F:color/share/sky/950|C|#082f49
+F:color/share/blue/50|C|#eff6ff
+F:color/share/blue/100|C|#dbeafe
+F:color/share/blue/200|C|#bfdbfe
+F:color/share/blue/300|C|#93c5fd
+F:color/share/blue/400|C|#60a5fa
+F:color/share/blue/500|C|#3b82f6
+F:color/share/blue/600|C|#2563eb
+F:color/share/blue/700|C|#1d4ed8
+F:color/share/blue/800|C|#1e40af
+F:color/share/blue/900|C|#1e3a8a
+F:color/share/blue/950|C|#172554
+F:color/share/indigo/50|C|#eef2ff
+F:color/share/indigo/100|C|#e0e7ff
+F:color/share/indigo/200|C|#c7d2fe
+F:color/share/indigo/300|C|#a5b4fc
+F:color/share/indigo/400|C|#818cf8
+F:color/share/indigo/500|C|#6366f1
+F:color/share/indigo/600|C|#4f46e5
+F:color/share/indigo/700|C|#4338ca
+F:color/share/indigo/800|C|#3730a3
+F:color/share/indigo/900|C|#312e81
+F:color/share/indigo/950|C|#1e1b4b
+F:color/share/violet/50|C|#f5f3ff
+F:color/share/violet/100|C|#ede9fe
+F:color/share/violet/200|C|#ddd6fe
+F:color/share/violet/300|C|#c4b5fd
+F:color/share/violet/400|C|#a78bfa
+F:color/share/violet/500|C|#8b5cf6
+F:color/share/violet/600|C|#7c3aed
+F:color/share/violet/700|C|#6d28d9
+F:color/share/violet/800|C|#5b21b6
+F:color/share/violet/900|C|#4c1d95
+F:color/share/violet/950|C|#2e1065
+F:color/share/purple/50|C|#faf5ff
+F:color/share/purple/100|C|#f3e8ff
+F:color/share/purple/200|C|#e9d5ff
+F:color/share/purple/300|C|#d8b4fe
+F:color/share/purple/400|C|#c084fc
+F:color/share/purple/500|C|#a855f7
+F:color/share/purple/600|C|#9333ea
+F:color/share/purple/700|C|#7e22ce
+F:color/share/purple/800|C|#6b21a8
+F:color/share/purple/900|C|#581c87
+F:color/share/purple/950|C|#3b0764
+F:color/share/fuchsia/50|C|#fdf4ff
+F:color/share/fuchsia/100|C|#fae8ff
+F:color/share/fuchsia/200|C|#f5d0fe
+F:color/share/fuchsia/300|C|#f0abfc
+F:color/share/fuchsia/400|C|#e879f9
+F:color/share/fuchsia/500|C|#d946ef
+F:color/share/fuchsia/600|C|#c026d3
+F:color/share/fuchsia/700|C|#a21caf
+F:color/share/fuchsia/800|C|#86198f
+F:color/share/fuchsia/900|C|#701a75
+F:color/share/fuchsia/950|C|#4a044e
+F:color/share/pink/50|C|#fdf2f8
+F:color/share/pink/100|C|#fce7f3
+F:color/share/pink/200|C|#fbcfe8
+F:color/share/pink/300|C|#f9a8d4
+F:color/share/pink/400|C|#f472b6
+F:color/share/pink/500|C|#ec4899
+F:color/share/pink/600|C|#db2777
+F:color/share/pink/700|C|#be185d
+F:color/share/pink/800|C|#9d174d
+F:color/share/pink/900|C|#831843
+F:color/share/pink/950|C|#500724
+F:color/share/rose/50|C|#fff1f2
+F:color/share/rose/100|C|#ffe4e6
+F:color/share/rose/200|C|#fecdd3
+F:color/share/rose/300|C|#fda4af
+F:color/share/rose/400|C|#fb7185
+F:color/share/rose/500|C|#f43f5e
+F:color/share/rose/600|C|#e11d48
+F:color/share/rose/700|C|#be123c
+F:color/share/rose/800|C|#9f1239
+F:color/share/rose/900|C|#881337
+F:color/share/rose/950|C|#4c0519
+F:color/retro/red/50|C|#faf9f9
+F:color/retro/red/100|C|#e6d8d8
+F:color/retro/red/200|C|#d7b1b1
+F:color/retro/red/300|C|#ce8484
+F:color/retro/red/400|C|#cb5151
+F:color/retro/red/500|C|#bd2828
+F:color/retro/red/600|C|#a02222
+F:color/retro/red/700|C|#821c1c
+F:color/retro/red/800|C|#651515
+F:color/retro/red/900|C|#480f0f
+F:color/retro/red/950|C|#2a0909
+F:color/retro/red-orange/50|C|#fafaf9
+F:color/retro/red-orange/100|C|#e6dcd8
+F:color/retro/red-orange/200|C|#d7bcb1
+F:color/retro/red-orange/300|C|#ce9a84
+F:color/retro/red-orange/400|C|#cb7551
+F:color/retro/red-orange/500|C|#bd5528
+F:color/retro/red-orange/600|C|#a04822
+F:color/retro/red-orange/700|C|#823a1c
+F:color/retro/red-orange/800|C|#652d15
+F:color/retro/red-orange/900|C|#48200f
+F:color/retro/red-orange/950|C|#2a1309
+F:color/retro/red-orange/700-alpha-8|C|#823a1c14
+F:color/retro/red-orange/700-alpha-16|C|#823a1c29
+F:color/retro/red-orange/700-alpha-32|C|#823a1c52
+F:color/retro/orange/50|C|#fafaf9
+F:color/retro/orange/100|C|#e6e0d8
+F:color/retro/orange/200|C|#d7c8b1
+F:color/retro/orange/300|C|#ceb084
+F:color/retro/orange/400|C|#cb9a51
+F:color/retro/orange/500|C|#bd8228
+F:color/retro/orange/600|C|#a06d22
+F:color/retro/orange/700|C|#82591c
+F:color/retro/orange/800|C|#654515
+F:color/retro/orange/900|C|#48310f
+F:color/retro/orange/950|C|#2a1d09
+F:color/retro/yellow/50|C|#fafaf9
+F:color/retro/yellow/100|C|#e6e4d8
+F:color/retro/yellow/200|C|#d7d3b1
+F:color/retro/yellow/300|C|#cec684
+F:color/retro/yellow/400|C|#cbbf51
+F:color/retro/yellow/500|C|#bdae28
+F:color/retro/yellow/600|C|#a09322
+F:color/retro/yellow/700|C|#82781c
+F:color/retro/yellow/800|C|#655d15
+F:color/retro/yellow/900|C|#48420f
+F:color/retro/yellow/950|C|#2a2709
+F:color/retro/yellow-green/50|C|#fafaf9
+F:color/retro/yellow-green/100|C|#e3e6d8
+F:color/retro/yellow-green/200|C|#cfd7b1
+F:color/retro/yellow-green/300|C|#bfce84
+F:color/retro/yellow-green/400|C|#b2cb51
+F:color/retro/yellow-green/500|C|#a0bd28
+F:color/retro/yellow-green/600|C|#87a022
+F:color/retro/yellow-green/700|C|#6e821c
+F:color/retro/yellow-green/800|C|#556515
+F:color/retro/yellow-green/900|C|#3c480f
+F:color/retro/yellow-green/950|C|#232a09
+F:color/retro/chartreuse/50|C|#fafaf9
+F:color/retro/chartreuse/100|C|#dfe6d8
+F:color/retro/chartreuse/200|C|#c4d7b1
+F:color/retro/chartreuse/300|C|#a9ce84
+F:color/retro/chartreuse/400|C|#8ecb51
+F:color/retro/chartreuse/500|C|#73bd28
+F:color/retro/chartreuse/600|C|#61a022
+F:color/retro/chartreuse/700|C|#4f821c
+F:color/retro/chartreuse/800|C|#3d6515
+F:color/retro/chartreuse/900|C|#2b480f
+F:color/retro/chartreuse/950|C|#1a2a09
+F:color/retro/green-yellow/50|C|#fafaf9
+F:color/retro/green-yellow/100|C|#dbe6d8
+F:color/retro/green-yellow/200|C|#b8d7b1
+F:color/retro/green-yellow/300|C|#93ce84
+F:color/retro/green-yellow/400|C|#69cb51
+F:color/retro/green-yellow/500|C|#46bd28
+F:color/retro/green-yellow/600|C|#3ba022
+F:color/retro/green-yellow/700|C|#30821c
+F:color/retro/green-yellow/800|C|#256515
+F:color/retro/green-yellow/900|C|#1a480f
+F:color/retro/green-yellow/950|C|#102a09
+F:color/retro/green/50|C|#f9faf9
+F:color/retro/green/100|C|#d8e6d9
+F:color/retro/green/200|C|#b1d7b5
+F:color/retro/green/300|C|#84ce8b
+F:color/retro/green/400|C|#51cb5d
+F:color/retro/green/500|C|#28bd37
+F:color/retro/green/600|C|#22a02f
+F:color/retro/green/700|C|#1c8226
+F:color/retro/green/800|C|#15651d
+F:color/retro/green/900|C|#0f4815
+F:color/retro/green/950|C|#092a0c
+F:color/retro/spring-green/50|C|#f9fafa
+F:color/retro/spring-green/100|C|#d8e6de
+F:color/retro/spring-green/200|C|#b1d7c0
+F:color/retro/spring-green/300|C|#84cea1
+F:color/retro/spring-green/400|C|#51cb82
+F:color/retro/spring-green/500|C|#28bd64
+F:color/retro/spring-green/600|C|#22a054
+F:color/retro/spring-green/700|C|#1c8245
+F:color/retro/spring-green/800|C|#156535
+F:color/retro/spring-green/900|C|#0f4826
+F:color/retro/spring-green/950|C|#092a16
+F:color/retro/cyan-green/50|C|#f9fafa
+F:color/retro/cyan-green/100|C|#d8e6e2
+F:color/retro/cyan-green/200|C|#b1d7cb
+F:color/retro/cyan-green/300|C|#84ceb8
+F:color/retro/cyan-green/400|C|#51cba6
+F:color/retro/cyan-green/500|C|#28bd91
+F:color/retro/cyan-green/600|C|#22a07a
+F:color/retro/cyan-green/700|C|#1c8264
+F:color/retro/cyan-green/800|C|#15654d
+F:color/retro/cyan-green/900|C|#0f4837
+F:color/retro/cyan-green/950|C|#092a20
+F:color/retro/cyan/50|C|#f9fafa
+F:color/retro/cyan/100|C|#d8e6e6
+F:color/retro/cyan/200|C|#b1d7d7
+F:color/retro/cyan/300|C|#84cece
+F:color/retro/cyan/400|C|#51cbcb
+F:color/retro/cyan/500|C|#28bdbd
+F:color/retro/cyan/600|C|#22a0a0
+F:color/retro/cyan/700|C|#1c8282
+F:color/retro/cyan/800|C|#156565
+F:color/retro/cyan/900|C|#0f4848
+F:color/retro/cyan/950|C|#092a2a
+F:color/retro/cyan-blue/50|C|#f9fafa
+F:color/retro/cyan-blue/100|C|#d8e2e6
+F:color/retro/cyan-blue/200|C|#b1cbd7
+F:color/retro/cyan-blue/300|C|#84b8ce
+F:color/retro/cyan-blue/400|C|#51a6cb
+F:color/retro/cyan-blue/500|C|#2891bd
+F:color/retro/cyan-blue/600|C|#227aa0
+F:color/retro/cyan-blue/700|C|#1c6482
+F:color/retro/cyan-blue/800|C|#154d65
+F:color/retro/cyan-blue/900|C|#0f3748
+F:color/retro/cyan-blue/950|C|#09202a
+F:color/retro/azure/50|C|#f9fafa
+F:color/retro/azure/100|C|#d8dee6
+F:color/retro/azure/200|C|#b1c0d7
+F:color/retro/azure/300|C|#84a1ce
+F:color/retro/azure/400|C|#5182cb
+F:color/retro/azure/500|C|#2864bd
+F:color/retro/azure/600|C|#2254a0
+F:color/retro/azure/700|C|#1c4582
+F:color/retro/azure/800|C|#153565
+F:color/retro/azure/900|C|#0f2648
+F:color/retro/azure/950|C|#09162a
+F:color/retro/blue/50|C|#f9f9fa
+F:color/retro/blue/100|C|#d8d9e6
+F:color/retro/blue/200|C|#b1b5d7
+F:color/retro/blue/300|C|#848bce
+F:color/retro/blue/400|C|#515dcb
+F:color/retro/blue/500|C|#2837bd
+F:color/retro/blue/600|C|#222fa0
+F:color/retro/blue/700|C|#1c2682
+F:color/retro/blue/800|C|#151d65
+F:color/retro/blue/900|C|#0f1548
+F:color/retro/blue/950|C|#090c2a
+F:color/retro/blue-violet/50|C|#faf9fa
+F:color/retro/blue-violet/100|C|#dbd8e6
+F:color/retro/blue-violet/200|C|#b8b1d7
+F:color/retro/blue-violet/300|C|#9384ce
+F:color/retro/blue-violet/400|C|#6951cb
+F:color/retro/blue-violet/500|C|#4628bd
+F:color/retro/blue-violet/600|C|#3b22a0
+F:color/retro/blue-violet/700|C|#301c82
+F:color/retro/blue-violet/800|C|#251565
+F:color/retro/blue-violet/900|C|#1a0f48
+F:color/retro/blue-violet/950|C|#10092a
+F:color/retro/violet/50|C|#faf9fa
+F:color/retro/violet/100|C|#dfd8e6
+F:color/retro/violet/200|C|#c4b1d7
+F:color/retro/violet/300|C|#a984ce
+F:color/retro/violet/400|C|#8e51cb
+F:color/retro/violet/500|C|#7328bd
+F:color/retro/violet/600|C|#6122a0
+F:color/retro/violet/700|C|#4f1c82
+F:color/retro/violet/800|C|#3d1565
+F:color/retro/violet/900|C|#2b0f48
+F:color/retro/violet/950|C|#1a092a
+F:color/retro/violet-magenta/50|C|#faf9fa
+F:color/retro/violet-magenta/100|C|#e3d8e6
+F:color/retro/violet-magenta/200|C|#cfb1d7
+F:color/retro/violet-magenta/300|C|#bf84ce
+F:color/retro/violet-magenta/400|C|#b251cb
+F:color/retro/violet-magenta/500|C|#a028bd
+F:color/retro/violet-magenta/600|C|#8722a0
+F:color/retro/violet-magenta/700|C|#6e1c82
+F:color/retro/violet-magenta/800|C|#551565
+F:color/retro/violet-magenta/900|C|#3c0f48
+F:color/retro/violet-magenta/950|C|#23092a
+F:color/retro/magenta/50|C|#faf9fa
+F:color/retro/magenta/100|C|#e6d8e4
+F:color/retro/magenta/200|C|#d7b1d3
+F:color/retro/magenta/300|C|#ce84c6
+F:color/retro/magenta/400|C|#cb51bf
+F:color/retro/magenta/500|C|#bd28ae
+F:color/retro/magenta/600|C|#a02293
+F:color/retro/magenta/700|C|#821c78
+F:color/retro/magenta/800|C|#65155d
+F:color/retro/magenta/900|C|#480f42
+F:color/retro/magenta/950|C|#2a0927
+F:color/retro/rose/50|C|#faf9fa
+F:color/retro/rose/100|C|#e6d8e0
+F:color/retro/rose/200|C|#d7b1c8
+F:color/retro/rose/300|C|#ce84b0
+F:color/retro/rose/400|C|#cb519a
+F:color/retro/rose/500|C|#bd2882
+F:color/retro/rose/600|C|#a0226d
+F:color/retro/rose/700|C|#821c59
+F:color/retro/rose/800|C|#651545
+F:color/retro/rose/900|C|#480f31
+F:color/retro/rose/950|C|#2a091d
+F:color/retro/rose-red/50|C|#faf9fa
+F:color/retro/rose-red/100|C|#e6d8dc
+F:color/retro/rose-red/200|C|#d7b1bc
+F:color/retro/rose-red/300|C|#ce849a
+F:color/retro/rose-red/400|C|#cb5175
+F:color/retro/rose-red/500|C|#bd2855
+F:color/retro/rose-red/600|C|#a02248
+F:color/retro/rose-red/700|C|#821c3a
+F:color/retro/rose-red/800|C|#65152d
+F:color/retro/rose-red/900|C|#480f20
+F:color/retro/rose-red/950|C|#2a0913
+F:color/retro/red-orange-muted/50|C|#fafafa
+F:color/retro/red-orange-muted/100|C|#e1dddc
+F:color/retro/red-orange-muted/200|C|#c9c0bd
+F:color/retro/red-orange-muted/300|C|#b5a39c
+F:color/retro/red-orange-muted/400|C|#a5887c
+F:color/retro/red-orange-muted/500|C|#927062
+F:color/retro/red-orange-muted/600|C|#7b5e52
+F:color/retro/red-orange-muted/700|C|#644c42
+F:color/retro/red-orange-muted/800|C|#4d3b33
+F:color/retro/red-orange-muted/900|C|#372a24
+F:color/retro/red-orange-muted/950|C|#201815
+F:color/retro/red-orange-muted/700-alpha-20|C|#644c4233
+F:color/retro/red-orange-muted/700-alpha-32|C|#644c4252
+## Style
+S:opacity/2xs|F|@F:opacity/100
+S:opacity/xs|F|@F:opacity/200
+S:opacity/sm|F|@F:opacity/300
+S:opacity/md|F|@F:opacity/400
+S:opacity/lg|F|@F:opacity/600
+S:opacity/xl|F|@F:opacity/800
+S:opacity/2xl|F|@F:opacity/1000
+S:opacity/3xl|F|@F:opacity/1100
+S:icon/2xs|F|@F:icon/size/150
+S:icon/xs|F|@F:icon/size/200
+S:icon/sm|F|@F:icon/size/250
+S:icon/md|F|@F:icon/size/300
+S:icon/lg|F|@F:icon/size/350
+S:icon/xl|F|@F:icon/size/400
+S:icon/2xl|F|@F:icon/size/450
+S:icon/3xl|F|@F:icon/size/500
+S:icon/4xl|F|@F:icon/size/600
+S:icon/5xl|F|@F:icon/size/800
+S:icon/6xl|F|@F:icon/size/1000
+S:border/xs|F|@F:border/100
+S:border/md|F|@F:border/200
+S:border/lg|F|@F:border/300
+S:border/xl|F|@F:border/400
+S:font/weight/thin|F|@F:font/weight/thin
+S:font/weight/extra-light|F|@F:font/weight/extra-light
+S:font/weight/light|F|@F:font/weight/light
+S:font/weight/regular|F|@F:font/weight/regular
+S:font/weight/medium|F|@F:font/weight/medium
+S:font/weight/semi-bold|F|@F:font/weight/semi-bold
+S:font/weight/bold|F|@F:font/weight/bold
+S:font/weight/extra-bold|F|@F:font/weight/extra-bold
+S:font/weight/black|F|@F:font/weight/black
+S:font/family/headline|S|@F:font/retro/family/sans
+S:font/family/body|S|@F:font/retro/family/sans
+S:font/family/label|S|@F:font/retro/family/sans
+S:font/family/zhTW/headline-zhTW|S|@F:font/default/family/sans-zhTW
+S:font/family/zhTW/body-zhTW|S|@F:font/default/family/sans-zhTW
+S:font/family/zhTW/label-zhTW|S|@F:font/default/family/sans-zhTW
+S:font/family/zhTW/handwriting-zhTW|S|@F:font/default/family/handwriting-zhTW
+S:font/size/caption/xs|F|@F:font/size/10
+S:font/size/label/xs|F|@F:font/size/10
+S:font/size/label/sm|F|@F:font/size/12
+S:font/size/label/md|F|@F:font/size/14
+S:font/size/label/lg|F|@F:font/size/16
+S:font/size/body/sm|F|@F:font/size/16
+S:font/size/body/md|F|@F:font/size/18
+S:font/size/body/lg|F|@F:font/size/20
+S:font/size/headline/xs|F|@F:font/size/20
+S:font/size/headline/sm|F|@F:font/size/28
+S:font/size/headline/md|F|@F:font/size/32
+S:font/size/headline/lg|F|@F:font/size/40
+S:color/primary|C|@F:color/retro/red-orange/400
+S:color/on primary|C|@F:color/retro/red-orange/50
+S:color/primary container|C|@F:color/retro/red-orange/100
+S:color/on primary container|C|@F:color/retro/red-orange/800
+S:color/secondary|C|@F:color/retro/red-orange-muted/500
+S:color/on secondary|C|@F:color/retro/red-orange-muted/50
+S:color/secondary container|C|@F:color/retro/red-orange-muted/200
+S:color/on secondary container|C|@F:color/retro/red-orange/800
+S:color/tertiary|C|@F:color/retro/cyan-blue/500
+S:color/on tertiary|C|@F:color/share/amber/50
+S:color/tertiary container|C|@F:color/retro/cyan-blue/100
+S:color/on tertiary container|C|@F:color/retro/cyan-blue/900
+S:color/error|C|@F:color/retro/red/500
+S:color/on error|C|@F:color/retro/red/50
+S:color/error container|C|@F:color/retro/red/100
+S:color/on error container|C|@F:color/retro/red/500
+S:color/ai primary|C|@F:color/share/black/zinc/400
+S:color/on ai primary|C|@F:color/share/black/zinc/800
+S:color/ai primary container|C|@F:color/share/black/zinc/400
+S:color/on ai primary container|C|@F:color/share/black/zinc/800
+S:color/disabled|C|@F:color/share/black/neutral/300
+S:color/on disable|C|@F:color/share/black/neutral/400
+S:color/disable container|C|@F:color/share/black/neutral/300
+S:color/on disable container|C|@F:color/share/black/neutral/400
+S:color/primary fixed|C|#f600ff
+S:color/primary fixed dim|C|#f600ff
+S:color/on primary fixed|C|#f600ff
+S:color/on primary fixed variant|C|#ffffff
+S:color/secondary fixed|C|#f600ff
+S:color/secondary fixed dim|C|#f600ff
+S:color/on secondary fixed|C|#f600ff
+S:color/on secondary fixed variant|C|#f600ff
+S:color/tertiary fixed|C|#f600ff
+S:color/tertiary fixed dim|C|#f600ff
+S:color/on tertiary fixed|C|#f600ff
+S:color/on tertiary fixed variant|C|#f600ff
+S:color/surface dim|C|@F:color/retro/red-orange-muted/500
+S:color/surface|C|@F:color/share/amber/50
+S:color/surface bright|C|@F:color/white
+S:color/surf container lowest|C|@F:color/retro/red-orange-muted/50
+S:color/surf container low|C|@F:color/retro/red-orange-muted/100
+S:color/surf container|C|@F:color/retro/red-orange-muted/200
+S:color/surf container high|C|@F:color/retro/red-orange-muted/300
+S:color/surf container highest|C|@F:color/retro/red-orange-muted/400
+S:color/text 100|C|@F:color/retro/red-orange/800
+S:color/text 200|C|@F:color/retro/red-orange-muted/500
+S:color/text inverse 100|C|@F:color/share/black/gray/100
+S:color/text inverse 200|C|@F:color/share/black/gray/400
+S:color/inverse surface|C|@F:color/retro/red-orange/800
+S:color/inverse primary|C|@F:color/retro/red-orange/500
+S:color/outline 50|C|@F:color/retro/red-orange-muted/50
+S:color/outline 100|C|@F:color/retro/red-orange/100
+S:color/outline 200|C|@F:color/retro/red-orange/300
+S:color/outline 300|C|@F:color/retro/red-orange/800
+S:color/outline neutral|C|@F:color/share/black/neutral/300
+S:color/scrim|C|@F:color/share/black/gray/950
+S:color/shadow|C|@F:color/share/black/gray/950
+S:color/opacity/opacity primary 50|C|@F:color/retro/red-orange/700-alpha-8
+S:color/opacity/opacity primary 100|C|@F:color/retro/red-orange/700-alpha-16
+S:color/opacity/opacity primary 150|C|@F:color/retro/red-orange/700-alpha-32
+S:color/customs/custom 1|C|@F:color/share/amber/300
+S:color/customs/custom container 1|C|@F:color/share/amber/100
+S:color/customs/on custom 1|C|@F:color/share/amber/950
+S:color/customs/custom 2|C|@F:color/share/yellow/300
+S:color/customs/custom container 2|C|@F:color/share/yellow/100
+S:color/customs/on custom 2|C|@F:color/share/yellow/950
+S:color/customs/custom 3|C|@F:color/retro/yellow-green/300
+S:color/customs/custom container 3|C|@F:color/retro/yellow-green/100
+S:color/customs/on custom 3|C|@F:color/retro/yellow-green/950
+S:color/customs/custom 4|C|@F:color/share/green/300
+S:color/customs/custom container 4|C|@F:color/share/green/100
+S:color/customs/on custom 4|C|@F:color/share/green/950
+S:color/customs/custom 5|C|@F:color/share/emerald/300
+S:color/customs/custom container 5|C|@F:color/share/emerald/100
+S:color/customs/on custom 5|C|@F:color/share/emerald/950
+S:color/customs/custom 6|C|@F:color/share/teal/300
+S:color/customs/custom container 6|C|@F:color/share/teal/100
+S:color/customs/on custom 6|C|@F:color/share/teal/950
+S:color/customs/custom 7|C|@F:color/share/cyan/300
+S:color/customs/custom container 7|C|@F:color/share/cyan/100
+S:color/customs/on custom 7|C|@F:color/share/cyan/950
+S:color/customs/custom 8|C|@F:color/share/sky/300
+S:color/customs/custom container 8|C|@F:color/share/sky/100
+S:color/customs/on custom 8|C|@F:color/share/sky/950
+S:color/customs/custom 9|C|@F:color/share/blue/300
+S:color/customs/custom container 9|C|@F:color/share/blue/100
+S:color/customs/on custom 9|C|@F:color/share/blue/950
+S:color/customs/custom 10|C|@F:color/share/indigo/300
+S:color/customs/custom container 10|C|@F:color/share/indigo/100
+S:color/customs/on custom 10|C|@F:color/share/indigo/950
+S:color/customs/custom 11|C|@F:color/share/purple/300
+S:color/customs/custom container 11|C|@F:color/share/purple/100
+S:color/customs/on custom 11|C|@F:color/share/purple/950
+S:color/customs/custom 12|C|@F:color/share/fuchsia/300
+S:color/customs/custom container 12|C|@F:color/share/fuchsia/100
+S:color/customs/on custom 12|C|@F:color/share/fuchsia/950
+S:color/customs/custom 13|C|@F:color/retro/rose/300
+S:color/customs/custom container 13|C|@F:color/retro/rose/100
+S:color/customs/on custom 13|C|@F:color/retro/rose/950
+S:color/customs/custom 14|C|@F:color/share/red/200
+S:color/customs/custom container 14|C|@F:color/share/red/100
+S:color/customs/on custom 14|C|@F:color/share/red/400
+S:shdow/length/2xs|F|@F:shadow/length/25
+S:shdow/length/xs|F|@F:shadow/length/50
+S:shdow/length/sm|F|@F:shadow/length/62-5
+S:shdow/length/md|F|@F:shadow/length/100
+S:shdow/length/lg|F|@F:shadow/length/150
+S:shdow/length/xl|F|@F:shadow/length/200
+S:shdow/md|C|@F:color/retro/red-orange/700-alpha-16
+S:shdow/lg|C|@F:color/retro/red-orange/700-alpha-32
+S:blur/2xs|F|@F:blur/50
+S:blur/xs|F|@F:blur/100
+S:blur/sm|F|@F:blur/200
+S:blur/md|F|@F:blur/300
+S:blur/lg|F|@F:blur/400
+S:radius/2xs|F|@F:radius/100
+S:radius/xs|F|@F:radius/150
+S:radius/sm|F|@F:radius/200
+S:radius/md|F|@F:radius/300
+S:radius/lg|F|@F:radius/400
+S:radius/xl|F|@F:radius/500
+S:radius/2xl|F|@F:radius/600
+S:radius/3xl|F|@F:radius/800
+S:radius/4xl|F|@F:radius/1100
+S:radius/full|F|@F:radius/full
+S:spacing/2xs|F|@F:spacing/50
+S:spacing/xs|F|@F:spacing/100
+S:spacing/sm|F|@F:spacing/150
+S:spacing/md|F|@F:spacing/200
+S:spacing/lg|F|@F:spacing/250
+S:spacing/xl|F|@F:spacing/300
+S:spacing/2xl|F|@F:spacing/400
+S:spacing/3xl|F|@F:spacing/500
+S:spacing/4xl|F|@F:spacing/600
+S:spacing/5xl|F|@F:spacing/800
+S:spacing/6xl|F|@F:spacing/1000
+S:spacing/7xl|F|@F:spacing/1100
+S:height/sm|F|@F:spacing/600
+S:height/md|F|@F:spacing/800
+S:height/lg|F|@F:spacing/1000
+S:height/xl|F|@F:spacing/1400
+S:height/2xl|F|@F:spacing/3000
+## Comps
+C:btn/normal/sm/radius|F|@S:radius/md
+C:btn/normal/md/radius|F|@S:radius/lg
+C:btn/normal/lg/radius|F|@S:radius/lg
+C:btn/normal/full/radius|F|@S:radius/full
+C:btn/normal/sm/icon|F|@S:icon/xs
+C:btn/normal/md/icon|F|@S:icon/sm
+C:btn/normal/sm/focus-ring-radius|F|@S:radius/lg
+C:btn/normal/md/focus-ring-radius|F|@S:radius/xl
+C:btn/normal/full/focus-ring-radius|F|@S:radius/full
+C:btn/icon/sm/radius|F|@S:radius/full
+C:btn/icon/md/radius|F|@S:radius/full
+C:btn/icon/lg/radius|F|@S:radius/full
+C:btn/segment/radius|F|@S:radius/full
+C:btn/segment/focus-ring-radius|F|@S:radius/full
+C:btn/segment/sm/height|F|@S:height/sm
+C:btn/segment/sm/icon|F|@S:icon/xs
+C:btn/segment/md/height|F|@S:height/md
+C:btn/segment/md/icon|F|@S:icon/xs
+C:btn/segment/lg/height|F|@S:height/lg
+C:btn/segment/lg/icon|F|@S:icon/sm
+C:field/radius|F|@S:radius/lg
+C:field/icon|F|@S:icon/md
+C:field/height|F|@S:height/2xl
+C:field/area-height|F|@S:height/2xl
+C:field/focus-outline-width|F|@S:border/lg
+C:chip/radius|F|@S:radius/full
+C:chip/sm/height|F|@S:height/sm
+C:chip/sm/icon|F|@S:icon/xs
+C:chip/md/height|F|@S:height/md
+C:chip/md/icon|F|@S:icon/xs
+C:chip/lg/height|F|@S:height/lg
+C:chip/lg/icon|F|@S:icon/sm
+C:focus-ring/color|C|@S:color/primary
+C:focus-ring/border|F|@S:border/xl
+C:card/radius|F|@S:radius/lg
+C:card/focus-ring-radius|F|@S:radius/xl
+C:divider/size|F|@S:border/xs
+C:divider/color/subtle|C|@S:color/outline 100
+C:divider/color/strong|C|@S:color/outline 200
+C:divider/color/neutral|C|@S:color/outline neutral
+C:bottom nav/active-icon|F|@S:icon/xl
+C:bottom nav/raduis|F|@S:radius/full
+C:bottom nav/padding-top-bottom|F|@S:spacing/lg
+C:bottom nav/padding-r-l|F|@S:spacing/2xl
