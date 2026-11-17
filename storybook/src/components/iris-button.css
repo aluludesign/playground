@@ -37,7 +37,7 @@
   /* 各尺寸會改的值 */
   --iris-layer-pad: var(--ds-sys-spacing-md);
   --iris-gap: var(--ds-sys-spacing-sm);
-  --iris-icon: var(--ds-comp-btn-normal-md-icon);
+  --iris-icon: var(--ds-comp-btn-iris-md-icon);
   --iris-font-size: var(--ds-sys-font-size-label-md);
   --iris-line-height: 18px;
   --iris-tracking: 0.05em;
@@ -56,7 +56,7 @@
   align-items: center;
   padding: var(--iris-ring);
   border: 0;
-  border-radius: var(--ds-comp-btn-normal-full-radius);
+  border-radius: var(--ds-comp-btn-iris-radius);
   background: none;
   color: var(--ds-sys-color-text-100);
   font: inherit;
@@ -66,11 +66,12 @@
 }
 .ds-iris-btn--sm {
   --iris-gap: var(--ds-sys-spacing-xs);
-  --iris-icon: var(--ds-comp-btn-normal-sm-icon);
+  --iris-icon: var(--ds-comp-btn-iris-sm-icon);
   --iris-font-size: var(--ds-sys-font-size-label-sm);
   --iris-line-height: 1; /* Figma 的 label/sm 行高是 auto，文字框量起來 12px */
 }
 .ds-iris-btn--lg {
+  --iris-icon: var(--ds-comp-btn-iris-lg-icon);
   --iris-layer-pad: var(--ds-sys-spacing-xl);
   --iris-layer-pad-pressed: var(--ds-sys-spacing-2xl);
   --iris-font-size: var(--ds-sys-font-size-label-lg);
@@ -228,14 +229,14 @@
 .ds-iris-btn.is-pressed::before {
   box-shadow: var(--ds-elevation-component-sm);
 }
-/* 聚焦：Focus ring 跟 Button 同一套（11/17 Figma 改的）：離外緣 2px、線寬 border/lg、focus-ring 色 */
+/* 聚焦：Focus ring 跟 Button 同一套（11/17 Figma 改的）：離外緣 2px、線寬 focus-ring/border、focus-ring 色 */
 .ds-iris-btn:focus { outline: none; }
 .ds-iris-btn::after {
   content: "";
   position: absolute;
-  inset: calc(-1 * (var(--iris-grow) + var(--ds-sys-spacing-2xs) + var(--ds-sys-border-lg)));
-  border: var(--ds-sys-border-lg) solid var(--ds-comp-focus-ring-color);
-  border-radius: var(--ds-comp-btn-normal-full-focus-ring-radius);
+  inset: calc(-1 * (var(--iris-grow) + var(--ds-sys-spacing-2xs) + var(--ds-comp-focus-ring-border)));
+  border: var(--ds-comp-focus-ring-border) solid var(--ds-comp-focus-ring-color);
+  border-radius: var(--ds-comp-btn-iris-focus-ring-radius);
   pointer-events: none;
   display: none;
   transition: inset 0.2s var(--iris-ease);

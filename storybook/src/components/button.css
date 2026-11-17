@@ -26,7 +26,7 @@
  * 文字和 icon 完全不動，按鈕佔的位置也不變。
  *
  * Outlined 的外框線畫在裡面（Figma Inside、不算進 layout），所以跟 Filled 一樣大。
- * 文字按鈕拿掉 icon 時高度不變（11/17 她定的）：最小高度 = icon + 上下 padding。
+ * 文字按鈕拿掉 icon 時高度不變（11/17 她定的）：最小高度 = comp 的 btn/normal/*/height。
  */
 
 /* State layer 的透明度做成可補間的數字，hover 時才能淡入 */
@@ -49,6 +49,7 @@
   --btn-ring-radius: var(--ds-comp-btn-normal-md-focus-ring-radius);
   --btn-icon-radius: var(--ds-comp-btn-icon-md-radius);
   --btn-icon: var(--ds-comp-btn-normal-md-icon);
+  --btn-height: var(--ds-comp-btn-normal-md-height);
   --btn-font-size: var(--ds-sys-font-size-label-md);
   --btn-line-height: 18px; /* label/md/semi-bold 的行高 */
   --btn-tracking: 0.05em;
@@ -76,7 +77,7 @@
   align-items: center;
   justify-content: center;
   gap: var(--btn-gap);
-  min-height: calc(var(--btn-icon) + 2 * var(--btn-pad-y));
+  min-height: var(--btn-height); /* 文字按鈕拿掉 icon 也維持這個高度 */
   padding: var(--btn-pad-y) var(--btn-pad-x);
   border: 0;
   border-radius: var(--btn-radius);
@@ -147,6 +148,7 @@
   --btn-ring-radius: var(--ds-comp-btn-normal-sm-focus-ring-radius);
   --btn-icon-radius: var(--ds-comp-btn-icon-sm-radius);
   --btn-icon: var(--ds-comp-btn-normal-sm-icon);
+  --btn-height: var(--ds-comp-btn-normal-sm-height);
   --btn-font-size: var(--ds-sys-font-size-label-sm);
   --btn-line-height: 1; /* label/sm/semi-bold 行高是 auto，文字框量起來 12px */
   --btn-grow-y: calc(var(--ds-sys-spacing-md) - var(--ds-sys-spacing-sm));
@@ -157,10 +159,11 @@
   --btn-pad-y: var(--ds-sys-spacing-xs);
   --btn-pad-x: var(--ds-sys-spacing-md);
   --btn-icon-pad: var(--ds-sys-spacing-xs);
-  --btn-radius: var(--ds-comp-btn-normal-sm-radius);
-  --btn-ring-radius: var(--ds-comp-btn-normal-sm-focus-ring-radius);
-  --btn-icon-radius: var(--ds-comp-btn-icon-sm-radius);
-  --btn-icon: var(--ds-comp-btn-normal-sm-icon);
+  --btn-radius: var(--ds-comp-btn-normal-xs-radius);
+  --btn-ring-radius: var(--ds-comp-btn-normal-xs-focus-ring-radius);
+  --btn-icon-radius: var(--ds-comp-btn-icon-xs-radius);
+  --btn-icon: var(--ds-comp-btn-normal-xs-icon);
+  --btn-height: var(--ds-comp-btn-normal-xs-height);
   --btn-font-size: var(--ds-sys-font-size-label-xs); /* caption/sm/semi-bold 綁的是 label/xs */
   --btn-line-height: 1;
   --btn-tracking: 0.04em;
@@ -201,13 +204,13 @@
     inset 0.2s var(--btn-ease),
     --btn-layer-op 0.15s ease-out;
 }
-/* Focus ring：外緣往外 2px，再畫 border/lg 粗的線；Pressed 長大時跟著長 */
+/* Focus ring：外緣往外 2px，再畫 focus-ring/border 粗的線；Pressed 長大時跟著長 */
 .ds-btn::after {
   content: "";
   position: absolute;
-  inset: calc(-1 * (var(--btn-dy) + var(--ds-sys-spacing-2xs) + var(--ds-sys-border-lg)))
-    calc(-1 * (var(--btn-dx) + var(--ds-sys-spacing-2xs) + var(--ds-sys-border-lg)));
-  border: var(--ds-sys-border-lg) solid var(--ds-comp-focus-ring-color);
+  inset: calc(-1 * (var(--btn-dy) + var(--ds-sys-spacing-2xs) + var(--ds-comp-focus-ring-border)))
+    calc(-1 * (var(--btn-dx) + var(--ds-sys-spacing-2xs) + var(--ds-comp-focus-ring-border)));
+  border: var(--ds-comp-focus-ring-border) solid var(--ds-comp-focus-ring-color);
   border-radius: var(--btn-ring-radius);
   pointer-events: none;
   display: none;
