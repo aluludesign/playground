@@ -2,12 +2,12 @@
 import "../pattern.css";
 
 const P = [
-  { k: "primary-soft", fig: "bg_style/primary-soft", desc: "淡橘底＋橘格" },
-  { k: "tertiary", fig: "bg_style/tertiary", desc: "藍底＋藍粗格" },
-  { k: "bright", fig: "bg_style/bright", desc: "白底＋橘格" },
-  { k: "surface", fig: "bg_style/surface", desc: "米白底＋深棕格" },
-  { k: "rainbow", fig: "bg_style/rainbow", desc: "彩虹漸層＋深棕格", bg: "白 ＋ Gradient/iris" },
-  { k: "primary", fig: "bg_style/primary", desc: "橘底＋深棕格" },
+  { k: "primary-soft", fig: "bg pattern/primary-soft", desc: "淡橘底＋橘格", bg: "surface ＋ 這層 16% 橘" },
+  { k: "tertiary", fig: "bg pattern/tertiary", desc: "藍底＋藍粗格" },
+  { k: "bright", fig: "bg pattern/bright", desc: "白底＋橘格" },
+  { k: "surface", fig: "bg pattern/surface", desc: "米白底＋深棕格" },
+  { k: "rainbow", fig: "bg pattern/rainbow", desc: "彩虹漸層＋深棕格", bg: "白 ＋ Gradient/iris" },
+  { k: "primary", fig: "bg pattern/primary", desc: "橘底＋深棕格" },
 ];
 
 const USAGE = `<!-- 卡片 -->
@@ -27,7 +27,7 @@ export const 全部 = {
     el.className = "tk-page";
     el.innerHTML = `<h1>背景圖樣（pattern）</h1>
 <p class="lead">卡片、畫面的底。每一種都是「底色＋一層格線」，底色、格線顏色、每格大小都是 token（<code>ds/sys/pattern/…</code>），格線透明度共用 <code>ds/sys/pattern/opacity</code>（= opacity/2xs，8%）。<br>
-Figma 的 pattern 填色不能綁變數，所以 Figma 上格線透明度和格子大小要手動對；token 是兩邊對照的依據。</p>
+Figma 上每一種是一個 color style「bg pattern/{名稱}」；pattern 填色本身不能綁變數，格線透明度和格子大小在 Figma 是手動對，token 是兩邊對照的依據。</p>
 
 <section class="tk"><h2>6 種</h2>
 <div class="pt-grid">
@@ -35,7 +35,7 @@ ${P.map((p) => `<figure><div class="pt-sw ds-pattern ds-pattern--${p.k}"></div><
 </div></section>
 
 <section class="tk"><h2>Token</h2>
-<table><thead><tr><th>Figma</th><th>class</th><th>底色</th><th>格線</th><th>每格</th></tr></thead><tbody>
+<table><thead><tr><th>Figma color style</th><th>class</th><th>底色</th><th>格線</th><th>每格</th></tr></thead><tbody>
 ${P.map(
   (p) => `<tr><td class="nm">${p.fig}</td><td><code class="var">ds-pattern--${p.k}</code></td><td>${tok(p.k, "bg")}${p.bg ? `<br><span class="muted">${p.bg}</span>` : ""}</td><td>${tok(p.k, "line")}</td><td>${tok(p.k, "size")}</td></tr>`,
 ).join("")}

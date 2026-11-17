@@ -2,6 +2,7 @@
  *
  *   <div class="ds-pattern ds-pattern--surface">…</div>
  *
+ * Figma 上每一種都有同名的 color style「bg pattern/{名稱}」。
  * 卡片、整個畫面的底都可以用。底色、格線顏色、每格大小都是 token：
  *   --ds-sys-pattern-{名稱}-bg     底色
  *   --ds-sys-pattern-{名稱}-line   格線顏色
@@ -52,9 +53,10 @@
   mask-repeat: repeat;
 }
 
-/* 1 淡橘底＋橘格 */
+/* 1 淡橘底＋橘格：Figma「bg pattern/primary-soft」是 surface 上面疊一層 16% 的橘（pattern bg） */
 .ds-pattern--primary-soft {
-  --pattern-bg: var(--ds-sys-pattern-primary-soft-bg);
+  --pattern-bg: var(--ds-sys-color-surface);
+  --pattern-image: linear-gradient(var(--ds-sys-pattern-primary-soft-bg), var(--ds-sys-pattern-primary-soft-bg));
   --pattern-line: var(--ds-sys-pattern-primary-soft-line);
   --pattern-size: var(--ds-sys-pattern-primary-soft-size);
   --pattern-position: center;
