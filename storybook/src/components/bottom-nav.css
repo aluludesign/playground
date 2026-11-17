@@ -120,31 +120,38 @@
 .ds-bottom-nav__item[aria-current="page"] .is-active-style {
   opacity: 1;
 }
-/* sticker 的上色：先放大，緊接著一支看不見的筆照每一塊上色的形狀描出來，描完再填色，
- * 最後描線收掉，停下來的樣子跟 Figma 一模一樣。一塊接一塊（--i）。
- * 回到 default 時直接收起來，不倒著擦。 */
-.ds-bottom-nav__pen {
+/* sticker 的上色：先放大，緊接著一支看不見的筆從左上往右下畫：
+ * 一塊接一塊（左上的先，--i），每一塊被斜向的筆刷掃出來——先出描邊、緊跟著填色，
+ * 最後描邊收掉，停下來的樣子跟 Figma 一模一樣。回到 default 時直接收起來，不倒著擦。
+ * （遮罩由 bottom-nav.js 量好每一塊的大小後加上） */
+.ds-bottom-nav__pen,
+.ds-bottom-nav__sweep {
   --pen-start: 0.2s;   /* 放大大致完成後就接上 */
-  --pen-draw: 0.32s;   /* 描一塊 */
+  --pen-draw: 0.3s;    /* 掃過一塊 */
   --pen-gap: 0.07s;    /* 下一塊晚多久開始 */
+  --pen-at: calc(var(--pen-start) + var(--i, 0) * var(--pen-gap));
+}
+.ds-bottom-nav__pen {
   stroke: var(--pen);
   stroke-width: 0.7;
-  stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-dasharray: 1 1;
-  stroke-dashoffset: 1;
   stroke-opacity: 1;
   fill-opacity: 0;
 }
+.ds-bottom-nav__sweep {
+  transform: none;
+}
+.ds-bottom-nav__item.is-active .ds-bottom-nav__sweep,
+.ds-bottom-nav__item[aria-current="page"] .ds-bottom-nav__sweep {
+  transform: translate(var(--sx), var(--sy));
+  transition: transform var(--pen-draw) cubic-bezier(0.4, 0, 0.2, 1) var(--pen-at);
+}
 .ds-bottom-nav__item.is-active .ds-bottom-nav__pen,
 .ds-bottom-nav__item[aria-current="page"] .ds-bottom-nav__pen {
-  --pen-at: calc(var(--pen-start) + var(--i) * var(--pen-gap));
-  stroke-dashoffset: 0;
   fill-opacity: 1;
   stroke-opacity: 0;
   transition:
-    stroke-dashoffset var(--pen-draw) cubic-bezier(0.4, 0, 0.2, 1) var(--pen-at),
-    fill-opacity 0.22s ease-out calc(var(--pen-at) + var(--pen-draw) * 0.7),
+    fill-opacity 0.2s ease-out calc(var(--pen-at) + var(--pen-draw) * 0.45),
     stroke-opacity 0.2s ease-out calc(var(--pen-at) + var(--pen-draw) + 0.1s);
 }
 
@@ -171,7 +178,8 @@
   .ds-bottom-nav__icon,
   .ds-bottom-nav__icon > svg,
   .ds-bottom-nav__label,
-  .ds-bottom-nav__item .ds-bottom-nav__pen {
+  .ds-bottom-nav__item .ds-bottom-nav__pen,
+  .ds-bottom-nav__item .ds-bottom-nav__sweep {
     transition: none !important;
   }
 }
