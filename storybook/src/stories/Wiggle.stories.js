@@ -2,10 +2,10 @@
 import { wireWiggle } from "../wiggle.js";
 
 const LINES = [
-  { cls: "", figma: "Property 1=Default", token: "ds/sys/color/outline 50" },
-  { cls: "ds-wiggle--outline-100", figma: "Property 1=Variant2", token: "ds/sys/color/outline 100" },
-  { cls: "ds-wiggle--outline-200", figma: "Property 1=Variant3", token: "ds/sys/color/outline 200" },
-  { cls: "ds-wiggle--outline-300", figma: "Property 1=Variant4", token: "ds/sys/color/outline 300" },
+  { cls: "", figma: "Color=outline 50", token: "ds/sys/color/outline 50" },
+  { cls: "ds-wiggle--outline-100", figma: "Color=outline 100", token: "ds/sys/color/outline 100" },
+  { cls: "ds-wiggle--outline-200", figma: "Color=outline 200", token: "ds/sys/color/outline 200" },
+  { cls: "ds-wiggle--outline-300", figma: "Color=outline 300", token: "ds/sys/color/outline 300" },
 ];
 
 const USAGE = `<!-- 分隔線（預設 outline 50） -->
