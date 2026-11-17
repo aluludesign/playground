@@ -133,6 +133,10 @@ F:icon/size/1000|F|80
 F:icon/size/1250|F|100
 F:icon/size/2000|F|160
 F:color/white|C|#ffffff
+F:color/share/iris/blue-alpha-32|C|#7aacf552
+F:color/share/iris/purple-alpha-32|C|#d7afdc52
+F:color/share/iris/yellow-alpha-32|C|#fac37852
+F:color/share/iris/green-alpha-32|C|#82e6c352
 F:color/black|C|#000000
 F:color/share/black/slate/50|C|#f8fafc
 F:color/share/black/slate/100|C|#f1f5f9
@@ -808,6 +812,25 @@ S:height/lg|F|@F:spacing/900
 S:height/xl|F|@F:spacing/1000
 S:height/2xl|F|@F:spacing/1400
 S:height/3xl|F|@F:spacing/3000
+S:pattern/opacity|F|@S:opacity/2xs
+S:pattern/primary-soft/bg|C|@S:color/opacity/opacity primary 100
+S:pattern/primary-soft/line|C|@S:color/primary
+S:pattern/primary-soft/size|F|20
+S:pattern/tertiary/bg|C|@S:color/tertiary container
+S:pattern/tertiary/line|C|@S:color/tertiary
+S:pattern/tertiary/size|F|25
+S:pattern/bright/bg|C|@S:color/surface bright
+S:pattern/bright/line|C|@S:color/primary
+S:pattern/bright/size|F|20
+S:pattern/surface/bg|C|@S:color/surface
+S:pattern/surface/line|C|@S:color/outline 300
+S:pattern/surface/size|F|20
+S:pattern/rainbow/bg|C|@F:color/white
+S:pattern/rainbow/line|C|@S:color/outline 300
+S:pattern/rainbow/size|F|20
+S:pattern/primary/bg|C|@S:color/primary
+S:pattern/primary/line|C|@S:color/outline 300
+S:pattern/primary/size|F|20
 ## Comps
 C:btn/normal/sm/radius|F|@S:radius/md
 C:btn/normal/md/radius|F|@S:radius/lg

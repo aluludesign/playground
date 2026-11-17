@@ -103,12 +103,12 @@
   overflow: hidden;
   isolation: isolate;
   border-radius: inherit;
-  /* Figma state-layer：白色＋一層 32% 的藍→粉→橘→薄荷。
+  /* Figma state-layer：color style「Gradient/iris」＝白色＋一層 32% 的藍→粉→橘→薄荷（跟 pattern rainbow 共用）。
      Figma 的漸層是左上到右下的對角（gradientTransform [[.59,.41],[-.41,.59]]），
      換成這個長寬比的按鈕大約是 160deg。 */
   background:
-    linear-gradient(160deg, #7aacf552 0%, #d7afdc52 32%, #fac37852 68%, #82e6c352 100%),
-    #ffffff;
+    linear-gradient(160deg, var(--ds-foun-color-share-iris-blue-alpha-32) 0%, var(--ds-foun-color-share-iris-purple-alpha-32) 32%, var(--ds-foun-color-share-iris-yellow-alpha-32) 68%, var(--ds-foun-color-share-iris-green-alpha-32) 100%),
+    var(--ds-foun-color-white);
   transition: inset 0.2s var(--iris-ease);
 }
 /* 主高光＋虹光帶：跟著 --sheen-x/y 流動。inset:-50% 讓錨點跑到元件外，邊界才不會有硬白邊。 */

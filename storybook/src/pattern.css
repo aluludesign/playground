@@ -1,0 +1,107 @@
+/* 背景圖樣 —— 對應 Figma「bg-patterns」（node 162505:12797）的 6 個 bg_style
+ *
+ *   <div class="ds-pattern ds-pattern--surface">…</div>
+ *
+ * 卡片、整個畫面的底都可以用。底色、格線顏色、每格大小都是 token：
+ *   --ds-sys-pattern-{名稱}-bg     底色
+ *   --ds-sys-pattern-{名稱}-line   格線顏色
+ *   --ds-sys-pattern-{名稱}-size   一格多大
+ *   --ds-sys-pattern-opacity       格線透明度（共用，8%）
+ *
+ * 格線畫在 ::before（放在內容後面），所以：
+ *   - 元素會變成 position: relative ＋ isolation: isolate（自己一層，格線不會跑到外面）
+ *   - 同一個元素的 ::before 不能再拿去做別的事
+ *   - 圓角跟著元素自己的 border-radius
+ *
+ * 格線形狀和 Figma 的 tile 一樣：tile 寬 5 單位、線寬 0.3 單位，線落在格子邊界正中間；
+ * 「tertiary」多一條 1 單位寬、64% 的粗邊。整個 tile 再乘上 pattern 的透明度。
+ */
+
+.ds-pattern {
+  /* 預設 = surface */
+  --pattern-bg: var(--ds-sys-pattern-surface-bg);
+  --pattern-line: var(--ds-sys-pattern-surface-line);
+  --pattern-size: var(--ds-sys-pattern-surface-size);
+  --pattern-image: none;
+  /* Figma 的對齊：有些是置中、有些是從左上角開始 */
+  --pattern-position: 0 0;
+  --pattern-tile: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 5 5'%3E%3Crect width='.15' height='5'/%3E%3Crect x='4.85' width='.15' height='5'/%3E%3Crect width='5' height='.15'/%3E%3Crect y='4.85' width='5' height='.15'/%3E%3C/svg%3E");
+
+  position: relative;
+  isolation: isolate;
+  background-color: var(--pattern-bg);
+  background-image: var(--pattern-image);
+}
+
+.ds-pattern::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  background-color: var(--pattern-line);
+  opacity: var(--ds-sys-pattern-opacity);
+  -webkit-mask-image: var(--pattern-tile);
+  mask-image: var(--pattern-tile);
+  -webkit-mask-size: var(--pattern-size) var(--pattern-size);
+  mask-size: var(--pattern-size) var(--pattern-size);
+  -webkit-mask-position: var(--pattern-position);
+  mask-position: var(--pattern-position);
+  -webkit-mask-repeat: repeat;
+  mask-repeat: repeat;
+}
+
+/* 1 淡橘底＋橘格 */
+.ds-pattern--primary-soft {
+  --pattern-bg: var(--ds-sys-pattern-primary-soft-bg);
+  --pattern-line: var(--ds-sys-pattern-primary-soft-line);
+  --pattern-size: var(--ds-sys-pattern-primary-soft-size);
+  --pattern-position: center;
+}
+
+/* 2 藍底＋藍粗格 */
+.ds-pattern--tertiary {
+  --pattern-bg: var(--ds-sys-pattern-tertiary-bg);
+  --pattern-line: var(--ds-sys-pattern-tertiary-line);
+  --pattern-size: var(--ds-sys-pattern-tertiary-size);
+  --pattern-position: center;
+  --pattern-tile: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 5 5'%3E%3Crect x='4' width='1' height='5' opacity='.64'/%3E%3Crect y='4' width='5' height='1' opacity='.64'/%3E%3Crect width='.15' height='5'/%3E%3Crect x='4.85' width='.15' height='5'/%3E%3Crect width='5' height='.15'/%3E%3Crect y='4.85' width='5' height='.15'/%3E%3C/svg%3E");
+}
+
+/* 3 白底＋橘格 */
+.ds-pattern--bright {
+  --pattern-bg: var(--ds-sys-pattern-bright-bg);
+  --pattern-line: var(--ds-sys-pattern-bright-line);
+  --pattern-size: var(--ds-sys-pattern-bright-size);
+  --pattern-position: center;
+}
+
+/* 4 米白底＋深棕格 */
+.ds-pattern--surface {
+  --pattern-bg: var(--ds-sys-pattern-surface-bg);
+  --pattern-line: var(--ds-sys-pattern-surface-line);
+  --pattern-size: var(--ds-sys-pattern-surface-size);
+}
+
+/* 5 彩虹漸層＋深棕格：漸層和 Dynamic Iris 同一組顏色（Figma color style「Gradient/iris」）
+ * Figma 的漸層方向在正方形上剛好等於 125deg */
+.ds-pattern--rainbow {
+  --pattern-bg: var(--ds-sys-pattern-rainbow-bg);
+  --pattern-line: var(--ds-sys-pattern-rainbow-line);
+  --pattern-size: var(--ds-sys-pattern-rainbow-size);
+  --pattern-image: linear-gradient(
+    125deg,
+    var(--ds-foun-color-share-iris-blue-alpha-32) 0%,
+    var(--ds-foun-color-share-iris-purple-alpha-32) 32%,
+    var(--ds-foun-color-share-iris-yellow-alpha-32) 68%,
+    var(--ds-foun-color-share-iris-green-alpha-32) 100%
+  );
+}
+
+/* 6 橘底＋深棕格 */
+.ds-pattern--primary {
+  --pattern-bg: var(--ds-sys-pattern-primary-bg);
+  --pattern-line: var(--ds-sys-pattern-primary-line);
+  --pattern-size: var(--ds-sys-pattern-primary-size);
+}
