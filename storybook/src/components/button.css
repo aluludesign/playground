@@ -131,8 +131,12 @@
   --btn-line-height: 1;
   --btn-tracking: 0.04em;
 }
-/* Figma 的 Icon Outlined／xs 是 24×24，外框線畫在裡面不撐大（其他 Outlined 都會大 2px） */
-.ds-btn--icon-outlined.ds-btn--xs {
+/* Outlined 的外框線畫在裡面（Figma Inside、不算進 layout），按鈕跟 Filled 一樣大：
+ * padding 扣掉線寬，讓線佔掉的是 padding 的位置（11/17 她定的）。 */
+.ds-btn--outlined {
+  padding: calc(var(--btn-pad-y) - var(--btn-bw)) calc(var(--btn-pad-x) - var(--btn-bw));
+}
+.ds-btn--icon-outlined {
   padding: calc(var(--btn-icon-pad) - var(--btn-bw));
 }
 
