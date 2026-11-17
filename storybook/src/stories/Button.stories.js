@@ -9,16 +9,16 @@ const COLORS = [
 ];
 // 列的順序照 Figma
 const ROWS = [
-  ["filled", "default", "Filled"],
-  ["filled", "sm", "Filled／Small"],
-  ["outlined", "default", "Outlined"],
-  ["outlined", "sm", "Outlined／Small"],
-  ["text", "default", "Text"],
-  ["text", "sm", "Text／Small"],
-  ["icon", "default", "Icon Filled"],
-  ["icon", "sm", "Icon Filled／Small"],
-  ["icon-outlined", "default", "Icon Outlined"],
-  ["icon-outlined", "sm", "Icon Outlined／Small"],
+  ["filled", "md", "Filled／md"],
+  ["filled", "sm", "Filled／sm"],
+  ["outlined", "md", "Outlined／md"],
+  ["outlined", "sm", "Outlined／sm"],
+  ["text", "md", "Text／md"],
+  ["text", "sm", "Text／sm"],
+  ["icon", "md", "Icon Filled／md"],
+  ["icon", "sm", "Icon Filled／sm"],
+  ["icon-outlined", "md", "Icon Outlined／md"],
+  ["icon-outlined", "sm", "Icon Outlined／sm"],
   ["filled", "xs", "Filled／xs"],
   ["outlined", "xs", "Outlined／xs"],
   ["text", "xs", "Text／xs"],
@@ -35,7 +35,7 @@ const STATES = [
 
 const USAGE = `<!-- 顏色 ds-btn--secondary／--tertiary／--error／--white（不加 = Primary）
      樣式 ds-btn--outlined／--text／--icon／--icon-outlined（不加 = Filled）
-     尺寸 ds-btn--sm／--xs（不加 = Default） -->
+     尺寸 ds-btn--sm／--xs（不加 = md） -->
 <button type="button" class="ds-btn ds-btn--outlined ds-btn--sm">
   <svg class="ds-btn__icon" viewBox="0 0 24 24">…</svg>   <!-- Leading icon -->
   <span class="ds-btn__label">記一筆</span>
@@ -86,8 +86,8 @@ export default {
 export const 全部狀態 = {
   render: () =>
     page(`<h1>按鈕 Button</h1>
-<p class="lead">一般按鈕。全部照 Figma「Button」：5 種顏色 × 5 種樣式 × 3 種尺寸 × 5 種狀態。<br>
-Hovered／Focused／Pressed 蓋一層同色（8%／10%／10%），Filled 類 Hovered 另外加 Elevation/text/xs 陰影；Focused 外面多一圈 focus ring。<br>
+<p class="lead">一般按鈕。全部照 Figma「Button」：5 種顏色 × 5 種樣式 × 3 種尺寸（md／sm／xs） × 5 種狀態。<br>
+Hovered／Focused／Pressed 蓋一層同色（8%／10%／10%），Filled 類 Hovered 另外加 Elevation/component/sm 陰影；Focused 外面多一圈 focus ring。<br>
 Pressed 跟 Dynamic Iris 一樣會稍微變大（只有背景往外長，文字不動）。文字按鈕拿掉 icon 時高度不變。<br>
 下面 Hovered／Focused／Pressed 是固定顯示的樣子；底下「實際操作」那排是真的按鈕，可以移上去、按住、用 Tab 移到上面看看。灰底是為了看得到 White。</p>
 ${COLORS.map((c) => `<section class="tk"><h2>${c.label}</h2>${matrix(c.key)}</section>`).join("")}
@@ -98,9 +98,9 @@ ${COLORS.map((c) => `<section class="tk"><h2>${c.label}</h2>${matrix(c.key)}</se
     ).join("")}</div>
 </section>
 <section class="tk"><h2>Leading／Trailing icon</h2>
-<p class="note">拿掉 icon 高度也一樣（Default 36、Small 28、xs 24）。</p>
+<p class="note">拿掉 icon 高度也一樣（md 36、sm 28、xs 24）。</p>
 <div class="btn-row">${buttonHTML({})}${buttonHTML({ leadingIcon: false })}${buttonHTML({ leadingIcon: false, trailingIcon: true })}${buttonHTML({ trailingIcon: true })}</div>
-<div class="btn-row">${["default", "sm", "xs"].map((z) => buttonHTML({ size: z }) + buttonHTML({ size: z, leadingIcon: false })).join("")}</div>
+<div class="btn-row">${["md", "sm", "xs"].map((z) => buttonHTML({ size: z }) + buttonHTML({ size: z, leadingIcon: false })).join("")}</div>
 </section>
 <section class="tk"><h2>用法</h2>
 <p class="note">CSS 在 <code>src/components/button.css</code>；也可以用 <code>src/components/button.js</code> 的 <code>buttonHTML()</code> 產生。</p>
@@ -109,12 +109,12 @@ ${COLORS.map((c) => `<section class="tk"><h2>${c.label}</h2>${matrix(c.key)}</se
 };
 
 export const 試玩 = {
-  args: { label: "記一筆", color: "primary", variant: "filled", size: "default", leadingIcon: true, trailingIcon: false, disabled: false },
+  args: { label: "記一筆", color: "primary", variant: "filled", size: "md", leadingIcon: true, trailingIcon: false, disabled: false },
   argTypes: {
     label: { name: "文字", control: "text" },
     color: { name: "顏色", control: "inline-radio", options: COLORS.map((c) => c.key) },
     variant: { name: "樣式", control: "inline-radio", options: ["filled", "outlined", "text", "icon", "icon-outlined"] },
-    size: { name: "尺寸", control: "inline-radio", options: ["default", "sm", "xs"] },
+    size: { name: "尺寸", control: "inline-radio", options: ["md", "sm", "xs"] },
     leadingIcon: { name: "前方 icon", control: "boolean" },
     trailingIcon: { name: "後方 icon", control: "boolean" },
     disabled: { name: "停用", control: "boolean" },

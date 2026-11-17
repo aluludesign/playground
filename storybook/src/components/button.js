@@ -9,7 +9,7 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&l
  * 產生 Button 的 HTML（對應 Figma「Button」的屬性）。
  * color:   "primary" | "secondary" | "tertiary" | "error" | "white"
  * variant: "filled" | "outlined" | "text" | "icon" | "icon-outlined"
- * size:    "default" | "sm" | "xs"
+ * size:    "md" | "sm" | "xs"
  * state:   只給文件頁固定顯示用（"hover" | "focus" | "pressed"）
  * icon / trailingIconSvg：換 icon 時傳 svg 字串（記得加 class="ds-btn__icon"）
  */
@@ -17,7 +17,7 @@ export function buttonHTML({
   label = "記一筆",
   color = "primary",
   variant = "filled",
-  size = "default",
+  size = "md",
   leadingIcon = true,
   trailingIcon = false,
   icon = ADD,
@@ -28,7 +28,7 @@ export function buttonHTML({
   const cls = ["ds-btn"];
   if (color !== "primary") cls.push("ds-btn--" + color);
   if (variant !== "filled") cls.push("ds-btn--" + variant);
-  if (size !== "default") cls.push("ds-btn--" + size);
+  if (size !== "md" && size !== "default") cls.push("ds-btn--" + size);
   if (state) cls.push("is-" + state);
   const iconOnly = variant === "icon" || variant === "icon-outlined";
   const inner = iconOnly

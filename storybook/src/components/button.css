@@ -3,7 +3,7 @@
  * 全部照 Figma「Button」（node 160985:2196），尺寸、間距、圓角、顏色都吃 token。
  *   Color：Primary / Secondary / Tertiary / Error / White
  *   Style：Filled / Outlined / Text / Icon Filled / Icon Outlined
- *   Size ：Default / Small / xs
+ *   Size ：md / sm / xs
  *   State：Enabled / Hovered / Focused / Pressed / Disabled
  *
  * 結構：
@@ -14,7 +14,7 @@
  *   </button>
  *   顏色：ds-btn--secondary / --tertiary / --error / --white（不加就是 Primary）
  *   樣式：ds-btn--outlined / --text / --icon / --icon-outlined（不加就是 Filled）
- *   尺寸：ds-btn--sm / --xs（不加就是 Default）
+ *   尺寸：ds-btn--sm / --xs（不加就是 md）
  *
  * 圖層：
  *   ::before = 底色＋外框線＋State layer（同色疊 8%／10%，用漸層疊在底色上）
@@ -40,7 +40,7 @@
   /* 顏色：c 是主色，on 是放在主色上的顏色 */
   --btn-c: var(--ds-sys-color-primary);
   --btn-on: var(--ds-sys-color-on-primary);
-  /* 尺寸（Default） */
+  /* 尺寸（md） */
   --btn-pad-y: var(--ds-sys-spacing-md);
   --btn-pad-x: var(--ds-sys-spacing-2xl);
   --btn-icon-pad: var(--ds-sys-spacing-md);
@@ -214,13 +214,13 @@
   transition: inset 0.2s var(--btn-ease);
 }
 
-/* Hovered：8%；Filled 類另外加 Elevation/text/xs 陰影 */
+/* Hovered：8%；Filled 類另外加 Elevation/component/sm 陰影（11/17 Figma 改的） */
 .ds-btn:hover:not(:disabled, .is-disabled),
 .ds-btn.is-hover {
   --btn-layer-op: 0.08;
 }
 .ds-btn:not(.ds-btn--outlined, .ds-btn--text, .ds-btn--icon-outlined):is(:hover:not(:disabled, .is-disabled), .is-hover) {
-  --btn-shadow: var(--ds-elevation-text-xs);
+  --btn-shadow: var(--ds-elevation-component-sm);
 }
 /* Focused（鍵盤）：10% ＋ focus ring */
 .ds-btn:focus-visible,
