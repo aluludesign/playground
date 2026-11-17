@@ -26,7 +26,7 @@
  * 文字和 icon 完全不動，按鈕佔的位置也不變。
  *
  * Outlined 的外框線畫在裡面（Figma Inside、不算進 layout），所以跟 Filled 一樣大。
- * 文字按鈕拿掉 icon 時高度不變（11/17 她定的）：最小高度 = comp 的 btn/normal/*/height。
+ * 文字按鈕拿掉 icon 時高度不變（11/17 她定的）：最小高度 = comp 的 btn/normal/{尺寸}/height。
  */
 
 /* State layer 的透明度做成可補間的數字，hover 時才能淡入 */
