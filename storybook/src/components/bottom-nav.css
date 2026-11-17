@@ -1,0 +1,110 @@
+/* 底部導覽 bottom nav —— Figma「bottom nav/main」「bottom nav/items」（section 162510:14932）
+ *
+ *   外框：膠囊、bg pattern/primary-soft、抖動外框（outline 50、wiggle 0.3）、Elevation/surface/soft
+ *   每一格：65×65 的點擊區，中間 55×55 的圓（bg pattern/tertiary、2px outline 50 框、Elevation/component/md）
+ *   default：icon 24（sys/icon/md）＋文字 caption/sm/regular
+ *   active ：icon 放大到 comp/bottom nav/active-icon（32），文字藏起來
+ *
+ * 外框的抖動線由 wiggle.js 畫（.ds-wiggle-border），底紋由 pattern.css 畫（.ds-pattern）。
+ */
+
+.ds-bottom-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-sys-spacing-2xl);
+  padding: var(--ds-sys-spacing-xs);
+  border-radius: var(--ds-comp-bottom-nav-radius);
+  box-shadow: var(--ds-elevation-surface-soft);
+  --wiggle-width: var(--ds-sys-border-xs);
+}
+
+.ds-bottom-nav__item {
+  --nav-icon: var(--ds-sys-icon-md);
+  --nav-ease: cubic-bezier(0.25, 1, 0.5, 1);
+  position: relative;
+  /* Figma items 是固定 65×65，圓 55×55（沒有對應的 token） */
+  width: 65px;
+  height: 65px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: none;
+  border-radius: var(--ds-comp-bottom-nav-radius);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  color: var(--ds-sys-color-text-100);
+}
+
+.ds-bottom-nav__circle {
+  box-sizing: border-box;
+  width: 55px;
+  height: 55px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ds-sys-spacing-2xs);
+  border: var(--ds-sys-border-md) solid var(--ds-sys-color-outline-50);
+  border-radius: var(--ds-comp-bottom-nav-radius);
+  box-shadow: var(--ds-elevation-component-md);
+}
+
+.ds-bottom-nav__icon {
+  position: relative;
+  width: var(--nav-icon);
+  height: var(--nav-icon);
+  flex: none;
+  transition: width 0.2s var(--nav-ease), height 0.2s var(--nav-ease);
+}
+/* icon 的 SVG 有些比 24 格大一點（貼紙描邊、飛機翼），照 Figma 不裁切、置中 */
+.ds-bottom-nav__icon > svg {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(var(--nav-icon) * var(--w) / 24);
+  height: calc(var(--nav-icon) * var(--h) / 24);
+  transform: translate(-50%, -50%);
+  overflow: visible;
+  transition: width 0.2s var(--nav-ease), height 0.2s var(--nav-ease);
+}
+
+/* caption/sm/regular：label 字體、label/xs 字級、行高 auto、字距 4% */
+.ds-bottom-nav__label {
+  font-family: var(--ds-sys-font-family-label);
+  font-weight: 400;
+  font-size: var(--ds-sys-font-size-label-xs);
+  line-height: 1;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.ds-bottom-nav__item.is-active,
+.ds-bottom-nav__item[aria-current="page"] {
+  --nav-icon: var(--ds-comp-bottom-nav-active-icon);
+}
+.ds-bottom-nav__item.is-active .ds-bottom-nav__label,
+.ds-bottom-nav__item[aria-current="page"] .ds-bottom-nav__label {
+  display: none;
+}
+
+/* 鍵盤焦點：跟按鈕一樣的 Focus ring */
+.ds-bottom-nav__item:focus-visible {
+  outline: none;
+}
+.ds-bottom-nav__item:focus-visible::after {
+  content: "";
+  position: absolute;
+  inset: calc(5px - var(--ds-sys-spacing-2xs) - var(--ds-comp-focus-ring-border));
+  border: var(--ds-comp-focus-ring-border) solid var(--ds-comp-focus-ring-color);
+  border-radius: var(--ds-comp-bottom-nav-radius);
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ds-bottom-nav__icon,
+  .ds-bottom-nav__icon > svg {
+    transition: none;
+  }
+}
