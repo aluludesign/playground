@@ -88,6 +88,7 @@ export const 全部狀態 = {
     page(`<h1>按鈕 Button</h1>
 <p class="lead">一般按鈕。全部照 Figma「Button」：5 種顏色 × 5 種樣式 × 3 種尺寸 × 5 種狀態。<br>
 Hovered／Focused／Pressed 蓋一層同色（8%／10%／10%），Filled 類 Hovered 另外加 Elevation/text/xs 陰影；Focused 外面多一圈 focus ring。<br>
+Pressed 跟 Dynamic Iris 一樣會稍微變大（只有背景往外長，文字不動）。文字按鈕拿掉 icon 時高度不變。<br>
 下面 Hovered／Focused／Pressed 是固定顯示的樣子；底下「實際操作」那排是真的按鈕，可以移上去、按住、用 Tab 移到上面看看。灰底是為了看得到 White。</p>
 ${COLORS.map((c) => `<section class="tk"><h2>${c.label}</h2>${matrix(c.key)}</section>`).join("")}
 <section class="tk"><h2>實際操作</h2>
@@ -97,7 +98,9 @@ ${COLORS.map((c) => `<section class="tk"><h2>${c.label}</h2>${matrix(c.key)}</se
     ).join("")}</div>
 </section>
 <section class="tk"><h2>Leading／Trailing icon</h2>
+<p class="note">拿掉 icon 高度也一樣（Default 36、Small 28、xs 24）。</p>
 <div class="btn-row">${buttonHTML({})}${buttonHTML({ leadingIcon: false })}${buttonHTML({ leadingIcon: false, trailingIcon: true })}${buttonHTML({ trailingIcon: true })}</div>
+<div class="btn-row">${["default", "sm", "xs"].map((z) => buttonHTML({ size: z }) + buttonHTML({ size: z, leadingIcon: false })).join("")}</div>
 </section>
 <section class="tk"><h2>用法</h2>
 <p class="note">CSS 在 <code>src/components/button.css</code>；也可以用 <code>src/components/button.js</code> 的 <code>buttonHTML()</code> 產生。</p>

@@ -16,9 +16,25 @@
  *   樣式：ds-btn--outlined / --text / --icon / --icon-outlined（不加就是 Filled）
  *   尺寸：ds-btn--sm / --xs（不加就是 Default）
  *
- * 狀態層（::before）和 Figma 的「State layer」一樣：蓋一層同色，Hovered 8%、Focused／Pressed 10%。
- * Focus ring（::after）和 Figma 的「Focus ring」一樣：離按鈕外緣 2px、線寬 border/lg。
+ * 圖層：
+ *   ::before = 底色＋外框線＋State layer（同色疊 8%／10%，用漸層疊在底色上）
+ *   ::after  = Focus ring（離外緣 2px、線寬 border/lg）
+ *   按鈕本身只放 icon 和文字。
+ *
+ * Pressed 會稍微變大（跟 Dynamic Iris 一樣，11/17 她定的）：Figma 是每個 padding 往上跳一級 spacing。
+ * 這裡不改 padding——改 padding 每一格都要重排，文字會抖——而是讓 ::before、::after 往外長，
+ * 文字和 icon 完全不動，按鈕佔的位置也不變。
+ *
+ * Outlined 的外框線畫在裡面（Figma Inside、不算進 layout），所以跟 Filled 一樣大。
+ * 文字按鈕拿掉 icon 時高度不變（11/17 她定的）：最小高度 = icon + 上下 padding。
  */
+
+/* State layer 的透明度做成可補間的數字，hover 時才能淡入 */
+@property --btn-layer-op {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
 
 .ds-btn {
   /* 顏色：c 是主色，on 是放在主色上的顏色 */
@@ -36,12 +52,22 @@
   --btn-font-size: var(--ds-sys-font-size-label-md);
   --btn-line-height: 18px; /* label/md/semi-bold 的行高 */
   --btn-tracking: 0.05em;
+  /* Pressed 時往外長多少 = Figma Pressed 的 padding − 平常的 padding（各往上一級） */
+  --btn-grow-y: calc(var(--ds-sys-spacing-lg) - var(--ds-sys-spacing-md));
+  --btn-grow-x: calc(var(--ds-sys-spacing-3xl) - var(--ds-sys-spacing-2xl));
+  --btn-icon-grow: calc(var(--ds-sys-spacing-lg) - var(--ds-sys-spacing-md));
   /* 樣式（Filled） */
   --btn-bg: var(--btn-c);
   --btn-fg: var(--btn-on);
   --btn-layer: var(--btn-on);
   --btn-bw: 0px;
   --btn-bc: transparent;
+  --btn-shadow: none;
+  /* 執行期狀態 */
+  --btn-layer-op: 0;
+  --btn-dy: 0px; /* 這一刻往外長多少 */
+  --btn-dx: 0px;
+  --btn-ease: cubic-bezier(0.25, 1, 0.5, 1); /* 跟 Dynamic Iris 一樣的 ease-tactile */
 
   position: relative;
   isolation: isolate;
@@ -50,10 +76,11 @@
   align-items: center;
   justify-content: center;
   gap: var(--btn-gap);
+  min-height: calc(var(--btn-icon) + 2 * var(--btn-pad-y));
   padding: var(--btn-pad-y) var(--btn-pad-x);
-  border: var(--btn-bw) solid var(--btn-bc);
+  border: 0;
   border-radius: var(--btn-radius);
-  background: var(--btn-bg);
+  background: none;
   color: var(--btn-fg);
   font-family: var(--ds-sys-font-family-label);
   font-weight: 700; /* semi-bold 樣式用的是源泉圓體 B */
@@ -100,11 +127,15 @@
   --btn-fg: var(--btn-c);
   --btn-layer: var(--btn-c);
 }
-.ds-btn--icon,
-.ds-btn--icon-outlined {
+/* 寫兩個 class 是為了蓋過後面尺寸 class 設的文字按鈕值 */
+.ds-btn.ds-btn--icon,
+.ds-btn.ds-btn--icon-outlined {
   --btn-radius: var(--btn-icon-radius);
   --btn-ring-radius: var(--ds-comp-btn-normal-full-focus-ring-radius);
-  padding: var(--btn-icon-pad);
+  --btn-pad-y: var(--btn-icon-pad);
+  --btn-pad-x: var(--btn-icon-pad);
+  --btn-grow-y: var(--btn-icon-grow);
+  --btn-grow-x: var(--btn-icon-grow);
 }
 
 /* ---------- 尺寸 ---------- */
@@ -118,6 +149,9 @@
   --btn-icon: var(--ds-comp-btn-normal-sm-icon);
   --btn-font-size: var(--ds-sys-font-size-label-sm);
   --btn-line-height: 1; /* label/sm/semi-bold 行高是 auto，文字框量起來 12px */
+  --btn-grow-y: calc(var(--ds-sys-spacing-md) - var(--ds-sys-spacing-sm));
+  --btn-grow-x: calc(var(--ds-sys-spacing-2xl) - var(--ds-sys-spacing-xl));
+  --btn-icon-grow: calc(var(--ds-sys-spacing-md) - var(--ds-sys-spacing-sm));
 }
 .ds-btn--xs {
   --btn-pad-y: var(--ds-sys-spacing-xs);
@@ -130,14 +164,9 @@
   --btn-font-size: var(--ds-sys-font-size-label-xs); /* caption/sm/semi-bold 綁的是 label/xs */
   --btn-line-height: 1;
   --btn-tracking: 0.04em;
-}
-/* Outlined 的外框線畫在裡面（Figma Inside、不算進 layout），按鈕跟 Filled 一樣大：
- * padding 扣掉線寬，讓線佔掉的是 padding 的位置（11/17 她定的）。 */
-.ds-btn--outlined {
-  padding: calc(var(--btn-pad-y) - var(--btn-bw)) calc(var(--btn-pad-x) - var(--btn-bw));
-}
-.ds-btn--icon-outlined {
-  padding: calc(var(--btn-icon-pad) - var(--btn-bw));
+  --btn-grow-y: calc(var(--ds-sys-spacing-sm) - var(--ds-sys-spacing-xs));
+  --btn-grow-x: calc(var(--ds-sys-spacing-lg) - var(--ds-sys-spacing-md));
+  --btn-icon-grow: calc(var(--ds-sys-spacing-sm) - var(--ds-sys-spacing-xs));
 }
 
 /* ---------- 內容 ---------- */
@@ -151,55 +180,72 @@
   display: block;
 }
 
-/* ---------- State layer ---------- */
+/* ---------- 底色＋外框線＋State layer ---------- */
 .ds-btn::before {
   content: "";
   position: absolute;
-  inset: calc(-1 * var(--btn-bw));
+  inset: calc(-1 * var(--btn-dy)) calc(-1 * var(--btn-dx));
   z-index: -1;
-  border-radius: inherit;
-  background: var(--btn-layer);
-  opacity: 0;
+  box-sizing: border-box;
+  border: var(--btn-bw) solid var(--btn-bc);
+  border-radius: var(--btn-radius);
+  background-color: var(--btn-bg);
+  background-image: linear-gradient(
+    color-mix(in srgb, var(--btn-layer) calc(var(--btn-layer-op) * 100%), transparent),
+    color-mix(in srgb, var(--btn-layer) calc(var(--btn-layer-op) * 100%), transparent)
+  );
+  background-origin: border-box; /* State layer 跟 Figma 一樣蓋到外框線底下 */
+  box-shadow: var(--btn-shadow);
   pointer-events: none;
-  transition: opacity 0.15s ease-out;
+  transition:
+    inset 0.2s var(--btn-ease),
+    --btn-layer-op 0.15s ease-out;
 }
-/* Focus ring：外緣往外 2px，再畫 border/lg 粗的線 */
+/* Focus ring：外緣往外 2px，再畫 border/lg 粗的線；Pressed 長大時跟著長 */
 .ds-btn::after {
   content: "";
   position: absolute;
-  inset: calc(-1 * (var(--btn-bw) + var(--ds-sys-spacing-2xs) + var(--ds-sys-border-lg)));
+  inset: calc(-1 * (var(--btn-dy) + var(--ds-sys-spacing-2xs) + var(--ds-sys-border-lg)))
+    calc(-1 * (var(--btn-dx) + var(--ds-sys-spacing-2xs) + var(--ds-sys-border-lg)));
   border: var(--ds-sys-border-lg) solid var(--ds-comp-focus-ring-color);
   border-radius: var(--btn-ring-radius);
   pointer-events: none;
   display: none;
+  transition: inset 0.2s var(--btn-ease);
 }
 
 /* Hovered：8%；Filled 類另外加 Elevation/text/xs 陰影 */
-.ds-btn:hover:not(:disabled):not(.is-disabled)::before,
-.ds-btn.is-hover::before {
-  opacity: 0.08;
+.ds-btn:hover:not(:disabled, .is-disabled),
+.ds-btn.is-hover {
+  --btn-layer-op: 0.08;
 }
-.ds-btn:is(:not(.ds-btn--outlined, .ds-btn--text, .ds-btn--icon-outlined)):is(:hover:not(:disabled):not(.is-disabled), .is-hover) {
-  box-shadow: var(--ds-elevation-text-xs);
+.ds-btn:not(.ds-btn--outlined, .ds-btn--text, .ds-btn--icon-outlined):is(:hover:not(:disabled, .is-disabled), .is-hover) {
+  --btn-shadow: var(--ds-elevation-text-xs);
 }
-/* Focused（鍵盤）／Pressed：10% */
-.ds-btn:focus-visible::before,
-.ds-btn.is-focus::before,
-.ds-btn:active:not(:disabled):not(.is-disabled)::before,
-.ds-btn.is-pressed::before {
-  opacity: 0.1;
+/* Focused（鍵盤）：10% ＋ focus ring */
+.ds-btn:focus-visible,
+.ds-btn.is-focus {
+  --btn-layer-op: 0.1;
 }
 .ds-btn:focus-visible::after,
 .ds-btn.is-focus::after {
   display: block;
+}
+/* Pressed：10% ＋ 稍微變大 */
+.ds-btn:active:not(:disabled, .is-disabled),
+.ds-btn.is-pressed {
+  --btn-layer-op: 0.1;
+  --btn-dy: var(--btn-grow-y);
+  --btn-dx: var(--btn-grow-x);
 }
 
 /* ---------- Disabled ---------- */
 .ds-btn:disabled,
 .ds-btn.is-disabled {
   --btn-fg: var(--ds-sys-color-on-disable-container);
+  --btn-layer-op: 0;
+  --btn-shadow: none;
   cursor: default;
-  box-shadow: none;
 }
 .ds-btn:not(.ds-btn--outlined, .ds-btn--text, .ds-btn--icon-outlined):is(:disabled, .is-disabled) {
   --btn-bg: var(--ds-sys-color-disable-container);
@@ -207,12 +253,10 @@
 .ds-btn:is(.ds-btn--outlined, .ds-btn--icon-outlined):is(:disabled, .is-disabled) {
   --btn-bc: var(--ds-sys-color-disable-container);
 }
-.ds-btn:is(:disabled, .is-disabled)::before {
-  opacity: 0;
-}
 
 @media (prefers-reduced-motion: reduce) {
-  .ds-btn::before {
+  .ds-btn::before,
+  .ds-btn::after {
     transition: none;
   }
 }
