@@ -6,8 +6,8 @@ const USAGE = `import { bottomNavHTML, wireBottomNav } from "./components/bottom
 el.innerHTML = bottomNavHTML({
   active: "plan",
   items: [
-    { key: "plan", label: "行程", icon: "icon_calender_sticker" },
-    { key: "transport", label: "交通", icon: "icon_flight_duotone" },
+    { key: "plan", label: "行程", icon: "calender" },
+    { key: "transport", label: "交通", icon: "flight" },
     …
   ],
 });
@@ -23,7 +23,7 @@ export const 全部 = {
     el.className = "tk-page";
     el.innerHTML = `<h1>底部導覽 Bottom nav</h1>
 <p class="lead">App 底部的主要導覽。外框是 <code>bg pattern/primary-soft</code>＋抖動外框，每一格是一顆 <code>bg pattern/tertiary</code> 的圓。<br>
-目前這頁（active）icon 放大到 <code>comp/bottom nav/active-icon</code>、文字藏起來。點點看。</p>
+目前這頁（active）icon 從 duotone 換成 sticker、放大到 <code>comp/bottom nav/active-icon</code>、文字藏起來；放大後一支看不見的筆照著每一塊上色的形狀描出來再填色。點點看。</p>
 
 <section class="tk"><h2>bottom nav/main</h2>
 <div class="bn-stage">${bottomNavHTML({ active: "plan" })}</div>
@@ -31,8 +31,8 @@ export const 全部 = {
 
 <section class="tk"><h2>bottom nav/items</h2>
 <table><thead><tr><th>Property 1</th><th>預覽</th><th>說明</th></tr></thead><tbody>
-<tr><td class="nm">default</td><td class="bn-cell">${bottomNavHTML({ items: [DEFAULT_ITEMS[0]], active: "" }).replace('class="ds-bottom-nav ', 'class="ds-bottom-nav bn-bare ')}</td><td class="al">icon <code>sys/icon/md</code>（24）＋ caption/sm/regular</td></tr>
-<tr><td class="nm">active</td><td class="bn-cell">${bottomNavHTML({ items: [DEFAULT_ITEMS[0]], active: "plan" }).replace('class="ds-bottom-nav ', 'class="ds-bottom-nav bn-bare ')}</td><td class="al">icon <code>comp/bottom nav/active-icon</code>（32），文字隱藏</td></tr>
+<tr><td class="nm">default</td><td class="bn-cell">${bottomNavHTML({ items: [DEFAULT_ITEMS[0]], active: "" }).replace('class="ds-bottom-nav ', 'class="ds-bottom-nav bn-bare ')}</td><td class="al">duotone icon <code>sys/icon/md</code>（24）＋ caption/sm/regular</td></tr>
+<tr><td class="nm">active</td><td class="bn-cell">${bottomNavHTML({ items: [DEFAULT_ITEMS[0]], active: "plan" }).replace('class="ds-bottom-nav ', 'class="ds-bottom-nav bn-bare ')}</td><td class="al">sticker icon <code>comp/bottom nav/active-icon</code>（32），文字隱藏</td></tr>
 </tbody></table>
 <p class="note">鍵盤操作時（Tab）會出現和按鈕一樣的 Focus ring。</p>
 </section>

@@ -2,8 +2,8 @@
  *
  *   外框：膠囊、bg pattern/primary-soft、抖動外框（outline 50、wiggle 0.3）、Elevation/surface/soft
  *   每一格：65×65 的點擊區，中間 55×55 的圓（bg pattern/tertiary、2px outline 50 框、Elevation/component/md）
- *   default：icon 24（sys/icon/md）＋文字 caption/sm/regular
- *   active ：icon 放大到 comp/bottom nav/active-icon（32），文字藏起來
+ *   default：duotone icon 24（sys/icon/md）＋文字 caption/sm/regular
+ *   active ：sticker icon 放大到 comp/bottom nav/active-icon（32），文字藏起來
  *
  * 外框的抖動線由 wiggle.js 畫（.ds-wiggle-border），底紋由 pattern.css 畫（.ds-pattern）。
  */
@@ -19,7 +19,6 @@
 }
 
 .ds-bottom-nav__item {
-  --nav-icon: var(--ds-sys-icon-md);
   --nav-ease: cubic-bezier(0.25, 1, 0.5, 1);
   position: relative;
   /* Figma items 是固定 65×65，圓 55×55（沒有對應的 token） */
@@ -51,42 +50,108 @@
   box-shadow: var(--ds-elevation-component-md);
 }
 
-.ds-bottom-nav__icon {
+/* icon 和文字都用絕對定位，切換時只動 transform／opacity，不重排版面（才不會抖）。
+ *
+ *   default：duotone、icon/md（24）、跟文字一起置中 → icon 中心往上 (2xs + 文字高) / 2
+ *   active ：sticker、active-icon（32）、自己置中、文字淡出
+ *
+ * icon 永遠用 active 的大小畫，default 時縮成 --nav-scale（= icon/md ÷ active-icon，由 JS 算；
+ * 算不到就用 Figma 的 24/32）。過場時 duotone 淡出、sticker 淡入，同時往下移、放大，
+ * 尾端帶一點回彈，像從小長大。 */
+.ds-bottom-nav__circle {
   position: relative;
-  width: var(--nav-icon);
-  height: var(--nav-icon);
-  flex: none;
-  transition: width 0.2s var(--nav-ease), height 0.2s var(--nav-ease);
 }
-/* icon 的 SVG 有些比 24 格大一點（貼紙描邊、飛機翼），照 Figma 不裁切、置中 */
+
+.ds-bottom-nav__icon {
+  --nav-shift: calc((var(--ds-sys-spacing-2xs) + var(--ds-sys-font-size-label-xs)) / -2);
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--ds-comp-bottom-nav-active-icon);
+  height: var(--ds-comp-bottom-nav-active-icon);
+  margin: calc(var(--ds-comp-bottom-nav-active-icon) / -2) 0 0 calc(var(--ds-comp-bottom-nav-active-icon) / -2);
+  transform: translateY(var(--nav-shift)) scale(var(--nav-scale, 0.75));
+  transition: transform 0.42s var(--nav-spring);
+}
+.ds-bottom-nav__item {
+  --nav-spring: cubic-bezier(0.34, 1.45, 0.64, 1);
+}
+
+/* 兩種樣式疊在一起交叉淡入淡出。SVG 有些比 24 格大一點（貼紙描邊、飛機翼），照 Figma 不裁切、置中 */
 .ds-bottom-nav__icon > svg {
   position: absolute;
   left: 50%;
   top: 50%;
-  width: calc(var(--nav-icon) * var(--w) / 24);
-  height: calc(var(--nav-icon) * var(--h) / 24);
+  width: calc(100% * var(--w) / 24);
+  height: calc(100% * var(--h) / 24);
   transform: translate(-50%, -50%);
   overflow: visible;
-  transition: width 0.2s var(--nav-ease), height 0.2s var(--nav-ease);
+  transition: opacity 0.28s ease;
+}
+.ds-bottom-nav__icon > .is-active-style {
+  opacity: 0;
 }
 
 /* caption/sm/regular：label 字體、label/xs 字級、行高 auto、字距 4% */
 .ds-bottom-nav__label {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  margin-top: calc((var(--ds-sys-icon-md) + var(--ds-sys-spacing-2xs)) / 2 - var(--ds-sys-font-size-label-xs) / 2);
+  transform: translateX(-50%);
   font-family: var(--ds-sys-font-family-label);
   font-weight: 400;
   font-size: var(--ds-sys-font-size-label-xs);
   line-height: 1;
   letter-spacing: 0.04em;
   white-space: nowrap;
+  transition: opacity 0.2s ease, transform 0.3s var(--nav-ease);
 }
 
-.ds-bottom-nav__item.is-active,
-.ds-bottom-nav__item[aria-current="page"] {
-  --nav-icon: var(--ds-comp-bottom-nav-active-icon);
+.ds-bottom-nav__item.is-active .ds-bottom-nav__icon,
+.ds-bottom-nav__item[aria-current="page"] .ds-bottom-nav__icon {
+  transform: none;
 }
+.ds-bottom-nav__item.is-active .is-default-style,
+.ds-bottom-nav__item[aria-current="page"] .is-default-style {
+  opacity: 0;
+}
+.ds-bottom-nav__item.is-active .is-active-style,
+.ds-bottom-nav__item[aria-current="page"] .is-active-style {
+  opacity: 1;
+}
+/* sticker 的上色：先放大，緊接著一支看不見的筆照每一塊上色的形狀描出來，描完再填色，
+ * 最後描線收掉，停下來的樣子跟 Figma 一模一樣。一塊接一塊（--i）。
+ * 回到 default 時直接收起來，不倒著擦。 */
+.ds-bottom-nav__pen {
+  --pen-start: 0.2s;   /* 放大大致完成後就接上 */
+  --pen-draw: 0.32s;   /* 描一塊 */
+  --pen-gap: 0.07s;    /* 下一塊晚多久開始 */
+  stroke: var(--pen);
+  stroke-width: 0.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1 1;
+  stroke-dashoffset: 1;
+  stroke-opacity: 1;
+  fill-opacity: 0;
+}
+.ds-bottom-nav__item.is-active .ds-bottom-nav__pen,
+.ds-bottom-nav__item[aria-current="page"] .ds-bottom-nav__pen {
+  --pen-at: calc(var(--pen-start) + var(--i) * var(--pen-gap));
+  stroke-dashoffset: 0;
+  fill-opacity: 1;
+  stroke-opacity: 0;
+  transition:
+    stroke-dashoffset var(--pen-draw) cubic-bezier(0.4, 0, 0.2, 1) var(--pen-at),
+    fill-opacity 0.22s ease-out calc(var(--pen-at) + var(--pen-draw) * 0.7),
+    stroke-opacity 0.2s ease-out calc(var(--pen-at) + var(--pen-draw) + 0.1s);
+}
+
 .ds-bottom-nav__item.is-active .ds-bottom-nav__label,
 .ds-bottom-nav__item[aria-current="page"] .ds-bottom-nav__label {
-  display: none;
+  opacity: 0;
+  transform: translateX(-50%) translateY(4px) scale(0.8);
 }
 
 /* 鍵盤焦點：跟按鈕一樣的 Focus ring */
@@ -104,7 +169,9 @@
 
 @media (prefers-reduced-motion: reduce) {
   .ds-bottom-nav__icon,
-  .ds-bottom-nav__icon > svg {
-    transition: none;
+  .ds-bottom-nav__icon > svg,
+  .ds-bottom-nav__label,
+  .ds-bottom-nav__item .ds-bottom-nav__pen {
+    transition: none !important;
   }
 }
