@@ -5,10 +5,10 @@ import { wireWiggle } from "../wiggle.js";
 const raw = import.meta.glob("../icons/general/*.svg", { query: "?raw", import: "default", eager: true });
 const svgOf = (file) => raw[`../icons/general/${file}.svg`] || "";
 
-// Figma bottom nav/main 裡的 5 格（icon 名稱照 Figma，含原本的拼字）
+// Figma bottom nav/main 裡的 5 格（icon 名稱照 Figma，含原本的拼字；第 2 格是「許願」）
 export const DEFAULT_ITEMS = [
   { key: "plan", label: "行程", icon: "icon_calender_sticker" },
-  { key: "wish", label: "行程", icon: "icon_start_heart_duotone" },
+  { key: "wish", label: "許願", icon: "icon_start_heart_duotone" },
   { key: "transport", label: "交通", icon: "icon_flight_duotone" },
   { key: "spend", label: "花費", icon: "icon_peoploe_plus_duotone" },
   { key: "split", label: "分帳", icon: "icon_circle_triangel_down_duotone" },

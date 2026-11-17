@@ -889,5 +889,3 @@ C:divider/color/strong|C|@S:color/outline 200
 C:divider/color/neutral|C|@S:color/outline neutral
 C:bottom nav/active-icon|F|@S:icon/xl
 C:bottom nav/radius|F|@S:radius/full
-C:bottom nav/padding-top-bottom|F|@S:spacing/lg
-C:bottom nav/padding-r-l|F|@S:spacing/2xl
