@@ -228,12 +228,21 @@
 .ds-iris-btn.is-pressed::before {
   box-shadow: var(--ds-elevation-component-sm);
 }
-/* 聚焦：外圈 primary 的 focus ring，跟按鈕隔一個 2xs */
+/* 聚焦：Focus ring 跟 Button 同一套（11/17 Figma 改的）：離外緣 2px、線寬 border/lg、focus-ring 色 */
 .ds-iris-btn:focus { outline: none; }
-.ds-iris-btn:focus-visible,
-.ds-iris-btn.is-focus {
-  outline: var(--ds-sys-border-md) solid var(--ds-sys-color-primary);
-  outline-offset: var(--ds-sys-spacing-2xs);
+.ds-iris-btn::after {
+  content: "";
+  position: absolute;
+  inset: calc(-1 * (var(--iris-grow) + var(--ds-sys-spacing-2xs) + var(--ds-sys-border-lg)));
+  border: var(--ds-sys-border-lg) solid var(--ds-comp-focus-ring-color);
+  border-radius: var(--ds-comp-btn-normal-full-focus-ring-radius);
+  pointer-events: none;
+  display: none;
+  transition: inset 0.2s var(--iris-ease);
+}
+.ds-iris-btn:focus-visible::after,
+.ds-iris-btn.is-focus::after {
+  display: block;
 }
 .ds-iris-btn:focus-visible::before,
 .ds-iris-btn.is-focus::before { box-shadow: none; } /* Figma 的 Focused 沒有套陰影 */
