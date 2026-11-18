@@ -891,3 +891,6 @@ C:bottom nav/active-icon|F|@S:icon/xl
 C:bottom nav/radius|F|@S:radius/full
 C:menu/radius|F|@S:radius/xs
 C:menu/icon|F|@S:icon/lg
+C:segmented/radius-top-left|F|@S:radius/sm
+C:segmented/radius-top-right|F|@S:radius/3xl
+C:segmented sheet/radius|F|@S:radius/sm
