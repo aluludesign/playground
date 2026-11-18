@@ -1,0 +1,90 @@
+/* 選單 menu —— Figma「menu」「menu_item」（section 162524:13250）
+ *
+ *   外框：bg pattern/bright、抖動外框（outline 300、wiggle 0.3、border/xs）、Elevation/surface/soft、圓角 comp/menu/radius
+ *   寬度照內容字寬，最寬是畫面左右各留 16（spacing/2xl）；文字最多三行，超過用「…」
+ *   menu_item：內距 sm／xl、間距 md、Body/sm/semi-bold（源泉圓體 M）
+ *   selected：底色 opacity primary 100，後面出現 check_line duotone（comp/menu/icon）
+ *
+ * 外框的抖動線由 wiggle.js 畫（.ds-wiggle-border），底紋由 pattern.css 畫（.ds-pattern）。
+ */
+
+.ds-menu {
+  display: inline-flex;
+  flex-direction: column;
+  width: max-content;
+  /* 最寬＝畫面左右各留 16；放在比畫面窄的容器裡可以覆寫 --menu-max-width */
+  max-width: var(--menu-max-width, calc(100vw - 2 * var(--ds-sys-spacing-2xl)));
+  border-radius: var(--ds-comp-menu-radius);
+  box-shadow: var(--ds-elevation-surface-soft);
+  --wiggle-width: var(--ds-sys-border-xs);
+}
+
+/* 選起來的底色要跟著外框圓角裁掉；抖動線畫在 .ds-menu 上，不會被裁 */
+.ds-menu__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-sys-spacing-2xs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-radius: inherit;
+  overflow: hidden;
+}
+
+.ds-menu__item {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-sys-spacing-md);
+  /* Figma 一列高 40 = icon 28 ＋ 上下內距 6 */
+  min-height: calc(var(--ds-comp-menu-icon) + 2 * var(--ds-sys-spacing-sm));
+  padding: var(--ds-sys-spacing-sm) var(--ds-sys-spacing-xl);
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  color: var(--ds-sys-color-text-100);
+  font-family: var(--ds-sys-font-family-body);
+  font-weight: 500; /* Body/sm/semi-bold 用的是源泉圓體 M */
+  font-size: var(--ds-sys-font-size-body-sm);
+  line-height: normal;
+  letter-spacing: 0.05em;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ds-menu__text {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+.ds-menu__check {
+  flex: none;
+  width: var(--ds-comp-menu-icon);
+  height: var(--ds-comp-menu-icon);
+  display: none;
+}
+.ds-menu__check svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.ds-menu__item[aria-checked="true"] {
+  background: var(--ds-sys-color-opacity-opacity-primary-100);
+}
+.ds-menu__item[aria-checked="true"] .ds-menu__check {
+  display: block;
+}
+
+.ds-menu__item:focus-visible {
+  outline: var(--ds-comp-focus-ring-border) solid var(--ds-comp-focus-ring-color);
+  outline-offset: calc(-1 * var(--ds-comp-focus-ring-border));
+}
