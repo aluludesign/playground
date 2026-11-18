@@ -55,6 +55,7 @@ export const 全部 = {
 <tr><td><code class="var">--pen-start</code></td><td>0</td><td class="al">晚多久才開始畫</td></tr>
 <tr><td><code class="var">--pen-draw</code></td><td>.3s</td><td class="al">掃過一塊要多久</td></tr>
 <tr><td><code class="var">--pen-gap</code></td><td>.07s</td><td class="al">下一塊晚多久開始</td></tr>
+<tr><td><code class="var">--pen-fill</code></td><td>.45</td><td class="al">筆掃到幾成時顏色開始浮出來（越小越早；底部導覽用 .1：畫的速度不變，只是顏色更早浮出來）</td></tr>
 </tbody></table>
 <pre class="wg-code"><code>${esc(BRUSH_USAGE)}</code></pre>
 </section>
