@@ -10,11 +10,13 @@
  *   --pen-start  晚多久才開始畫（預設 0；bottom nav 等 icon 放大完才畫）
  *   --pen-draw   掃過一塊要多久（預設 .3s）
  *   --pen-gap    下一塊晚多久開始（預設 .07s）
+ *   --pen-fill   筆掃到幾成時填色開始浮出來（預設 .45；越小顏色越早出來）
  */
 .ds-pen-brush {
   --pen-start: 0s;
   --pen-draw: 0.3s;
   --pen-gap: 0.07s;
+  --pen-fill: 0.45;
 }
 .ds-pen-brush__layer,
 .ds-pen-brush__sweep {
@@ -38,7 +40,7 @@
   fill-opacity: 1;
   stroke-opacity: 0;
   transition:
-    fill-opacity 0.2s ease-out calc(var(--pen-at) + var(--pen-draw) * 0.45),
+    fill-opacity 0.2s ease-out calc(var(--pen-at) + var(--pen-draw) * var(--pen-fill)),
     stroke-opacity 0.2s ease-out calc(var(--pen-at) + var(--pen-draw) + 0.1s);
 }
 
