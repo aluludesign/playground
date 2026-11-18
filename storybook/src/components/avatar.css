@@ -1,7 +1,7 @@
 /* 頭像 Avatar —— Figma shared comps「avatar」（162273:13717）
  *
  *   圓形照片，裡面描一圈 outline 50 的細框（comp/avatar/border，畫在內側）
- *   Property 1：lg 35／md 24／sm 18（comp/avatar/size/*）
+ *   Property 1：lg 36／md 24／sm 16（comp/avatar/size/*）
  */
 .ds-avatar {
   position: relative;

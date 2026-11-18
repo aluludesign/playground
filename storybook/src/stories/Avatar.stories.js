@@ -19,9 +19,9 @@ export const 全部 = {
 
 <section class="tk"><h2>Property 1</h2>
 <table><thead><tr><th>size</th><th>預覽</th><th>token</th></tr></thead><tbody>
-<tr><td class="nm">lg</td><td class="av-cell">${avatarHTML({ src: photo, size: "lg" })}</td><td><code class="var">--ds-comp-avatar-size-lg</code>（35）</td></tr>
+<tr><td class="nm">lg</td><td class="av-cell">${avatarHTML({ src: photo, size: "lg" })}</td><td><code class="var">--ds-comp-avatar-size-lg</code>（icon/2xl，36）</td></tr>
 <tr><td class="nm">md</td><td class="av-cell">${avatarHTML({ src: photo })}</td><td><code class="var">--ds-comp-avatar-size-md</code>（icon/md，24）</td></tr>
-<tr><td class="nm">sm</td><td class="av-cell">${avatarHTML({ src: photo, size: "sm" })}</td><td><code class="var">--ds-comp-avatar-size-sm</code>（18）</td></tr>
+<tr><td class="nm">sm</td><td class="av-cell">${avatarHTML({ src: photo, size: "sm" })}</td><td><code class="var">--ds-comp-avatar-size-sm</code>（icon/xs，16）</td></tr>
 </tbody></table></section>
 
 <section class="tk"><h2>Token</h2>
