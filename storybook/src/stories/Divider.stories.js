@@ -7,8 +7,8 @@ const USAGE = `import { dividerWiggleHTML, dividerDotHTML, wireDivider } from ".
 el.innerHTML = dividerWiggleHTML({ color: "outline-200" }); // "outline-200" | "primary"
 wireDivider(el); // 畫線；尺寸變了會自己重畫
 
-// 直的點點線：放在兩段字中間（height 不給就是 9）
-row.innerHTML = \`日本，東京都\${dividerDotHTML()}景點\`;`;
+// 直的點點線（height 不給就是 9）
+box.innerHTML = dividerDotHTML({ height: 24 });`;
 
 const esc = (s) => s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]);
 
@@ -19,7 +19,7 @@ export const 全部 = {
     const el = document.createElement("div");
     el.className = "tk-page";
     el.innerHTML = `<h1>分隔線 Divider</h1>
-<p class="lead">兩種分隔線：橫的手繪抖動線，用來分開上下兩塊；直的點點線，用來分開同一列裡的兩段。</p>
+<p class="lead">兩種分隔線：橫的手繪抖動線，和直的點點線。</p>
 
 <section class="tk"><h2>divider/wiggle</h2>
 <p class="note">抖法照線條樣式的「分隔線」（frequency、wiggle、smoothen 都是 <code class="var">sys/wiggle/*</code> token），寬度跟著外面那層。</p>
@@ -33,7 +33,6 @@ export const 全部 = {
 <table><thead><tr><th></th><th>預覽</th></tr></thead><tbody>
 <tr><td class="nm">單獨</td><td class="dv-cell dv-dot">${dividerDotHTML()}</td></tr>
 <tr><td class="nm">height: 24</td><td class="dv-cell dv-dot">${dividerDotHTML({ height: 24 })}</td></tr>
-<tr><td class="nm">放在字中間</td><td class="dv-cell"><span class="dv-row">日本，東京都${dividerDotHTML()}景點</span></td></tr>
 </tbody></table></section>
 
 <section class="tk"><h2>Token</h2>
@@ -48,7 +47,6 @@ export const 全部 = {
 <style>
 .dv-cell { padding: 14px 16px; width: 326px; }
 .dv-dot { line-height: 0; }
-.dv-row { display: inline-flex; align-items: center; gap: var(--ds-sys-spacing-md); font: 400 var(--ds-sys-font-size-label-md)/18px var(--ds-sys-font-family-label); letter-spacing: .04em; color: var(--ds-sys-color-text-200); }
 .wg-code { background: #f6f2f0; border-radius: 8px; padding: 12px 14px; overflow-x: auto; font-size: 12px; line-height: 1.6; }
 </style>`;
     requestAnimationFrame(() => wireDivider(el));
