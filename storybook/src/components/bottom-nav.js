@@ -22,6 +22,8 @@ function styled(name, style, cls) {
   const [w, h] = m ? [+m[1], +m[2]] : [24, 24];
   // sticker 的上色由一支看不見的筆畫出來（pen-brush：遮罩在 wireBottomNav 量好大小後才加上）
   if (style === "sticker") svg = markPenLayers(svg);
+  // duotone 的白底（第一塊 fill="white"）標起來：切到 active 時白底先退，只留線稿疊在 sticker 上面等筆畫
+  if (style === "duotone") svg = svg.replace(/<path(?=[^>]*fill="white")/i, '<path class="ds-bottom-nav__base"');
   return svg.replace("<svg", `<svg class="${cls}" style="--w:${w};--h:${h}"`);
 }
 
@@ -50,7 +52,20 @@ export function wireBottomNav(root) {
     const md = parseFloat(cs.getPropertyValue("--ds-sys-icon-md"));
     const lg = parseFloat(cs.getPropertyValue("--ds-comp-bottom-nav-active-icon"));
     if (md && lg) nav.style.setProperty("--nav-scale", String(md / lg));
-    nav.querySelectorAll(".is-active-style").forEach(preparePenBrush);
+    nav.querySelectorAll(".is-active-style").forEach((sticker) => {
+      preparePenBrush(sticker);
+      // duotone 等筆刷上色畫到 10% 才淡出：開始畫 + 10% ×（最後一塊開始的時間 + 掃一塊的時間）
+      const sc = getComputedStyle(sticker);
+      const sec = (name, d) => {
+        const v = sc.getPropertyValue(name).trim();
+        const n = parseFloat(v);
+        return Number.isFinite(n) ? (v.endsWith("ms") ? n / 1000 : n) : d;
+      };
+      const layers = sticker.querySelectorAll(".ds-pen-brush__layer").length;
+      const total = Math.max(0, layers - 1) * sec("--pen-gap", 0.07) + sec("--pen-draw", 0.3);
+      const item = sticker.closest(".ds-bottom-nav__item");
+      if (item && layers) item.style.setProperty("--nav-duo-delay", `${(sec("--pen-start", 0.2) + total * 0.1).toFixed(3)}s`);
+    });
     nav.addEventListener("click", (e) => {
       const btn = e.target.closest(".ds-bottom-nav__item");
       if (!btn) return;
