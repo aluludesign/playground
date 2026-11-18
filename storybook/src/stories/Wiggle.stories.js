@@ -32,7 +32,7 @@ export const 全部 = {
 Figma 的三個數字照搬：frequency（多密）、wiggle（抖多大）、smoothen（多圓滑）。CSS 本身畫不出這種線，所以由 <code>src/wiggle.js</code> 照這三個數字畫一條平滑的 SVG 線疊上去；抖法每個元素固定，不會一縮放就換一條。</p>
 
 <section class="tk"><h2>分隔線</h2>
-<p class="note">Figma「line-style」：frequency 10 · wiggle 1.5 · smoothen 0.5 · 線寬 border/xs</p>
+<p class="note">Figma「line-style」：frequency <code class="var">sys/wiggle/frequency</code>（10）· wiggle <code class="var">sys/wiggle/amount/line</code>（1.5）· smoothen <code class="var">sys/wiggle/smoothen</code>（0.5）· 線寬 border/xs</p>
 <table class="wg-table"><thead><tr><th>Figma</th><th>預覽</th><th>顏色</th><th>class</th></tr></thead><tbody>
 ${LINES.map(
   (l) => `<tr><td class="nm">${l.figma}</td><td><div class="ds-wiggle-line ${l.cls}" style="width:326px"></div></td><td><code>${l.token}</code></td><td><code class="var">ds-wiggle-line${l.cls ? " " + l.cls : ""}</code></td></tr>`,
@@ -40,7 +40,7 @@ ${LINES.map(
 </tbody></table></section>
 
 <section class="tk"><h2>外框</h2>
-<p class="note">照 Figma「menu」的外框：frequency 10 · wiggle 0.3 · smoothen 0.5 · outline 300 · 圓角 radius/xs · 線畫在邊框正中間</p>
+<p class="note">照 Figma「menu」的外框：frequency <code class="var">sys/wiggle/frequency</code>（10）· wiggle <code class="var">sys/wiggle/amount/border</code>（0.3）· smoothen <code class="var">sys/wiggle/smoothen</code>（0.5）· outline 300 · 圓角 radius/xs · 線畫在邊框正中間</p>
 <div class="ds-wiggle-border wg-menu">
   <div class="wg-item">北海道 8 日孝親之旅</div>
   <div class="wg-item is-on">東京 PA PA 造 Happy Birithday</div>

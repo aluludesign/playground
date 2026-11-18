@@ -8,7 +8,8 @@
  *   顏色：  加 ds-wiggle--outline-50／-100／-200／-300
  *   然後在頁面上呼叫一次 wireWiggle()，它會幫所有 .ds-wiggle-* 畫線、尺寸變了會重畫。
  *
- * 數值放在 CSS 變數上，元件要不一樣的抖法就覆寫：
+ * 數值是 token：sys/wiggle/frequency、sys/wiggle/smoothen、sys/wiggle/amount/line（分隔線）、sys/wiggle/amount/border（外框）。
+ * wiggle.js 讀的是下面這幾個 CSS 變數（預設指向 token）：
  *   --wiggle-frequency  Figma frequency（10 ≒ 每 10px 一個起伏點）
  *   --wiggle-amount     Figma wiggle（px，往兩側最多偏多少）
  *   --wiggle-smoothen   Figma smoothen（0 尖、1 圓）
@@ -18,15 +19,15 @@
 
 .ds-wiggle-line,
 .ds-wiggle-border {
-  --wiggle-frequency: 10;
-  --wiggle-smoothen: 0.5;
+  --wiggle-frequency: var(--ds-sys-wiggle-frequency);
+  --wiggle-smoothen: var(--ds-sys-wiggle-smoothen);
   --wiggle-width: var(--ds-sys-border-xs);
   position: relative;
 }
 
 /* 分隔線：Figma line-style 預設是 outline 50、wiggle 1.5 */
 .ds-wiggle-line {
-  --wiggle-amount: 1.5;
+  --wiggle-amount: var(--ds-sys-wiggle-amount-line);
   display: block;
   height: calc(2 * var(--wiggle-amount) * 1px + var(--wiggle-width));
   --wiggle-color: var(--ds-sys-color-outline-50);
@@ -34,7 +35,7 @@
 
 /* 外框：Figma menu 是 outline 300、wiggle 0.3、線畫在邊框正中間（Center） */
 .ds-wiggle-border {
-  --wiggle-amount: 0.3;
+  --wiggle-amount: var(--ds-sys-wiggle-amount-border);
   border: 0;
   --wiggle-color: var(--ds-sys-color-outline-300);
 }

@@ -35,5 +35,6 @@ export const 陰影 = () =>
     table(p("blur/"), { title: "模糊" }),
   );
 export const 透明度 = () => page(table(p("opacity/"), { title: "透明度" }));
+export const 抖動 = () => page(table(p("wiggle/"), { title: "抖動", note: "Figma Dynamic stroke 的三個數字：frequency（多密）、wiggle（抖多大）、smoothen（多圓滑）。線條樣式頁用的就是這些。" }));
 export const Icon尺寸 = () => page(table(p("icon/"), { title: "Icon 尺寸" }));
 Icon尺寸.storyName = "Icon 尺寸";
