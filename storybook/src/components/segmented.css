@@ -1,0 +1,122 @@
+/* 分頁籤 segmented —— Figma「segmented」「segmented/item」（section 162537:17529）
+ *
+ *   一排像資料夾標籤的頁籤：左上圓角 comp/segmented/radius-top-left、右上 comp/segmented/radius-top-right，下面方的
+ *   排列：間距 spacing/2xl，左邊留 spacing/xl、右邊留 spacing/4xl
+ *   每一格：內距 上 xl／左右 2xl／下 lg，文字 Body/sm/semi-bold（源泉圓體 M）
+ *
+ *   Default：bg pattern/primary-soft（淡橘格），文字 text 200
+ *   hover  ：bg pattern/surface，上面再蓋一層 opacity primary 50（state layer，連字一起蓋）
+ *   Active ：bg pattern/surface，文字 text 100，字底下一條 primary 的抖動線（divider/wiggle，border/md）
+ *   focus  ：鍵盤操作時，外面留 spacing/2xs 再畫 comp/focus-ring
+ *
+ * 底紋由 pattern.css 畫（.ds-pattern）；抖動線照 Figma 畫好的形狀（segmented.js 的 LINE）。
+ */
+
+.ds-segmented {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-sys-spacing-2xl);
+  padding: 0 var(--ds-sys-spacing-4xl) 0 var(--ds-sys-spacing-xl);
+}
+
+.ds-segmented__item {
+  position: relative;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  border: 0;
+  padding: var(--ds-sys-spacing-xl) var(--ds-sys-spacing-2xl) var(--ds-sys-spacing-lg);
+  border-radius: var(--ds-comp-segmented-radius-top-left) var(--ds-comp-segmented-radius-top-right) 0 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  color: var(--ds-sys-color-text-200);
+  font-family: var(--ds-sys-font-family-body);
+  font-weight: 500; /* Body/sm/semi-bold 用的是源泉圓體 M */
+  font-size: var(--ds-sys-font-size-body-sm);
+  line-height: 1; /* Figma 字框高 16（= 字級），一格才會是 12 + 16 + 10 = 38 */
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+/* 文字外面那一層（Figma「active」frame）：左右多 spacing/sm，抖動線的長度就是它的寬 */
+.ds-segmented__label {
+  position: relative;
+  display: inline-flex;
+  padding: 0 var(--ds-sys-spacing-sm);
+}
+
+/* Figma 裡線在字的下面一層 */
+.ds-segmented__text {
+  position: relative;
+}
+
+/* Active 的抖動線（形狀在 segmented.js 的 LINE）：Figma 線的中心在 16 高字框頂端往下 14.5，
+ * svg 的 viewBox 上面留 3.5、下面留 1.5，左右各多 1（圓頭） */
+.ds-segmented__line {
+  position: absolute;
+  left: -1px;
+  width: calc(100% + 2px);
+  top: calc(100% - 1.5px - 3.5px);
+  height: 5px;
+  overflow: visible;
+  fill: none;
+  stroke: var(--ds-sys-color-primary);
+  stroke-width: var(--ds-sys-border-md);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.ds-segmented__item[aria-selected="true"] {
+  color: var(--ds-sys-color-text-100);
+}
+.ds-segmented__item[aria-selected="true"] .ds-segmented__line {
+  visibility: visible;
+}
+
+/* hover（只在有滑鼠的裝置、沒選中的那幾格）：底換成 surface，再蓋一層 state layer */
+.ds-segmented__item::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--ds-sys-color-opacity-opacity-primary-50);
+  pointer-events: none;
+  opacity: 0;
+}
+.ds-segmented__item.is-hover {
+  --pattern-bg: var(--ds-sys-pattern-surface-bg);
+  --pattern-line: var(--ds-sys-pattern-surface-line);
+  --pattern-size: var(--ds-sys-pattern-surface-size);
+  --pattern-image: none;
+  --pattern-position: 0 0;
+}
+.ds-segmented__item.is-hover::after {
+  opacity: 1;
+}
+@media (hover: hover) {
+  .ds-segmented__item:not([aria-selected="true"]):hover {
+    --pattern-bg: var(--ds-sys-pattern-surface-bg);
+    --pattern-line: var(--ds-sys-pattern-surface-line);
+    --pattern-size: var(--ds-sys-pattern-surface-size);
+    --pattern-image: none;
+    --pattern-position: 0 0;
+  }
+  .ds-segmented__item:not([aria-selected="true"]):hover::after {
+    opacity: 1;
+  }
+}
+
+.ds-segmented__item:focus-visible,
+.ds-segmented__item.is-focus {
+  outline: var(--ds-comp-focus-ring-border) solid var(--ds-comp-focus-ring-color);
+  outline-offset: var(--ds-sys-spacing-2xs);
+}
+
+/* Figma 裡頁籤後面還藏了一顆 Dynamic Iris（預設不顯示），要用就放進 trailing */
+.ds-segmented__trailing {
+  display: inline-flex; /* Figma 是緊接在頁籤後面，間距一樣 spacing/2xl */
+}
