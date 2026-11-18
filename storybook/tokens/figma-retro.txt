@@ -895,6 +895,8 @@ C:divider/size|F|@S:border/xs
 C:divider/color/subtle|C|@S:color/outline 100
 C:divider/color/strong|C|@S:color/outline 200
 C:divider/color/neutral|C|@S:color/outline neutral
+C:divider/color/primary|C|@S:color/primary
+C:divider/dot/size|F|@S:border/md
 C:bottom nav/active-icon|F|@S:icon/xl
 C:bottom nav/radius|F|@S:radius/full
 C:menu/radius|F|@S:radius/xs
