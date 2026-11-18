@@ -911,3 +911,7 @@ C:info/icon|F|@S:icon/xs
 C:pin/badge/opacity|F|@S:opacity/lg
 C:pin/focus-ring/width|F|@S:border/md
 C:pin/timeline/gap|F|@S:spacing/lg
+C:avatar/size/lg|F|@S:icon/2xl
+C:avatar/size/md|F|@S:icon/md
+C:avatar/size/sm|F|@S:icon/xs
+C:avatar/border|F|@S:border/xs

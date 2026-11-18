@@ -1,0 +1,38 @@
+/* 頭像 Avatar —— Figma shared comps「avatar」（162273:13717）
+ *
+ *   圓形照片，裡面描一圈 outline 50 的細框（comp/avatar/border，畫在內側）
+ *   Property 1：lg 36／md 24／sm 16（comp/avatar/size/*）
+ */
+.ds-avatar {
+  position: relative;
+  display: inline-block;
+  flex: none;
+  width: var(--ds-comp-avatar-size-md);
+  height: var(--ds-comp-avatar-size-md);
+  border-radius: 50%;
+  overflow: hidden;
+  vertical-align: middle;
+}
+.ds-avatar--lg {
+  width: var(--ds-comp-avatar-size-lg);
+  height: var(--ds-comp-avatar-size-lg);
+}
+.ds-avatar--sm {
+  width: var(--ds-comp-avatar-size-sm);
+  height: var(--ds-comp-avatar-size-sm);
+}
+.ds-avatar__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* 細框畫在內側、疊在照片上（Figma stroke Inside） */
+.ds-avatar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 var(--ds-comp-avatar-border) var(--ds-sys-color-outline-50);
+  pointer-events: none;
+}
