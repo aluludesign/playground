@@ -151,9 +151,22 @@
 .ds-bottom-nav__item[aria-current="page"] .is-active-style {
   transition-delay: 0.12s;
 }
+/* duotone 疊在 sticker 上面：白底跟 sticker 浮出來同時退掉，只剩咖啡色線稿；
+ * 線稿等筆刷上色畫到 70% 才開始淡出（--nav-duo-delay 由 bottom-nav.js 照這顆 sticker 有幾塊上色算） */
+.ds-bottom-nav__icon > .is-default-style {
+  z-index: 1;
+}
+.ds-bottom-nav__base {
+  transition: opacity 0.28s ease;
+}
+.ds-bottom-nav__item.is-active .ds-bottom-nav__base,
+.ds-bottom-nav__item[aria-current="page"] .ds-bottom-nav__base {
+  opacity: 0;
+  transition-delay: 0.12s;
+}
 .ds-bottom-nav__item.is-active .is-default-style,
 .ds-bottom-nav__item[aria-current="page"] .is-default-style {
-  transition-delay: 0.08s;
+  transition-delay: var(--nav-duo-delay, 0.08s);
 }
 
 .ds-bottom-nav__item.is-active .ds-bottom-nav__label,
