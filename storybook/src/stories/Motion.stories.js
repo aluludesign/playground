@@ -1,5 +1,5 @@
 // 動態：一支看不見的筆畫出來的兩種效果（筆畫線、筆刷上色）
-import { penLineSVG, drawPenLine } from "../pen-line.js";
+import { penLineSVG, penMarkerHTML, drawPenLine } from "../pen-line.js";
 import { markPenLayers, drawPenBrush } from "../pen-brush.js";
 
 const raw = import.meta.glob("../icons/general/*_sticker.svg", { query: "?raw", import: "default", eager: true });
@@ -10,7 +10,11 @@ const LINE_USAGE = `import { penLineSVG, drawPenLine } from "./pen-line.js";
 // 放在要畫線的那一欄裡（那一欄要 position: relative），線會跟它等寬
 label.insertAdjacentHTML("beforeend", penLineSVG({ drawn: false }));
 drawPenLine(label.querySelector(".ds-pen-line"), true);  // 由左往右畫出來
-drawPenLine(label.querySelector(".ds-pen-line"), false); // 收起來`;
+drawPenLine(label.querySelector(".ds-pen-line"), false); // 收起來
+
+// 螢光筆：放在字前面（疊在字下面），一樣用 drawPenLine 畫出來
+title.insertAdjacentHTML("afterbegin", penMarkerHTML({ look: "title" })); // look: "default" | "title"
+drawPenLine(title.querySelector(".ds-pen-marker"), true);`;
 
 const BRUSH_USAGE = `import { markPenLayers, drawPenBrush } from "./pen-brush.js";
 
@@ -31,18 +35,30 @@ export const 全部 = {
 <p class="lead">Trippps 的手繪感也放在「東西怎麼出現」上：很多地方像有一支看不見的筆，當下把它畫出來。這裡收集這類共用的動態規則，元件直接套用。</p>
 
 <section class="tk"><h2>筆畫線 pen line</h2>
-<p class="note">一條手繪的抖動線，出現時由左往右畫出來；收起來時直接消失，不倒著擦。形狀照 Figma <code>divider/wiggle</code>（Dynamic stroke frequency 10・wiggle 1.5・smoothen 0.5）畫出來的那條，長度跟放它的那一欄等寬，所以會跟著字變長變短，線寬不變。<br>用在：分頁籤 Segmented 選到的那一格。</p>
+<p class="note">一支看不見的筆由左往右畫出來，有兩種筆：細的抖動線，和粗的螢光筆（下面）。<br>細線：一條手繪的抖動線，出現時由左往右畫出來；收起來時直接消失，不倒著擦。形狀照 Figma <code>divider/wiggle</code>（Dynamic stroke frequency 10・wiggle 1.5・smoothen 0.5）畫出來的那條，長度跟放它的那一欄等寬，所以會跟著字變長變短，線寬不變。<br>用在：分頁籤 Segmented 選到的那一格。</p>
 <div class="mo-lines">
   <span class="mo-label">熱門地點${penLineSVG({ drawn: true })}</span>
   <span class="mo-label">不指定地點${penLineSVG({ drawn: true })}</span>
   <span class="mo-label">北海道 8 日孝親之旅${penLineSVG({ drawn: true })}</span>
 </div>
+<h3 class="mo-sub">螢光筆 marker</h3>
+<p class="note">同一個動態的第二種筆：字底下一筆粗的螢光筆（Figma <code>active_bg/line_lg</code>，線寬 10、Dynamic stroke 實際畫出來的形狀），尾巴筆停住的地方比較深、旁邊滴一小點。由左往右揭開，尾巴那團跟著筆一起出來；寬度跟著字。<br>用在：標題（Figma <code>title</code>：primary 64%、尾巴 shadow/lg）。</p>
+<div class="mo-lines">
+  <span class="mo-title">${penMarkerHTML({ drawn: true, look: "title" })}<span>淺草寺</span></span>
+  <span class="mo-title">${penMarkerHTML({ drawn: true, look: "title" })}<span>北海道 8 日孝親之旅</span></span>
+  <span class="mo-title">${penMarkerHTML({ drawn: true })}<span>淺草寺</span></span>
+</div>
+<p class="note">最後一個是元件本身的顏色（<code class="var">--ds-comp-active-bg-line-color</code>，custom 5）。</p>
 <button type="button" class="mo-replay" data-replay="line">再畫一次</button>
 <table><thead><tr><th>變數</th><th>預設</th><th>說明</th></tr></thead><tbody>
 <tr><td><code class="var">--pen-line-color</code></td><td><code>primary</code></td><td class="al">線的顏色</td></tr>
 <tr><td><code class="var">--pen-line-width</code></td><td><code>border/md</code></td><td class="al">線寬</td></tr>
 <tr><td><code class="var">--pen-line-duration</code></td><td>.35s</td><td class="al">畫完一條要多久</td></tr>
 <tr><td><code class="var">--pen-line-delay</code></td><td>0</td><td class="al">晚多久才開始畫</td></tr>
+<tr><td><code class="var">--pen-marker-color</code></td><td><code>comp/active bg/line/color</code></td><td class="al">螢光筆的顏色（標題：primary）</td></tr>
+<tr><td><code class="var">--pen-marker-opacity</code></td><td>1</td><td class="al">螢光筆的透明度（標題：opacity/xl）</td></tr>
+<tr><td><code class="var">--pen-marker-end</code></td><td><code>opacity primary 50</code></td><td class="al">尾巴那團的顏色（標題：shadow/lg）</td></tr>
+<tr><td><code class="var">--pen-marker-y</code></td><td>18.5px</td><td class="al">螢光筆中心離字頂多遠</td></tr>
 </tbody></table>
 <pre class="wg-code"><code>${esc(LINE_USAGE)}</code></pre>
 </section>
@@ -64,6 +80,9 @@ export const 全部 = {
 .mo-label { position: relative; display: inline-flex; padding: 0 var(--ds-sys-spacing-sm); font: 500 var(--ds-sys-font-size-body-sm)/1 var(--ds-sys-font-family-body); letter-spacing: .05em; color: var(--ds-sys-color-text-100); }
 .mo-label > .ds-pen-line { position: absolute; left: -1px; width: calc(100% + 2px); top: calc(100% - 5px); height: 5px; }
 .mo-label > span { position: relative; }
+.mo-sub { margin: 20px 0 4px; font-size: 15px; }
+.mo-title { position: relative; display: inline-block; font: 400 var(--ds-sys-font-size-body-lg)/22px var(--ds-sys-font-family-zhtw-handwriting-zhtw); letter-spacing: .05em; color: var(--ds-sys-color-text-100); white-space: nowrap; }
+.mo-title > span:last-child { position: relative; }
 .mo-stickers { display: flex; gap: 24px; padding: 16px 4px 12px; }
 .mo-sticker-box { width: 56px; height: 56px; display: grid; place-items: center; }
 .mo-sticker { width: 48px; height: 48px; overflow: visible; }
@@ -79,7 +98,7 @@ export const 全部 = {
     el.addEventListener("click", (e) => {
       const b = e.target.closest(".mo-replay");
       if (!b) return;
-      if (b.dataset.replay === "line") replay(".ds-pen-line", drawPenLine);
+      if (b.dataset.replay === "line") replay(".ds-pen-line, .ds-pen-marker", drawPenLine);
       else replay(".mo-sticker", drawPenBrush);
     });
     return el;
