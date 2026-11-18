@@ -1,0 +1,126 @@
+/* 馬克筆按鈕 Marker button —— Figma shared comps「btn」（162197:22140）
+ *
+ *   像用馬克筆塗出來的一條色塊：左右兩端是不規則的收筆，右端再疊一層較深的筆跡。
+ *   每一塊（左收筆、中間、右收筆、深色筆跡）各自是 comp/btn/marker/opacity（88%）的透明度，疊在一起的地方會比較深。
+ *
+ *   color：primary（橘）／secondary（棕）；disabled 一律灰（on disable，Figma 的 shared）
+ *   size ：lg  內距 sm／xs、Body/lg/extra-bold（20/22、源泉圓體 B）
+ *          md  內距 2xs／xs、label/lg/regular（16/20）
+ *          sm  內距 2xs、label/sm/regular（12）
+ *   hover：字疊一層 opacity primary 50
+ *   後面可以放往下的三角形 icon（comp/btn/marker/icon），和字間距 spacing/md
+ */
+
+.ds-marker {
+  --marker-color: var(--ds-sys-color-primary);
+  --marker-shade: var(--ds-sys-color-opacity-opacity-primary-150);
+  --marker-text: var(--ds-sys-color-on-primary);
+  position: relative;
+  display: inline-flex;
+  align-items: stretch;
+  margin: 0;
+  /* 兩端收筆疊在這兩條內距上（左 4、右 5），高度只跟著中間那塊走 */
+  padding: 0 5px 0 4px;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  color: var(--marker-text);
+}
+
+.ds-marker--secondary {
+  --marker-color: var(--ds-sys-color-secondary);
+}
+.ds-marker:disabled,
+.ds-marker.is-disabled {
+  --marker-color: var(--ds-sys-color-on-disable);
+  --marker-shade: var(--ds-sys-color-on-disable);
+  cursor: default;
+}
+
+.ds-marker__edge,
+.ds-marker__shade {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  fill: var(--marker-color);
+  opacity: var(--ds-comp-btn-marker-opacity);
+  pointer-events: none;
+}
+.ds-marker__edge--start {
+  left: 0;
+  width: 4px;
+}
+/* 右收筆：Figma 是同一個形狀轉 180° */
+.ds-marker__edge--end {
+  right: 0;
+  width: 5px;
+  transform: rotate(180deg);
+}
+.ds-marker__shade {
+  right: 0;
+  width: 5.76px;
+  fill: var(--marker-shade);
+  transform: rotate(180deg);
+}
+
+.ds-marker__body {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--ds-sys-spacing-md);
+  background: var(--marker-color);
+  opacity: var(--ds-comp-btn-marker-opacity);
+  white-space: nowrap;
+}
+
+.ds-marker__icon {
+  flex: none;
+  width: var(--ds-comp-btn-marker-icon);
+  height: var(--ds-comp-btn-marker-icon);
+}
+
+/* lg：Body/lg/extra-bold（Figma 用源泉圓體 B） */
+.ds-marker--lg .ds-marker__body {
+  padding: var(--ds-sys-spacing-sm) var(--ds-sys-spacing-xs);
+  font-family: var(--ds-sys-font-family-body);
+  font-weight: 700;
+  font-size: var(--ds-sys-font-size-body-lg);
+  line-height: 22px;
+  letter-spacing: 0.05em;
+}
+/* md：label/lg/regular */
+.ds-marker--md .ds-marker__body {
+  padding: var(--ds-sys-spacing-2xs) var(--ds-sys-spacing-xs);
+  font-family: var(--ds-sys-font-family-label);
+  font-weight: 400;
+  font-size: var(--ds-sys-font-size-label-lg);
+  line-height: 20px;
+  letter-spacing: 0.04em;
+}
+/* sm：label/sm/regular（行高 auto＝字級） */
+.ds-marker--sm .ds-marker__body {
+  padding: var(--ds-sys-spacing-2xs);
+  font-family: var(--ds-sys-font-family-label);
+  font-weight: 400;
+  font-size: var(--ds-sys-font-size-label-sm);
+  line-height: 1;
+  letter-spacing: 0.04em;
+}
+
+/* hover：字上面疊一層 opacity primary 50（Figma 文字的第二層填色） */
+.ds-marker.is-hover {
+  --marker-text: color-mix(in srgb, var(--ds-sys-color-on-primary), var(--ds-foun-color-retro-red-orange-700) 8%);
+}
+@media (hover: hover) {
+  .ds-marker:not(:disabled):hover {
+    --marker-text: color-mix(in srgb, var(--ds-sys-color-on-primary), var(--ds-foun-color-retro-red-orange-700) 8%);
+  }
+}
+
+/* 鍵盤焦點：外面留 spacing/2xs，再畫 comp/focus-ring */
+.ds-marker:focus-visible,
+.ds-marker.is-focus {
+  outline: var(--ds-comp-focus-ring-border) solid var(--ds-comp-focus-ring-color);
+  outline-offset: var(--ds-sys-spacing-2xs);
+}

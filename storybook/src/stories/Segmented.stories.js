@@ -1,6 +1,7 @@
 // 分頁籤：Figma section 162537:17529（segmented、segmented/item）
 import { segmentedHTML, segmentedItemHTML, segmentedSheetHTML, wireSegmented } from "../components/segmented.js";
 import photo from "../images/sample-attraction.jpg";
+import { searchItemHTML } from "../components/search-list.js";
 
 const USAGE = `import { segmentedHTML, wireSegmented } from "./components/segmented.js";
 
@@ -25,8 +26,8 @@ el.addEventListener("ds-segmented-select", (e) => {
   el.querySelector(".ds-segmented-sheet__content").innerHTML = contentFor(e.detail.key);
 });`;
 
-// Figma segmented sheet 裡的範例清單（wish/recommands → search list）
-const PLACE = () => `<div class="sg-place"><img class="sg-place__photo" src="${photo}" alt=""><div class="sg-place__text"><div class="sg-place__name">淺草寺</div><div class="sg-place__info"><span>日本，東京都</span><span class="sg-place__dot">‧</span><span>景點</span></div></div></div>`;
+// Figma segmented sheet 裡的範例清單（wish/recommands → search list，見 Components/搜尋清單 Search list）
+const PLACE = () => searchItemHTML({ photo, name: "淺草寺", info: ["日本，東京都", "景點"] });
 const PLACES = Array.from({ length: 9 }, PLACE).join("");
 
 const esc = (s) => s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]);
@@ -46,7 +47,7 @@ export const 全部 = {
 </section>
 
 <section class="tk"><h2>segmented sheet</h2>
-<p class="note">上面一排頁籤、下面一張放內容的底。內容可以自由替換（Figma 寫的 containt replaced）：清單、表單、地圖都可以放，超出的部分裁掉。下面用 Figma 裡的熱門地點清單當例子，滑鼠移到某一列會刷淡橘色。</p>
+<p class="note">上面一排頁籤、下面一張放內容的底。內容可以自由替換（Figma 寫的 containt replaced）：清單、表單、地圖都可以放，超出的部分裁掉。下面用 Figma 裡的熱門地點清單當例子（每一列是「搜尋清單 Search list」元件）。</p>
 <div class="sg-sheet-stage">${segmentedSheetHTML({ selected: "hot", items: [{ key: "hot", label: "熱門地點" }, { key: "any", label: "不指定地點" }], content: PLACES })}</div>
 </section>
 
@@ -79,16 +80,7 @@ export const 全部 = {
 .sg-stage { padding: 24px 0 0; border-bottom: 1px solid #eee5e1; max-width: 420px; }
 .sg-sheet-stage { padding: 16px 32px 40px; }
 .sg-sheet-stage .ds-segmented-sheet { width: 358px; height: 599px; }
-.sg-place { position: relative; display: flex; align-items: center; gap: var(--ds-sys-spacing-xl); flex: none; }
-.sg-place::after { content: ""; position: absolute; inset: -4px; border-radius: var(--ds-sys-radius-sm); background: var(--ds-sys-color-opacity-opacity-primary-50); opacity: 0; pointer-events: none; }
-@media (hover: hover) { .sg-place:hover::after { opacity: 1; } }
-.sg-place__photo { width: 48px; height: 48px; flex: none; object-fit: cover; border-radius: var(--ds-sys-radius-sm); }
-.sg-place__text { display: flex; flex-direction: column; gap: var(--ds-sys-spacing-xs); min-width: 0; }
-.sg-place__name { font: 500 var(--ds-sys-font-size-body-sm)/1 var(--ds-sys-font-family-body); letter-spacing: .05em; color: var(--ds-sys-color-text-100); }
-.sg-place__info { display: flex; gap: var(--ds-sys-spacing-xs); font: 400 var(--ds-sys-font-size-label-md)/18px var(--ds-sys-font-family-label); letter-spacing: .04em; color: var(--ds-sys-color-text-200); }
-.sg-place__dot { width: 14px; font-size: 0; display: flex; align-items: center; justify-content: center; } /* 字型子集沒有「‧」，照 Figma 畫一顆 14 寬、置中的圓點 */
-.sg-place__dot::before { content: ""; width: 3px; height: 3px; border-radius: 50%; background: currentColor; }
-.sg-empty { margin: 0; font: 400 var(--ds-sys-font-size-label-md)/1.5 var(--ds-sys-font-family-label); color: var(--ds-sys-color-text-200); }
+@media (hover: hover) { .sg-empty { margin: 0; font: 400 var(--ds-sys-font-size-label-md)/1.5 var(--ds-sys-font-family-label); color: var(--ds-sys-color-text-200); }
 .sg-cell { padding: 16px 12px; }
 .sg-bare { padding: 0; }
 .wg-code { background: #f6f2f0; border-radius: 8px; padding: 12px 14px; overflow-x: auto; font-size: 12px; line-height: 1.6; }
