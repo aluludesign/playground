@@ -68,7 +68,7 @@ export const 全部 = {
 <tr><td class="al">文字</td><td>Body/sm/semi-bold <code class="var">--ds-sys-font-size-body-sm</code>・<code class="var">--ds-sys-color-text-200</code>／選中 <code class="var">--ds-sys-color-text-100</code></td></tr>
 <tr><td class="al">底紋</td><td><code class="var">ds-pattern--primary-soft</code>／hover、選中 <code class="var">ds-pattern--surface</code></td></tr>
 <tr><td class="al">hover 蓋的那層</td><td><code class="var">--ds-sys-color-opacity-opacity-primary-50</code></td></tr>
-<tr><td class="al">sheet 的底</td><td><code class="var">ds-pattern--surface</code>（格線 5%）・四角 <code class="var">--ds-comp-segmented-sheet-radius</code></td></tr>
+<tr><td class="al">sheet 的底</td><td><code class="var">ds-pattern--surface</code>・四角 <code class="var">--ds-comp-segmented-sheet-radius</code></td></tr>
 <tr><td class="al">sheet 內容區內距</td><td><code class="var">--ds-sys-spacing-4xl</code></td></tr>
 <tr><td class="al">sheet 陰影</td><td>Elevation/surface/medium</td></tr>
 <tr><td class="al">抖動線</td><td><code class="var">--ds-sys-color-primary</code>・<code class="var">--ds-sys-border-md</code>，比文字左右各長 <code class="var">--ds-sys-spacing-sm</code></td></tr>

@@ -106,7 +106,7 @@
 }
 
 /* segmented sheet —— Figma「segmented sheet」（162187:28671）
- *   上面頁籤、下面一張底：surface ＋ surface 格線（這張的格線是 5%）、四角 comp/segmented sheet/radius
+ *   上面頁籤、下面一張底：bg pattern/surface、四角 comp/segmented sheet/radius
  *   內容區（containt replaced）：內距 spacing/4xl，內容可以自由替換，超出的部分裁掉
  *   整張的陰影：Elevation/surface/medium（照頁籤和底的形狀投影）
  */
@@ -126,7 +126,6 @@
   display: flex;
   border-radius: var(--ds-comp-segmented-sheet-radius);
   overflow: hidden;
-  --ds-sys-pattern-opacity: 0.05;
 }
 .ds-segmented-sheet__content {
   flex: 1 1 auto;
