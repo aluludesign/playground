@@ -24,7 +24,7 @@ export const 全部 = {
     el.className = "tk-page";
     el.innerHTML = `<h1>選單 Menu</h1>
 <p class="lead">點了才出現的一串選項，例如切換旅程。外框是 <code>bg pattern/bright</code>＋抖動外框；選中的那一列換底色、後面出現打勾。<br>
-寬度照最長那一列的字寬，最寬到畫面左右各留 16；一列文字最多三行，超過用「…」。點點看。</p>
+寬度照最長那一列的字寬（每列都留著打勾的位置，切換選項時寬度不會變），最寬到畫面左右各留 16；一列文字最多三行，超過用「…」。點點看。</p>
 
 <section class="tk"><h2>menu</h2>
 <div class="mn-stage">${menuHTML({ selected: "tokyo" })}</div>
@@ -33,6 +33,7 @@ export const 全部 = {
 <section class="tk"><h2>menu_item</h2>
 <table><thead><tr><th>state</th><th>預覽</th><th>說明</th></tr></thead><tbody>
 <tr><td class="nm">default</td><td class="mn-cell">${one("東京 PA PA 造 Happy Bir", false)}</td><td class="al">沒有底色、沒有 icon</td></tr>
+<tr><td class="nm">hover</td><td class="mn-cell">${one("東京 PA PA 造 Happy Bir", false).replace('class="ds-menu__item"', 'class="ds-menu__item mn-hover"')}</td><td class="al">滑鼠移上去：一樣刷 <code>opacity primary 100</code>，沒有 icon</td></tr>
 <tr><td class="nm">selected</td><td class="mn-cell">${one("東京 PA PA 造 Happy Bir", true)}</td><td class="al">底色 <code>opacity primary 100</code>＋ check_line duotone <code>comp/menu/icon</code>（28）</td></tr>
 </tbody></table>
 <p class="note">鍵盤操作時（Tab）會出現 Focus ring。</p>
@@ -67,6 +68,7 @@ export const 全部 = {
 <style>
 .mn-stage { padding: 24px 16px; }
 .mn-phone { width: 375px; box-sizing: border-box; --menu-max-width: calc(375px - 2 * var(--ds-sys-spacing-2xl)); background: #f6f2f0; border-radius: 12px; }
+.mn-hover { background: var(--ds-sys-color-opacity-opacity-primary-100); }
 .mn-cell { padding: 16px 12px; }
 .mn-bare { box-shadow: none; background: none; width: 278px; }
 .mn-bare::before, .mn-bare > .ds-wiggle__svg { display: none; }
