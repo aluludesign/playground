@@ -35,7 +35,7 @@ export function bottomNavHTML({ items = DEFAULT_ITEMS, active = "plan", label = 
 ${items
   .map(
     (it) => `<button type="button" class="ds-bottom-nav__item${it.key === active ? " is-active" : ""}" data-key="${it.key}"${it.key === active ? ' aria-current="page"' : ""} aria-label="${it.label}">
-  <span class="ds-bottom-nav__circle ds-pattern ds-pattern--tertiary">${iconHTML(it.icon, it.key === active)}<span class="ds-bottom-nav__label">${it.label}</span></span>
+  <span class="ds-bottom-nav__circle ds-pattern ds-pattern--tertiary" aria-hidden="true"></span>${iconHTML(it.icon, it.key === active)}<span class="ds-bottom-nav__label">${it.label}</span>
 </button>`,
   )
   .join("")}
