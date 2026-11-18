@@ -1,7 +1,7 @@
 /* 底部導覽 bottom nav —— Figma「bottom nav/main」「bottom nav/items」（section 162510:14932）
  *
  *   外框：膠囊、bg pattern/primary-soft、抖動外框（outline 50、wiggle 0.3）、Elevation/surface/soft
- *   每一格：65×65 的點擊區，中間 55×55 的圓（bg pattern/tertiary、2px outline 50 框、Elevation/component/md）
+ *   每一格：65×65 的點擊區，中間 55×55 的圓（bg pattern/tertiary、2px outline 50 框、Elevation/component/sm；hover 換 md、pressed 長到 59）
  *   default：duotone icon 24（sys/icon/md）＋文字 caption/sm/regular
  *   active ：sticker icon 放大到 comp/bottom nav/active-icon（32），文字藏起來
  *
@@ -47,7 +47,24 @@
   gap: var(--ds-sys-spacing-2xs);
   border: var(--ds-sys-border-md) solid var(--ds-sys-color-outline-50);
   border-radius: var(--ds-comp-bottom-nav-radius);
-  box-shadow: var(--ds-elevation-component-md);
+  box-shadow: var(--ds-elevation-component-sm);
+  transition: box-shadow 0.2s ease, width 0.12s var(--nav-ease), height 0.12s var(--nav-ease);
+}
+
+/* Figma bottom nav/items：
+ *   default／active：Elevation/component/sm
+ *   hover          ：陰影加深成 Elevation/component/md（只在有滑鼠的裝置）
+ *   pressed        ：圓從 55 長到 59（框和 icon 大小不變），陰影 component/sm
+ * icon、文字是絕對定位置中，圓變大時跟著置中，不會抖。 */
+@media (hover: hover) {
+  .ds-bottom-nav__item:hover .ds-bottom-nav__circle {
+    box-shadow: var(--ds-elevation-component-md);
+  }
+}
+.ds-bottom-nav__item:active .ds-bottom-nav__circle {
+  width: 59px;
+  height: 59px;
+  box-shadow: var(--ds-elevation-component-sm);
 }
 
 /* icon 和文字都用絕對定位，切換時只動 transform／opacity，不重排版面（才不會抖）。
