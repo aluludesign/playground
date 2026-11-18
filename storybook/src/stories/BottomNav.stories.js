@@ -33,10 +33,10 @@ export const 全部 = {
 <table><thead><tr><th>Property 1</th><th>預覽</th><th>說明</th></tr></thead><tbody>
 <tr><td class="nm">default</td><td class="bn-cell">${bottomNavHTML({ items: [DEFAULT_ITEMS[0]], active: "" }).replace('class="ds-bottom-nav ', 'class="ds-bottom-nav bn-bare ')}</td><td class="al">duotone icon <code>sys/icon/md</code>（24）＋ caption/sm/regular</td></tr>
 <tr><td class="nm">hover</td><td class="bn-cell">${bottomNavHTML({ items: [DEFAULT_ITEMS[0]], active: "" }).replace('class="ds-bottom-nav ', 'class="ds-bottom-nav bn-bare bn-hover ')}</td><td class="al">滑鼠移上去：陰影加深成 <code>Elevation/component/md</code></td></tr>
-<tr><td class="nm">pressed</td><td class="bn-cell">${bottomNavHTML({ items: [DEFAULT_ITEMS[0]], active: "" }).replace('class="ds-bottom-nav ', 'class="ds-bottom-nav bn-bare bn-pressed ')}</td><td class="al">按下去：圓從 55 長到 57，icon 和框大小不變</td></tr>
+<tr><td class="nm">pressed</td><td class="bn-cell">${bottomNavHTML({ items: [DEFAULT_ITEMS[0]], active: "" }).replace('class="ds-bottom-nav ', 'class="ds-bottom-nav bn-bare bn-pressed ')}</td><td class="al">按下去：圓從 55 長到 59，icon 和框大小不變</td></tr>
+<tr><td class="nm">focus</td><td class="bn-cell">${bottomNavHTML({ items: [DEFAULT_ITEMS[0]], active: "" }).replace('class="ds-bottom-nav ', 'class="ds-bottom-nav bn-bare bn-focus ')}</td><td class="al">鍵盤操作（Tab）：圓外留 <code>spacing/2xs</code>，再畫 <code>comp/focus-ring</code> 的框</td></tr>
 <tr><td class="nm">active</td><td class="bn-cell">${bottomNavHTML({ items: [DEFAULT_ITEMS[0]], active: "plan" }).replace('class="ds-bottom-nav ', 'class="ds-bottom-nav bn-bare ')}</td><td class="al">sticker icon <code>comp/bottom nav/active-icon</code>（32），文字隱藏</td></tr>
 </tbody></table>
-<p class="note">鍵盤操作時（Tab）會出現和按鈕一樣的 Focus ring。</p>
 </section>
 
 <section class="tk"><h2>Token</h2>
@@ -59,7 +59,8 @@ export const 全部 = {
 .bn-cell { padding: 16px 12px; }
 .bn-bare { padding: 0; gap: 0; box-shadow: none; background: none; }
 .bn-hover .ds-bottom-nav__circle { box-shadow: var(--ds-elevation-component-md); }
-.bn-pressed .ds-bottom-nav__circle { width: 57px; height: 57px; }
+.bn-pressed .ds-bottom-nav__circle { width: 59px; height: 59px; }
+.bn-focus .ds-bottom-nav__item::after { content: ""; position: absolute; inset: calc(5px - var(--ds-sys-spacing-2xs) - var(--ds-comp-focus-ring-border)); border: var(--ds-comp-focus-ring-border) solid var(--ds-comp-focus-ring-color); border-radius: var(--ds-comp-bottom-nav-radius); pointer-events: none; }
 .bn-bare::before, .bn-bare > .ds-wiggle__svg { display: none; }
 .wg-code { background: #f6f2f0; border-radius: 8px; padding: 12px 14px; overflow-x: auto; font-size: 12px; line-height: 1.6; }
 </style>`;
