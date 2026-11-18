@@ -55,7 +55,7 @@
  *   default／active：Elevation/component/sm
  *   hover          ：陰影加深成 Elevation/component/md（只在有滑鼠的裝置）
  *   pressed        ：圓從 55 長到 59（框和 icon 大小不變），陰影 component/sm
- * icon、文字是絕對定位置中，圓變大時跟著置中，不會抖。 */
+ * icon、文字對著那一格置中（不在圓裡面），圓變大時它們完全不動。 */
 @media (hover: hover) {
   .ds-bottom-nav__item:hover .ds-bottom-nav__circle {
     box-shadow: var(--ds-elevation-component-md);
@@ -67,7 +67,10 @@
   box-shadow: var(--ds-elevation-component-sm);
 }
 
-/* icon 和文字都用絕對定位，切換時只動 transform／opacity，不重排版面（才不會抖）。
+/* icon 和文字放在圓外面、對著固定 65×65 的那一格置中（不是對著圓）：
+ * 按下去圓從 55 長到 59 時，圓的大小一直在變，桌機（1 倍解析度）上對著圓置中的東西會被湊整數像素而上下跳。
+ *
+ * icon 和文字都用絕對定位，切換時只動 transform／opacity，不重排版面（才不會抖）。
  *
  *   default：duotone、icon/md（24）、跟文字一起置中 → icon 中心往上 (2xs + 文字高) / 2
  *   active ：sticker、active-icon（32）、自己置中、文字淡出
@@ -77,6 +80,7 @@
  * 尾端帶一點回彈，像從小長大。 */
 .ds-bottom-nav__circle {
   position: relative;
+  grid-area: 1 / 1;
 }
 
 .ds-bottom-nav__icon {
