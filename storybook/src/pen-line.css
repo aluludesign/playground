@@ -62,25 +62,28 @@
   --pen-marker-y: 18.5px;
   --pen-line-duration: 0.35s;
   --pen-line-delay: 0s;
+  /* 外框往左多 5（起頭圓頭）、往右多 2（尾巴小點），揭開只用 100% → 0：
+   * iOS Safari 不會把 calc(100% + 10px) 這種混合單位做成動畫，會直接跳到畫好（手機上看不到在畫） */
   position: absolute;
-  left: 0;
-  right: 0;
-  top: var(--pen-marker-y);
-  height: 0;
+  left: -5px;
+  right: -2px;
+  /* 外框有實際高度（線中心上下各 7）：iPhone 上高度 0 的元素在遮罩動畫途中不會重畫，看起來就沒在動 */
+  top: calc(var(--pen-marker-y) - 7px);
+  height: 14px;
   pointer-events: none;
-  clip-path: inset(-20px calc(100% + 10px) -20px -10px);
+  clip-path: inset(-20px 100% -20px 0);
 }
 .ds-pen-marker.is-drawn {
-  clip-path: inset(-20px -10px -20px -10px);
+  clip-path: inset(-20px 0 -20px 0);
   transition: clip-path var(--pen-line-duration) cubic-bezier(0.45, 0, 0.25, 1) var(--pen-line-delay);
 }
 /* 粗線：Figma Dynamic stroke 實際畫出來的形狀。線長 = 整欄寬 − 4.39（尾巴那團蓋在線尾）
  * 頭、中段、尾三段：中段橫向伸縮，兩端的圓頭（各 5）不變形 */
 .ds-pen-marker__ink {
   position: absolute;
-  left: 0;
-  top: -6.2px;
-  width: calc(100% - 4.39px);
+  left: 5px;
+  top: 0.8px;
+  width: calc(100% - 11.39px);
   height: 11.6px;
   fill: var(--pen-marker-color);
   opacity: var(--pen-marker-opacity);
@@ -104,8 +107,8 @@
 }
 .ds-pen-marker__end {
   position: absolute;
-  right: 0;
-  top: -5.07px;
+  right: 2px;
+  top: 1.93px;
   width: 9.39px;
   height: 10.15px;
   border-radius: 50%;
@@ -113,8 +116,8 @@
 }
 .ds-pen-marker__drop {
   position: absolute;
-  right: -0.19px;
-  top: 0.52px;
+  right: 1.81px;
+  top: 7.52px;
   width: 4px;
   height: 4px;
   border-radius: 50%;
