@@ -1,0 +1,31 @@
+/* 分隔線 Divider —— Figma shared comps「divider」（section 162565:18843）
+ *
+ *   divider/wiggle：橫的手繪抖動線（線條樣式「分隔線」），Property 1 = outline 200／primary
+ *   divider/dot   ：直的點點線，高 9；圓頭的短線（線寬 border/md、dash 1、gap 5），Figma 會調整成頭尾剛好一點 → 9 高是 3 點
+ */
+
+/* 抖動線：抖法照線條樣式（src/wiggle.css 的 .ds-wiggle-line），線寬、顏色用 comp/divider */
+.ds-divider {
+  --wiggle-width: var(--ds-comp-divider-size);
+  --wiggle-color: var(--ds-comp-divider-color-strong);
+  width: 100%;
+}
+.ds-divider--primary {
+  --wiggle-color: var(--ds-comp-divider-color-primary);
+}
+
+/* 點點線：直的，預設高 9（Figma divider/dot） */
+.ds-divider-dot {
+  display: inline-block;
+  flex: none;
+  width: var(--ds-comp-divider-dot-size);
+  overflow: visible;
+  vertical-align: middle;
+  color: var(--ds-comp-divider-color-strong);
+}
+.ds-divider-dot line {
+  stroke: currentColor;
+  stroke-width: var(--ds-comp-divider-dot-size);
+  stroke-linecap: round;
+  /* dasharray／dashoffset 由 divider.js 照高度算（Figma 的 Adjust dashes） */
+}
