@@ -26,18 +26,18 @@
   stroke-linejoin: round;
   pointer-events: none;
 }
-/* path 的 pathLength = 1：虛線「1 段實線 + 2 段空白」，往後推 1 就整條藏起來，推回 0 就整條畫出來 */
-.ds-pen-line path {
-  stroke-dasharray: 1 2;
-  stroke-dashoffset: 1;
+/* 由左往右揭開：用 clip-path 從右邊收起來的狀態，推回整條看得到。
+ * （不用虛線位移：線被橫向拉長時，虛線長度不會跟著拉長，畫不到尾巴） */
+.ds-pen-line {
+  clip-path: inset(-100% 100% -100% 0);
 }
-.ds-pen-line.is-drawn path {
-  stroke-dashoffset: 0;
-  transition: stroke-dashoffset var(--pen-line-duration) cubic-bezier(0.45, 0, 0.25, 1) var(--pen-line-delay);
+.ds-pen-line.is-drawn {
+  clip-path: inset(-100% 0 -100% 0);
+  transition: clip-path var(--pen-line-duration) cubic-bezier(0.45, 0, 0.25, 1) var(--pen-line-delay);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .ds-pen-line.is-drawn path {
+  .ds-pen-line.is-drawn {
     transition: none;
   }
 }

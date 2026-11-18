@@ -6,7 +6,7 @@ const PATH = "M0 0L10.05 .08C16.68 .13 21.7 0 25 -.33L35 -1.3C38.3 -1.62 41.66 -
 
 /** drawn：一開始就畫好（不跑動畫）；cls：再加的 class（用來定位） */
 export function penLineSVG({ drawn = false, cls = "" } = {}) {
-  return `<svg class="ds-pen-line${drawn ? " is-drawn" : ""}${cls ? " " + cls : ""}" viewBox="-1 -3.5 81 5" preserveAspectRatio="none" aria-hidden="true"><path d="${PATH}" pathLength="1" vector-effect="non-scaling-stroke"/></svg>`;
+  return `<svg class="ds-pen-line${drawn ? " is-drawn" : ""}${cls ? " " + cls : ""}" viewBox="-1 -3.5 81 5" preserveAspectRatio="none" aria-hidden="true"><path d="${PATH}" vector-effect="non-scaling-stroke"/></svg>`;
 }
 
 /** 畫出來（on = true）或收起來 */
