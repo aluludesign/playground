@@ -137,12 +137,19 @@
 .ds-bottom-nav__item[aria-current="page"] .is-active-style {
   opacity: 1;
 }
-/* sticker 的上色＝筆刷上色（src/pen-brush.css）：放大的同時，一支看不見的筆從左上往右下畫出來。
- * sticker 底下是一塊白底，筆太晚下的話會先看到一整塊白閃一下 → 筆一開始放大就下、填色緊跟著筆。 */
+/* sticker 的上色＝筆刷上色（src/pen-brush.css）：先放大，接著一支看不見的筆從左上往右下畫出來（畫的速度照共用的）。
+ * sticker 底下是一塊白底：白底等筆快下的時候才浮出來，填色緊跟著筆，才不會先看到一整塊白閃一下。 */
 .ds-bottom-nav .ds-pen-brush {
-  --pen-start: 0.03s;
-  --pen-gap: 0.05s;
+  --pen-start: 0.2s;
   --pen-fill: 0.1;
+}
+.ds-bottom-nav__item.is-active .is-active-style,
+.ds-bottom-nav__item[aria-current="page"] .is-active-style {
+  transition-delay: 0.12s;
+}
+.ds-bottom-nav__item.is-active .is-default-style,
+.ds-bottom-nav__item[aria-current="page"] .is-default-style {
+  transition-delay: 0.08s;
 }
 
 .ds-bottom-nav__item.is-active .ds-bottom-nav__label,

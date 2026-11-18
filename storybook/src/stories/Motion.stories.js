@@ -48,14 +48,14 @@ export const 全部 = {
 </section>
 
 <section class="tk"><h2>筆刷上色 pen brush</h2>
-<p class="note">sticker 的上色模仿筆刷塗鴉，所以出現時由一支看不見的筆畫出來：一塊接一塊（左上的先），每一塊從左上往右下掃出來，先出描邊、緊跟著填色，最後描邊收掉，停下來的樣子跟原本的 sticker 一模一樣。白底和深棕線稿不動。<br>用在：底部導覽 Bottom nav 切到的那一格（icon 放大的同時就開始畫，<code>--pen-start</code> .03s）。</p>
+<p class="note">sticker 的上色模仿筆刷塗鴉，所以出現時由一支看不見的筆畫出來：一塊接一塊（左上的先），每一塊從左上往右下掃出來，先出描邊、緊跟著填色，最後描邊收掉，停下來的樣子跟原本的 sticker 一模一樣。白底和深棕線稿不動。<br>用在：底部導覽 Bottom nav 切到的那一格（icon 先放大，<code>--pen-start</code> 0.2s 後接著畫）。</p>
 <div class="mo-stickers">${["calender", "start_heart", "flight", "peoploe_plus", "circle_triangel_down"].map((n) => `<span class="mo-sticker-box">${sticker(n)}</span>`).join("")}</div>
 <button type="button" class="mo-replay" data-replay="brush">再畫一次</button>
 <table><thead><tr><th>變數</th><th>預設</th><th>說明</th></tr></thead><tbody>
 <tr><td><code class="var">--pen-start</code></td><td>0</td><td class="al">晚多久才開始畫</td></tr>
 <tr><td><code class="var">--pen-draw</code></td><td>.3s</td><td class="al">掃過一塊要多久</td></tr>
 <tr><td><code class="var">--pen-gap</code></td><td>.07s</td><td class="al">下一塊晚多久開始</td></tr>
-<tr><td><code class="var">--pen-fill</code></td><td>.45</td><td class="al">筆掃到幾成時顏色開始浮出來（越小越早；底部導覽用 .1，免得先看到白底閃一下）</td></tr>
+<tr><td><code class="var">--pen-fill</code></td><td>.45</td><td class="al">筆掃到幾成時顏色開始浮出來（越小越早；底部導覽用 .1：畫的速度不變，只是顏色更早浮出來）</td></tr>
 </tbody></table>
 <pre class="wg-code"><code>${esc(BRUSH_USAGE)}</code></pre>
 </section>
