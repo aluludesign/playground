@@ -24,5 +24,7 @@ const MARKER = "M-0.00252634 -4.97573 C-2.76395 -4.97406 -5.00117 -2.73413 -4.99
  * 要畫出來／收起來一樣用 drawPenLine(el, on)
  */
 export function penMarkerHTML({ drawn = false, look = "default" } = {}) {
-  return `<span class="ds-pen-marker${look === "title" ? " ds-pen-marker--title" : ""}${drawn ? " is-drawn" : ""}" aria-hidden="true"><svg class="ds-pen-marker__line" viewBox="-5 -6.2 58.98 11.6" preserveAspectRatio="none"><path d="${MARKER}"/></svg><span class="ds-pen-marker__end"></span><span class="ds-pen-marker__drop"></span></span>`;
+  // 頭、中段、尾分開畫：只有中段跟著字拉長，兩端圓頭照 Figma 原樣不變形（各多疊 0.5 免得接縫露白；透明度加在外層才不會疊深）
+  const part = (cls, vb, ar) => `<svg class="ds-pen-marker__${cls}" viewBox="${vb}"${ar ? ` preserveAspectRatio="${ar}"` : ""}><path d="${MARKER}"/></svg>`;
+  return `<span class="ds-pen-marker${look === "title" ? " ds-pen-marker--title" : ""}${drawn ? " is-drawn" : ""}" aria-hidden="true"><span class="ds-pen-marker__ink">${part("cap-start", "-5 -6.2 5.5 11.6")}${part("body", "0 -6.2 48.98 11.6", "none")}${part("cap-end", "48.48 -6.2 5.5 11.6")}</span><span class="ds-pen-marker__end"></span><span class="ds-pen-marker__drop"></span></span>`;
 }

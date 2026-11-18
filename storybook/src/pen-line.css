@@ -74,16 +74,33 @@
   clip-path: inset(-20px -10px -20px -10px);
   transition: clip-path var(--pen-line-duration) cubic-bezier(0.45, 0, 0.25, 1) var(--pen-line-delay);
 }
-/* 粗線：Figma Dynamic stroke 實際畫出來的形狀（含圓頭，左右各凸出 5）；線長 = 整欄寬 − 4.39（尾巴那團蓋在線尾） */
-.ds-pen-marker__line {
+/* 粗線：Figma Dynamic stroke 實際畫出來的形狀。線長 = 整欄寬 − 4.39（尾巴那團蓋在線尾）
+ * 頭、中段、尾三段：中段橫向伸縮，兩端的圓頭（各 5）不變形 */
+.ds-pen-marker__ink {
   position: absolute;
-  left: -5px;
+  left: 0;
   top: -6.2px;
-  width: calc(100% + 5.61px);
+  width: calc(100% - 4.39px);
   height: 11.6px;
-  overflow: visible;
   fill: var(--pen-marker-color);
   opacity: var(--pen-marker-opacity);
+}
+.ds-pen-marker__ink > svg {
+  position: absolute;
+  top: 0;
+  height: 100%;
+}
+.ds-pen-marker__cap-start {
+  left: -5px;
+  width: 5.5px;
+}
+.ds-pen-marker__body {
+  left: 0;
+  width: 100%;
+}
+.ds-pen-marker__cap-end {
+  left: calc(100% - 0.5px);
+  width: 5.5px;
 }
 .ds-pen-marker__end {
   position: absolute;
