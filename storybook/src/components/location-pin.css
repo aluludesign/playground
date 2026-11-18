@@ -1,0 +1,180 @@
+/* 地點標記 Location pin —— Figma shared comps「location pin」（section 162565:24486）
+ *
+ *   badge（pin/draw）：28 的塗鴉圓 + 號碼。塗鴉底是 on custom N（每天/每人一種顏色）× comp/pin/badge/opacity
+ *     Default／dot（primary 實心＋中間白塗鴉）／not on map（灰）／focuse（外面一圈手繪圈）
+ *   label：白色膠囊名字，Default（label/sm/regular）／focuse（label/sm/semi-bold）
+ *   pin：白色水滴 + badge；sm（32×36、badge 28）／lg（56×68、badge 51、號碼 Body/lg）
+ *   pin set：label 在上、pin 在下（sm 用 Default label，lg 用 focuse label）
+ *   pin_timeline：行程時間軸那一欄，點點線（divider/dot）＋ badge／時間／文字
+ */
+
+/* ---------- badge ---------- */
+.ds-pin-badge {
+  --pin-color: var(--ds-sys-color-customs-on-custom-14);
+  position: relative;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+}
+/* 塗鴉底：Figma 在 28 裡是 (1.42, 1.52) 25.15×24.95，lg 等比例放大 */
+.ds-pin-badge__bg {
+  position: absolute;
+  left: 5.07%;
+  top: 5.43%;
+  width: 89.82%;
+  height: 89.11%;
+  fill: var(--pin-color);
+  opacity: var(--ds-comp-pin-badge-opacity);
+}
+/* 號碼：label/md/semi-bold（14/18、字距 5%）、text 100、Elevation/text/xs */
+.ds-pin-badge__num {
+  position: relative;
+  font-family: var(--ds-sys-font-family-label);
+  font-weight: 700;
+  font-size: var(--ds-sys-font-size-label-md);
+  line-height: 18px;
+  letter-spacing: 0.05em;
+  color: var(--ds-sys-color-text-100);
+  text-shadow: var(--ds-elevation-text-xs);
+}
+/* lg（pin/focuse_l 裡）：51、號碼 Body/lg/regular（20/22） */
+.ds-pin-badge--lg {
+  width: 51px;
+  height: 51px;
+}
+.ds-pin-badge--lg .ds-pin-badge__num {
+  font-family: var(--ds-sys-font-family-body);
+  font-weight: 400;
+  font-size: var(--ds-sys-font-size-body-lg);
+  line-height: 22px;
+}
+/* not on map：灰 */
+.ds-pin-badge--not-on-map {
+  --pin-color: var(--ds-sys-color-on-disable);
+}
+/* dot：primary 實心塗鴉 + 中間一顆 on primary 的小塗鴉，沒有號碼 */
+.ds-pin-badge--dot {
+  --pin-color: var(--ds-sys-color-primary);
+}
+.ds-pin-badge--dot .ds-pin-badge__bg {
+  opacity: 1;
+}
+.ds-pin-badge__dot {
+  position: absolute;
+  left: 9px;
+  top: 9px;
+  width: 10px;
+  height: 10px;
+  fill: var(--ds-sys-color-on-primary);
+}
+/* focuse：外面一圈手繪圈（Figma 36 的圓、往外 4，Dynamic stroke 照 Figma 畫出來的那條） */
+.ds-pin-badge__ring {
+  position: absolute;
+  left: -4px;
+  top: -4px;
+  width: 36px;
+  height: 36px;
+  overflow: visible;
+  fill: var(--ds-sys-color-outline-300);
+  pointer-events: none;
+}
+
+/* ---------- label ---------- */
+/* 白色膠囊：surface bright、radius full、內距 xs／sm、Elevation/component/sm；字 label/sm（行高 auto＝字級） */
+.ds-pin-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--ds-sys-spacing-xs) var(--ds-sys-spacing-sm);
+  border-radius: var(--ds-sys-radius-full);
+  background: var(--ds-sys-color-surface-bright);
+  box-shadow: var(--ds-elevation-component-sm);
+  font-family: var(--ds-sys-font-family-label);
+  font-weight: 400;
+  font-size: var(--ds-sys-font-size-label-sm);
+  line-height: 1;
+  letter-spacing: 0.04em;
+  color: var(--ds-sys-color-text-100);
+  white-space: nowrap;
+}
+.ds-pin-label--focus {
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+/* ---------- pin ---------- */
+.ds-pin {
+  position: relative;
+  display: inline-block;
+  flex: none;
+  width: 32px;
+  height: 36px;
+}
+.ds-pin--lg {
+  width: 56px;
+  height: 68px;
+}
+/* 白色水滴：surface bright + Elevation/component/sm（drop-shadow 的模糊是 box-shadow 的一半） */
+.ds-pin__shape {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  fill: var(--ds-sys-color-surface-bright);
+  filter: drop-shadow(0 var(--ds-sys-border-xs) calc(var(--ds-sys-blur-2xs) / 2) var(--ds-sys-shadow-md))
+    drop-shadow(0 var(--ds-sys-border-xs) calc(var(--ds-sys-blur-2xs) / 2) var(--ds-sys-shadow-md));
+}
+.ds-pin > .ds-pin-badge {
+  position: absolute;
+  left: 2px;
+  top: 1px;
+}
+.ds-pin--lg > .ds-pin-badge {
+  left: 3px;
+  top: 4px;
+}
+
+/* ---------- pin set ---------- */
+.ds-pin-set {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--ds-sys-spacing-xs);
+}
+/* 名字膠囊撐滿整組的寬（Figma Fill）：lg 跟 pin 一樣寬，sm 照字的寬 */
+.ds-pin-set > .ds-pin-label {
+  align-self: stretch;
+}
+
+/* ---------- pin_timeline ---------- */
+.ds-pin-timeline {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--ds-comp-pin-timeline-gap);
+  width: 28px;
+}
+.ds-pin-timeline--empty {
+  width: auto;
+  padding: var(--ds-sys-spacing-sm) var(--ds-sys-spacing-2xl);
+}
+.ds-pin-timeline__top {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--ds-sys-spacing-2xs);
+}
+.ds-pin-timeline--text .ds-pin-timeline__top {
+  padding: var(--ds-sys-spacing-xs) 0;
+}
+/* 時間、文字：label/sm/hand-regular（全瀨體 12、字距 4%） */
+.ds-pin-timeline__text {
+  font-family: var(--ds-sys-font-family-zhtw-handwriting-zhtw);
+  font-weight: 400;
+  font-size: var(--ds-sys-font-size-label-sm);
+  line-height: 1;
+  letter-spacing: 0.04em;
+  color: var(--ds-sys-color-text-100);
+  white-space: nowrap;
+}
