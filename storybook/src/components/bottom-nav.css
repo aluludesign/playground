@@ -152,7 +152,7 @@
   transition-delay: 0.12s;
 }
 /* duotone 疊在 sticker 上面：白底跟 sticker 浮出來同時退掉，只剩咖啡色線稿；
- * 線稿等筆刷上色畫到 70% 才開始淡出（--nav-duo-delay 由 bottom-nav.js 照這顆 sticker 有幾塊上色算） */
+ * 線稿等筆刷上色畫到 20% 才開始淡出（--nav-duo-delay 由 bottom-nav.js 照這顆 sticker 有幾塊上色算） */
 .ds-bottom-nav__icon > .is-default-style {
   z-index: 1;
 }

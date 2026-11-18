@@ -54,7 +54,7 @@ export function wireBottomNav(root) {
     if (md && lg) nav.style.setProperty("--nav-scale", String(md / lg));
     nav.querySelectorAll(".is-active-style").forEach((sticker) => {
       preparePenBrush(sticker);
-      // duotone 等筆刷上色畫到 70% 才淡出：開始畫 + 70% ×（最後一塊開始的時間 + 掃一塊的時間）
+      // duotone 等筆刷上色畫到 20% 才淡出：開始畫 + 20% ×（最後一塊開始的時間 + 掃一塊的時間）
       const sc = getComputedStyle(sticker);
       const sec = (name, d) => {
         const v = sc.getPropertyValue(name).trim();
@@ -64,7 +64,7 @@ export function wireBottomNav(root) {
       const layers = sticker.querySelectorAll(".ds-pen-brush__layer").length;
       const total = Math.max(0, layers - 1) * sec("--pen-gap", 0.07) + sec("--pen-draw", 0.3);
       const item = sticker.closest(".ds-bottom-nav__item");
-      if (item && layers) item.style.setProperty("--nav-duo-delay", `${(sec("--pen-start", 0.2) + total * 0.7).toFixed(3)}s`);
+      if (item && layers) item.style.setProperty("--nav-duo-delay", `${(sec("--pen-start", 0.2) + total * 0.2).toFixed(3)}s`);
     });
     nav.addEventListener("click", (e) => {
       const btn = e.target.closest(".ds-bottom-nav__item");
