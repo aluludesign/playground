@@ -39,7 +39,7 @@ export const 全部 = {
     const el = document.createElement("div");
     el.className = "tk-page";
     el.innerHTML = `<h1>分頁籤 Segmented</h1>
-<p class="lead">一排像資料夾標籤的頁籤，左上小圓角、右上大圓角、下面是方的。沒選的是淡橘格子底；選中的換成米白格子底、字變深，字底下有一條手繪的橘色抖動線。點點看，也可以用鍵盤左右鍵切換。</p>
+<p class="lead">一排像資料夾標籤的頁籤，左上小圓角、右上大圓角、下面是方的。沒選的是淡橘格子底；選中的換成米白格子底、字變深，字底下一支看不見的筆由左往右畫出一條手繪的橘色抖動線（長度跟字那一欄一樣寬）。點點看，也可以用鍵盤左右鍵切換。</p>
 
 <section class="tk"><h2>segmented</h2>
 <div class="sg-stage">${segmentedHTML({ selected: "none" })}</div>
@@ -55,7 +55,7 @@ export const 全部 = {
 <tr><td class="nm">Default</td><td class="sg-cell">${one({})}</td><td class="al"><code>bg pattern/primary-soft</code>，文字 <code>text 200</code></td></tr>
 <tr><td class="nm">hover</td><td class="sg-cell">${one({ state: "hover" })}</td><td class="al">滑鼠移上去：底換成 <code>bg pattern/surface</code>，再蓋一層 <code>opacity primary 50</code></td></tr>
 <tr><td class="nm">focus</td><td class="sg-cell">${one({ state: "focus" })}</td><td class="al">鍵盤操作（Tab）：外面留 <code>spacing/2xs</code>，再畫 <code>comp/focus-ring</code> 的框</td></tr>
-<tr><td class="nm">Active</td><td class="sg-cell">${one({ selected: true })}</td><td class="al"><code>bg pattern/surface</code>，文字 <code>text 100</code>，字底下 <code>primary</code> 的抖動線（<code>border/md</code>）</td></tr>
+<tr><td class="nm">Active</td><td class="sg-cell">${one({ selected: true })}</td><td class="al"><code>bg pattern/surface</code>，文字 <code>text 100</code>，字底下 <code>primary</code> 的抖動線（<code>border/md</code>），選到時由左往右畫出來</td></tr>
 </tbody></table>
 </section>
 

@@ -9,7 +9,7 @@
  *   Active ：bg pattern/surface，文字 text 100，字底下一條 primary 的抖動線（divider/wiggle，border/md）
  *   focus  ：鍵盤操作時，外面留 spacing/2xs 再畫 comp/focus-ring
  *
- * 底紋由 pattern.css 畫（.ds-pattern）；抖動線照 Figma 畫好的形狀（segmented.js 的 LINE）。
+ * 底紋由 pattern.css 畫（.ds-pattern）；抖動線是筆畫線（pen-line.css），選到時由左往右畫出來。
  */
 
 .ds-segmented {
@@ -52,29 +52,18 @@
   position: relative;
 }
 
-/* Active 的抖動線（形狀在 segmented.js 的 LINE）：Figma 線的中心在 16 高字框頂端往下 14.5，
- * svg 的 viewBox 上面留 3.5、下面留 1.5，左右各多 1（圓頭） */
+/* Active 的抖動線＝筆畫線（src/pen-line.css）：選到時由左往右畫出來，長度跟字那一欄（含左右 spacing/sm）等寬。
+ * Figma 線的中心在 16 高字框頂端往下 14.5；svg 上面留 3.5、下面留 1.5，左右各多 1（圓頭） */
 .ds-segmented__line {
   position: absolute;
   left: -1px;
   width: calc(100% + 2px);
   top: calc(100% - 1.5px - 3.5px);
   height: 5px;
-  overflow: visible;
-  fill: none;
-  stroke: var(--ds-sys-color-primary);
-  stroke-width: var(--ds-sys-border-md);
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  visibility: hidden;
-  pointer-events: none;
 }
 
 .ds-segmented__item[aria-selected="true"] {
   color: var(--ds-sys-color-text-100);
-}
-.ds-segmented__item[aria-selected="true"] .ds-segmented__line {
-  visibility: visible;
 }
 
 /* hover（只在有滑鼠的裝置、沒選中的那幾格）：底換成 surface，再蓋一層 state layer */

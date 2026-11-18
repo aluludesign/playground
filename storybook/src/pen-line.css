@@ -1,0 +1,43 @@
+/* 筆畫線 pen line —— 一條手繪的抖動線，出現時像一支看不見的筆由左往右畫出來
+ *
+ *   <span style="position:relative">文字 ${penLineSVG()}</span>
+ *   加上 .is-drawn 就畫出來、拿掉就收起來（收起來不倒著擦，直接消失）
+ *
+ * 形狀照 Figma divider/wiggle（Dynamic stroke frequency 10・wiggle 1.5・smoothen 0.5）實際畫出來的那條，
+ * 長度跟著放它的那一欄等寬（只橫向伸縮，線寬不變）。
+ *
+ * 可以覆寫的變數：
+ *   --pen-line-color     線的顏色（預設 primary）
+ *   --pen-line-width     線寬（預設 border/md）
+ *   --pen-line-duration  畫完一條要多久（預設 .35s）
+ *   --pen-line-delay     晚多久才開始畫（預設 0）
+ */
+.ds-pen-line {
+  --pen-line-color: var(--ds-sys-color-primary);
+  --pen-line-width: var(--ds-sys-border-md);
+  --pen-line-duration: 0.35s;
+  --pen-line-delay: 0s;
+  display: block;
+  overflow: visible;
+  fill: none;
+  stroke: var(--pen-line-color);
+  stroke-width: var(--pen-line-width);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+/* path 的 pathLength = 1：虛線「1 段實線 + 2 段空白」，往後推 1 就整條藏起來，推回 0 就整條畫出來 */
+.ds-pen-line path {
+  stroke-dasharray: 1 2;
+  stroke-dashoffset: 1;
+}
+.ds-pen-line.is-drawn path {
+  stroke-dashoffset: 0;
+  transition: stroke-dashoffset var(--pen-line-duration) cubic-bezier(0.45, 0, 0.25, 1) var(--pen-line-delay);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ds-pen-line.is-drawn path {
+    transition: none;
+  }
+}
