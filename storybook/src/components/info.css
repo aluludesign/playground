@@ -1,7 +1,7 @@
 /* 提示 Info —— Figma shared comps「info」（162201:23111）
  *
  *   一張淡藍的提示條：前面 info icon，中間一段說明（可以有粗體的重點字），後面收合箭頭和「不再提醒」。
- *   外框是 tertiary 的抖動線（Dynamic stroke wiggle 1.5），底色 tertiary container 往右下錯開一點，像手塗的。
+ *   外框套線條樣式的「外框」（tertiary 色），底色 tertiary container 往右下錯開一點，像手塗的。
  *
  *   state：collapse（說明只顯示一行，超過用…）／expend（全部展開，箭頭朝上）
  *   Show leading icon／Show collapse icon／Show btn：三個開關
@@ -28,9 +28,7 @@
 }
 
 .ds-info__body {
-  /* 外框：tertiary 的抖動線，wiggle 1.5、線寬 border/xs，畫在邊框正中間（wiggle.js） */
-  --wiggle-amount: 1.5;
-  --wiggle-width: var(--ds-sys-border-xs);
+  /* 外框：直接套線條樣式的「外框」（.ds-wiggle-border，抖法照共用的），只換成 tertiary 的顏色 */
   --wiggle-color: var(--ds-sys-color-tertiary);
   position: relative;
   display: flex;

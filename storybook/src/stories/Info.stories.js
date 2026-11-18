@@ -43,7 +43,7 @@ export const 全部 = {
 <section class="tk"><h2>Token</h2>
 <table><thead><tr><th>用在</th><th>token</th></tr></thead><tbody>
 <tr><td class="al">底色（往右下錯開）</td><td><code class="var">--ds-sys-color-tertiary-container</code></td></tr>
-<tr><td class="al">外框</td><td><code class="var">--ds-sys-color-tertiary</code>・<code class="var">--ds-sys-border-xs</code>・抖動 wiggle 1.5</td></tr>
+<tr><td class="al">外框</td><td>線條樣式「外框」<code class="var">ds-wiggle-border</code>，顏色 <code class="var">--ds-sys-color-tertiary</code></td></tr>
 <tr><td class="al">圓角</td><td><code class="var">--ds-comp-info-radius</code></td></tr>
 <tr><td class="al">icon</td><td><code class="var">--ds-comp-info-icon</code>（info 用 <code class="var">--ds-sys-color-tertiary</code>，箭頭用 on tertiary container）</td></tr>
 <tr><td class="al">字</td><td><code class="var">--ds-sys-color-on-tertiary-container</code>・label/md/regular，重點字 label/md/semi-bold</td></tr>
