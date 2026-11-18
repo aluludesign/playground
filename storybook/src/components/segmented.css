@@ -116,7 +116,35 @@
   outline-offset: var(--ds-sys-spacing-2xs);
 }
 
-/* Figma 裡頁籤後面還藏了一顆 Dynamic Iris（預設不顯示），要用就放進 trailing */
-.ds-segmented__trailing {
-  display: inline-flex; /* Figma 是緊接在頁籤後面，間距一樣 spacing/2xl */
+/* segmented sheet —— Figma「segmented sheet」（162187:28671）
+ *   上面頁籤、下面一張底：surface ＋ surface 格線（這張的格線是 5%）、四角 comp/segmented sheet/radius
+ *   內容區（containt replaced）：內距 spacing/4xl，內容可以自由替換，超出的部分裁掉
+ *   整張的陰影：Elevation/surface/medium（照頁籤和底的形狀投影）
+ */
+.ds-segmented-sheet {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  /* 和 --ds-elevation-surface-medium 同一組值；drop-shadow 的模糊是標準差，所以是 box-shadow 模糊的一半 */
+  filter: drop-shadow(var(--ds-foun-shadow-length-0) var(--ds-foun-shadow-length-100) calc(var(--ds-sys-blur-lg) / 2) var(--ds-foun-color-retro-red-orange-700-alpha-32));
+}
+.ds-segmented-sheet > .ds-segmented {
+  flex: none;
+}
+.ds-segmented-sheet__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  border-radius: var(--ds-comp-segmented-sheet-radius);
+  overflow: hidden;
+  --ds-sys-pattern-opacity: 0.05;
+}
+.ds-segmented-sheet__content {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-sys-spacing-2xl);
+  padding: var(--ds-sys-spacing-4xl);
+  overflow: hidden;
 }

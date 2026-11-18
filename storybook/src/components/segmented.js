@@ -19,11 +19,11 @@ export function segmentedItemHTML({ key = "", label = "", selected = false, stat
   return `<button type="button" role="tab" class="ds-segmented__item ds-pattern ${pattern}${state ? " is-" + state : ""}" data-key="${esc(key)}" aria-selected="${selected}" tabindex="${selected ? 0 : -1}"><span class="ds-segmented__label">${LINE}<span class="ds-segmented__text">${esc(label)}</span></span></button>`;
 }
 
-/** items: [{ key, label }]；selected: 選中的 key；trailing: 放在最右邊的 HTML（例如 Dynamic Iris），預設沒有 */
-export function segmentedHTML({ items = DEFAULT_ITEMS, selected = items[0]?.key, label = "分頁", trailing = "" } = {}) {
+/** items: [{ key, label }]；selected: 選中的 key */
+export function segmentedHTML({ items = DEFAULT_ITEMS, selected = items[0]?.key, label = "分頁" } = {}) {
   return `<div class="ds-segmented" role="tablist" aria-label="${esc(label)}">${items
     .map((it) => segmentedItemHTML({ ...it, selected: it.key === selected }))
-    .join("")}${trailing ? `<span class="ds-segmented__trailing">${trailing}</span>` : ""}</div>`;
+    .join("")}</div>`;
 }
 
 function select(root, btn) {
@@ -35,6 +35,14 @@ function select(root, btn) {
     b.classList.toggle("ds-pattern--primary-soft", !on);
   });
   root.dispatchEvent(new CustomEvent("ds-segmented-select", { bubbles: true, detail: { key: btn.dataset.key } }));
+}
+
+/**
+ * segmented sheet：上面一排頁籤、下面一張放內容的底（Figma「segmented sheet」）。
+ * 內容可以自由替換（containt replaced）：content 傳任何 HTML；切頁籤時聽 ds-segmented-select 自己換內容。
+ */
+export function segmentedSheetHTML({ items = DEFAULT_ITEMS, selected = items[0]?.key, label = "分頁", content = "" } = {}) {
+  return `<div class="ds-segmented-sheet">${segmentedHTML({ items, selected, label })}<div class="ds-segmented-sheet__body ds-pattern ds-pattern--surface" role="tabpanel"><div class="ds-segmented-sheet__content">${content}</div></div></div>`;
 }
 
 /** 點一格就選它（發出 ds-segmented-select，detail.key）；左右鍵切換 */
