@@ -4,7 +4,7 @@
  *   寬度照內容字寬，最寬是畫面左右各留 16（spacing/2xl）；文字最多三行，超過用「…」
  *   menu_item：內距 sm／xl、間距 md、Body/sm/semi-bold（源泉圓體 M）
  *   selected：底色 opacity primary 100，後面出現 check_line duotone（comp/menu/icon）
- *   hover   ：一樣刷 opacity primary 100
+ *   hover   ：刷淡一點的 opacity primary 50
  *   每一列都留著 icon 的位置，切換選項時整組寬度不變
  *
  * 外框的抖動線由 wiggle.js 畫（.ds-wiggle-border），底紋由 pattern.css 畫（.ds-pattern）。
@@ -87,10 +87,10 @@
   visibility: visible;
 }
 
-/* hover：和選中一樣刷淡橘色（只在有滑鼠的裝置） */
+/* hover：刷比選中淡一點的橘色（只在有滑鼠的裝置） */
 @media (hover: hover) {
   .ds-menu__item:hover {
-    background: var(--ds-sys-color-opacity-opacity-primary-100);
+    background: var(--ds-sys-color-opacity-opacity-primary-50);
   }
 }
 

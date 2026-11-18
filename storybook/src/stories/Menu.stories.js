@@ -33,7 +33,7 @@ export const 全部 = {
 <section class="tk"><h2>menu_item</h2>
 <table><thead><tr><th>state</th><th>預覽</th><th>說明</th></tr></thead><tbody>
 <tr><td class="nm">default</td><td class="mn-cell">${one("東京 PA PA 造 Happy Bir", false)}</td><td class="al">沒有底色、沒有 icon</td></tr>
-<tr><td class="nm">hover</td><td class="mn-cell">${one("東京 PA PA 造 Happy Bir", false).replace('class="ds-menu__item"', 'class="ds-menu__item mn-hover"')}</td><td class="al">滑鼠移上去：一樣刷 <code>opacity primary 100</code>，沒有 icon</td></tr>
+<tr><td class="nm">hover</td><td class="mn-cell">${one("東京 PA PA 造 Happy Bir", false).replace('class="ds-menu__item"', 'class="ds-menu__item mn-hover"')}</td><td class="al">滑鼠移上去：刷 <code>opacity primary 50</code>，沒有 icon</td></tr>
 <tr><td class="nm">selected</td><td class="mn-cell">${one("東京 PA PA 造 Happy Bir", true)}</td><td class="al">底色 <code>opacity primary 100</code>＋ check_line duotone <code>comp/menu/icon</code>（28）</td></tr>
 </tbody></table>
 <p class="note">鍵盤操作時（Tab）會出現 Focus ring。</p>
@@ -60,6 +60,7 @@ export const 全部 = {
 <tr><td class="al">列與列間距</td><td><code class="var">--ds-sys-spacing-2xs</code></td></tr>
 <tr><td class="al">一列的內距／間距</td><td><code class="var">--ds-sys-spacing-sm</code> <code class="var">--ds-sys-spacing-xl</code>／<code class="var">--ds-sys-spacing-md</code></td></tr>
 <tr><td class="al">文字</td><td>Body/sm/semi-bold <code class="var">--ds-sys-font-size-body-sm</code> <code class="var">--ds-sys-color-text-100</code></td></tr>
+<tr><td class="al">hover 底色</td><td><code class="var">--ds-sys-color-opacity-opacity-primary-50</code></td></tr>
 <tr><td class="al">selected 底色</td><td><code class="var">--ds-sys-color-opacity-opacity-primary-100</code></td></tr>
 <tr><td class="al">icon</td><td><code class="var">--ds-comp-menu-icon</code></td></tr>
 </tbody></table></section>
@@ -68,7 +69,7 @@ export const 全部 = {
 <style>
 .mn-stage { padding: 24px 16px; }
 .mn-phone { width: 375px; box-sizing: border-box; --menu-max-width: calc(375px - 2 * var(--ds-sys-spacing-2xl)); background: #f6f2f0; border-radius: 12px; }
-.mn-hover { background: var(--ds-sys-color-opacity-opacity-primary-100); }
+.mn-hover { background: var(--ds-sys-color-opacity-opacity-primary-50); }
 .mn-cell { padding: 16px 12px; }
 .mn-bare { box-shadow: none; background: none; width: 278px; }
 .mn-bare::before, .mn-bare > .ds-wiggle__svg { display: none; }
