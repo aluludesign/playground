@@ -896,3 +896,5 @@ C:segmented/radius-top-right|F|@S:radius/3xl
 C:segmented sheet/radius|F|@S:radius/sm
 C:btn/marker/opacity|F|@S:opacity/3xl
 C:btn/marker/icon|F|@S:icon/xs
+C:info/radius|F|@S:radius/lg
+C:info/icon|F|@S:icon/xs
