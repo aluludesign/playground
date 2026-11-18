@@ -1,0 +1,50 @@
+/* 筆刷上色 pen brush —— sticker 的上色由一支看不見的筆畫出來
+ *
+ *   一塊接一塊（左上的先），每一塊被斜向的筆刷由左上往右下掃出來：先出描邊、緊跟著填色，
+ *   最後描邊收掉，停下來的樣子跟原本的 sticker 一模一樣。收起來時直接消失，不倒著擦。
+ *
+ *   svg 加 .ds-pen-brush（上色層由 markPenLayers 標好、遮罩由 preparePenBrush 量好後加上），
+ *   再加 .is-drawn 就畫出來、拿掉就收起來。
+ *
+ * 可以覆寫的變數（放在 svg 或它的祖先上）：
+ *   --pen-start  晚多久才開始畫（預設 0；bottom nav 等 icon 放大完才畫）
+ *   --pen-draw   掃過一塊要多久（預設 .3s）
+ *   --pen-gap    下一塊晚多久開始（預設 .07s）
+ */
+.ds-pen-brush {
+  --pen-start: 0s;
+  --pen-draw: 0.3s;
+  --pen-gap: 0.07s;
+}
+.ds-pen-brush__layer,
+.ds-pen-brush__sweep {
+  --pen-at: calc(var(--pen-start) + var(--i, 0) * var(--pen-gap));
+}
+.ds-pen-brush__layer {
+  stroke: var(--pen);
+  stroke-width: 0.7;
+  stroke-linejoin: round;
+  stroke-opacity: 1;
+  fill-opacity: 0;
+}
+.ds-pen-brush__sweep {
+  transform: none;
+}
+.ds-pen-brush.is-drawn .ds-pen-brush__sweep {
+  transform: translate(var(--sx), var(--sy));
+  transition: transform var(--pen-draw) cubic-bezier(0.4, 0, 0.2, 1) var(--pen-at);
+}
+.ds-pen-brush.is-drawn .ds-pen-brush__layer {
+  fill-opacity: 1;
+  stroke-opacity: 0;
+  transition:
+    fill-opacity 0.2s ease-out calc(var(--pen-at) + var(--pen-draw) * 0.45),
+    stroke-opacity 0.2s ease-out calc(var(--pen-at) + var(--pen-draw) + 0.1s);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ds-pen-brush .ds-pen-brush__layer,
+  .ds-pen-brush .ds-pen-brush__sweep {
+    transition: none !important;
+  }
+}
