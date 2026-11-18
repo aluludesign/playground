@@ -1,0 +1,109 @@
+/* 搜尋清單的一列 search list —— Figma「search list」（162537:17618）
+ *
+ *   照片 48（圓角 radius/sm）＋ 名稱（Body/sm/semi-bold、text 100）＋ 資訊（label/md/regular、text 200，中間用「‧」隔開）
+ *   照片和文字間距 spacing/xl，名稱和資訊間距 spacing/xs
+ *
+ *   Default：沒有底
+ *   hover  ：往外 4 蓋一層 opacity primary 50（state layer，圓角 radius/sm）
+ *   pressed：state layer 再往外長到 6
+ *   focus  ：hover 的 state layer，外面留 spacing/2xs 再畫 comp/focus-ring
+ */
+.ds-search-item {
+  --search-layer: -4px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--ds-sys-spacing-xl);
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  border-radius: var(--ds-sys-radius-lg);
+}
+.ds-search-item::after {
+  content: "";
+  position: absolute;
+  inset: var(--search-layer);
+  border-radius: var(--ds-sys-radius-sm);
+  background: var(--ds-sys-color-opacity-opacity-primary-50);
+  opacity: 0;
+  pointer-events: none;
+  transition: inset 0.12s ease-out, opacity 0.15s ease;
+}
+
+.ds-search-item__photo {
+  flex: none;
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: var(--ds-sys-radius-sm);
+}
+.ds-search-item__text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-sys-spacing-xs);
+  min-width: 0;
+}
+.ds-search-item__name {
+  font: 500 var(--ds-sys-font-size-body-sm) / 1 var(--ds-sys-font-family-body);
+  letter-spacing: 0.05em;
+  color: var(--ds-sys-color-text-100);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ds-search-item__info {
+  display: flex;
+  gap: var(--ds-sys-spacing-xs);
+  font: 400 var(--ds-sys-font-size-label-md) / 18px var(--ds-sys-font-family-label);
+  letter-spacing: 0.04em;
+  color: var(--ds-sys-color-text-200);
+  white-space: nowrap;
+}
+/* 字型子集沒有「‧」：照 Figma 畫一顆 14 寬、置中的圓點 */
+.ds-search-item__dot {
+  width: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ds-search-item__dot::before {
+  content: "";
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* hover */
+.ds-search-item.is-hover::after {
+  opacity: 1;
+}
+@media (hover: hover) {
+  .ds-search-item:hover::after {
+    opacity: 1;
+  }
+}
+/* pressed：state layer 再往外長 */
+.ds-search-item:active,
+.ds-search-item.is-pressed {
+  --search-layer: -6px;
+}
+.ds-search-item:active::after,
+.ds-search-item.is-pressed::after {
+  opacity: 1;
+}
+/* focus */
+.ds-search-item:focus-visible {
+  outline: none;
+}
+.ds-search-item:focus-visible::after,
+.ds-search-item.is-focus::after {
+  opacity: 1;
+  outline: var(--ds-comp-focus-ring-border) solid var(--ds-comp-focus-ring-color);
+  outline-offset: var(--ds-sys-spacing-2xs);
+}

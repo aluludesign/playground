@@ -7,8 +7,8 @@ cd "$(dirname "$0")/.."
 FONTS="${FONTS:-$HOME/Library/Fonts}"
 SUB="${PYFTSUBSET:-pyftsubset}"
 TEXT=$(mktemp)
-# 頁面上所有字 + 英數符號
-cat src/*.js src/stories/*.js > "$TEXT"
+# 頁面上所有字（含元件預設文字）+ 英數符號
+cat src/*.js src/components/*.js src/stories/*.js > "$TEXT"
 printf ' !"#$%%&()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[]^_abcdefghijklmnopqrstuvwxyz{|}~' >> "$TEXT"
 for w in EL L R M B H; do
   "$SUB" "$FONTS/GenSenRounded2TW-$w.otf" --text-file="$TEXT" --flavor=woff2 --layout-features='*' \
