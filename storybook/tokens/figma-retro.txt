@@ -915,3 +915,4 @@ C:avatar/size/lg|F|@S:icon/2xl
 C:avatar/size/md|F|@S:icon/md
 C:avatar/size/sm|F|@S:icon/xs
 C:avatar/border|F|@S:border/xs
+C:active bg/line/color|C|@S:color/customs/custom 5
