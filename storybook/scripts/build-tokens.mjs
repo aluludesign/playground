@@ -42,6 +42,8 @@ for (const t of tokens) {
 // 數字要不要帶單位：看它是什麼
 function unitFor(name, value) {
   if (/\/font\/weight\//.test(name)) return String(value);
+  // 抖動線的三個數字照 Figma Dynamic stroke（frequency／wiggle／smoothen），不帶單位
+  if (/\/wiggle\//.test(name)) return String(value);
   if (/\/opacity\//.test(name)) return value + "%";
   return value + "px";
 }

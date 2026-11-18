@@ -1,0 +1,96 @@
+/* 提示 Info —— Figma shared comps「info」（162201:23111）
+ *
+ *   一張淡藍的提示條：前面 info icon，中間一段說明（可以有粗體的重點字），後面收合箭頭和「不再提醒」。
+ *   外框套線條樣式的「外框」（tertiary 色），底色 tertiary container 往右下錯開一點，像手塗的。
+ *
+ *   state：collapse（說明只顯示一行，超過用…）／expend（全部展開，箭頭朝上）
+ *   Show leading icon／Show collapse icon／Show btn：三個開關
+ */
+
+.ds-info {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+/* 錯開的底色：Figma active_bg 在 (4, 1)，寬少 2、高多 1 → 右下各凸出 2 */
+.ds-info__bg {
+  position: absolute;
+  top: 1px;
+  left: 4px;
+  right: -2px;
+  bottom: -2px;
+  border-radius: var(--ds-comp-info-radius);
+  background: var(--ds-sys-color-tertiary-container);
+  pointer-events: none;
+}
+
+.ds-info__body {
+  /* 外框：直接套線條樣式的「外框」（.ds-wiggle-border，抖法照共用的），只換成 tertiary 的顏色 */
+  --wiggle-color: var(--ds-sys-color-tertiary);
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ds-sys-spacing-xl);
+  padding: var(--ds-sys-spacing-xl) var(--ds-sys-spacing-xl) var(--ds-sys-spacing-xl) var(--ds-sys-spacing-3xl);
+  border-radius: var(--ds-comp-info-radius);
+}
+
+.ds-info__icon {
+  flex: none;
+  width: var(--ds-comp-info-icon);
+  height: var(--ds-comp-info-icon);
+  color: var(--ds-sys-color-tertiary);
+}
+
+/* label/md/regular（14/18、字距 4%）；重點字 label/md/semi-bold（源泉圓體 B、字距 5%） */
+.ds-info__text {
+  flex: 1 1 0;
+  min-width: 0;
+  margin: 0;
+  font-family: var(--ds-sys-font-family-label);
+  font-weight: 400;
+  font-size: var(--ds-sys-font-size-label-md);
+  line-height: 18px;
+  letter-spacing: 0.04em;
+  color: var(--ds-sys-color-on-tertiary-container);
+}
+.ds-info__text strong {
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+.ds-info:not(.is-expanded) .ds-info__text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 收合箭頭：點了展開／收合；高度跟著那一列，箭頭靠上 */
+.ds-info__toggle {
+  flex: none;
+  align-self: stretch;
+  display: flex;
+  align-items: flex-start;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ds-sys-color-on-tertiary-container);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.ds-info__toggle svg {
+  width: var(--ds-comp-info-icon);
+  height: var(--ds-comp-info-icon);
+}
+.ds-info__toggle:focus-visible {
+  outline: var(--ds-comp-focus-ring-border) solid var(--ds-comp-focus-ring-color);
+  outline-offset: var(--ds-sys-spacing-2xs);
+  border-radius: var(--ds-sys-radius-xs);
+}
+
+.ds-info__btn {
+  flex: none;
+}

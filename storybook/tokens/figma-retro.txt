@@ -110,6 +110,10 @@ F:opacity/600|F|48
 F:opacity/800|F|64
 F:opacity/1000|F|80
 F:opacity/1100|F|88
+F:wiggle/frequency/1000|F|10
+F:wiggle/amount/30|F|0.3
+F:wiggle/amount/150|F|1.5
+F:wiggle/smoothen/50|F|0.5
 F:blur/0|F|0
 F:blur/50|F|4
 F:blur/100|F|8
@@ -638,6 +642,10 @@ S:icon/5xl|F|@F:icon/size/800
 S:icon/6xl|F|@F:icon/size/1000
 S:border/xs|F|@F:border/100
 S:border/md|F|@F:border/200
+S:wiggle/frequency|F|@F:wiggle/frequency/1000
+S:wiggle/smoothen|F|@F:wiggle/smoothen/50
+S:wiggle/amount/line|F|@F:wiggle/amount/150
+S:wiggle/amount/border|F|@F:wiggle/amount/30
 S:border/lg|F|@F:border/300
 S:border/xl|F|@F:border/400
 S:font/weight/thin|F|@F:font/weight/thin
@@ -896,3 +904,5 @@ C:segmented/radius-top-right|F|@S:radius/3xl
 C:segmented sheet/radius|F|@S:radius/sm
 C:btn/marker/opacity|F|@S:opacity/3xl
 C:btn/marker/icon|F|@S:icon/xs
+C:info/radius|F|@S:radius/lg
+C:info/icon|F|@S:icon/xs
