@@ -47,8 +47,8 @@
   padding: var(--ds-sys-spacing-md) 0;
 }
 
-/* 底線：兩條抖動線疊在一起，中心在第 46px。
- * 平常那條 outline 200、border/xs；聚焦那條 outline 300、border/md，聚焦時由左往右畫出來（跟筆畫線同一個動態） */
+/* 底線：中心在第 46px。平常那條 outline 200、border/xs；聚焦那條 outline 300、border/md。
+ * 聚焦時是「換掉」不是疊上去：粗線由左往右畫出來（跟筆畫線同一個動態），細線同時整條漸漸淡掉 */
 .ds-text-field__line {
   position: absolute;
   left: 0;
@@ -60,6 +60,10 @@
 .ds-text-field__line--rest {
   --wiggle-color: var(--ds-comp-text-field-line-color);
   --wiggle-width: var(--ds-comp-text-field-line-width);
+  transition: opacity 0.35s ease;
+}
+.ds-text-field.is-focused .ds-text-field__line--rest {
+  opacity: 0;
 }
 .ds-text-field__line--focus {
   --wiggle-color: var(--ds-comp-text-field-line-focus-color);
@@ -234,6 +238,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .ds-text-field.is-focused .ds-text-field__line--focus,
+  .ds-text-field.is-focused .ds-text-field__line--rest,
   .ds-text-field__icon > svg {
     transition: none;
   }

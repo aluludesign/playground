@@ -25,7 +25,7 @@ export const 全部 = {
     const el = document.createElement("div");
     el.className = "tk-page";
     el.innerHTML = `<h1>文字輸入框 Text field</h1>
-<p class="lead">上面一行標籤，中間是手寫字的輸入列（前面一顆燈泡、底下一條手繪抖動線），下面一行說明和馬克筆按鈕。點進去打字時，燈泡被一支看不見的筆塗上顏色、底線由左往右畫粗。</p>
+<p class="lead">上面一行標籤，中間是手寫字的輸入列（前面一顆燈泡、底下一條手繪抖動線），下面一行說明和馬克筆按鈕。點進去打字時，燈泡被一支看不見的筆塗上顏色、粗底線由左往右畫出來、細底線同時淡掉。</p>
 
 <section class="tk"><h2>試試看</h2>
 <div class="tf-try">${textFieldHTML()}</div>
@@ -34,7 +34,7 @@ export const 全部 = {
 <section class="tk"><h2>state</h2>
 <table><thead><tr><th>state</th><th>預覽</th><th>說明</th></tr></thead><tbody>
 <tr><td class="nm">default</td><td class="tf-cell">${textFieldHTML()}</td><td class="al">空的、沒聚焦：燈泡 outlined、細底線（outline 200）、沒有 ✕</td></tr>
-<tr><td class="nm">focused_pre typing</td><td class="tf-cell">${textFieldHTML({ state: "focused" })}</td><td class="al">聚焦、還沒打字：打字游標在最前面（手機叫出鍵盤）、燈泡換 sticker、粗底線（outline 300、border/md）；還沒有字，所以沒有 ✕</td></tr>
+<tr><td class="nm">focused_pre typing</td><td class="tf-cell">${textFieldHTML({ state: "focused" })}</td><td class="al">聚焦、還沒打字：打字游標在最前面（手機叫出鍵盤）、燈泡換 sticker、細底線淡掉、換成由左往右畫出來的粗底線（outline 300、border/md）；還沒有字，所以沒有 ✕</td></tr>
 <tr><td class="nm">focused_typing</td><td class="tf-cell">${textFieldHTML({ state: "focused", value: "Filled text" })}</td><td class="al">聚焦、打字中：打字游標跟在字後面、有字了，出現清除 ✕</td></tr>
 <tr><td class="nm">filled w/o focused</td><td class="tf-cell">${textFieldHTML({ value: "Filled text" })}</td><td class="al">有字、離開了：燈泡維持 sticker、底線變回細的</td></tr>
 </tbody></table>
