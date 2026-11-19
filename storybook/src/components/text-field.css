@@ -114,7 +114,19 @@
   background: var(--ds-sys-color-surface-bright);
 }
 
-/* 手寫字 body/lg（20/22、字距 5%）；還沒打字時是 text 200 的提示字 */
+/* 輸入框外面包一層，文件頁的假游標疊在上面 */
+.ds-text-field__box {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+}
+.ds-text-field__field {
+  cursor: text;
+}
+
+/* 手寫字 body/lg（20/22、字距 5%）；還沒打字時是 text 200 的提示字。
+ * 聚焦時是瀏覽器自己的打字游標（text 100），手機上會叫出鍵盤 */
 .ds-text-field__input {
   flex: 1 1 0;
   min-width: 0;
@@ -135,6 +147,40 @@
 .ds-text-field__input::placeholder {
   color: var(--ds-sys-color-text-200);
   opacity: 1;
+}
+
+/* 文件頁固定顯示 focused 時的假游標（Figma 的「|」）：跟在看不見的同樣的字後面，一秒閃一次 */
+.ds-text-field__caret {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 22px;
+  display: none;
+  white-space: pre;
+  pointer-events: none;
+  font-family: var(--ds-sys-font-family-zhtw-handwriting-zhtw);
+  font-size: var(--ds-sys-font-size-body-lg);
+  line-height: 22px;
+  letter-spacing: 0.05em;
+}
+.ds-text-field__caret > span {
+  visibility: hidden;
+}
+.ds-text-field__caret::after {
+  content: "";
+  display: inline-block;
+  width: 1.5px;
+  height: 20px;
+  margin-top: 1px;
+  vertical-align: top;
+  background: var(--ds-sys-color-text-100);
+  animation: ds-text-field-blink 1s steps(1) infinite;
+}
+.ds-text-field.is-demo-focus .ds-text-field__caret {
+  display: block;
+}
+@keyframes ds-text-field-blink {
+  50% { opacity: 0; }
 }
 
 /* 清除 ✕：有字才出現（icon/xs） */
@@ -190,5 +236,8 @@
   .ds-text-field.is-focused .ds-text-field__line--focus,
   .ds-text-field__icon > svg {
     transition: none;
+  }
+  .ds-text-field__caret::after {
+    animation: none;
   }
 }

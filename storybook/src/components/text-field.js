@@ -27,7 +27,7 @@ let uid = 0;
  * placeholder：還沒打字時的提示字；value：一開始的內容
  * leadingIcon：燈泡（Show Leading icon）；trailingIcon：清除 ✕（Show Trailing icon，有字才出現）
  * supportingText：下面的說明（Show supporting text：supporting）；button：說明列後面的馬克筆按鈕文字（不要就給 ""）
- * state：只給文件頁固定顯示用（"focused"）
+ * state：只給文件頁固定顯示用（"focused"：沒有真的聚焦，所以另外畫一個會閃的打字游標，位置跟真的一樣）
  */
 export function textFieldHTML({
   label = "許個願，想去東京哪? ",
@@ -44,8 +44,10 @@ export function textFieldHTML({
   const id = `ds-text-field-${++uid}`;
   const cls = ["ds-text-field"];
   if (value) cls.push("is-filled");
-  if (state === "focused") cls.push("is-focused");
-  return `<div class="${cls.join(" ")}">${floatingLabel ? `<label class="ds-text-field__label" for="${id}">${esc(label)}</label>` : ""}<div class="ds-text-field__field">${leadingIcon ? `<span class="ds-text-field__icon">${BULB}</span>` : ""}<span class="ds-text-field__content"><input class="ds-text-field__input" id="${id}" type="text" value="${esc(value)}" placeholder="${esc(placeholder)}"${floatingLabel ? "" : ` aria-label="${esc(label)}"`}>${trailingIcon ? `<button type="button" class="ds-text-field__clear" aria-label="清除">${CROSS}</button>` : ""}</span><div class="ds-text-field__line ds-text-field__line--rest ds-wiggle-line" aria-hidden="true"></div><div class="ds-text-field__line ds-text-field__line--focus ds-wiggle-line" aria-hidden="true"></div></div>${supporting ? `<div class="ds-text-field__support">${ARROW}<span class="ds-text-field__support-text">${esc(supportingText)}</span>${button ? markerButtonHTML({ label: button, size: "sm" }).replace('class="ds-marker', 'class="ds-text-field__btn ds-marker') : ""}</div>` : ""}</div>`;
+  if (state === "focused") cls.push("is-focused", "is-demo-focus");
+  // 文件頁的假游標：前面墊一段看不見的同樣的字，游標就停在字的後面（沒字時停在最前面）
+  const caret = state === "focused" ? `<span class="ds-text-field__caret" aria-hidden="true"><span>${esc(value)}</span></span>` : "";
+  return `<div class="${cls.join(" ")}">${floatingLabel ? `<label class="ds-text-field__label" for="${id}">${esc(label)}</label>` : ""}<div class="ds-text-field__field">${leadingIcon ? `<span class="ds-text-field__icon">${BULB}</span>` : ""}<span class="ds-text-field__content"><span class="ds-text-field__box"><input class="ds-text-field__input" id="${id}" type="text" enterkeyhint="done" value="${esc(value)}" placeholder="${esc(placeholder)}"${floatingLabel ? "" : ` aria-label="${esc(label)}"`}>${caret}</span>${trailingIcon ? `<button type="button" class="ds-text-field__clear" aria-label="清除">${CROSS}</button>` : ""}</span><div class="ds-text-field__line ds-text-field__line--rest ds-wiggle-line" aria-hidden="true"></div><div class="ds-text-field__line ds-text-field__line--focus ds-wiggle-line" aria-hidden="true"></div></div>${supporting ? `<div class="ds-text-field__support">${ARROW}<span class="ds-text-field__support-text">${esc(supportingText)}</span>${button ? markerButtonHTML({ label: button, size: "sm" }).replace('class="ds-marker', 'class="ds-text-field__btn ds-marker') : ""}</div>` : ""}</div>`;
 }
 
 /** 聚焦／有字時切換樣子（燈泡用筆刷畫出來、底線由左往右畫出來）；✕ 清掉內容；畫抖動線 */
@@ -60,7 +62,12 @@ export function wireTextField(root = document) {
       tf.classList.toggle("is-filled", !!input.value);
       if (sticker) drawPenBrush(sticker, focused || !!input.value);
     };
-    input.addEventListener("focus", () => { tf.classList.add("is-focused"); sync(); });
+    // 點輸入列的任何地方（燈泡、空白處）都把游標放進去：手機上就會叫出鍵盤
+    tf.querySelector(".ds-text-field__field").addEventListener("click", (e) => {
+      if (e.target.closest(".ds-text-field__clear") || e.target === input) return;
+      input.focus();
+    });
+    input.addEventListener("focus", () => { tf.classList.remove("is-demo-focus"); tf.classList.add("is-focused"); sync(); });
     input.addEventListener("blur", () => { tf.classList.remove("is-focused"); sync(); });
     input.addEventListener("input", sync);
     tf.querySelector(".ds-text-field__clear")?.addEventListener("click", () => {

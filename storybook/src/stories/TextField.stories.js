@@ -29,15 +29,16 @@ export const 全部 = {
 
 <section class="tk"><h2>試試看</h2>
 <div class="tf-try">${textFieldHTML()}</div>
-<p class="note">點進去、打字、按 ✕ 清掉、點外面離開，四種 state 會自己切換。</p></section>
+<p class="note">點進去、打字、按 ✕ 清掉、點外面離開，四種 state 會自己切換。點輸入列的任何地方（燈泡、空白處）都會把打字游標放進去，手機上會叫出鍵盤。</p></section>
 
 <section class="tk"><h2>state</h2>
 <table><thead><tr><th>state</th><th>預覽</th><th>說明</th></tr></thead><tbody>
 <tr><td class="nm">default</td><td class="tf-cell">${textFieldHTML()}</td><td class="al">空的、沒聚焦：燈泡 outlined、細底線（outline 200）、沒有 ✕</td></tr>
-<tr><td class="nm">focused_pre typing</td><td class="tf-cell">${textFieldHTML({ state: "focused" })}</td><td class="al">聚焦、還沒打字：燈泡換 sticker、粗底線（outline 300、border/md）；還沒有字，所以沒有 ✕</td></tr>
-<tr><td class="nm">focused_typing</td><td class="tf-cell">${textFieldHTML({ state: "focused", value: "Filled text" })}</td><td class="al">聚焦、打字中：有字了，出現清除 ✕</td></tr>
+<tr><td class="nm">focused_pre typing</td><td class="tf-cell">${textFieldHTML({ state: "focused" })}</td><td class="al">聚焦、還沒打字：打字游標在最前面（手機叫出鍵盤）、燈泡換 sticker、粗底線（outline 300、border/md）；還沒有字，所以沒有 ✕</td></tr>
+<tr><td class="nm">focused_typing</td><td class="tf-cell">${textFieldHTML({ state: "focused", value: "Filled text" })}</td><td class="al">聚焦、打字中：打字游標跟在字後面、有字了，出現清除 ✕</td></tr>
 <tr><td class="nm">filled w/o focused</td><td class="tf-cell">${textFieldHTML({ value: "Filled text" })}</td><td class="al">有字、離開了：燈泡維持 sticker、底線變回細的</td></tr>
-</tbody></table></section>
+</tbody></table>
+<p class="note">這裡兩個 focused 沒有真的聚焦，打字游標是畫上去的（一秒閃一次），位置跟真的一樣。</p></section>
 
 <section class="tk"><h2>Show Floating label／Leading icon／Trailing icon／supporting text</h2>
 <table><thead><tr><th></th><th>預覽</th></tr></thead><tbody>
