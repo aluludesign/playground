@@ -4,6 +4,8 @@
  *   外框套線條樣式的「外框」（tertiary 色），底色 tertiary container 往右下錯開一點，像手塗的。
  *
  *   state：collapse（說明只顯示一行，超過用…）／expend（全部展開，箭頭朝上）
+ *   type ：info（淡藍，上面這樣）／default（中性：surface 底、outline 300 框、字和 icon 用 text 100、
+ *          按鈕 Secondary；寬度跟著內容，字距 15%、行高 19）→ .ds-info--default
  *   Show leading icon／Show collapse icon／Show btn：三個開關
  */
 
@@ -91,6 +93,29 @@
   border-radius: var(--ds-sys-radius-xs);
 }
 
+/* 按鈕：Figma 包在一個貼齊內容的框裡，靠上、高度只到字（上下內距 + 字 = 18），不撐到按鈕 xs 的 24 */
 .ds-info__btn {
   flex: none;
+  --btn-height: auto;
+}
+
+/* type=default：中性的那一款（Figma state=default, type=default） */
+.ds-info--default {
+  width: fit-content;
+  max-width: 100%;
+}
+.ds-info--default .ds-info__bg {
+  background: var(--ds-sys-color-surface);
+}
+.ds-info--default .ds-info__body {
+  --wiggle-color: var(--ds-sys-color-outline-300);
+}
+.ds-info--default .ds-info__icon,
+.ds-info--default .ds-info__toggle,
+.ds-info--default .ds-info__text {
+  color: var(--ds-sys-color-text-100);
+}
+.ds-info--default .ds-info__text {
+  line-height: 19px;
+  letter-spacing: 0.15em;
 }
