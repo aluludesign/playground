@@ -49,7 +49,9 @@
  *   動態跟筆畫線一樣：由左往右揭開，尾巴那一團跟著筆一起出來。
  *
  *   <span class="…" style="position:relative">${penMarkerHTML()}淺草寺</span>
- *   放在字前面（疊在字下面），寬度跟著那一欄；線的中心在 --pen-marker-y（預設 18.5px，Figma title 22 高的字）
+ *   放在字前面（疊在字下面），寬度跟著那一欄。
+ *   線對齊那一欄的底部：字換成好幾行時，只有最後一行底下有線（Figma 162582:20018）；
+ *   線的中心離欄底 --pen-marker-bottom（預設 3.5px，Figma title 22 高的字）
  *
  *   顏色：--pen-marker-color（線）、--pen-marker-opacity（線的透明度）、--pen-marker-end（尾巴那團）
  *     元件預設：comp/active bg/line/color（custom 5）、opacity/3xl、opacity primary 50
@@ -60,7 +62,7 @@
   --pen-marker-color: var(--ds-comp-active-bg-line-color);
   --pen-marker-opacity: var(--ds-sys-opacity-3xl);
   --pen-marker-end: var(--ds-sys-color-opacity-opacity-primary-50);
-  --pen-marker-y: 18.5px;
+  --pen-marker-bottom: 3.5px;
   --pen-line-duration: 0.35s;
   --pen-line-delay: 0s;
   /* 外框往左多 5（起頭圓頭）、往右多 2（尾巴小點），揭開只用 100% → 0：
@@ -69,7 +71,7 @@
   left: -5px;
   right: -2px;
   /* 外框有實際高度（線中心上下各 7）：iPhone 上高度 0 的元素在遮罩動畫途中不會重畫，看起來就沒在動 */
-  top: calc(var(--pen-marker-y) - 7px);
+  bottom: calc(var(--pen-marker-bottom) - 7px);
   height: 14px;
   pointer-events: none;
   clip-path: inset(-20px 100% -20px 0);

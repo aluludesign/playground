@@ -48,7 +48,10 @@ export const 全部 = {
   <span class="mo-title">${penMarkerHTML({ drawn: true, look: "title" })}<span>北海道 8 日孝親之旅</span></span>
   <span class="mo-title">${penMarkerHTML({ drawn: true })}<span>淺草寺</span></span>
 </div>
-<p class="note">最後一個是元件本身的顏色（<code class="var">--ds-comp-active-bg-line-color</code>，custom 5、opacity/3xl）。</p>
+<p class="note">上面第三個是元件本身的顏色（<code class="var">--ds-comp-active-bg-line-color</code>，custom 5、opacity/3xl）。<br>字換成好幾行時，只有最後一行底下有線（線對齊那一欄的底部，寬度一樣跟著那一欄）：</p>
+<div class="mo-lines">
+  <span class="mo-title mo-title--multi">${penMarkerHTML({ drawn: true })}<span>淺草寺淺淺草寺淺草寺淺草寺淺淺草寺淺草寺</span></span>
+</div>
 <h3 class="mo-sub">可以用的顏色</h3>
 <p class="note">筆畫線、螢光筆的線可以用 primary、secondary、tertiary 三個主色，和任何一個 custom（1–14，行程顏色）。螢光筆換顏色時，尾巴那團和小點不變。<br>程式：<code>penLineSVG({ color: "custom 3" })</code>、<code>penMarkerHTML({ color: "custom 3" })</code>，可以用的名稱在 <code>PEN_COLORS</code>。</p>
 <table class="mo-colors"><thead><tr><th>顏色 token</th><th>筆畫線</th><th>螢光筆</th></tr></thead><tbody>
@@ -63,7 +66,7 @@ ${PEN_COLORS.map((c) => `<tr><td><code class="var">${c.startsWith("custom") ? "c
 <tr><td><code class="var">--pen-marker-color</code></td><td><code>comp/active bg/line/color</code></td><td class="al">螢光筆的顏色（primary、secondary、tertiary、custom 1–14；標題：primary）</td></tr>
 <tr><td><code class="var">--pen-marker-opacity</code></td><td><code>opacity/3xl</code></td><td class="al">螢光筆的透明度（標題：opacity/xl）</td></tr>
 <tr><td><code class="var">--pen-marker-end</code></td><td><code>opacity primary 50</code></td><td class="al">尾巴那團的顏色（標題：shadow/lg）</td></tr>
-<tr><td><code class="var">--pen-marker-y</code></td><td>18.5px</td><td class="al">螢光筆中心離字頂多遠</td></tr>
+<tr><td><code class="var">--pen-marker-bottom</code></td><td>3.5px</td><td class="al">螢光筆中心離那一欄底部多遠（好幾行時就在最後一行底下）</td></tr>
 </tbody></table>
 <pre class="wg-code"><code>${esc(LINE_USAGE)}</code></pre>
 </section>
@@ -90,6 +93,7 @@ ${PEN_COLORS.map((c) => `<tr><td><code class="var">${c.startsWith("custom") ? "c
 .mo-sub { margin: 20px 0 4px; font-size: 15px; }
 .mo-title { position: relative; display: inline-block; font: 400 var(--ds-sys-font-size-body-lg)/22px var(--ds-sys-font-family-zhtw-handwriting-zhtw); letter-spacing: .05em; color: var(--ds-sys-color-text-100); white-space: nowrap; }
 .mo-title > span:last-child { position: relative; }
+.mo-title--multi { width: 310px; white-space: normal; font: var(--ds-sys-font-weight-extra-bold) var(--ds-sys-font-size-headline-xs)/normal var(--ds-sys-font-family-headline); letter-spacing: .05em; --pen-marker-bottom: 2.4px; }
 .mo-stickers { display: flex; gap: 24px; padding: 16px 4px 12px; }
 .mo-sticker-box { width: 56px; height: 56px; display: grid; place-items: center; }
 .mo-sticker { width: 48px; height: 48px; overflow: visible; }
