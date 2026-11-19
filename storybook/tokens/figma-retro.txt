@@ -916,3 +916,9 @@ C:avatar/size/md|F|@S:icon/md
 C:avatar/size/sm|F|@S:icon/xs
 C:avatar/border|F|@S:border/xs
 C:active bg/line/color|C|@S:color/customs/custom 5
+C:text field/icon/lg|F|@S:icon/lg
+C:text field/icon/sm|F|@S:icon/xs
+C:text field/line/width|F|@S:border/xs
+C:text field/line/focus-width|F|@S:border/md
+C:text field/line/color|C|@S:color/outline 200
+C:text field/line/focus-color|C|@S:color/outline 300

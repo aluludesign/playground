@@ -1,0 +1,194 @@
+/* 文字輸入框 Text field —— Figma shared comps「text filed」（162240:23151）
+ *
+ *   上：標籤（label/sm、源泉圓體 B）
+ *   中：輸入列 48 高 —— 燈泡 icon（icon/lg）＋ 內容框（surface bright：手寫字 body/lg、清除 ✕）＋ 底下一條抖動線
+ *   下：說明列 —— ↳ icon、說明文字（label/sm、text 200）、馬克筆按鈕 sm（強力搜）
+ *
+ *   state（Figma）                  這裡怎麼判斷
+ *   default              空的、沒聚焦       —
+ *   focused_pre typing   聚焦、還沒打字     .is-focused
+ *   focused_typing       聚焦、有字         .is-focused.is-filled
+ *   filled w/o focused   有字、沒聚焦       .is-filled
+ *
+ *   聚焦或有字：燈泡從 outlined 換成 sticker（用共用的筆刷上色畫出來）、出現 ✕
+ *   （Figma 的 Notch、輸入列底色 surf container lowest 都是隱藏的，這裡不畫）
+ *   聚焦：底線變粗變深（outline 300、border/md），由左往右畫出來（共用的筆畫線動態）
+ */
+
+.ds-text-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-sys-spacing-md);
+  min-width: 0;
+  color: var(--ds-sys-color-text-100);
+}
+
+/* 標籤：一列 16 高，字靠上 */
+.ds-text-field__label {
+  display: block;
+  height: 16px;
+  font-family: var(--ds-sys-font-family-label);
+  font-weight: 700;
+  font-size: var(--ds-sys-font-size-label-sm);
+  line-height: 1;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+/* 輸入列：48 高（Figma 固定、沒有對應的 token），上下內距 md、icon 和內容間距 md */
+.ds-text-field__field {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--ds-sys-spacing-md);
+  height: 48px;
+  box-sizing: border-box;
+  padding: var(--ds-sys-spacing-md) 0;
+}
+
+/* 底線：兩條抖動線疊在一起，中心在第 46px。
+ * 平常那條 outline 200、border/xs；聚焦那條 outline 300、border/md，聚焦時由左往右畫出來（跟筆畫線同一個動態） */
+.ds-text-field__line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 46px;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+.ds-text-field__line--rest {
+  --wiggle-color: var(--ds-comp-text-field-line-color);
+  --wiggle-width: var(--ds-comp-text-field-line-width);
+}
+.ds-text-field__line--focus {
+  --wiggle-color: var(--ds-comp-text-field-line-focus-color);
+  --wiggle-width: var(--ds-comp-text-field-line-focus-width);
+  clip-path: inset(-10px 100% -10px 0);
+}
+.ds-text-field.is-focused .ds-text-field__line--focus {
+  clip-path: inset(-10px 0 -10px 0);
+  transition: clip-path 0.35s cubic-bezier(0.45, 0, 0.25, 1);
+}
+
+/* 燈泡：outlined 和 sticker 疊在一起；聚焦或有字時 sticker 由筆刷畫出來、outlined 淡掉 */
+.ds-text-field__icon {
+  position: relative;
+  flex: none;
+  width: var(--ds-comp-text-field-icon-lg);
+  height: var(--ds-comp-text-field-icon-lg);
+}
+/* SVG 有些比 24 格大一點（sticker 的貼紙描邊），照 Figma 不裁切、置中 */
+.ds-text-field__icon > svg {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(100% * var(--w) / 24);
+  height: calc(100% * var(--h) / 24);
+  transform: translate(-50%, -50%);
+  overflow: visible;
+  transition: opacity 0.2s ease;
+}
+.ds-text-field__icon > .is-on {
+  opacity: 0;
+}
+.ds-text-field.is-focused .ds-text-field__icon > .is-on,
+.ds-text-field.is-filled .ds-text-field__icon > .is-on {
+  opacity: 1;
+}
+.ds-text-field.is-focused .ds-text-field__icon > .is-off,
+.ds-text-field.is-filled .ds-text-field__icon > .is-off {
+  opacity: 0;
+  transition-delay: 0.08s;
+}
+
+/* 內容框：surface bright、上下 2xs 左右 xs；字和 ✕ 分在兩頭 */
+.ds-text-field__content {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-sys-spacing-2xl);
+  padding: var(--ds-sys-spacing-2xs) var(--ds-sys-spacing-xs);
+  background: var(--ds-sys-color-surface-bright);
+}
+
+/* 手寫字 body/lg（20/22、字距 5%）；還沒打字時是 text 200 的提示字 */
+.ds-text-field__input {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 22px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: none;
+  font-family: var(--ds-sys-font-family-zhtw-handwriting-zhtw);
+  font-weight: 400;
+  font-size: var(--ds-sys-font-size-body-lg);
+  line-height: 22px;
+  letter-spacing: 0.05em;
+  color: var(--ds-sys-color-text-100);
+  caret-color: var(--ds-sys-color-text-100);
+}
+.ds-text-field__input::placeholder {
+  color: var(--ds-sys-color-text-200);
+  opacity: 1;
+}
+
+/* 清除 ✕：聚焦或有字才出現（icon/xs） */
+.ds-text-field__clear {
+  flex: none;
+  display: none;
+  width: var(--ds-comp-text-field-icon-sm);
+  height: var(--ds-comp-text-field-icon-sm);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ds-sys-color-text-100);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.ds-text-field.is-focused .ds-text-field__clear,
+.ds-text-field.is-filled .ds-text-field__clear {
+  display: block;
+}
+.ds-text-field__clear svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.ds-text-field__clear:focus-visible {
+  outline: var(--ds-comp-focus-ring-border) solid var(--ds-comp-focus-ring-color);
+  outline-offset: var(--ds-sys-spacing-2xs);
+  border-radius: var(--ds-sys-radius-xs);
+}
+
+/* 說明列：上內距 md、右內距 2xl、間距 xs */
+.ds-text-field__support {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-sys-spacing-xs);
+  padding: var(--ds-sys-spacing-md) var(--ds-sys-spacing-2xl) 0 0;
+}
+.ds-text-field__support-icon {
+  flex: none;
+  width: var(--ds-comp-text-field-icon-sm);
+  height: var(--ds-comp-text-field-icon-sm);
+}
+.ds-text-field__support-text {
+  font-family: var(--ds-sys-font-family-label);
+  font-weight: 400;
+  font-size: var(--ds-sys-font-size-label-sm);
+  line-height: 1;
+  letter-spacing: 0.04em;
+  color: var(--ds-sys-color-text-200);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ds-text-field.is-focused .ds-text-field__line--focus,
+  .ds-text-field__icon > svg {
+    transition: none;
+  }
+}
