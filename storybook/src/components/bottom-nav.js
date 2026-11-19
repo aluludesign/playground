@@ -12,8 +12,8 @@ export const DEFAULT_ITEMS = [
   { key: "plan", label: "行程", icon: "calender" },
   { key: "wish", label: "許願", icon: "start_heart" },
   { key: "transport", label: "交通", icon: "flight" },
-  { key: "spend", label: "花費", icon: "peoploe_plus" },
-  { key: "split", label: "分帳", icon: "circle_triangel_down" },
+  { key: "spend", label: "花費", icon: "money" },
+  { key: "me", label: "我", icon: "eye" },
 ];
 
 function styled(name, style, cls) {
@@ -22,8 +22,8 @@ function styled(name, style, cls) {
   const [w, h] = m ? [+m[1], +m[2]] : [24, 24];
   // sticker 的上色由一支看不見的筆畫出來（pen-brush：遮罩在 wireBottomNav 量好大小後才加上）
   if (style === "sticker") svg = markPenLayers(svg);
-  // duotone 的白底（第一塊 fill="white"）標起來：切到 active 時白底先退，只留線稿疊在 sticker 上面等筆畫
-  if (style === "duotone") svg = svg.replace(/<path(?=[^>]*fill="white")/i, '<path class="ds-bottom-nav__base"');
+  // duotone 的白底（第一塊白色或 #FAFAFA 的 fill，eye 用的是 #FAFAFA）標起來：切到 active 時白底先退，只留線稿疊在 sticker 上面等筆畫
+  if (style === "duotone") svg = svg.replace(/<path(?=[^>]*fill="(?:white|#fff|#ffffff|#fafafa)")/i, '<path class="ds-bottom-nav__base"');
   return svg.replace("<svg", `<svg class="${cls}" style="--w:${w};--h:${h}"`);
 }
 
