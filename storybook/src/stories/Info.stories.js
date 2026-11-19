@@ -6,6 +6,7 @@ const USAGE = `import { infoHTML, wireInfo } from "./components/info.js";
 el.innerHTML = infoHTML({
   text: "直接許願**淺草寺**，願望地圖上不會出現地點指標", // **粗體**
   expanded: false,      // collapse／expend
+  type: "info",         // info（淡藍）／default（中性）
   leadingIcon: true,    // Show leading icon
   collapseIcon: true,   // Show collapse icon
   button: true,         // Show btn
@@ -32,6 +33,12 @@ export const 全部 = {
 </tbody></table>
 <p class="note">點箭頭可以切換（鍵盤 Tab 到箭頭會有 focus ring）。</p></section>
 
+<section class="tk"><h2>type</h2>
+<table><thead><tr><th>type</th><th>預覽</th><th>說明</th></tr></thead><tbody>
+<tr><td class="nm">info</td><td class="if-cell">${infoHTML({ expanded: true })}</td><td class="al">淡藍的提示條（上面那些）</td></tr>
+<tr><td class="nm">default</td><td class="if-cell">${infoHTML({ type: "default", expanded: true, text: "這個範圍找不到" })}</td><td class="al">中性的：surface 底、outline 300 外框，字和 icon 用 text 100，按鈕 Secondary；寬度跟著內容</td></tr>
+</tbody></table></section>
+
 <section class="tk"><h2>Show leading icon／Show collapse icon／Show btn</h2>
 <table><thead><tr><th></th><th>預覽</th></tr></thead><tbody>
 <tr><td class="nm">沒有 leading icon</td><td class="if-cell">${infoHTML({ leadingIcon: false })}</td></tr>
@@ -49,12 +56,13 @@ export const 全部 = {
 <tr><td class="al">字</td><td><code class="var">--ds-sys-color-on-tertiary-container</code>・label/md/regular，重點字 label/md/semi-bold</td></tr>
 <tr><td class="al">內距／間距</td><td>左 <code class="var">--ds-sys-spacing-3xl</code>、其他 <code class="var">--ds-sys-spacing-xl</code>；間距 <code class="var">--ds-sys-spacing-xl</code></td></tr>
 <tr><td class="al">按鈕</td><td>Button Tertiary・Text・xs</td></tr>
+<tr><td class="al">type=default</td><td>底色 <code class="var">--ds-sys-color-surface</code>、外框 <code class="var">--ds-sys-color-outline-300</code>、字和 icon <code class="var">--ds-sys-color-text-100</code>（字距 15%、行高 19）、按鈕 Secondary・Text・xs</td></tr>
 </tbody></table></section>
 
 <section class="tk"><h2>用法</h2><pre class="wg-code"><code>${esc(USAGE)}</code></pre></section>
 <style>
 .if-cell { padding: 14px 16px; }
-.if-cell .ds-info { width: 310px; }
+.if-cell .ds-info:not(.ds-info--default) { width: 310px; }
 .wg-code { background: #f6f2f0; border-radius: 8px; padding: 12px 14px; overflow-x: auto; font-size: 12px; line-height: 1.6; }
 </style>`;
     requestAnimationFrame(() => wireInfo(el));
