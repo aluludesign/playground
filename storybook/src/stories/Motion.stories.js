@@ -1,5 +1,5 @@
 // 動態：一支看不見的筆畫出來的兩種效果（筆畫線、筆刷上色）
-import { penLineSVG, penMarkerHTML, drawPenLine } from "../pen-line.js";
+import { penLineSVG, penMarkerHTML, drawPenLine, PEN_COLORS } from "../pen-line.js";
 import { markPenLayers, drawPenBrush } from "../pen-brush.js";
 
 const raw = import.meta.glob("../icons/general/*_sticker.svg", { query: "?raw", import: "default", eager: true });
@@ -48,15 +48,20 @@ export const 全部 = {
   <span class="mo-title">${penMarkerHTML({ drawn: true, look: "title" })}<span>北海道 8 日孝親之旅</span></span>
   <span class="mo-title">${penMarkerHTML({ drawn: true })}<span>淺草寺</span></span>
 </div>
-<p class="note">最後一個是元件本身的顏色（<code class="var">--ds-comp-active-bg-line-color</code>，custom 5）。</p>
+<p class="note">最後一個是元件本身的顏色（<code class="var">--ds-comp-active-bg-line-color</code>，custom 5、opacity/3xl）。</p>
+<h3 class="mo-sub">可以用的顏色</h3>
+<p class="note">筆畫線、螢光筆的線可以用 primary、secondary、tertiary 三個主色，和任何一個 custom（1–14，行程顏色）。螢光筆換顏色時，尾巴那團和小點不變。<br>程式：<code>penLineSVG({ color: "custom 3" })</code>、<code>penMarkerHTML({ color: "custom 3" })</code>，可以用的名稱在 <code>PEN_COLORS</code>。</p>
+<table class="mo-colors"><thead><tr><th>顏色 token</th><th>筆畫線</th><th>螢光筆</th></tr></thead><tbody>
+${PEN_COLORS.map((c) => `<tr><td><code class="var">${c.startsWith("custom") ? "customs/" + c : c}</code></td><td><span class="mo-label">熱門地點${penLineSVG({ drawn: true, color: c })}</span></td><td><span class="mo-title">${penMarkerHTML({ drawn: true, color: c })}<span>淺草寺</span></span></td></tr>`).join("")}
+</tbody></table>
 <button type="button" class="mo-replay" data-replay="line">再畫一次</button>
 <table><thead><tr><th>變數</th><th>預設</th><th>說明</th></tr></thead><tbody>
-<tr><td><code class="var">--pen-line-color</code></td><td><code>primary</code></td><td class="al">線的顏色</td></tr>
+<tr><td><code class="var">--pen-line-color</code></td><td><code>primary</code></td><td class="al">線的顏色（primary、secondary、tertiary、custom 1–14）</td></tr>
 <tr><td><code class="var">--pen-line-width</code></td><td><code>border/md</code></td><td class="al">線寬</td></tr>
 <tr><td><code class="var">--pen-line-duration</code></td><td>.35s</td><td class="al">畫完一條要多久</td></tr>
 <tr><td><code class="var">--pen-line-delay</code></td><td>0</td><td class="al">晚多久才開始畫</td></tr>
-<tr><td><code class="var">--pen-marker-color</code></td><td><code>comp/active bg/line/color</code></td><td class="al">螢光筆的顏色（標題：primary）</td></tr>
-<tr><td><code class="var">--pen-marker-opacity</code></td><td>1</td><td class="al">螢光筆的透明度（標題：opacity/xl）</td></tr>
+<tr><td><code class="var">--pen-marker-color</code></td><td><code>comp/active bg/line/color</code></td><td class="al">螢光筆的顏色（primary、secondary、tertiary、custom 1–14；標題：primary）</td></tr>
+<tr><td><code class="var">--pen-marker-opacity</code></td><td><code>opacity/3xl</code></td><td class="al">螢光筆的透明度（標題：opacity/xl）</td></tr>
 <tr><td><code class="var">--pen-marker-end</code></td><td><code>opacity primary 50</code></td><td class="al">尾巴那團的顏色（標題：shadow/lg）</td></tr>
 <tr><td><code class="var">--pen-marker-y</code></td><td>18.5px</td><td class="al">螢光筆中心離字頂多遠</td></tr>
 </tbody></table>
@@ -80,6 +85,8 @@ export const 全部 = {
 .mo-label { position: relative; display: inline-flex; padding: 0 var(--ds-sys-spacing-sm); font: 500 var(--ds-sys-font-size-body-sm)/1 var(--ds-sys-font-family-body); letter-spacing: .05em; color: var(--ds-sys-color-text-100); }
 .mo-label > .ds-pen-line { position: absolute; left: -1px; width: calc(100% + 2px); top: calc(100% - 5px); height: 5px; }
 .mo-label > span { position: relative; }
+.mo-colors td { padding-top: 10px; padding-bottom: 10px; }
+.mo-colors .mo-label, .mo-colors .mo-title { margin: 0 8px; }
 .mo-sub { margin: 20px 0 4px; font-size: 15px; }
 .mo-title { position: relative; display: inline-block; font: 400 var(--ds-sys-font-size-body-lg)/22px var(--ds-sys-font-family-zhtw-handwriting-zhtw); letter-spacing: .05em; color: var(--ds-sys-color-text-100); white-space: nowrap; }
 .mo-title > span:last-child { position: relative; }
