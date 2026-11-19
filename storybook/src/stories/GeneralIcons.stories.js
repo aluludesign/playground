@@ -1,6 +1,6 @@
 import { iconPage } from "../icon-page.js";
 
-// 一般 icon：Figma「icon」區塊（node 162443:14521）的 13 組 component set，
+// 一般 icon：Figma「icon」區塊（node 162443:14521）的 15 組 component set，
 // 每組 outlined／solid／duotone／sticker（peoploe_plus 的線條版在 Figma 叫 Style3）。
 // 檔案由 Figma 匯出，只保留 component 本身（拿掉外層 section 的底色與虛線框）。
 // 名稱照 Figma 原樣（含 peoploe、calender、triangel、start 等拼法）。
@@ -21,6 +21,8 @@ const ITEMS = [
   "plus",
   "subdirectory_arrow_right",
   "check_line",
+  "money",
+  "eye",
 ];
 
 const render = () =>
