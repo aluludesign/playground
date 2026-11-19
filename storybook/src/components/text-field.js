@@ -25,7 +25,7 @@ let uid = 0;
  * 文字輸入框（Figma shared comps「text filed」）
  * label：上面的標籤（Show Floating label：floatingLabel）
  * placeholder：還沒打字時的提示字；value：一開始的內容
- * leadingIcon：燈泡（Show Leading icon）；trailingIcon：清除 ✕（Show Trailing icon，聚焦或有字才出現）
+ * leadingIcon：燈泡（Show Leading icon）；trailingIcon：清除 ✕（Show Trailing icon，有字才出現）
  * supportingText：下面的說明（Show supporting text：supporting）；button：說明列後面的馬克筆按鈕文字（不要就給 ""）
  * state：只給文件頁固定顯示用（"focused"）
  */

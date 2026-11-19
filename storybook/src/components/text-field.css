@@ -10,7 +10,8 @@
  *   focused_typing       聚焦、有字         .is-focused.is-filled
  *   filled w/o focused   有字、沒聚焦       .is-filled
  *
- *   聚焦或有字：燈泡從 outlined 換成 sticker（用共用的筆刷上色畫出來）、出現 ✕
+ *   聚焦或有字：燈泡從 outlined 換成 sticker（用共用的筆刷上色畫出來）
+ *   有字：出現清除 ✕（沒字時就算聚焦也沒有）
  *   （Figma 的 Notch、輸入列底色 surf container lowest 都是隱藏的，這裡不畫）
  *   聚焦：底線變粗變深（outline 300、border/md），由左往右畫出來（共用的筆畫線動態）
  */
@@ -136,7 +137,7 @@
   opacity: 1;
 }
 
-/* 清除 ✕：聚焦或有字才出現（icon/xs） */
+/* 清除 ✕：有字才出現（icon/xs） */
 .ds-text-field__clear {
   flex: none;
   display: none;
@@ -150,7 +151,6 @@
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
-.ds-text-field.is-focused .ds-text-field__clear,
 .ds-text-field.is-filled .ds-text-field__clear {
   display: block;
 }

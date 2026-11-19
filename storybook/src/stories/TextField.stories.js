@@ -8,7 +8,7 @@ el.innerHTML = textFieldHTML({
   placeholder: "東京鐵塔…等",
   value: "",
   leadingIcon: true,               // Show Leading icon（燈泡）
-  trailingIcon: true,              // Show Trailing icon（清除 ✕，聚焦或有字才出現）
+  trailingIcon: true,              // Show Trailing icon（清除 ✕，有字才出現）
   supporting: true,                // Show supporting text
   supportingText: "Supporting text",
   button: "強力搜",                // 說明列後面的馬克筆按鈕；不要就給 ""
@@ -34,8 +34,8 @@ export const 全部 = {
 <section class="tk"><h2>state</h2>
 <table><thead><tr><th>state</th><th>預覽</th><th>說明</th></tr></thead><tbody>
 <tr><td class="nm">default</td><td class="tf-cell">${textFieldHTML()}</td><td class="al">空的、沒聚焦：燈泡 outlined、細底線（outline 200）、沒有 ✕</td></tr>
-<tr><td class="nm">focused_pre typing</td><td class="tf-cell">${textFieldHTML({ state: "focused" })}</td><td class="al">聚焦、還沒打字：燈泡換 sticker、粗底線（outline 300、border/md）、出現 ✕</td></tr>
-<tr><td class="nm">focused_typing</td><td class="tf-cell">${textFieldHTML({ state: "focused", value: "Filled text" })}</td><td class="al">聚焦、打字中</td></tr>
+<tr><td class="nm">focused_pre typing</td><td class="tf-cell">${textFieldHTML({ state: "focused" })}</td><td class="al">聚焦、還沒打字：燈泡換 sticker、粗底線（outline 300、border/md）；還沒有字，所以沒有 ✕</td></tr>
+<tr><td class="nm">focused_typing</td><td class="tf-cell">${textFieldHTML({ state: "focused", value: "Filled text" })}</td><td class="al">聚焦、打字中：有字了，出現清除 ✕</td></tr>
 <tr><td class="nm">filled w/o focused</td><td class="tf-cell">${textFieldHTML({ value: "Filled text" })}</td><td class="al">有字、離開了：燈泡維持 sticker、底線變回細的</td></tr>
 </tbody></table></section>
 
