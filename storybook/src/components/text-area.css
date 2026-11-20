@@ -1,0 +1,235 @@
+/* 多行輸入框 Text area —— Figma shared comps「text area」（162250:10394）
+ *
+ *   上：標籤（label/sm、源泉圓體 B，跟文字輸入框一樣）
+ *   中：輸入區 —— 前面頭像或 icon（comp/text area/avatar＝28）＋ 內容框（opacity primary 50 底、手寫字 body/lg、最少 144 高、跟著字變高）
+ *        內容框底下一列「+照片」馬克筆按鈕（secondary md）和照片縮圖；有字時右上角出現清除 ✕
+ *        整個輸入區底下一條抖動線
+ *   下：動作列（靠右）—— 取消（Button Secondary Text md，可以拿掉，看當時狀況）、送出（馬克筆按鈕 Primary lg）
+ *
+ *   state 跟文字輸入框一樣：聚焦 .is-focused、有字 .is-filled
+ *   聚焦：細底線淡掉、粗底線由左往右畫出來（outline 200 → outline 300、border/md）
+ */
+
+.ds-text-area {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--ds-sys-spacing-md);
+  min-width: 0;
+  color: var(--ds-sys-color-text-100);
+}
+
+.ds-text-area__label {
+  display: block;
+  height: 16px;
+  font-family: var(--ds-sys-font-family-label);
+  font-weight: 700;
+  font-size: var(--ds-sys-font-size-label-sm);
+  line-height: 1;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+/* 輸入區：上下內距 md、頭像和內容框間距 md、靠上 */
+.ds-text-area__field {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ds-sys-spacing-md);
+  padding: var(--ds-sys-spacing-md) 0;
+  cursor: text;
+}
+/* 頭像：用頭像元件，大小 comp/text area/avatar（icon/lg＝28） */
+.ds-text-area__avatar {
+  flex: none;
+  display: flex;
+}
+.ds-text-area__avatar .ds-avatar {
+  width: var(--ds-comp-text-area-avatar);
+  height: var(--ds-comp-text-area-avatar);
+}
+/* 也可以換成 icon（同樣大小） */
+.ds-text-area__avatar--icon {
+  position: relative;
+  width: var(--ds-comp-text-area-avatar);
+  height: var(--ds-comp-text-area-avatar);
+}
+.ds-text-area__icon {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(100% * var(--w) / 24);
+  height: calc(100% * var(--h) / 24);
+  transform: translate(-50%, -50%);
+  overflow: visible;
+}
+
+/* 底線：中心在輸入區底往上 2px；聚焦時細線淡掉、粗線由左往右畫出來 */
+.ds-text-area__line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 2px;
+  transform: translateY(50%);
+  pointer-events: none;
+}
+.ds-text-area__line--rest {
+  --wiggle-color: var(--ds-comp-text-field-line-color);
+  --wiggle-width: var(--ds-comp-text-field-line-width);
+  transition: opacity 0.35s ease;
+}
+.ds-text-area.is-focused .ds-text-area__line--rest {
+  opacity: 0;
+}
+.ds-text-area__line--focus {
+  --wiggle-color: var(--ds-comp-text-field-line-focus-color);
+  --wiggle-width: var(--ds-comp-text-field-line-focus-width);
+  clip-path: inset(-10px 100% -10px 0);
+}
+.ds-text-area.is-focused .ds-text-area__line--focus {
+  clip-path: inset(-10px 0 -10px 0);
+  transition: clip-path 0.35s cubic-bezier(0.45, 0, 0.25, 1);
+}
+
+/* 內容框：opacity primary 50 底；上內距 2xs、右邊留 5xl 給 ✕、下面留 comp/field/height（120）放照片列 */
+.ds-text-area__content {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding: var(--ds-sys-spacing-2xs) var(--ds-sys-spacing-5xl) var(--ds-comp-field-height) 0;
+  background: var(--ds-sys-color-opacity-opacity-primary-50);
+}
+
+/* 手寫字 body/lg（20/22、字距 5%）；跟著字變高（高度由 text-area.js 算） */
+.ds-text-area__input {
+  display: block;
+  width: 100%;
+  min-height: 22px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: none;
+  resize: none;
+  overflow: hidden;
+  font-family: var(--ds-sys-font-family-zhtw-handwriting-zhtw);
+  font-weight: 400;
+  font-size: var(--ds-sys-font-size-body-lg);
+  line-height: 22px;
+  letter-spacing: 0.05em;
+  color: var(--ds-sys-color-text-100);
+  caret-color: var(--ds-sys-color-text-100);
+}
+.ds-text-area__input::placeholder {
+  color: var(--ds-sys-color-text-200);
+  opacity: 1;
+}
+
+/* 文件頁固定顯示 focused 時的假游標：跟在看不見的同樣的字後面，一秒閃一次 */
+.ds-text-area__caret {
+  position: absolute;
+  left: 0;
+  right: var(--ds-sys-spacing-5xl);
+  top: var(--ds-sys-spacing-2xs);
+  display: none;
+  white-space: pre-wrap;
+  word-break: break-all;
+  pointer-events: none;
+  font-family: var(--ds-sys-font-family-zhtw-handwriting-zhtw);
+  font-size: var(--ds-sys-font-size-body-lg);
+  line-height: 22px;
+  letter-spacing: 0.05em;
+}
+.ds-text-area__caret > span {
+  visibility: hidden;
+}
+.ds-text-area__caret::after {
+  content: "";
+  display: inline-block;
+  width: 1.5px;
+  height: 20px;
+  margin-top: 1px;
+  vertical-align: top;
+  background: var(--ds-sys-color-text-100);
+  animation: ds-text-area-blink 1s steps(1) infinite;
+}
+.ds-text-area.is-demo-focus .ds-text-area__caret {
+  display: block;
+}
+@keyframes ds-text-area-blink {
+  50% { opacity: 0; }
+}
+
+/* 清除 ✕：有字才出現，在內容框右上（右 8、上 8，icon/xs） */
+.ds-text-area__clear {
+  position: absolute;
+  top: var(--ds-sys-spacing-md);
+  right: var(--ds-sys-spacing-md);
+  display: none;
+  width: var(--ds-comp-text-field-icon-sm);
+  height: var(--ds-comp-text-field-icon-sm);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ds-sys-color-text-100);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.ds-text-area.is-filled .ds-text-area__clear {
+  display: block;
+}
+.ds-text-area__clear svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* 照片列：貼在內容框底部，56 高；上下左內距 xl、按鈕和照片間距 2xl、照片之間 xl */
+.ds-text-area__add {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--ds-sys-spacing-2xl);
+  padding: var(--ds-sys-spacing-xl) 0 var(--ds-sys-spacing-xl) var(--ds-sys-spacing-xl);
+  min-height: 56px;
+  box-sizing: border-box;
+}
+.ds-text-area__photos {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-sys-spacing-xl);
+  min-width: 0;
+}
+.ds-text-area__photos:empty {
+  display: none;
+}
+
+/* 動作列：靠右，間距 md */
+.ds-text-area__actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-start;
+  gap: var(--ds-sys-spacing-md);
+}
+
+.ds-text-area__clear:focus-visible {
+  outline: var(--ds-comp-focus-ring-border) solid var(--ds-comp-focus-ring-color);
+  outline-offset: var(--ds-sys-spacing-2xs);
+  border-radius: var(--ds-sys-radius-xs);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ds-text-area__line--rest,
+  .ds-text-area.is-focused .ds-text-area__line--focus {
+    transition: none;
+  }
+  .ds-text-area__caret::after {
+    animation: none;
+  }
+}
