@@ -4317,10 +4317,10 @@
       }));
     }
     if (layers.all) {
-      /* 「全部已排」:六天全部。編號是第幾天、顏色是那天的顏色 ——
-         同一個編號會出現好幾次,那是對的:它回答的是「這個點排在哪一天」。 */
+      /* 「全部已排」:六天全部。編號是那天的行程順序,跟行程頁一樣;是第幾天看顏色 ——
+         同一個編號會出現好幾次,那是對的(2026-11-21,Lulu;以前這裡標的是第幾天)。 */
       DAYS.forEach(d => dayList(d.date).forEach((x, i) => out.push({
-        item: x, k: "p" + d.date + "-" + i, n: d.n, cls: "plan", color: d.color, on: d.on,
+        item: x, k: "p" + d.date + "-" + i, n: i + 1, cls: "plan", color: d.color, on: d.on,
         tip: "DAY " + d.n + " " + (x.time || "") + " " + x.title,
       })));
     } else if (layers.plan) {
@@ -4794,7 +4794,8 @@
     DAYS.forEach(d => dayList(d.date).forEach((x, i) => {
       const at = pinOf(x);
       if (!inJapan(at)) return;
-      out.push({ k: "p" + d.date + "-" + i, n: d.n, cls: "plan", color: d.color, on: d.on, la: at.la, lo: at.lo,
+      /* 編號是那天的行程順序,跟行程頁一樣(2026-11-21,Lulu);是第幾天看顏色 */
+      out.push({ k: "p" + d.date + "-" + i, n: i + 1, cls: "plan", color: d.color, on: d.on, la: at.la, lo: at.lo,
         place: x.place || x.title, title: x.title, tip: "DAY " + d.n + " " + (x.time || "") + " " + x.title });
     }));
     return out;

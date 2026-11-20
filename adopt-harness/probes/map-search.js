@@ -96,7 +96,7 @@ return (async function () {
   chip.click(); await wait(80);
   var plan = qa("#ss-map .pin.plan");
   out.全部已排.開 = { 點: plan.length, 搜到的點: qa("#ss-map .pin:not(.plan)").length, 卡片: qa("#ss-q-out .hcard").length,
-    有顏色: plan.every(p => !!p.style.background), 編號是第幾天: plan.every(p => /^[1-9]$/.test(txt(p).replace(/\D.*$/, ""))), 按著: chip.getAttribute("aria-pressed") };
+    有顏色: plan.every(p => !!p.style.background), 編號是行程順序: plan.every(p => /^[1-9]$/.test(txt(p).replace(/\D.*$/, ""))), 按著: chip.getAttribute("aria-pressed") };
   var pv = plan.filter(p => pinIn(p.dataset.k))[0];
   if (pv) { tapPin(pv.dataset.k); await wait(80); }
   out.全部已排.點了 = { 卡片亮: qa("#ss-q-out .hcard.on").length, 那顆亮: pv ? q('#ss-map .pin[data-k="' + pv.dataset.k + '"]').classList.contains("on") : null, 還開著: shown("seek-screen") };
@@ -104,7 +104,7 @@ return (async function () {
   out.全部已排.關 = qa("#ss-map .pin.plan").length;
   ok("「全部已排」預設關;開了畫出已排的點(那天的顏色、第幾天),搜到的點和卡片不變;點它不選卡片;再按收掉",
     out.全部已排.預設 === "false" && out.全部已排.開.點 > 3 && out.全部已排.開.搜到的點 === nHit && out.全部已排.開.卡片 === nCard &&
-    out.全部已排.開.有顏色 && out.全部已排.開.編號是第幾天 && out.全部已排.開.按著 === "true" &&
+    out.全部已排.開.有顏色 && out.全部已排.開.編號是行程順序 && out.全部已排.開.按著 === "true" &&
     (!pv || (out.全部已排.點了.卡片亮 === 0 && out.全部已排.點了.那顆亮 && out.全部已排.點了.還開著)) && out.全部已排.關 === 0, out.全部已排);
   delete q("#seek-screen").dataset.picked;   /* 上面點了已排的點不算改過,保險起見清掉,後面的 Esc 測試才準 */
 
