@@ -922,3 +922,4 @@ C:text field/line/width|F|@S:border/xs
 C:text field/line/focus-width|F|@S:border/md
 C:text field/line/color|C|@S:color/outline 200
 C:text field/line/focus-color|C|@S:color/outline 300
+C:text area/avatar|F|@S:icon/lg
