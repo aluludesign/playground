@@ -1722,8 +1722,16 @@
     body.m-in-detail #m-ended, body.m-in-detail #m-menu{display:none !important;}
     body.m-in-detail #m-cal{top:calc(16px + env(safe-area-inset-top,0px)) !important;}
     body.m-in-detail #map-sheet .mapzoom{display:none;}
+    /* 新外框的點:錨點在水滴的尖端;不要原本那顆圓點的底色、框和陰影 */
+    body.member-ui #map .pin{transform:translate(-50%,-100%); min-width:0; height:auto; padding:0; border:0; border-radius:0;
+      background:none !important; box-shadow:none; color:inherit; display:block;}
+    body.member-ui #map .pin.on{box-shadow:none; z-index:3;}
+    body.member-ui #map .pin.hot{transform:translate(-50%,-100%) scale(1.1);}
+    body.member-ui #map .mapzoom.ds-zoom{gap:var(--ds-sys-spacing-md); border:0; background:none; box-shadow:none;}
+    body.member-ui #map .mapzoom.ds-zoom button{width:auto; height:auto; border:0; background:none; border-radius:var(--ds-comp-btn-icon-xs-radius);}
     /* 地圖的 ＋／− 移到日曆鈕底下(Figma:右邊、日曆鈕下面) */
-    body.member-ui #map-sheet .mapzoom{top:calc(var(--m-headh,137px) + 72px); right:var(--ds-sys-spacing-2xl);}
+    /* Figma:日曆鈕在頂列下 24、＋ 在頂列下 101;兩顆跟日曆鈕同一條中線(離右邊 32) */
+    body.member-ui #map-sheet .mapzoom{top:calc(var(--m-headh,137px) + 101px); right:20px;}
     #members-overlay ul{list-style:none; margin:0 0 12px; padding:0; display:grid; gap:8px;}
     #members-overlay li{display:flex; align-items:center; gap:10px;}
     #members-overlay .dot{width:12px; height:12px; border-radius:50%; flex:none;}
@@ -4334,7 +4342,7 @@
       /* 「全部已排」:六天全部。編號是那天的行程順序,跟行程頁一樣;是第幾天看顏色 ——
          同一個編號會出現好幾次,那是對的(2026-11-21,Lulu;以前這裡標的是第幾天)。 */
       DAYS.forEach(d => dayList(d.date).forEach((x, i) => out.push({
-        item: x, k: "p" + d.date + "-" + i, n: i + 1, cls: "plan", color: mDayColor(d).color, on: mDayColor(d).on,
+        item: x, k: "p" + d.date + "-" + i, n: i + 1, cls: "plan", color: mDayColor(d).color, on: mDayColor(d).on, cn: dayColorN(d.n),
         tip: "DAY " + d.n + " " + (x.time || "") + " " + x.title,
       })));
     } else if (layers.plan) {
@@ -4344,7 +4352,7 @@
       const today = DAYS.find(x => x.date === state.day);
       dayList(state.day).forEach((x, i) => out.push({
         item: x, k: "d" + i, n: i + 1, cls: "plan", color: today ? mDayColor(today).color : "",
-        on: today ? mDayColor(today).on : "",
+        on: today ? mDayColor(today).on : "", cn: today ? dayColorN(today.n) : 8,
         tip: (i + 1) + ". " + x.title + (x.place ? " \u00b7 " + x.place : ""),
       }));
     }
@@ -6104,12 +6112,19 @@
         Math.round(left + nearX(p.lo, v) * TILE) + "px; top:" + Math.round(top + projY(p.la, v.z) * TILE) +
         "px" + (p.color ? "; background:" + p.color : "") +
         (p.on ? "; color:" + p.on : "") +
-        '" title="' + esc(p.tip) + '">' + esc(p.n) +
-        '<span class="lab">' + esc((p.ap ? "約 " : "") + p.title) + '</span></a>';
+        '" title="' + esc(p.tip) + '">' + (mPins(box)
+          /* 一般團員的新外框:Figma 的 pin set(名字泡泡＋白色水滴＋塗鴉底編號);選到的那個用大的。願望是 dot、沒有編號 */
+          ? DS.pinSetHTML({ size: p.k === box._focus ? "lg" : "sm", label: (p.ap ? "約 " : "") + p.title, number: p.n,
+              color: p.cn || 8, state: p.cls === "plan" ? "default" : "dot" })
+          : esc(p.n) + '<span class="lab">' + esc((p.ap ? "約 " : "") + p.title) + "</span>") + "</a>";
     });
     html += "</div>";
-    html += '<div class="mapzoom"><button type="button" data-zoom="1" aria-label="\u653e\u5927">+</button>' +
-      '<button type="button" data-zoom="-1" aria-label="\u7e2e\u5c0f">\u2212</button></div>';
+    /* ＋／−:新外框用 Storybook 的 Button(White、Icon Filled、xs),Figma 是兩顆白色小圓鈕 */
+    html += mPins(box)
+      ? '<div class="mapzoom ds-zoom">' + DS.buttonHTML({ label: "\u653e\u5927", color: "white", variant: "icon", size: "xs" }).replace("<button ", '<button data-zoom="1" ') +
+        DS.buttonHTML({ label: "\u7e2e\u5c0f", color: "white", variant: "icon", size: "xs", icon: M_MINUS }).replace("<button ", '<button data-zoom="-1" ') + "</div>"
+      : '<div class="mapzoom"><button type="button" data-zoom="1" aria-label="\u653e\u5927">+</button>' +
+        '<button type="button" data-zoom="-1" aria-label="\u7e2e\u5c0f">\u2212</button></div>';
     /* OSM 的圖磚要求標示出處 */
     html += '<span class="attr">\u00a9 <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a></span>';
     box.innerHTML = html;
@@ -6118,6 +6133,9 @@
     layoutLabels(box);
   }
 
+  /* 主地圖在一般團員的新外框裡,點和 ＋／− 改用 Storybook 的元件 */
+  function mPins(box) { return box.id === "map" && !!DS && document.body.classList.contains("member-ui"); }
+  var M_MINUS = '<svg class="ds-btn__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 13H5V11H19V13Z"/></svg>';
   /* 標籤會互相蓋住。照優先序一個一個放:願望／當天行程先,已排的背景點後。
      位置被佔走就改放到標記下面,下面也被佔走就先藏起來 ——
      藏起來的那些滑過或被聚焦時還是會冒出來,不是永久消失。 */

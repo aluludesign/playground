@@ -61,9 +61,16 @@ button.ds-date:focus-visible {
   line-height: 12px;
   font-weight: 400;
 }
-/* 抖動線畫在格子頂端那一條的底部 */
-.ds-date__head.ds-wiggle-line { height: 29px; --wiggle-amount: var(--ds-sys-wiggle-amount-border); }
-.ds-date__head.ds-wiggle-line > .ds-wiggle__svg { top: auto; bottom: 0; height: 2px; }
+/* 抖動線是 Day1 那一列的底線：單獨一條貼在那一列的底部（線畫在自己的正中間，所以往下半條） */
+.ds-date__head { position: relative; }
+.ds-date__rule {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  transform: translateY(50%);
+  --wiggle-amount: var(--ds-sys-wiggle-amount-border);
+}
 .ds-date__head b { font-weight: 700; }
 
 .ds-date__big {
@@ -118,4 +125,3 @@ button.ds-date:focus-visible {
 .ds-date--status .ds-date__head {
   font-family: var(--ds-sys-font-family-label);
 }
-.ds-date--status .ds-date__big { margin-top: var(--ds-sys-spacing-md); }

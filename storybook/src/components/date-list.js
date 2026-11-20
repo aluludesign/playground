@@ -25,7 +25,7 @@ export function dateCardHTML({ state = "default", key = "", day = "Day1", week =
   const style = ` style="--date-color:var(--ds-sys-color-customs-custom-${color});--date-on:var(--ds-sys-color-customs-on-custom-${color})"`;
   if (state === "status") {
     return `<div class="${cls.join(" ")} ds-wiggle-border"${style}>
-<div class="ds-date__head ds-wiggle-line ds-wiggle--outline-300"><span>${esc(title)}</span></div>
+<div class="ds-date__head"><span>${esc(title)}</span><span class="ds-date__rule ds-wiggle-line ds-wiggle--outline-300" aria-hidden="true"></span></div>
 ${value ? `<div class="ds-date__big"><span class="ds-date__mark">${penMarkerHTML({ drawn: true, color: "primary" })}<span>${esc(value)}</span></span></div>` : ""}
 </div>`;
   }
@@ -36,7 +36,7 @@ ${weather.rain != null ? `<span class="ds-date__wx-row">${wxIcon("drop")}<span>$
 </div>`
     : "";
   return `<button type="button" class="${cls.join(" ")} ds-wiggle-border" data-key="${esc(key)}" aria-pressed="${state === "active"}"${style}>
-<span class="ds-date__head ds-wiggle-line ds-wiggle--outline-300"><span>${esc(day)}</span><b aria-hidden="true">‧</b><span>${esc(week)}</span></span>
+<span class="ds-date__head"><span>${esc(day)}</span><b aria-hidden="true">‧</b><span>${esc(week)}</span><span class="ds-date__rule ds-wiggle-line ds-wiggle--outline-300" aria-hidden="true"></span></span>
 <span class="ds-date__big"><span class="ds-date__mark">${penMarkerHTML({ drawn: true, color: state === "past" ? "disable" : `custom ${color}` })}<span>${esc(date)}</span></span></span>
 ${wx}
 </button>`;

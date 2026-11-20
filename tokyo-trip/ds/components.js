@@ -1387,7 +1387,7 @@ function T3({ state: C = "default", key: e = "", day: L = "Day1", week: t = "TUE
   const d = ["ds-date", `ds-date--${C}`], l = ` style="--date-color:var(--ds-sys-color-customs-custom-${s});--date-on:var(--ds-sys-color-customs-on-custom-${s})"`;
   if (C === "status")
     return `<div class="${d.join(" ")} ds-wiggle-border"${l}>
-<div class="ds-date__head ds-wiggle-line ds-wiggle--outline-300"><span>${w(i)}</span></div>
+<div class="ds-date__head"><span>${w(i)}</span><span class="ds-date__rule ds-wiggle-line ds-wiggle--outline-300" aria-hidden="true"></span></div>
 ${M ? `<div class="ds-date__big"><span class="ds-date__mark">${T({ drawn: !0, color: "primary" })}<span>${w(M)}</span></span></div>` : ""}
 </div>`;
   const h = o && C !== "past" ? `<div class="ds-date__wx">
@@ -1395,7 +1395,7 @@ ${M ? `<div class="ds-date__big"><span class="ds-date__mark">${T({ drawn: !0, co
 ${o.rain != null ? `<span class="ds-date__wx-row">${s1("drop")}<span>${w(o.rain)}%</span></span>` : ""}
 </div>` : "";
   return `<button type="button" class="${d.join(" ")} ds-wiggle-border" data-key="${w(e)}" aria-pressed="${C === "active"}"${l}>
-<span class="ds-date__head ds-wiggle-line ds-wiggle--outline-300"><span>${w(L)}</span><b aria-hidden="true">‧</b><span>${w(t)}</span></span>
+<span class="ds-date__head"><span>${w(L)}</span><b aria-hidden="true">‧</b><span>${w(t)}</span><span class="ds-date__rule ds-wiggle-line ds-wiggle--outline-300" aria-hidden="true"></span></span>
 <span class="ds-date__big"><span class="ds-date__mark">${T({ drawn: !0, color: C === "past" ? "disable" : `custom ${s}` })}<span>${w(n)}</span></span></span>
 ${h}
 </button>`;
