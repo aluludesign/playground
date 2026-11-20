@@ -69,6 +69,7 @@ ${PEN_COLORS.map((c) => `<tr><td><code class="var">${c.startsWith("custom") ? "c
 <tr><td><code class="var">--pen-marker-bottom</code></td><td>3.5px</td><td class="al">螢光筆中心離那一欄底部多遠（好幾行時就在最後一行底下）</td></tr>
 </tbody></table>
 <pre class="wg-code"><code>${esc(LINE_USAGE)}</code></pre>
+<p class="note"><b>捲進畫面才畫（revealPens，src/pen-reveal.js）：</b>列表裡的螢光筆（日期列、時間軸、景點卡）不要寫死 drawn，外層加 <code>data-pen="唯一的 key"</code>，再呼叫 <code>revealPens(root)</code>：捲進畫面 60% 才由左往右畫，同一格好幾筆依序晚 0.08s；同一個 key 畫過就記住，畫面重畫時直接是畫好的樣子、不重播。key 換了（例：選到的那天換了）就再畫一次。</p>
 </section>
 
 <section class="tk"><h2>筆刷上色 pen brush</h2>

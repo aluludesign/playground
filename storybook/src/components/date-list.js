@@ -3,6 +3,7 @@ import "../pen-line.css";
 import "./date-list.css";
 import { wireWiggle } from "../wiggle.js";
 import { penMarkerHTML } from "../pen-line.js";
+import { revealPens } from "../pen-reveal.js";
 
 // 天氣圖示：icons/weather 的 color 那一組
 const raw = import.meta.glob("../icons/weather/*_color.svg", { query: "?raw", import: "default", eager: true });
@@ -26,7 +27,7 @@ export function dateCardHTML({ state = "default", key = "", day = "Day1", week =
   if (state === "status") {
     return `<div class="${cls.join(" ")} ds-wiggle-border"${style}>
 <div class="ds-date__head"><span>${esc(title)}</span><span class="ds-date__rule ds-wiggle-line ds-wiggle--outline-300" aria-hidden="true"></span></div>
-${value ? `<div class="ds-date__big"><span class="ds-date__mark">${penMarkerHTML({ drawn: true, color: "primary" })}<span>${esc(value)}</span></span></div>` : ""}
+${value ? `<div class="ds-date__big"><span class="ds-date__mark" data-pen="status-${esc(title)}-${esc(value)}">${penMarkerHTML({ color: "primary" })}<span>${esc(value)}</span></span></div>` : ""}
 </div>`;
   }
   const wx = weather && state !== "past"
@@ -37,7 +38,7 @@ ${weather.rain != null ? `<span class="ds-date__wx-row">${wxIcon("drop")}<span>$
     : "";
   return `<button type="button" class="${cls.join(" ")} ds-wiggle-border" data-key="${esc(key)}" aria-pressed="${state === "active"}"${style}>
 <span class="ds-date__head"><span>${esc(day)}</span><b aria-hidden="true">‧</b><span>${esc(week)}</span><span class="ds-date__rule ds-wiggle-line ds-wiggle--outline-300" aria-hidden="true"></span></span>
-<span class="ds-date__big"><span class="ds-date__mark">${penMarkerHTML({ drawn: true, color: state === "past" ? "disable" : `custom ${color}` })}<span>${esc(date)}</span></span></span>
+<span class="ds-date__big"><span class="ds-date__mark" data-pen="date-${esc(key || date)}-${state}">${penMarkerHTML({ color: state === "past" ? "disable" : `custom ${color}` })}<span>${esc(date)}</span></span></span>
 ${wx}
 </button>`;
 }
@@ -62,6 +63,7 @@ export function wireDateList(root = document) {
     }
   });
   wireWiggle(root);
+  revealPens(root); // 螢光筆捲進畫面才由左往右畫出來；選到的那天換了就重畫那一格
 }
 
 export function centerDateList(list, smooth = true) {

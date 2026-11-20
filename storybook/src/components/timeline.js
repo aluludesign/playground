@@ -5,6 +5,7 @@ import "./location-pin.css";
 import "./timeline.css";
 import { wireWiggle } from "../wiggle.js";
 import { penMarkerHTML } from "../pen-line.js";
+import { revealPens } from "../pen-reveal.js";
 import { pinTimelineHTML } from "./location-pin.js";
 import { dividerDotHTML } from "./divider.js";
 import down from "../icons/general/icon_triangel_down_duotone.svg?raw";
@@ -35,7 +36,7 @@ export function attractionPhotosHTML({ photos = [], key = "", label = "看照片
 export function scheduleDetailHTML({ key = "", title = "淺草寺", meta = ["日本，東京都", "景點"], wiki = "", note = "", align = "left", color = 5 } = {}) {
   const info = meta.filter(Boolean).map((m) => `<span>${esc(m)}</span>`).join('<span aria-hidden="true">‧</span>');
   return `<button type="button" class="ds-stop ds-stop--${align}" data-key="${esc(key)}">
-<span class="ds-stop__title"><span class="ds-stop__mark">${penMarkerHTML({ drawn: true, color: `custom ${color}` })}<span>${esc(title)}</span></span></span>
+<span class="ds-stop__title"><span class="ds-stop__mark" data-pen="stop-${esc(key)}-${esc(title)}">${penMarkerHTML({ color: `custom ${color}` })}<span>${esc(title)}</span></span></span>
 ${info ? `<span class="ds-stop__info">${info}</span>` : ""}
 ${wiki ? `<span class="ds-stop__wiki">${esc(wiki)}</span>` : ""}
 ${note ? `<span class="ds-stop__note"><span class="ds-stop__note-text">${esc(note)}</span><span class="ds-wiggle-line ds-wiggle--outline-200" aria-hidden="true"></span><span class="ds-stop__tail" aria-hidden="true"></span></span>` : ""}
@@ -81,4 +82,5 @@ export function wireTimeline(root = document) {
     });
   });
   wireWiggle(root);
+  revealPens(root);
 }

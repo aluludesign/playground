@@ -4,6 +4,7 @@ import "../pen-line.css";
 import "./attraction-card.css";
 import { wireWiggle } from "../wiggle.js";
 import { penMarkerHTML } from "../pen-line.js";
+import { revealPens } from "../pen-reveal.js";
 import { scrimButtonHTML } from "./scrim-button.js";
 import arrow from "../icons/general/icon_subdirectory_arrow_right_outlined.svg?raw";
 
@@ -50,7 +51,7 @@ ${note ? `<p class="ds-acard__note">${esc(note)}<span class="ds-wiggle-line ds-w
 ${gallery}
 <div class="ds-acard__body">
 <div class="ds-acard__top">
-<h2 class="ds-acard__title"><span class="ds-acard__mark">${penMarkerHTML({ drawn: true, look: "title" })}<span>${esc(title)}</span></span></h2>
+<h2 class="ds-acard__title"><span class="ds-acard__mark" data-pen="card-${esc(title)}">${penMarkerHTML({ look: "title" })}<span>${esc(title)}</span></span></h2>
 ${loc}
 </div>
 ${rows ? `<ul class="ds-acard__info">${rows}</ul>` : ""}
@@ -79,4 +80,5 @@ export function wireAttractionCard(root = document) {
     });
   });
   wireWiggle(root);
+  revealPens(root);
 }
