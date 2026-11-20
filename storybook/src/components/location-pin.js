@@ -7,14 +7,14 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&l
 
 /**
  * badge（Figma pin/draw）
- * number：號碼；color：1–14，對應 sys/color/customs/on custom N（預設 14）
+ * number：號碼；color：1–14，對應 sys/color/customs/custom N（預設 8，照 Figma Default）
  * state：「default」|「dot」|「not-on-map」|「focus」；size：「sm」(28) |「lg」(51)
  */
-export function pinBadgeHTML({ number = 1, color = 14, state = "default", size = "sm" } = {}) {
+export function pinBadgeHTML({ number = 1, color = 8, state = "default", size = "sm" } = {}) {
   const cls = ["ds-pin-badge"];
   if (size === "lg") cls.push("ds-pin-badge--lg");
   if (state !== "default") cls.push("ds-pin-badge--" + state);
-  const style = state === "default" || state === "focus" ? ` style="--pin-color:var(--ds-sys-color-customs-on-custom-${color})"` : "";
+  const style = state === "default" || state === "focus" ? ` style="--pin-color:var(--ds-sys-color-customs-custom-${color})"` : "";
   const ring = state === "focus" ? `<svg class="ds-pin-badge__ring" viewBox="0 0 36 36" aria-hidden="true"><path d="${FOCUS_RING}"/></svg>` : "";
   const inner = state === "dot"
     ? `<svg class="ds-pin-badge__dot" viewBox="0 0 10 10" aria-hidden="true"><path d="${DOT_MARK}"/></svg>`

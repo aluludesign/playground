@@ -1,6 +1,6 @@
 /* 地點標記 Location pin —— Figma shared comps「location pin」（section 162565:24486）
  *
- *   badge（pin/draw）：28 的塗鴉圓 + 號碼。塗鴉底是 on custom N（每天/每人一種顏色）× comp/pin/badge/opacity
+ *   badge（pin/draw）：28 的塗鴉圓 + 號碼。塗鴉底是 custom N（每天/每人一種顏色）× comp/pin/badge/opacity（opacity/2xl＝80%）
  *     Default／dot（primary 實心＋中間白塗鴉）／not on map（灰）／focuse（外面一圈手繪圈）
  *   label：白色膠囊名字，Default（label/sm/regular）／focuse（label/sm/semi-bold）
  *   pin：白色水滴 + badge；sm（32×36、badge 28）／lg（56×68、badge 51、號碼 Body/lg）
@@ -10,7 +10,7 @@
 
 /* ---------- badge ---------- */
 .ds-pin-badge {
-  --pin-color: var(--ds-sys-color-customs-on-custom-14);
+  --pin-color: var(--ds-sys-color-customs-custom-8);
   position: relative;
   flex: none;
   display: grid;
@@ -50,9 +50,12 @@
   font-size: var(--ds-sys-font-size-body-lg);
   line-height: 22px;
 }
-/* not on map：灰 */
+/* not on map：disabled 的灰、不透明 */
 .ds-pin-badge--not-on-map {
-  --pin-color: var(--ds-sys-color-on-disable);
+  --pin-color: var(--ds-sys-color-disabled);
+}
+.ds-pin-badge--not-on-map .ds-pin-badge__bg {
+  opacity: 1;
 }
 /* dot：primary 實心塗鴉 + 中間一顆 on primary 的小塗鴉，沒有號碼 */
 .ds-pin-badge--dot {

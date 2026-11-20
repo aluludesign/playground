@@ -7,7 +7,7 @@
  * 長度跟著放它的那一欄等寬（只橫向伸縮，線寬不變）。
  *
  * 可以覆寫的變數：
- *   --pen-line-color     線的顏色（預設 primary；可以用 primary、secondary、tertiary、custom 1–14 → penLineSVG({ color })）
+ *   --pen-line-color     線的顏色（預設 primary；可以用 primary、secondary、tertiary、disable、custom 1–14 → penLineSVG({ color })）
  *   --pen-line-width     線寬（預設 border/md）
  *   --pen-line-duration  畫完一條要多久（預設 .35s）
  *   --pen-line-delay     晚多久才開始畫（預設 0）
@@ -55,7 +55,7 @@
  *
  *   顏色：--pen-marker-color（線）、--pen-marker-opacity（線的透明度）、--pen-marker-end（尾巴那團）
  *     元件預設：comp/active bg/line/color（custom 5）、opacity/3xl、opacity primary 50
- *     線的顏色可以換成 primary、secondary、tertiary、custom 1–14（penMarkerHTML({ color })）
+ *     線的顏色可以換成 primary、secondary、tertiary、disable、custom 1–14（penMarkerHTML({ color })）
  *     標題用（Figma title）：primary、opacity/xl、shadow/lg → .ds-pen-marker--title
  */
 .ds-pen-marker {
