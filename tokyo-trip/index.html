@@ -1716,7 +1716,8 @@
       padding:0 var(--ds-sys-spacing-2xl) calc(var(--ds-sys-spacing-2xl) + env(safe-area-inset-bottom,0px));}
     #m-detail[hidden]{display:none;}
     #m-detail-gap{height:var(--m-detail-gap,370px);}
-    #m-detail-card{pointer-events:auto; max-width:430px; margin:0 auto;}
+    #m-detail-card{max-width:430px; margin:0 auto; display:flex; flex-direction:column; gap:var(--ds-sys-spacing-2xl);}
+    #m-detail-card .m-dcard{pointer-events:auto;}
     body.m-in-detail #m-head, body.m-in-detail #m-sheet-box, body.m-in-detail #m-nav,
     body.m-in-detail #m-ended, body.m-in-detail #m-menu{display:none !important;}
     body.m-in-detail #m-cal{top:calc(16px + env(safe-area-inset-top,0px)) !important;}
@@ -7141,8 +7142,10 @@
       renderMemberShell();
     });
     el("m-detail-card").addEventListener("ds-card-close", mCloseDetail);
+    el("m-detail").addEventListener("scroll", mDetailScrolled, { passive: true });
     el("m-detail-card").addEventListener("ds-card-photo", e => {
-      const x = mDetail && dayList(mDetail.day)[mDetail.i];
+      const c = e.target.closest(".m-dcard");
+      const x = mDetail && dayList(mDetail.day)[c ? +c.dataset.i : mDetail.i];
       const pics = x ? stopPhotos(x) : [];
       if (pics.length) openPhoto(pics.map(u => u.replace(/width=\d+/, "width=1200")).join(" "), isCommons(x.photo) ? x.photo : "");
     });
@@ -7222,7 +7225,9 @@
     renderMemberShell();
     if (sheetMode) loadSheetMap(true);
   }
-  function mPaintDetail(x) {
+  /* 同一天的每一站一張卡,上下疊著:往下滑就是下一站(Lulu 11-21);
+     停在畫面上那一張的點,地圖跟著移過去 */
+  function mCardHTML(x) {
     const g = x.geo || {};
     const p = pinOf(x);
     const info = mPlaceInfo[x.place || x.title] || {};
@@ -7236,15 +7241,47 @@
     ];
     if (rows.some(r => r.value)) rows.push({ label: "資料來源", value: "OpenStreetMap" });
     const q = p ? p.la + "," + p.lo : (x.place || x.title || "");
-    el("m-detail-card").innerHTML = DS.attractionCardHTML({
-      photos: stopPhotos(x), title: x.title || "", meta: [[g.c, g.s].filter(Boolean).join("，"), g.k || info.cat || ""],
+    return DS.attractionCardHTML({
+      /* 地點那一行:有地點資訊就寫「國家，縣市 ‧ 種類」;沒有就寫地點欄(跟名稱一樣就不重複) */
+      photos: stopPhotos(x), title: x.title || "",
+      meta: [[g.c, g.s].filter(Boolean).join("，") || (x.place && !samePlace(x.title, x.place) ? x.place : ""), g.k || info.cat || ""],
       mapURL: q ? "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(q) : "",
       info: rows, wisher: x.by ? nameOf(x.by) : "", note: x.note || "", closeLabel: "回行程",
     });
-    DS.wireAttractionCard(el("m-detail-card"));
-    /* 卡片頂端從畫面 44% 的地方開始(Figma 370/844),往上滑看全部 */
-    const H = window.innerHeight;
-    el("m-detail").style.setProperty("--m-detail-gap", Math.max(60, Math.min(H * 370 / 844, H - el("m-detail-card").offsetHeight - 24)) + "px");
+  }
+  function mPaintDetail(_, keepScroll) {
+    const list = dayList(mDetail.day);
+    const box = el("m-detail-card");
+    const top = el("m-detail").scrollTop;
+    box.innerHTML = list.map((x, i) => '<div class="m-dcard" data-i="' + i + '">' + mCardHTML(x) + "</div>").join("");
+    DS.wireAttractionCard(box);
+    /* 卡片頂端停在畫面 44% 的地方(Figma 370/844);最後一張也要能推到那裡 */
+    const H = window.innerHeight, gap = Math.round(H * 370 / 844);
+    el("m-detail").style.setProperty("--m-detail-gap", gap + "px");
+    box.style.paddingBottom = Math.max(0, H - gap - (box.lastElementChild ? box.lastElementChild.offsetHeight : 0) - 24) + "px";
+    if (keepScroll) el("m-detail").scrollTop = top;
+    else {
+      const cur = box.querySelector('.m-dcard[data-i="' + mDetail.i + '"]');
+      el("m-detail").scrollTop = cur ? cur.offsetTop - gap : 0;
+    }
+  }
+  /* 滑動停下來時,哪一張卡的頂端最靠近那條線,就是現在這一站 */
+  let mDetailTimer = null;
+  function mDetailScrolled() {
+    clearTimeout(mDetailTimer);
+    mDetailTimer = setTimeout(() => {
+      if (!mDetail) return;
+      const sc = el("m-detail"), line = sc.getBoundingClientRect().top + parseFloat(getComputedStyle(sc).getPropertyValue("--m-detail-gap"));
+      let best = null, bd = Infinity;
+      sc.querySelectorAll(".m-dcard").forEach(c => { const d = Math.abs(c.getBoundingClientRect().top - line); if (d < bd) { bd = d; best = c; } });
+      const i = best ? +best.dataset.i : mDetail.i;
+      if (i === mDetail.i) return;
+      mDetail.i = i;
+      const x = dayList(mDetail.day)[i];
+      const p = x && pinOf(x);
+      if (p) focusPin(el("map"), p, stopKey(mDetail.day, i));
+      if (x) mLoadPlaceInfo(x);
+    }, 120);
   }
   /* 地點資料:用座標問 OpenStreetMap(Nominatim reverse,走 queued() 一秒一次),問過記在這台手機 */
   const PLACE_INFO_LS = "tokyo5-place-info";
@@ -7264,7 +7301,7 @@
       phone: t.phone || t["contact:phone"] || "", web: t.website || t["contact:website"] || "",
     };
     try { localStorage.setItem(PLACE_INFO_LS, JSON.stringify(mPlaceInfo)); } catch (_) {}
-    if (mDetail && dayList(mDetail.day)[mDetail.i] === x) mPaintDetail(x);
+    if (mDetail && dayList(mDetail.day).indexOf(x) >= 0) mPaintDetail(null, true);
   }
   async function toggleTripMenu() {
     const box = el("m-menu");
