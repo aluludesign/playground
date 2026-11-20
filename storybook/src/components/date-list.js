@@ -37,7 +37,7 @@ ${weather.rain != null ? `<span class="ds-date__wx-row">${wxIcon("drop")}<span>$
     : "";
   return `<button type="button" class="${cls.join(" ")} ds-wiggle-border" data-key="${esc(key)}" aria-pressed="${state === "active"}"${style}>
 <span class="ds-date__head ds-wiggle-line ds-wiggle--outline-300"><span>${esc(day)}</span><b aria-hidden="true">‧</b><span>${esc(week)}</span></span>
-<span class="ds-date__big"><span class="ds-date__mark">${penMarkerHTML({ drawn: true, color: state === "past" ? undefined : `custom ${color}` })}<span>${esc(date)}</span></span></span>
+<span class="ds-date__big"><span class="ds-date__mark">${penMarkerHTML({ drawn: true, color: state === "past" ? "disable" : `custom ${color}` })}<span>${esc(date)}</span></span></span>
 ${wx}
 </button>`;
 }

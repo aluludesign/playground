@@ -113,7 +113,6 @@ button.ds-date:focus-visible {
 
 /* 過去的日子：淡掉 */
 .ds-date--past { color: var(--ds-sys-color-on-disable); }
-.ds-date--past .ds-pen-marker { --pen-marker-color: var(--ds-sys-color-disabled) !important; }
 
 /* 倒數／回味中 */
 .ds-date--status .ds-date__head {
