@@ -955,7 +955,7 @@ function _3(C = document) {
   }), y(C);
 }
 const R2 = /* @__PURE__ */ Object.assign({ "../icons/general/icon_bulb_outlined.svg": T, "../icons/general/icon_calender_outlined.svg": s1, "../icons/general/icon_check_line_outlined.svg": l1, "../icons/general/icon_circle_triangel_down_outlined.svg": o1, "../icons/general/icon_cross_outlined.svg": q, "../icons/general/icon_eye_outlined.svg": r1, "../icons/general/icon_flight_outlined.svg": a1, "../icons/general/icon_heart_outlined.svg": d1, "../icons/general/icon_money_outlined.svg": M1, "../icons/general/icon_plus_outlined.svg": c1, "../icons/general/icon_start_heart_outlined.svg": g1, "../icons/general/icon_subdirectory_arrow_right_outlined.svg": P, "../icons/general/icon_triangel_down_outlined.svg": p1, "../icons/general/icon_triangel_up_outlined.svg": u1 }), N2 = (C) => (R2[`../icons/general/icon_${C}_outlined.svg`] || "").replace(/fill="#[0-9a-f]{3,8}"/gi, 'fill="currentColor"').replace("<svg", '<svg class="ds-scrim-btn__icon" aria-hidden="true"'), U2 = (C) => String(C).replace(/[&<>"]/g, (L) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[L]);
-function v3({ icon: C = "calender", color: L = "scrim", size: e = "md", label: n = "", pressed: t, disabled: i = !1, state: s } = {}) {
+function v3({ icon: C = "calender", color: L = "scrim", size: e = "lg", label: n = "", pressed: t, disabled: i = !1, state: s } = {}) {
   const l = ["ds-scrim-btn", `ds-scrim-btn--${L}`, `ds-scrim-btn--${e}`, s ? `is-${s}` : ""].filter(Boolean).join(" "), M = t === void 0 ? "" : ` aria-pressed="${!!t}"`;
   return `<button type="button" class="${l}" aria-label="${U2(n)}"${M}${i ? " disabled" : ""}>${N2(C)}</button>`;
 }

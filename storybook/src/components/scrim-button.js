@@ -13,11 +13,11 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&l
 /**
  * icon：icons/general 裡的名字（例：「calender」→ icon_calender_outlined.svg）
  * color：「scrim」（黑底 80%）｜「primary」
- * size：「md」32｜「sm」24｜「xs」12
+ * size：「lg」32｜「md」24｜「sm」16｜「xs」12（11-20 Lulu 改名：原本的 md→lg、sm→md）
  * label：給讀螢幕的人聽的名字（按鈕上沒有字）
  * pressed：有開關狀態的按鈕給 true／false（例：地圖上「開關其他日子的行程」），沒有就不給
  */
-export function scrimButtonHTML({ icon = "calender", color = "scrim", size = "md", label = "", pressed, disabled = false, state } = {}) {
+export function scrimButtonHTML({ icon = "calender", color = "scrim", size = "lg", label = "", pressed, disabled = false, state } = {}) {
   const cls = ["ds-scrim-btn", `ds-scrim-btn--${color}`, `ds-scrim-btn--${size}`, state ? `is-${state}` : ""].filter(Boolean).join(" ");
   const pr = pressed === undefined ? "" : ` aria-pressed="${!!pressed}"`;
   return `<button type="button" class="${cls}" aria-label="${esc(label)}"${pr}${disabled ? " disabled" : ""}>${iconSVG(icon)}</button>`;

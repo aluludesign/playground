@@ -6,7 +6,7 @@ const USAGE = `import { scrimButtonHTML } from "./components/scrim-button.js";
 el.innerHTML = scrimButtonHTML({
   icon: "calender",   // icons/general 的名字，用 outlined 那一組
   color: "scrim",     // scrim（黑底 80%）／primary
-  size: "md",         // md 32／sm 24／xs 12
+  size: "lg",         // lg 32／md 24／sm 16／xs 12
   label: "開關其他日子的行程",
   pressed: false,     // 有開關狀態才給
 });`;
@@ -14,7 +14,7 @@ el.innerHTML = scrimButtonHTML({
 const esc = (s) => s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]);
 const STATES = ["enabled", "hovered", "focused", "pressed", "disabled"];
 const row = (color) =>
-  ["md", "sm", "xs"]
+  ["lg", "md", "sm", "xs"]
     .map(
       (size) => `<tr><td class="nm">${color}／${size}</td>${STATES.map(
         (st) => `<td style="padding:16px">${scrimButtonHTML({ color, size, label: "開關其他日子的行程", state: st === "enabled" ? undefined : st, disabled: st === "disabled" })}</td>`,

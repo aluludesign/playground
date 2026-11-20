@@ -1,12 +1,11 @@
 /* Scrim 圓鈕 —— Figma「Scrim」（162254:14112），疊在地圖、照片上
  *
  *   Color：Scrim（color/scrim、整顆 80% 不透明、圖示 text inverse 100）／Primary（primary、圖示 on primary）
- *   Size ：md 32（圖示 24）／sm 24（圖示 16）／xs 12（圖示 8）；圓角 comp/chip/radius
+ *   Size ：lg 32（圖示 24）／md 24（圖示 16）／sm 16（圖示 8）／xs 12（圖示 8）；圓角 comp/chip/radius
+ *          （11-20 Lulu 改名：原本的 md→lg、sm→md，新增 sm 16）
  *   State：Hovered 疊 on primary 8%、陰影換 Elevation/component/md；Focused 疊 10%＋外圈 focus ring（離外緣 2px、線寬 3）；
- *          Pressed 疊 10%、整顆大 2px（34／26／14）；Disabled 底 disable container、圖示 on disable、沒有陰影
+ *          Pressed 疊 10%、整顆大 2px；Disabled 底 disable container、圖示 on disable、沒有陰影
  *   平常陰影 Elevation/component/sm
- *
- * 要別的大小（例：Figma delete photo 裡被拉成 16 的 xs）：在按鈕上設 --scrim-size／--scrim-icon。
  *
  * 圖層：::before = 底色＋State layer；::after = Focus ring；按鈕本身只放圖示。
  * Pressed 讓 ::before 往外長，按鈕佔的位置不變。
@@ -46,7 +45,8 @@
   -webkit-tap-highlight-color: transparent;
   transition: --scrim-layer-op 150ms ease, --scrim-grow 150ms cubic-bezier(0.25, 1, 0.5, 1);
 }
-.ds-scrim-btn--sm { --scrim-size: 24px; --scrim-icon: 16px; }
+.ds-scrim-btn--md { --scrim-size: 24px; --scrim-icon: 16px; }
+.ds-scrim-btn--sm { --scrim-size: 16px; --scrim-icon: 8px; }
 .ds-scrim-btn--xs { --scrim-size: 12px; --scrim-icon: 8px; }
 .ds-scrim-btn--primary {
   --scrim-bg: var(--ds-sys-color-primary);

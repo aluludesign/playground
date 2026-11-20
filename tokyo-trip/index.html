@@ -1684,17 +1684,32 @@
       padding:var(--ds-sys-spacing-2xl) var(--ds-sys-spacing-4xl) calc(var(--ds-sys-spacing-2xl) + env(safe-area-inset-bottom,0px));}
     /* 面板拉到最低時底部導覽收起來(Figma 162123:12383 的畫法;待 Lulu 確認) */
     body.member-ui.m-sheet-min #m-nav{transform:translateY(110%); transition:transform .25s ease;}
+    /* 最低時地圖右邊的 ＋／− 也收起來,只留日曆鈕(Lulu 11-21) */
+    body.member-ui.m-sheet-min #map-sheet .mapzoom{display:none;}
     #m-nav{transition:transform .25s ease;}
     /* 交通、花費、分帳:頂列和底部導覽中間是一般會捲的頁 */
     body.member-ui:not([data-view="plan"]):not([data-view="wish"]) .wrap{padding-top:calc(var(--m-headh,137px) + 12px);
       padding-bottom:calc(var(--m-navh,113px) + 12px);}
     #m-seg{position:absolute; left:var(--ds-sys-spacing-2xl); right:var(--ds-sys-spacing-2xl); z-index:3; display:flex; justify-content:center;}
     #m-seg[hidden]{display:none;}
-    body.member-ui[data-view="cost"] .wrap,
-    body.member-ui[data-view="split"] .wrap{padding-top:calc(var(--m-headh,137px) + 64px);}
+    /* 花費／分帳上面多一排分頁(要壓過上面那條 :not() 疊出來的權重) */
+    body.member-ui[data-view="cost"]:not([data-view="plan"]) .wrap,
+    body.member-ui[data-view="split"]:not([data-view="plan"]) .wrap{padding-top:calc(var(--m-headh,137px) + 72px);}
     @media (min-width:768px){
       #m-sheet-box .ds-sheet{right:auto; width:430px; left:var(--ds-sys-spacing-2xl);}
     }
+    /* 「我」頁:原本右上角漢堡選單裡的東西(Lulu 11-21),一般團員的漢堡就不放了 */
+    #m-me{position:absolute; left:0; right:0; top:var(--m-headh,137px); bottom:var(--m-navh,113px); overflow-y:auto;
+      padding:var(--ds-sys-spacing-4xl); color:var(--ds-sys-color-text-100); font-family:var(--ds-sys-font-family-body);}
+    #m-me[hidden]{display:none;}
+    body.member-ui[data-view="me"] .wrap > footer,
+    body.member-ui[data-view="me"] .wrap > .foot{display:none;}
+    #m-me h2{border:0; padding:0; margin:0 0 var(--ds-sys-spacing-md); font-family:var(--ds-sys-font-family-headline); font-weight:900;
+      font-size:var(--ds-sys-font-size-headline-xs); letter-spacing:.05em;}
+    #m-me-who{margin:0 0 var(--ds-sys-spacing-2xl); color:var(--ds-sys-color-text-200);
+      font-family:var(--ds-sys-font-family-zhtw-handwriting-zhtw); font-size:var(--ds-sys-font-size-label-lg);}
+    #m-me-ops{display:flex; flex-direction:column; align-items:stretch; gap:var(--ds-sys-spacing-xl);}
+    body.member-ui[data-view="me"] .wrap > main{display:none;}
     /* 地圖的 ＋／− 移到日曆鈕底下(Figma:右邊、日曆鈕下面) */
     body.member-ui #map-sheet .mapzoom{top:calc(var(--m-headh,137px) + 72px); right:var(--ds-sys-spacing-2xl);}
     #members-overlay ul{list-style:none; margin:0 0 12px; padding:0; display:grid; gap:8px;}
@@ -1735,6 +1750,7 @@
   <div id="m-cal"></div>
   <div id="m-seg" hidden></div>
   <div id="m-sheet-box"></div>
+  <section id="m-me" aria-labelledby="m-me-h" hidden><h2 id="m-me-h">我</h2><p id="m-me-who"></p><div id="m-me-ops"></div></section>
   <div id="m-nav"></div>
 </div>
 <div class="overlay" id="members-overlay" hidden>
@@ -6937,15 +6953,17 @@
       DS.wireInfo(el("m-ended"));
     }
     /* 日曆鈕 = 開關其他日子的行程(就是原本的「全部已排」) */
-    const mapView = state.tab === "plan" || state.tab === "wish";
+    const mapView = !mMe && (state.tab === "plan" || state.tab === "wish");
+    el("m-me").hidden = !mMe;
+    if (mMe) mMeOps();
     el("m-cal").hidden = !mapView;
     el("m-cal").style.top = (headH + 24) + "px";
     el("m-cal").innerHTML = DS.scrimButtonHTML({
-      icon: "calender", color: state.tab === "wish" ? "primary" : "scrim", size: "md",
+      icon: "calender", color: state.tab === "wish" ? "primary" : "scrim", size: "lg",
       label: "開關其他日子的行程", pressed: !!layers.all,
     });
     /* 花費頁:花費／分帳兩個分頁(分帳併進花費,Lulu 11-20) */
-    const costView = state.tab === "cost" || state.tab === "split";
+    const costView = !mMe && (state.tab === "cost" || state.tab === "split");
     el("m-seg").hidden = !costView;
     if (costView) {
       el("m-seg").style.top = (headH + 12) + "px";
@@ -6977,6 +6995,7 @@
   /* 底部導覽的 key ↔ 分頁:交通 = fly、花費 = cost(分帳也算花費)、我 = 選單 */
   const NAV_TAB = { plan: "plan", wish: "wish", transport: "fly", spend: "cost", me: "" };
   function mNavKey() {
+    if (mMe) return "me";
     return state.tab === "wish" ? "wish" : state.tab === "fly" ? "transport" : (state.tab === "cost" || state.tab === "split") ? "spend" : "plan";
   }
   function mSyncNav() {
@@ -6986,16 +7005,17 @@
     const cur = nav.querySelector(".ds-bottom-nav__item.is-active");
     if (!cur || cur.dataset.key !== want) {
       const b = nav.querySelector('[data-key="' + want + '"]');
-      if (b) b.click();
+      if (b) { mSyncing = true; try { b.click(); } finally { mSyncing = false; } }
     }
   }
+  let mSyncing = false;   /* mSyncNav 自己按的那一下(只是把亮的那格換過去),不是使用者要換頁 */
   function wireMemberShell() {
     el("m-nav").addEventListener("click", e => {
       const b = e.target.closest(".ds-bottom-nav__item");
-      if (!b || !e.isTrusted) return;
+      if (!b || mSyncing) return;
       const tab = NAV_TAB[b.dataset.key];
-      /* 「我」那一頁 Figma 還沒畫:先打開原本右上角的選單(登出、AI 次數…都在那裡) */
-      if (b.dataset.key === "me") { el("menu-btn").click(); setTimeout(mSyncNav); return; }
+      /* 「我」=原本右上角漢堡選單裡的項目(Lulu 11-21),功能和權限不變 */
+      if (b.dataset.key === "me") { mShowMe(); return; }
       if (tab && tab !== state.tab) switchTab(tab);
     });
     el("m-seg").addEventListener("click", e => {
@@ -7007,6 +7027,11 @@
       const b = el("lay-all").getAttribute("aria-pressed") === "true" ? el("lay-plan") : el("lay-all");
       b.click();
       renderMemberShell();
+    });
+    el("m-me-ops").addEventListener("click", e => {
+      const b = e.target.closest("[data-for]");
+      const orig = b && el(b.dataset.for);
+      if (orig) orig.click();
     });
     el("m-head").addEventListener("ds-header-people", openMembers);
     el("m-head").addEventListener("ds-header-title", toggleTripMenu);
@@ -7020,6 +7045,26 @@
       el("m-menu").hidden = true; renderMemberShell();
     });
     window.addEventListener("resize", () => { if (memberUI() && mSheet) mSheet.refresh(); });
+  }
+  /* 「我」不是原本的分頁(TABS 裡沒有它):只有新外框有,所以自己記著。換到別的分頁就離開 */
+  let mMe = false;
+  function mShowMe() {
+    mMe = true;
+    closeMapSheet();
+    document.body.dataset.view = "me";
+    renderCloudBar();
+    renderMemberShell();
+  }
+  function mMeOps() {
+    /* 跟漢堡選單同一份按鈕(renderCloudBar 決定有哪幾顆、各自做什麼),這裡只換成 Storybook 的按鈕畫一次 */
+    const box = el("m-me-ops");
+    if (!box || !DS) return;
+    el("m-me-who").textContent = el("cloud-msg").textContent;
+    box.innerHTML = [].map.call(el("cloud-ops").children, b => {
+      const html = DS.buttonHTML({ label: b.textContent.trim(), leadingIcon: false, size: "md",
+        variant: b.classList.contains("btn-ghost") ? "outlined" : "filled", color: b.id === "cloud-out" ? "error" : "primary" });
+      return html.replace("<button ", '<button data-for="' + b.id + '" ');
+    }).join("");
   }
   async function toggleTripMenu() {
     const box = el("m-menu");
@@ -7079,6 +7124,7 @@
   const PANEL_OF = { plan: "plan", wish: "plan", fly: "fly", cost: "cost", split: "split" };
   function switchTab(name) {
     state.tab = name;
+    mMe = false;
     TABS.forEach(t => el("tab-" + t).setAttribute("aria-selected", String(t === name)));
     ["plan", "fly", "cost", "split"].forEach(pn => { el("panel-" + pn).hidden = PANEL_OF[name] !== pn; });
     document.body.dataset.view = name;
@@ -7111,6 +7157,7 @@
     syncWishLock();
     syncWishBar();
     syncHeadH();
+    renderMemberShell();   /* 一般團員的新外框:面板、日曆鈕、花費／分帳分頁跟著頁換 */
   }
   document.querySelectorAll(".tab").forEach(b => b.addEventListener("click", () => switchTab(b.dataset.tab)));
   /* 使用者在寬桌機上還是點得到那個 summary。點了就再開回去 ——
@@ -9479,6 +9526,7 @@
     if (el("cloud-admin")) el("cloud-admin").addEventListener("click", () => openHome("admin"));
     if (el("cloud-out")) el("cloud-out").addEventListener("click", logout);
     if (el("cloud-in")) el("cloud-in").addEventListener("click", () => location.reload());
+    if (mMe) mMeOps();   /* 「我」頁開著:按鈕跟著換 */
   }
 
   /* ---------- 邀請朋友 ---------- */
