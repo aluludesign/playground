@@ -10,7 +10,7 @@ el.innerHTML = textAreaHTML({
   avatar: me.photo,          // Show Leading icon（頭像）；給 "" 就不顯示
   photos: [],                // Show photos：已經放的照片
   photoButton: "+照片",       // Show photo button；給 "" 就不顯示
-  cancel: "取消",             // 給 "" 就不顯示
+  cancel: "取消",             // Show cancel；給 "" 就不顯示（任何 state 都可以有或沒有）
   submit: "送出許願",
 });
 wireTextArea(el); // 聚焦／有字換樣子、跟著字變高、✕ 清除、選照片、畫抖動線
@@ -37,29 +37,30 @@ export const 全部 = {
 <section class="tk"><h2>state</h2>
 <table><thead><tr><th>state</th><th>預覽</th><th>說明</th></tr></thead><tbody>
 <tr><td class="nm">default</td><td class="ta-cell">${textAreaHTML({ avatar })}</td><td class="al">空的、沒聚焦：細底線（outline 200）</td></tr>
-<tr><td class="nm">focused_pre typing</td><td class="ta-cell">${textAreaHTML({ avatar, photos: P3, cancel: "", state: "focused" })}</td><td class="al">聚焦、還沒打字：打字游標在最前面（手機叫出鍵盤）；細底線淡掉、粗底線由左往右畫出來；還沒有字，所以沒有 ✕</td></tr>
-<tr><td class="nm">focused_typing</td><td class="ta-cell">${textAreaHTML({ avatar, photos: P3, cancel: "", value: LONG, state: "focused" })}</td><td class="al">聚焦、打字中：內容框跟著字變高；有字了，出現清除 ✕</td></tr>
-<tr><td class="nm">filled w/o focused</td><td class="ta-cell">${textAreaHTML({ avatar, photos: P3, cancel: "", value: LONG })}</td><td class="al">有字、離開了：底線變回細的</td></tr>
+<tr><td class="nm">focused_pre typing</td><td class="ta-cell">${textAreaHTML({ avatar, photos: P3, state: "focused" })}</td><td class="al">聚焦、還沒打字：打字游標在最前面（手機叫出鍵盤）；細底線淡掉、粗底線由左往右畫出來；還沒有字，所以沒有 ✕</td></tr>
+<tr><td class="nm">focused_typing</td><td class="ta-cell">${textAreaHTML({ avatar, photos: P3, value: LONG, state: "focused" })}</td><td class="al">聚焦、打字中：內容框跟著字變高；有字了，出現清除 ✕</td></tr>
+<tr><td class="nm">filled w/o focused</td><td class="ta-cell">${textAreaHTML({ avatar, photos: P3, value: LONG })}</td><td class="al">有字、離開了：底線變回細的</td></tr>
 </tbody></table>
-<p class="note">照 Figma：只有 default 有「取消」，其他三個沒有。兩個 focused 沒有真的聚焦，打字游標是畫上去的。</p></section>
+<p class="note">兩個 focused 沒有真的聚焦，打字游標是畫上去的。</p></section>
 
-<section class="tk"><h2>Show Leading icon／photos／photo button／Trailing icon</h2>
+<section class="tk"><h2>Show Leading icon／photos／photo button／Trailing icon／cancel</h2>
 <table><thead><tr><th></th><th>預覽</th></tr></thead><tbody>
 <tr><td class="nm">沒有頭像</td><td class="ta-cell">${textAreaHTML({})}</td></tr>
 <tr><td class="nm">沒有「+照片」</td><td class="ta-cell">${textAreaHTML({ avatar, photoButton: "" })}</td></tr>
+<tr><td class="nm">沒有「取消」</td><td class="ta-cell">${textAreaHTML({ avatar, cancel: "" })}</td></tr>
 <tr><td class="nm">沒有 ✕</td><td class="ta-cell">${textAreaHTML({ avatar, value: LONG, trailingIcon: false })}</td></tr>
 </tbody></table></section>
 
 <section class="tk"><h2>Token</h2>
 <table><thead><tr><th>用在</th><th>token</th></tr></thead><tbody>
 <tr><td class="al">標籤</td><td>label/sm（源泉圓體 B、字距 5%）<code class="var">--ds-sys-color-text-100</code></td></tr>
-<tr><td class="al">頭像</td><td>頭像 Avatar md（<code class="var">--ds-comp-avatar-size-md</code>）</td></tr>
+<tr><td class="al">頭像</td><td>頭像 Avatar，大小 <code class="var">--ds-comp-text-area-avatar</code>（icon/lg＝28）</td></tr>
 <tr><td class="al">內容框</td><td>底色 <code class="var">--ds-sys-color-opacity-opacity-primary-50</code>；內距上 2xs、右 5xl、下 <code class="var">--ds-comp-field-height</code>（120）</td></tr>
 <tr><td class="al">字</td><td>手寫 body/lg（20/22、字距 5%）<code class="var">--ds-sys-color-text-100</code>；提示字 <code class="var">--ds-sys-color-text-200</code></td></tr>
 <tr><td class="al">照片列</td><td>「+照片」馬克筆按鈕 secondary・md；照片縮圖 32（radius/sm、outline 50 細框），右上角 Scrim xs 圓鈕；間距 2xl／xl</td></tr>
 <tr><td class="al">✕</td><td><code class="var">--ds-comp-text-field-icon-sm</code></td></tr>
 <tr><td class="al">底線</td><td>跟文字輸入框共用 <code class="var">--ds-comp-text-field-line-*</code></td></tr>
-<tr><td class="al">動作列</td><td>靠右、間距 md；取消 Button Secondary・Text・md；送出 馬克筆按鈕 Primary・lg</td></tr>
+<tr><td class="al">動作列</td><td>靠右、間距 md；取消（可以拿掉）Button Secondary・Text・md；送出 馬克筆按鈕 Primary・lg</td></tr>
 </tbody></table></section>
 
 <section class="tk"><h2>用法</h2><pre class="wg-code"><code>${esc(USAGE)}</code></pre></section>

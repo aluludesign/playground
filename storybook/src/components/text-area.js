@@ -16,7 +16,7 @@ let uid = 0;
  * label：上面的標籤；placeholder：還沒打字時的提示字；value：一開始的內容
  * avatar：前面頭像的照片網址（Show Leading icon：給 "" 就不顯示）；avatarAlt：頭像名字
  * photos：已經放的照片網址陣列（Show photos）；photoButton：「+照片」按鈕文字（Show photo button：給 "" 就不顯示）
- * cancel：取消按鈕文字（給 "" 就不顯示）；submit：送出按鈕文字
+ * cancel：取消按鈕文字（Show cancel：給 "" 就不顯示；任何 state 都可以有或沒有，看當時狀況）；submit：送出按鈕文字
  * trailingIcon：清除 ✕（Show Trailing icon，有字才出現）
  * state：只給文件頁固定顯示用（"focused"：另外畫一個會閃的打字游標）
  */
