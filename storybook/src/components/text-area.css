@@ -1,7 +1,7 @@
 /* 多行輸入框 Text area —— Figma shared comps「text area」（162250:10394）
  *
  *   上：標籤（label/sm、源泉圓體 B，跟文字輸入框一樣）
- *   中：輸入區 —— 前面頭像（comp/text area/avatar＝28）＋ 內容框（opacity primary 50 底、手寫字 body/lg、最少 144 高、跟著字變高）
+ *   中：輸入區 —— 前面頭像或 icon（comp/text area/avatar＝28）＋ 內容框（opacity primary 50 底、手寫字 body/lg、最少 144 高、跟著字變高）
  *        內容框底下一列「+照片」馬克筆按鈕（secondary md）和照片縮圖；有字時右上角出現清除 ✕
  *        整個輸入區底下一條抖動線
  *   下：動作列（靠右）—— 取消（Button Secondary Text md，可以拿掉，看當時狀況）、送出（馬克筆按鈕 Primary lg）
@@ -47,6 +47,21 @@
 .ds-text-area__avatar .ds-avatar {
   width: var(--ds-comp-text-area-avatar);
   height: var(--ds-comp-text-area-avatar);
+}
+/* 也可以換成 icon（同樣大小） */
+.ds-text-area__avatar--icon {
+  position: relative;
+  width: var(--ds-comp-text-area-avatar);
+  height: var(--ds-comp-text-area-avatar);
+}
+.ds-text-area__icon {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(100% * var(--w) / 24);
+  height: calc(100% * var(--h) / 24);
+  transform: translate(-50%, -50%);
+  overflow: visible;
 }
 
 /* 底線：中心在輸入區底往上 2px；聚焦時細線淡掉、粗線由左往右畫出來 */

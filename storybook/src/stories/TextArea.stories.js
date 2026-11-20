@@ -7,9 +7,11 @@ const USAGE = `import { textAreaHTML, wireTextArea } from "./components/text-are
 el.innerHTML = textAreaHTML({
   label: "有什麼想說的？",
   placeholder: "許願卡上的留言",
-  avatar: me.photo,          // Show Leading icon（頭像）；給 "" 就不顯示
+  avatar: me.photo,          // Show Leading icon：頭像；給 "" 就不顯示
+  // icon: "bulb", iconStyle: "sticker",  // 也可以換成 icon（跟頭像二選一）
   photos: [],                // Show photos：已經放的照片
   photoButton: "+照片",       // Show photo button；給 "" 就不顯示
+  maxPhotos: 3,              // 最多 3 張；放滿了「+照片」變成不能按
   cancel: "取消",             // Show cancel；給 "" 就不顯示（任何 state 都可以有或沒有）
   submit: "送出許願",
 });
@@ -32,7 +34,7 @@ export const 全部 = {
 
 <section class="tk"><h2>試試看</h2>
 <div class="ta-try">${textAreaHTML({ avatar })}</div>
-<p class="note">點進去打字（會跟著字變高）、按「+照片」選照片、按照片右上角的 ✕ 刪掉、按 ✕ 清掉字。</p></section>
+<p class="note">點進去打字（會跟著字變高）、按「+照片」選照片、按照片右上角的 ✕ 刪掉、按 ✕ 清掉字。照片最多 3 張：放滿了「+照片」就變成不能按，一次多選的只收到補滿為止；刪掉一張又可以再加。</p></section>
 
 <section class="tk"><h2>state</h2>
 <table><thead><tr><th>state</th><th>預覽</th><th>說明</th></tr></thead><tbody>
@@ -45,6 +47,7 @@ export const 全部 = {
 
 <section class="tk"><h2>Show Leading icon／photos／photo button／Trailing icon／cancel</h2>
 <table><thead><tr><th></th><th>預覽</th></tr></thead><tbody>
+<tr><td class="nm">頭像換成 icon</td><td class="ta-cell">${textAreaHTML({ icon: "bulb", iconStyle: "sticker" })}</td></tr>
 <tr><td class="nm">沒有頭像</td><td class="ta-cell">${textAreaHTML({})}</td></tr>
 <tr><td class="nm">沒有「+照片」</td><td class="ta-cell">${textAreaHTML({ avatar, photoButton: "" })}</td></tr>
 <tr><td class="nm">沒有「取消」</td><td class="ta-cell">${textAreaHTML({ avatar, cancel: "" })}</td></tr>
@@ -54,7 +57,7 @@ export const 全部 = {
 <section class="tk"><h2>Token</h2>
 <table><thead><tr><th>用在</th><th>token</th></tr></thead><tbody>
 <tr><td class="al">標籤</td><td>label/sm（源泉圓體 B、字距 5%）<code class="var">--ds-sys-color-text-100</code></td></tr>
-<tr><td class="al">頭像</td><td>頭像 Avatar，大小 <code class="var">--ds-comp-text-area-avatar</code>（icon/lg＝28）</td></tr>
+<tr><td class="al">頭像</td><td>頭像 Avatar 或一般 icon，大小 <code class="var">--ds-comp-text-area-avatar</code>（icon/lg＝28）</td></tr>
 <tr><td class="al">內容框</td><td>底色 <code class="var">--ds-sys-color-opacity-opacity-primary-50</code>；內距上 2xs、右 5xl、下 <code class="var">--ds-comp-field-height</code>（120）</td></tr>
 <tr><td class="al">字</td><td>手寫 body/lg（20/22、字距 5%）<code class="var">--ds-sys-color-text-100</code>；提示字 <code class="var">--ds-sys-color-text-200</code></td></tr>
 <tr><td class="al">照片列</td><td>「+照片」馬克筆按鈕 secondary・md；照片縮圖 32（radius/sm、outline 50 細框），右上角 Scrim sm 圓鈕（16）；間距 2xl／xl</td></tr>
