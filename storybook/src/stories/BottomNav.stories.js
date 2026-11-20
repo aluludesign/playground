@@ -45,7 +45,7 @@ export const 全部 = {
 <tr><td class="al">外框線</td><td><code class="var">--ds-sys-color-outline-50</code>・抖動 wiggle 0.3・<code class="var">--ds-sys-border-xs</code></td></tr>
 <tr><td class="al">外框陰影</td><td><code class="var">--ds-elevation-surface-soft</code></td></tr>
 <tr><td class="al">外框圓角</td><td><code class="var">--ds-comp-bottom-nav-radius</code></td></tr>
-<tr><td class="al">外框內距／間距</td><td><code class="var">--ds-sys-spacing-xs</code>／<code class="var">--ds-sys-spacing-2xl</code></td></tr>
+<tr><td class="al">外框內距／間距</td><td><code class="var">--ds-sys-spacing-xs</code>／<code class="var">--ds-sys-spacing-xl</code></td></tr>
 <tr><td class="al">圓的底紋</td><td><code class="var">ds-pattern--tertiary</code></td></tr>
 <tr><td class="al">圓的框</td><td><code class="var">--ds-sys-border-md</code> <code class="var">--ds-sys-color-outline-50</code></td></tr>
 <tr><td class="al">圓的陰影</td><td><code class="var">--ds-elevation-component-sm</code>／hover <code class="var">--ds-elevation-component-md</code></td></tr>
