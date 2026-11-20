@@ -7607,7 +7607,9 @@
     const city = out.querySelector("[data-city]"), wide = out.querySelector("[data-wide]");
     let html = "";
     if (city || wide) {
-      html = DS.infoHTML({ text: "這個範圍找不到", type: "info", expanded: true, collapseIcon: false, button: false }) +
+      /* 字照原本那一句(這個範圍／這個城市找不到「…」),Figma 畫的是拖過地圖之後那一種 */
+      const said = out.querySelector(".said.hint");
+      html = DS.infoHTML({ text: said ? said.firstChild.textContent.trim() : "這個範圍找不到", type: "info", expanded: true, collapseIcon: false, button: false }) +
         DS.buttonHTML({ label: city ? "重新搜尋整個「" + (mCity() || "這個城市") + "」" : "往外找", leadingIcon: false })
           .replace("<button ", '<button data-proxy="#ss-q-out ' + (city ? "[data-city]" : "[data-wide]") + '" ');
     } else if (ssMoved && out._hits) {
