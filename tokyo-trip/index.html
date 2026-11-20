@@ -1675,9 +1675,9 @@
     #m-sheet-box .ds-sheet{pointer-events:auto;}
     #m-scroll{flex:1 1 auto; min-height:0; overflow-y:auto; overscroll-behavior:contain;
       padding:0 15px calc(var(--m-navh,113px) + 12px);}
-    /* 搬進來的日期列黏在面板頂端 */
-    #m-scroll #days{position:sticky; top:0; z-index:5; background:var(--ds-sys-color-surface); margin:0 -15px; padding:8px 15px;}
-    body.member-ui[data-view="plan"] #m-scroll #wishbox{display:none;}
+    #m-days{flex:none;}
+    #m-tl[hidden]{display:none;}
+    body.member-ui[data-view="plan"] #m-scroll #plan-cols{display:none;}
     body.member-ui[data-view="wish"] #m-scroll .col:not(.wishbox){display:none;}
     body.member-ui #m-scroll #wishbox{margin-top:0; border:0; background:none;}
     #m-nav{position:absolute; left:0; right:0; bottom:0; z-index:5; display:flex; justify-content:center;
@@ -1710,6 +1710,17 @@
       font-family:var(--ds-sys-font-family-zhtw-handwriting-zhtw); font-size:var(--ds-sys-font-size-label-lg);}
     #m-me-ops{display:flex; flex-direction:column; align-items:stretch; gap:var(--ds-sys-spacing-xl);}
     body.member-ui[data-view="me"] .wrap > main{display:none;}
+    /* 當日細節(點地圖上的點、點行程小卡進來):頂列、面板、底部導覽都收起來,
+       只剩地圖、日曆鈕和下面一張景點卡;卡片往上滑可以看全部(Figma 162114:14958 → 162119:15938) */
+    #m-detail{position:absolute; inset:0; z-index:6; overflow-y:auto; overscroll-behavior:contain; pointer-events:none;
+      padding:0 var(--ds-sys-spacing-2xl) calc(var(--ds-sys-spacing-2xl) + env(safe-area-inset-bottom,0px));}
+    #m-detail[hidden]{display:none;}
+    #m-detail-gap{height:var(--m-detail-gap,370px);}
+    #m-detail-card{pointer-events:auto; max-width:430px; margin:0 auto;}
+    body.m-in-detail #m-head, body.m-in-detail #m-sheet-box, body.m-in-detail #m-nav,
+    body.m-in-detail #m-ended, body.m-in-detail #m-menu{display:none !important;}
+    body.m-in-detail #m-cal{top:calc(16px + env(safe-area-inset-top,0px)) !important;}
+    body.m-in-detail #map-sheet .mapzoom{display:none;}
     /* 地圖的 ＋／− 移到日曆鈕底下(Figma:右邊、日曆鈕下面) */
     body.member-ui #map-sheet .mapzoom{top:calc(var(--m-headh,137px) + 72px); right:var(--ds-sys-spacing-2xl);}
     #members-overlay ul{list-style:none; margin:0 0 12px; padding:0; display:grid; gap:8px;}
@@ -1750,6 +1761,7 @@
   <div id="m-cal"></div>
   <div id="m-seg" hidden></div>
   <div id="m-sheet-box"></div>
+  <div id="m-detail" hidden><div id="m-detail-gap"></div><div id="m-detail-card"></div></div>
   <section id="m-me" aria-labelledby="m-me-h" hidden><h2 id="m-me-h">我</h2><p id="m-me-who"></p><div id="m-me-ops"></div></section>
   <div id="m-nav"></div>
 </div>
@@ -4144,7 +4156,7 @@
     if (!force && c && Date.now() - c.at < WX_TTL) return;
     try {
       const res = await fetch("https://api.open-meteo.com/v1/forecast?latitude=" + lat + "&longitude=" + lon +
-        "&daily=precipitation_probability_max,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=16");
+        "&daily=precipitation_probability_max,temperature_2m_max,temperature_2m_min,weather_code&timezone=auto&forecast_days=16");
       const d = (await res.json()).daily;
       if (!d || !d.time) return;
       const days = {};
@@ -4156,7 +4168,8 @@
            印出「☔ 32%」旁邊空一塊看起來像壞掉,而那天是預報最遠、最不準的一天,
            少一天不可惜,隔天就補齊了。 */
         if (pop == null || hi == null) return;
-        days[date] = [pop, hi, lo];
+        /* 第 4 格是天氣代碼(WMO,2026-11-21 起):新外框的日期卡要畫晴、雨、雪的圖示 */
+        days[date] = [pop, hi, lo, d.weather_code ? d.weather_code[i] : null];
       });
       wxCache[k] = { at: Date.now(), days: days };
       saveWx();
@@ -4320,7 +4333,7 @@
       /* 「全部已排」:六天全部。編號是那天的行程順序,跟行程頁一樣;是第幾天看顏色 ——
          同一個編號會出現好幾次,那是對的(2026-11-21,Lulu;以前這裡標的是第幾天)。 */
       DAYS.forEach(d => dayList(d.date).forEach((x, i) => out.push({
-        item: x, k: "p" + d.date + "-" + i, n: i + 1, cls: "plan", color: d.color, on: d.on,
+        item: x, k: "p" + d.date + "-" + i, n: i + 1, cls: "plan", color: mDayColor(d).color, on: mDayColor(d).on,
         tip: "DAY " + d.n + " " + (x.time || "") + " " + x.title,
       })));
     } else if (layers.plan) {
@@ -4329,8 +4342,8 @@
          畫面上一定有一天是亮著的,預設就放全部的話,地圖會在講另一件事。 */
       const today = DAYS.find(x => x.date === state.day);
       dayList(state.day).forEach((x, i) => out.push({
-        item: x, k: "d" + i, n: i + 1, cls: "plan", color: today ? today.color : "",
-        on: today ? today.on : "",
+        item: x, k: "d" + i, n: i + 1, cls: "plan", color: today ? mDayColor(today).color : "",
+        on: today ? mDayColor(today).on : "",
         tip: (i + 1) + ". " + x.title + (x.place ? " \u00b7 " + x.place : ""),
       }));
     }
@@ -6331,6 +6344,13 @@
   /* 清單那張 sheet 蓋住地圖下半部多少 —— 手機上它是 `position:fixed` 疊在地圖上,
      桌機上它是版面裡的一欄、不重疊,所以回 0。 */
   function mapCoveredBottom(box) {
+    /* 一般團員的新外框:蓋住地圖的是新面板,或當日細節那張卡 */
+    if (document.body.classList.contains("member-ui")) {
+      const cov = mDetail ? el("m-detail-card") : document.querySelector("#m-sheet-box .ds-sheet");
+      if (!cov) return 0;
+      const r = box.getBoundingClientRect(), c = cov.getBoundingClientRect();
+      return Math.max(0, Math.min(r.height, r.bottom - Math.max(r.top, c.top)));
+    }
     const sh = el("panel-plan");
     if (!sh || getComputedStyle(sh).position !== "fixed") return 0;
     const r = box.getBoundingClientRect(), s = sh.getBoundingClientRect();
@@ -6924,9 +6944,12 @@
   function renderMemberShell() {
     const on = memberUI();
     document.body.classList.toggle("member-ui", on);
+    /* 地圖上的點要吃得到 Storybook 的顏色變數(它們掛在 .ds-app 底下) */
+    el("map-sheet").classList.toggle("ds-app", on);
     const shell = el("m-shell");
     if (!on) {
       if (!shell.hidden) { shell.hidden = true; mRestore(); }
+      delete el("map")._onPin;
       return;
     }
     if (!DS) { loadDS(); return; }
@@ -6975,10 +6998,18 @@
     }
     if (!mBuilt) {
       mBuilt = true;
-      el("m-sheet-box").innerHTML = DS.bottomSheetHTML({ content: '<div id="m-scroll"></div>', label: "行程" });
-      const scroll = el("m-scroll");
-      mMove(el("days"), scroll);
-      mMove(el("plan-cols"), scroll);
+      el("m-sheet-box").innerHTML = DS.bottomSheetHTML({ content: '<div id="m-days"></div><div id="m-scroll"><div id="m-tl"></div></div>', label: "行程" });
+      /* 許願頁的清單還是原本那一份(第三步才換),先搬進面板 */
+      mMove(el("plan-cols"), el("m-scroll"));
+      el("m-days").addEventListener("ds-date-select", e => {
+        if (!e.detail.key || e.detail.key === state.day) return;
+        leaveAllDays();
+        state.day = e.detail.key;
+        render();
+        if (sheetMode) loadSheetMap(true);
+      });
+      el("m-tl").addEventListener("ds-stop-open", e => openDayDetail(e.detail.key));
+      el("m-tl").addEventListener("ds-photos-open", e => openStopPhotos(e.detail.key));
       el("m-nav").innerHTML = DS.bottomNavHTML({ active: mNavKey(), label: "主要導覽" });
       DS.wireBottomNav(el("m-nav"));
       document.body.style.setProperty("--m-navh", el("m-nav").offsetHeight + "px");
@@ -6992,6 +7023,86 @@
       if (mSheet) mSheet.refresh();
     }
     el("m-sheet-box").hidden = !mapView;
+    if (mapView) mRenderPlan();
+    /* 點地圖上行程的點 → 當日細節(Figma 註解);許願的點第三步再接 */
+    el("map")._onPin = k => { if (k[0] === "d" || k[0] === "p") mOpenDetail(k); };
+  }
+  /* WMO 天氣代碼 → icons/weather 的名字;舊的快取沒有代碼,就看降雨機率 */
+  function wxIconOf(code, pop) {
+    if (code == null) return pop >= 60 ? "rain" : pop >= 30 ? "partly_cloudy_day" : "sunny";
+    if (code === 0) return "sunny";
+    if (code <= 2) return "partly_cloudy_day";
+    if (code === 3) return "overcast";
+    if (code === 45 || code === 48) return "fog";
+    if (code >= 51 && code <= 57) return "drizzle";
+    if (code === 66 || code === 67) return "freezing_rain";
+    if ((code >= 71 && code <= 77) || code === 85 || code === 86) return "snow";
+    if (code === 65 || code === 82) return "heavy_rain";
+    if ((code >= 61 && code <= 64) || code === 80 || code === 81) return "rain";
+    if (code >= 95) return "thunderstorm";
+    return "cloudy";
+  }
+  /* 地圖上的點:一般團員看到的是新外框的日子顏色(跟日期列、時間軸同一個),團主照舊 */
+  function mDayColor(d) {
+    if (!memberUI()) return { color: d.color, on: d.on };
+    const n = dayColorN(d.n);
+    return { color: "var(--ds-sys-color-customs-custom-" + n + ")", on: "var(--ds-sys-color-customs-on-custom-" + n + ")" };
+  }
+  const WEEK_EN = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+  /* 新外框裡日子的顏色用 Storybook 的 custom 1–14。照這個順序輪,相鄰兩天色相拉得開 */
+  const DAY_CUSTOM = [14, 1, 5, 8, 11, 2, 4, 9, 12, 6, 10, 13, 3, 7];
+  const dayColorN = n => DAY_CUSTOM[(n - 1) % DAY_CUSTOM.length];
+  function mRenderPlan() {
+    const t = todayISO();
+    const cards = [];
+    /* 最前面一格:開始前倒數、結束後回味中(旅途中不放) */
+    if (DAYS.length && t < DAYS[0].date) {
+      const left = Math.round((new Date(DAYS[0].date) - new Date(t)) / 864e5);
+      cards.push({ state: "status", title: "正在倒數", value: left + " 天" });
+    } else if (tripEnded() || (DAYS.length && t > DAYS[DAYS.length - 1].date)) {
+      cards.push({ state: "status", title: "回味中", value: "" });
+    }
+    DAYS.forEach(d => {
+      const c = wxCache[wxKey(CITY.lat, CITY.lon)];
+      const w = c && c.days[d.date];
+      cards.push({
+        key: d.date, day: "Day" + d.n, week: WEEK_EN[new Date(d.date + "T00:00:00").getDay()], date: d.date.slice(5).replace("-", "/"),
+        color: dayColorN(d.n), state: d.date === state.day ? "active" : d.date < t ? "past" : "default",
+        /* 天氣只在預報查得到的日子(Open-Meteo 約 16 天內);太遠的不顯示(Lulu 11-20) */
+        weather: w ? { icon: wxIconOf(w[3], w[0]), lo: w[2] != null ? Math.round(w[2]) : "", hi: Math.round(w[1]), rain: Math.round(w[0]) } : null,
+      });
+    });
+    const box = el("m-days");
+    const prevScroll = box.firstElementChild ? box.firstElementChild.scrollLeft : null;
+    box.innerHTML = DS.dateListHTML({ cards, label: "選擇日期" });
+    DS.wireDateList(box);
+    const list = box.firstElementChild;
+    if (prevScroll != null) list.scrollLeft = prevScroll;
+    requestAnimationFrame(() => DS.centerDateList(list, prevScroll != null));
+    /* 時間軸:編號＝地圖上的號碼(dayList 的順序) */
+    const d = DAYS.find(x => x.date === state.day);
+    const items = dayList(state.day).map((x, i) => {
+      const g = x.geo || {};
+      const region = [g.c, g.s].filter(Boolean).join("，");
+      return {
+        key: x.id || ("a" + i), n: i + 1, time: (x.time || "") + (x.day === OVERNIGHT && state.day !== OVERNIGHT ? "+1" : ""),
+        color: d ? dayColorN(d.n) : 5, title: x.title || "", meta: [region, g.k || ""],
+        note: x.note || "", photos: stopPhotos(x),
+      };
+    });
+    el("m-tl").innerHTML = DS.timelineHTML({ items, empty: editable("plan") ? "這天還沒有行程。" : "這天還沒有行程，等有人排進來就會出現。" });
+    DS.wireTimeline(el("m-tl"));
+    el("m-tl").hidden = state.tab !== "plan";
+  }
+  /* 行程的照片:現在只有維基共享資源那一張(團員放的附圖還沒上線,上了再加進來,最多疊 3 張) */
+  function stopPhotos(x) {
+    return isCommons(x.photo) ? [commonsImg(x.photo, 360)] : [];
+  }
+  /* 點行程小卡 → 當日細節(地圖上那個點放到正中間、放大,下面一張景點卡) */
+  function openDayDetail(key) { mOpenDetail(key); }
+  function openStopPhotos(key) {
+    const x = dayList(state.day).find((s, i) => (s.id || "a" + i) === key);
+    if (x && isCommons(x.photo)) openPhoto(commonsImg(x.photo, 1200), x.photo);
   }
   /* 底部導覽的 key ↔ 分頁:交通 = fly、花費 = cost(分帳也算花費)、我 = 選單 */
   const NAV_TAB = { plan: "plan", wish: "wish", transport: "fly", spend: "cost", me: "" };
@@ -7028,6 +7139,12 @@
       const b = el("lay-all").getAttribute("aria-pressed") === "true" ? el("lay-plan") : el("lay-all");
       b.click();
       renderMemberShell();
+    });
+    el("m-detail-card").addEventListener("ds-card-close", mCloseDetail);
+    el("m-detail-card").addEventListener("ds-card-photo", e => {
+      const x = mDetail && dayList(mDetail.day)[mDetail.i];
+      const pics = x ? stopPhotos(x) : [];
+      if (pics.length) openPhoto(pics.map(u => u.replace(/width=\d+/, "width=1200")).join(" "), isCommons(x.photo) ? x.photo : "");
     });
     el("m-me-ops").addEventListener("click", e => {
       const b = e.target.closest("[data-for]");
@@ -7066,6 +7183,88 @@
         variant: b.classList.contains("btn-ghost") ? "outlined" : "filled", color: b.id === "cloud-out" ? "error" : "primary" });
       return html.replace("<button ", '<button data-for="' + b.id + '" ');
     }).join("");
+  }
+  /* ===== 當日細節(第二步,Lulu 11-20/21) =====
+     點地圖上行程的點、或點時間軸的小卡進來。選到的點放到地圖看得到那一塊的正中間、放大;
+     下面一張景點卡:照片(最多 6 張)、名稱、地點(點了開 Google 地圖)、地點資料、有人許願有留言才有的許願區。 */
+  let mDetail = null;
+  /* key:時間軸的 key(行程 id,或沒有 id 時 "a"+順序),或地圖上的點(d<順序>／p<日期>-<順序>) */
+  function mStopOf(key) {
+    let m = /^d(\d+)$/.exec(key);
+    if (m) return { day: state.day, i: +m[1] };
+    m = /^p(\d{4}-\d{2}-\d{2})-(\d+)$/.exec(key);
+    if (m) return { day: m[1], i: +m[2] };
+    const list = dayList(state.day);
+    const i = list.findIndex((x, k) => (x.id || "a" + k) === key);
+    return i >= 0 ? { day: state.day, i } : null;
+  }
+  function mOpenDetail(key) {
+    const at = mStopOf(key);
+    if (!at) return;
+    const x = dayList(at.day)[at.i];
+    if (!x) return;
+    if (at.day !== state.day) { state.day = at.day; render(); }
+    mDetail = { day: at.day, i: at.i, id: x.id || "" };
+    document.body.classList.add("m-in-detail");
+    el("m-detail").hidden = false;
+    el("m-detail").scrollTop = 0;
+    mPaintDetail(x);
+    /* 地圖:那個點放到卡片上面那一塊的正中間、放大 */
+    const box = el("map"), p = pinOf(x);
+    if (p) focusPin(box, p, stopKey(at.day, at.i));
+    mLoadPlaceInfo(x);
+  }
+  function mCloseDetail() {
+    if (!mDetail) return;
+    mDetail = null;
+    document.body.classList.remove("m-in-detail");
+    el("m-detail").hidden = true;
+    renderMemberShell();
+    if (sheetMode) loadSheetMap(true);
+  }
+  function mPaintDetail(x) {
+    const g = x.geo || {};
+    const p = pinOf(x);
+    const info = mPlaceInfo[x.place || x.title] || {};
+    const rows = [
+      { label: "類別", value: info.cat || g.k || "" },
+      { label: "營業時間", value: info.hours || "" },
+      { label: "門票", value: info.fee || "" },
+      { label: "輪椅", value: info.wheel || "" },
+      { label: "電話", value: info.phone || "" },
+      { label: "網站", value: info.web || "" },
+    ];
+    if (rows.some(r => r.value)) rows.push({ label: "資料來源", value: "OpenStreetMap" });
+    const q = p ? p.la + "," + p.lo : (x.place || x.title || "");
+    el("m-detail-card").innerHTML = DS.attractionCardHTML({
+      photos: stopPhotos(x), title: x.title || "", meta: [[g.c, g.s].filter(Boolean).join("，"), g.k || info.cat || ""],
+      mapURL: q ? "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(q) : "",
+      info: rows, wisher: x.by ? nameOf(x.by) : "", note: x.note || "", closeLabel: "回行程",
+    });
+    DS.wireAttractionCard(el("m-detail-card"));
+    /* 卡片頂端從畫面 44% 的地方開始(Figma 370/844),往上滑看全部 */
+    const H = window.innerHeight;
+    el("m-detail").style.setProperty("--m-detail-gap", Math.max(60, Math.min(H * 370 / 844, H - el("m-detail-card").offsetHeight - 24)) + "px");
+  }
+  /* 地點資料:用座標問 OpenStreetMap(Nominatim reverse,走 queued() 一秒一次),問過記在這台手機 */
+  const PLACE_INFO_LS = "tokyo5-place-info";
+  let mPlaceInfo = {};
+  try { mPlaceInfo = JSON.parse(localStorage.getItem(PLACE_INFO_LS) || "{}"); } catch (_) {}
+  const YESNO = { fee: { yes: "要", no: "不用" }, wheel: { yes: "可以", limited: "部分可以", no: "不行" } };
+  async function mLoadPlaceInfo(x) {
+    const k = x.place || x.title, at = pinOf(x);
+    if (!k || !at || mPlaceInfo[k] || !online) return;
+    const r = await queued(() => fetch("https://nominatim.openstreetmap.org/reverse?format=json&zoom=18&addressdetails=1&extratags=1&namedetails=1" +
+      "&accept-language=zh-TW&lat=" + at.la + "&lon=" + at.lo).then(v => v.json()).catch(() => null));
+    if (!r || r.error) return;
+    const t = r.extratags || {};
+    mPlaceInfo[k] = {
+      cat: hitCat(r), hours: hitHours(r),
+      fee: YESNO.fee[t.fee] || "", wheel: YESNO.wheel[t.wheelchair] || "",
+      phone: t.phone || t["contact:phone"] || "", web: t.website || t["contact:website"] || "",
+    };
+    try { localStorage.setItem(PLACE_INFO_LS, JSON.stringify(mPlaceInfo)); } catch (_) {}
+    if (mDetail && dayList(mDetail.day)[mDetail.i] === x) mPaintDetail(x);
   }
   async function toggleTripMenu() {
     const box = el("m-menu");
@@ -7126,6 +7325,7 @@
   function switchTab(name) {
     state.tab = name;
     mMe = false;
+    if (mDetail) { mDetail = null; document.body.classList.remove("m-in-detail"); el("m-detail").hidden = true; }
     TABS.forEach(t => el("tab-" + t).setAttribute("aria-selected", String(t === name)));
     ["plan", "fly", "cost", "split"].forEach(pn => { el("panel-" + pn).hidden = PANEL_OF[name] !== pn; });
     document.body.dataset.view = name;

@@ -16,7 +16,7 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&l
  * state：「default」｜「active」（選到的那天）｜「past」（Figma pass by：過去的日子，沒有天氣）｜「status」（Figma coming soon：倒數／回味中，放在最前面）
  * key：點了之後 ds-date-select 帶回去的值（例：日期 2026-10-05）
  * day：「Day1」；week：「TUE」；date：「10/06」
- * color：那天的顏色（1–14，對應 customs/custom N；選到時整格底色用 on custom N）
+ * color：那天的顏色（1–14，對應 customs/custom N；選到時整格鋪同一個顏色、淡一點）
  * weather：{ icon: "sun", lo: 24, hi: 29, rain: 30 }；查不到（太遠的日子）就不給，那一塊就空著
  * title／value：state=status 用，例：「正在倒數」「38 天」、「回味中」
  */
