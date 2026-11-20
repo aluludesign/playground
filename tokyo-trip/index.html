@@ -37,6 +37,10 @@
      反過來的話它的組件會開始無聲蓋掉我寫好的東西。
      (跨層的部分由它產出裡那行 @layer 順序宣告決定,utilities 最後,utility 贏我。) -->
 <link rel="stylesheet" href="retro-modern.built.css">
+<!-- 介面改版(2026-11-20,Lulu):一般團員看到的新外框用 Storybook 的元件。
+     這兩支是 storybook/ 打包出來的(npm run build:app),不要手改。
+     變數掛在 .ds-app 底下,只有新外框吃 Storybook 的值,團主那邊的畫面不受影響。 -->
+<link rel="stylesheet" href="ds/components.css">
 <style>
   :root{
     /* **顏色角色照 Figma 的 Style collection 走(Material 3 的角色架構)。**(Lulu 的決定,2026-09-27)
@@ -1635,7 +1639,70 @@
     /* 花費分類 ＝ Chip / Label：不能點，沒有狀態；底色是各分類自己的顏色（行內 style），所以字維持白色 */
     .rm-chip.cat{border-color:transparent; color:#fff;}
   }
-</style>
+    /* ===== 一般團員的新外框(2026-11-20 起,介面改版第一階段) =====
+       團主和副團主看到的還是原本的畫面;body.member-ui 只在「成員」身上。
+       地圖是整頁的底;頂列、日曆鈕、面板、底部導覽浮在上面(#m-shell)。 */
+    #m-shell[hidden]{display:none;}
+    body.member-ui .topbar,
+    body.member-ui > .wrap > .tabs,
+    body.member-ui #ended-bar,
+    body.member-ui .pg-grab,
+    body.member-ui #dev-badge{display:none !important;}
+    body.member-ui{background:var(--ds-sys-color-surface, #f2f1ed);}
+    /* 地圖鋪滿整頁(行程、許願兩頁) */
+    body.member-ui #map-sheet{position:fixed; inset:0; z-index:1; width:auto; top:0;}
+    body.member-ui #map-sheet .sheet-in{height:100%; border-radius:0; box-shadow:none; animation:none;
+      display:flex; flex-direction:column; padding:0; max-width:none;}
+    body.member-ui #map-sheet .sheet-head,
+    body.member-ui #map-sheet .sheet-grab,
+    body.member-ui #map-sheet .sheet-grip,
+    body.member-ui #map-sheet .maplayers{display:none !important;}
+    body.member-ui #map-sheet #map{flex:1; height:auto; min-height:0; border-radius:0;}
+    /* 原本那張清單 sheet 收起來 —— 它的內容(日期列、時間軸、許願)搬進新的面板 */
+    body.member-ui[data-view="plan"] #panel-plan,
+    body.member-ui[data-view="wish"] #panel-plan{display:none !important;}
+    #m-shell{position:fixed; inset:0; z-index:25; pointer-events:none;}
+    #m-shell > *{pointer-events:auto;}
+    #m-head{position:absolute; top:0; left:0; right:0; z-index:4; padding-top:env(safe-area-inset-top,0px);}
+    #m-head .ds-trip-header{padding-top:calc(var(--ds-sys-spacing-xl) + env(safe-area-inset-top,0px));}
+    #m-head{padding-top:0;}
+    #m-menu{position:absolute; left:var(--ds-sys-spacing-4xl); z-index:6;}
+    #m-menu[hidden]{display:none;}
+    #m-cal{position:absolute; right:var(--ds-sys-spacing-2xl); z-index:3;}
+    #m-ended{position:absolute; left:var(--ds-sys-spacing-4xl); right:72px; z-index:3;}
+    #m-ended[hidden]{display:none;}
+    #m-sheet-box{position:absolute; left:0; right:0; top:0; bottom:0; pointer-events:none; overflow:hidden;}
+    #m-sheet-box .ds-sheet{pointer-events:auto;}
+    #m-scroll{flex:1 1 auto; min-height:0; overflow-y:auto; overscroll-behavior:contain;
+      padding:0 15px calc(var(--m-navh,113px) + 12px);}
+    /* 搬進來的日期列黏在面板頂端 */
+    #m-scroll #days{position:sticky; top:0; z-index:5; background:var(--ds-sys-color-surface); margin:0 -15px; padding:8px 15px;}
+    body.member-ui[data-view="plan"] #m-scroll #wishbox{display:none;}
+    body.member-ui[data-view="wish"] #m-scroll .col:not(.wishbox){display:none;}
+    body.member-ui #m-scroll #wishbox{margin-top:0; border:0; background:none;}
+    #m-nav{position:absolute; left:0; right:0; bottom:0; z-index:5; display:flex; justify-content:center;
+      padding:var(--ds-sys-spacing-2xl) var(--ds-sys-spacing-4xl) calc(var(--ds-sys-spacing-2xl) + env(safe-area-inset-bottom,0px));}
+    /* 面板拉到最低時底部導覽收起來(Figma 162123:12383 的畫法;待 Lulu 確認) */
+    body.member-ui.m-sheet-min #m-nav{transform:translateY(110%); transition:transform .25s ease;}
+    #m-nav{transition:transform .25s ease;}
+    /* 交通、花費、分帳:頂列和底部導覽中間是一般會捲的頁 */
+    body.member-ui:not([data-view="plan"]):not([data-view="wish"]) .wrap{padding-top:calc(var(--m-headh,137px) + 12px);
+      padding-bottom:calc(var(--m-navh,113px) + 12px);}
+    #m-seg{position:absolute; left:var(--ds-sys-spacing-2xl); right:var(--ds-sys-spacing-2xl); z-index:3; display:flex; justify-content:center;}
+    #m-seg[hidden]{display:none;}
+    body.member-ui[data-view="cost"] .wrap,
+    body.member-ui[data-view="split"] .wrap{padding-top:calc(var(--m-headh,137px) + 64px);}
+    @media (min-width:768px){
+      #m-sheet-box .ds-sheet{right:auto; width:430px; left:var(--ds-sys-spacing-2xl);}
+    }
+    /* 地圖的 ＋／− 移到日曆鈕底下(Figma:右邊、日曆鈕下面) */
+    body.member-ui #map-sheet .mapzoom{top:calc(var(--m-headh,137px) + 72px); right:var(--ds-sys-spacing-2xl);}
+    #members-overlay ul{list-style:none; margin:0 0 12px; padding:0; display:grid; gap:8px;}
+    #members-overlay li{display:flex; align-items:center; gap:10px;}
+    #members-overlay .dot{width:12px; height:12px; border-radius:50%; flex:none;}
+    #members-overlay .role{margin-left:auto; font-size:12px; color:var(--muted);}
+
+  </style>
 </head>
 <body>
 
@@ -1659,6 +1726,24 @@
   <symbol id="i-chevron-down" viewBox="0 0 512 512"><path d="M233.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L256 338.7 86.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z"/></symbol>
   <symbol id="i-plus" viewBox="0 0 448 512"><path d="M256 80c0-17.7-14.3-32-32-32s-32 14.3-32 32l0 144L48 224c-17.7 0-32 14.3-32 32s14.3 32 32 32l144 0 0 144c0 17.7 14.3 32 32 32s32-14.3 32-32l0-144 144 0c17.7 0 32-14.3 32-32s-14.3-32-32-32l-144 0 0-144z"/></symbol>
 </svg>
+
+<!-- 一般團員的新外框(介面改版,2026-11-20)。內容由 renderMemberShell() 用 ds/components.js 畫 -->
+<div id="m-shell" class="ds-app" hidden>
+  <div id="m-head"></div>
+  <div id="m-menu" hidden></div>
+  <div id="m-ended" hidden></div>
+  <div id="m-cal"></div>
+  <div id="m-seg" hidden></div>
+  <div id="m-sheet-box"></div>
+  <div id="m-nav"></div>
+</div>
+<div class="overlay" id="members-overlay" hidden>
+  <div class="signin" role="dialog" aria-modal="true" aria-labelledby="mb-title">
+    <h2 id="mb-title">成員名單</h2>
+    <ul id="mb-list"></ul>
+    <div class="ops"><button type="button" class="btn btn-ghost btn-sm" id="mb-close">關掉</button></div>
+  </div>
+</div>
 
 <div class="wrap">
   <header class="topbar">
@@ -6778,7 +6863,186 @@
     el("sync").textContent = !online && !storageOK ? "○ 瀏覽器不讓存檔,離開後會消失" : FOOT;
   }
 
-  function render() { renderCountdown(); renderSeats(); renderDays(); renderRoute(); renderWishes(); renderCost(); renderFund(); renderSplit(); renderSync(); }
+  /* ===== 一般團員的新外框(介面改版第一階段,2026-11-20,Lulu) =====
+     **只有「成員」看到。** 團主和副團主這次完全不動。
+     元件一律用 Storybook 的(ds/components.js,`npm run build:app` 打包出來的),不在這裡另寫一份。
+     這一步只換外框:地圖當底、頂列、日曆鈕、可拉的面板、底部導覽。
+     面板裡的日期列、時間軸、許願清單先把原本的搬進來,下一步再換成新元件。 */
+  let DS = null, dsLoading = null;
+  function loadDS() {
+    if (!dsLoading) {
+      /* 字型只有新外框用(源泉圓體、全瀨體,切成小塊,只下載用得到的字),所以到這時才載 */
+      const fl = document.createElement("link");
+      fl.rel = "stylesheet"; fl.href = "ds/fonts.css";
+      document.head.appendChild(fl);
+      dsLoading = import("./ds/components.js").then(m => { DS = m; renderMemberShell(); })
+        .catch(e => { dsLoading = null; console.error("ds/components.js", e); });
+    }
+    return dsLoading;
+  }
+  const memberUI = () => !!myMember && myMember.role === "成員" && !!trip;
+  /* 搬進面板的原本那幾塊,記住原本的位置才搬得回去(切到團主身分、或換團時) */
+  const mMoved = [];
+  function mMove(node, into) {
+    if (!node || node.parentNode === into) return;
+    const mark = document.createComment("m-shell:" + (node.id || ""));
+    node.parentNode.insertBefore(mark, node);
+    mMoved.push([node, mark]);
+    into.appendChild(node);
+  }
+  function mRestore() {
+    while (mMoved.length) { const [node, mark] = mMoved.pop(); mark.parentNode.insertBefore(node, mark); mark.remove(); }
+  }
+  let mSheet = null, mBuilt = false, mTrips = null;
+  /* 面板三段的高度:最低只剩日期列、預設、最高到頂列下面(Figma 186 / 450 / 707,以 844 高為準) */
+  function mSnaps() {
+    const H = window.innerHeight, head = el("m-head").offsetHeight || 137;
+    const days = el("days") ? el("days").offsetHeight : 120;
+    return [Math.min(H - head, 40 + days + 26), Math.round(H * 450 / 844), H - head];
+  }
+  function mMeta() {
+    const range = trip.start && trip.end ? trip.start.replace(/-/g, "/") + "-" + trip.end.slice(5).replace("-", "/") : "";
+    return [trip.city || trip.country || "", range, DAYS.length + " Days", MEMBERS.length + "☻"];
+  }
+  function renderMemberShell() {
+    const on = memberUI();
+    document.body.classList.toggle("member-ui", on);
+    const shell = el("m-shell");
+    if (!on) {
+      if (!shell.hidden) { shell.hidden = true; mRestore(); }
+      return;
+    }
+    if (!DS) { loadDS(); return; }
+    shell.hidden = false;
+    /* 頂列:團名、城市‧日期‧天數‧人數。▼ 只在有別團可以切的時候出現(團清單第一次點才去要) */
+    const menuOpen = !el("m-menu").hidden;
+    el("m-head").innerHTML = DS.tripHeaderHTML({
+      title: trip.name, meta: mMeta(), ended: tripEnded(), expanded: menuOpen,
+      switchable: mTrips === null || mTrips.length > 1, peopleLabel: "看成員名單",
+    });
+    DS.wireTripHeader(el("m-head"));
+    const headH = el("m-head").offsetHeight;
+    document.body.style.setProperty("--m-headh", headH + "px");
+    el("m-menu").style.top = (headH - 28) + "px";
+    /* 結束的團:頂列底下一張提示 */
+    const ended = tripEnded();
+    el("m-ended").hidden = !ended;
+    if (ended) {
+      el("m-ended").style.top = (headH + 10) + "px";
+      el("m-ended").innerHTML = DS.infoHTML({
+        text: "這一團已經在 " + String(trip.end || "").slice(5).replace("-", "/") + " 結束了，只能看。" +
+          (editable("cost") ? "你還可以記帳、改花費。" : ""),
+        expanded: true, collapseIcon: false, button: false,
+      });
+      DS.wireInfo(el("m-ended"));
+    }
+    /* 日曆鈕 = 開關其他日子的行程(就是原本的「全部已排」) */
+    const mapView = state.tab === "plan" || state.tab === "wish";
+    el("m-cal").hidden = !mapView;
+    el("m-cal").style.top = (headH + 24) + "px";
+    el("m-cal").innerHTML = DS.scrimButtonHTML({
+      icon: "calender", color: state.tab === "wish" ? "primary" : "scrim", size: "md",
+      label: "開關其他日子的行程", pressed: !!layers.all,
+    });
+    /* 花費頁:花費／分帳兩個分頁(分帳併進花費,Lulu 11-20) */
+    const costView = state.tab === "cost" || state.tab === "split";
+    el("m-seg").hidden = !costView;
+    if (costView) {
+      el("m-seg").style.top = (headH + 12) + "px";
+      el("m-seg").innerHTML = DS.segmentedHTML({
+        items: [{ key: "cost", label: "花費" }, { key: "split", label: "分帳" }], selected: state.tab, label: "花費或分帳",
+      });
+      DS.wireSegmented(el("m-seg"));
+    }
+    if (!mBuilt) {
+      mBuilt = true;
+      el("m-sheet-box").innerHTML = DS.bottomSheetHTML({ content: '<div id="m-scroll"></div>', label: "行程" });
+      const scroll = el("m-scroll");
+      mMove(el("days"), scroll);
+      mMove(el("plan-cols"), scroll);
+      el("m-nav").innerHTML = DS.bottomNavHTML({ active: mNavKey(), label: "主要導覽" });
+      DS.wireBottomNav(el("m-nav"));
+      document.body.style.setProperty("--m-navh", el("m-nav").offsetHeight + "px");
+      mSheet = DS.wireBottomSheet(el("m-sheet-box").querySelector(".ds-sheet"), { snaps: mSnaps, at: 1, scroller: "#m-scroll" });
+      el("m-sheet-box").addEventListener("ds-sheet-snap", e => {
+        document.body.classList.toggle("m-sheet-min", e.detail.index === 0);
+      });
+      wireMemberShell();
+    } else {
+      mSyncNav();
+      if (mSheet) mSheet.refresh();
+    }
+    el("m-sheet-box").hidden = !mapView;
+  }
+  /* 底部導覽的 key ↔ 分頁:交通 = fly、花費 = cost(分帳也算花費)、我 = 選單 */
+  const NAV_TAB = { plan: "plan", wish: "wish", transport: "fly", spend: "cost", me: "" };
+  function mNavKey() {
+    return state.tab === "wish" ? "wish" : state.tab === "fly" ? "transport" : (state.tab === "cost" || state.tab === "split") ? "spend" : "plan";
+  }
+  function mSyncNav() {
+    const nav = el("m-nav").querySelector(".ds-bottom-nav");
+    if (!nav) return;
+    const want = mNavKey();
+    const cur = nav.querySelector(".ds-bottom-nav__item.is-active");
+    if (!cur || cur.dataset.key !== want) {
+      const b = nav.querySelector('[data-key="' + want + '"]');
+      if (b) b.click();
+    }
+  }
+  function wireMemberShell() {
+    el("m-nav").addEventListener("click", e => {
+      const b = e.target.closest(".ds-bottom-nav__item");
+      if (!b || !e.isTrusted) return;
+      const tab = NAV_TAB[b.dataset.key];
+      /* 「我」那一頁 Figma 還沒畫:先打開原本右上角的選單(登出、AI 次數…都在那裡) */
+      if (b.dataset.key === "me") { el("menu-btn").click(); setTimeout(mSyncNav); return; }
+      if (tab && tab !== state.tab) switchTab(tab);
+    });
+    el("m-seg").addEventListener("click", e => {
+      const b = e.target.closest("[data-key]");
+      if (b && b.dataset.key !== state.tab) switchTab(b.dataset.key);
+    });
+    el("m-cal").addEventListener("click", e => {
+      if (!e.target.closest(".ds-scrim-btn")) return;
+      const b = el("lay-all").getAttribute("aria-pressed") === "true" ? el("lay-plan") : el("lay-all");
+      b.click();
+      renderMemberShell();
+    });
+    el("m-head").addEventListener("ds-header-people", openMembers);
+    el("m-head").addEventListener("ds-header-title", toggleTripMenu);
+    el("m-menu").addEventListener("ds-menu-select", e => {
+      const code = e.detail.key;
+      if (code && code !== TRIP) location.href = "?t=" + encodeURIComponent(code);
+      else { el("m-menu").hidden = true; renderMemberShell(); }
+    });
+    document.addEventListener("click", e => {
+      if (el("m-menu").hidden || e.target.closest("#m-menu") || e.target.closest(".ds-trip-header__title")) return;
+      el("m-menu").hidden = true; renderMemberShell();
+    });
+    window.addEventListener("resize", () => { if (memberUI() && mSheet) mSheet.refresh(); });
+  }
+  async function toggleTripMenu() {
+    const box = el("m-menu");
+    if (!box.hidden) { box.hidden = true; renderMemberShell(); return; }
+    if (mTrips === null) {
+      try { const b = await api("?resource=trips"); mTrips = (b.trips || []).filter(t => !t.closed || t.code === TRIP); }
+      catch (_) { mTrips = []; }
+    }
+    if (mTrips.length < 2) { renderMemberShell(); return; }
+    box.innerHTML = DS.menuHTML({ items: mTrips.map(t => ({ key: t.code, label: t.name })), selected: TRIP, label: "切換到別團" });
+    DS.wireMenu(box);
+    box.hidden = false;
+    renderMemberShell();
+  }
+  function openMembers() {
+    el("mb-list").innerHTML = MEMBERS.map(m => '<li><span class="dot" style="background:' + esc(m.color || "#999") + '"></span>' +
+      esc(nameOf(m.id)) + (myMember && m.id === myMember.id ? "(你)" : "") +
+      '<span class="role">' + esc(m.role || "成員") + "</span></li>").join("");
+    el("members-overlay").hidden = false;
+  }
+  el("mb-close").addEventListener("click", () => { el("members-overlay").hidden = true; });
+
+  function render() { renderCountdown(); renderSeats(); renderDays(); renderRoute(); renderWishes(); renderCost(); renderFund(); renderSplit(); renderSync(); renderMemberShell(); }
 
   /* ================= 互動 ================= */
   /* **三塊並排的門檻,跟 CSS 那條 media query 同一個數字。**
@@ -9867,7 +10131,7 @@
     "settings-overlay": ["st-cancel"], "invite-overlay": ["inv-close"], "flight-overlay": ["fl-cancel"],
     "exp-edit-overlay": ["xe-cancel"], "edit-overlay": ["se-cancel"], "stop-add-overlay": ["sf-cancel"],
     "ai-overlay": ["ai-cancel", "ai-cancel2"], "wish-add-overlay": ["wf-cancel"], "wish-edit-overlay": ["we-cancel"],
-    "time-overlay": ["tf-cancel"], "fund-top-overlay": ["ft-cancel"], "confirm-overlay": ["cf-cancel"], "photo-overlay": ["ph-close"], "pick-overlay": ["pk-cancel"],
+    "time-overlay": ["tf-cancel"], "fund-top-overlay": ["ft-cancel"], "confirm-overlay": ["cf-cancel"], "members-overlay": ["mb-close"], "photo-overlay": ["ph-close"], "pick-overlay": ["pk-cancel"],
     /* 全螢幕地圖搜尋:沒有「外面」可以點,只有 Esc。改過 = 搜尋框改了字,或選起了一個地點 */
     "seek-screen": ["ss-x"],
   };
@@ -9944,7 +10208,9 @@
          (天數那一列改成大家都看得到),標記留著給探針讀。以前沒叫是時間的關係:
          開機要等 fetch 失敗才退回本機模式,這一條檢查跑的時候它還沒掛上去;
          第 2 期的假後端回得快,它就叫了 —— 一直都是孤兒,只是這次才被看到。 */
-    const IGNORE = ["brand", "panel", "plan", "can-edit"];
+    /* - `under`:地圖平移時留在底下撐著的舊圖磚那一層(.layer.under)。只給程式找、等新圖磚到了就拿掉,
+         刻意沒有樣式 —— 動畫一跑就叫,所以要排除。 */
+    const IGNORE = ["brand", "panel", "plan", "can-edit", "under"];
     const dev = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname) || location.protocol === "file:";
     setTimeout(() => {
       const known = {};
@@ -9964,6 +10230,8 @@
       });
       const used = {};
       [].forEach.call(document.querySelectorAll("[class]"), e => {
+        /* 新外框(.ds-app)裡是 Storybook 的元件,class 名字是它們自己的(有些只是給程式找的標記),不在這條檢查的範圍 */
+        if (e.closest(".ds-app")) return;
         (typeof e.className === "string" ? e.className : "").split(/\s+/).forEach(c => { if (c) used[c] = 1; });
       });
       const orphan = Object.keys(used).filter(c => !known[c] && IGNORE.indexOf(c) < 0);

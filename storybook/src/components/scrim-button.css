@@ -1,0 +1,103 @@
+/* Scrim 圓鈕 —— Figma「Scrim」（162254:14112），疊在地圖、照片上
+ *
+ *   Color：Scrim（color/scrim、整顆 80% 不透明、圖示 text inverse 100）／Primary（primary、圖示 on primary）
+ *   Size ：md 32（圖示 24）／sm 24（圖示 16）／xs 12（圖示 8）；圓角 comp/chip/radius
+ *   State：Hovered 疊 on primary 8%、陰影換 Elevation/component/md；Focused 疊 10%＋外圈 focus ring（離外緣 2px、線寬 3）；
+ *          Pressed 疊 10%、整顆大 2px（34／26／14）；Disabled 底 disable container、圖示 on disable、沒有陰影
+ *   平常陰影 Elevation/component/sm
+ *
+ * 要別的大小（例：Figma delete photo 裡被拉成 16 的 xs）：在按鈕上設 --scrim-size／--scrim-icon。
+ *
+ * 圖層：::before = 底色＋State layer；::after = Focus ring；按鈕本身只放圖示。
+ * Pressed 讓 ::before 往外長，按鈕佔的位置不變。
+ */
+
+@property --scrim-layer-op {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+
+.ds-scrim-btn {
+  --scrim-size: 32px;
+  --scrim-icon: 24px;
+  --scrim-bg: var(--ds-sys-color-scrim);
+  --scrim-op: var(--ds-sys-opacity-2xl);
+  --scrim-fg: var(--ds-sys-color-text-inverse-100);
+  --scrim-layer: var(--ds-sys-color-on-primary);
+  --scrim-layer-op: 0;
+  --scrim-grow: 0px;
+  --scrim-shadow: var(--ds-elevation-component-sm);
+
+  position: relative;
+  isolation: isolate;
+  display: inline-grid;
+  place-items: center;
+  box-sizing: border-box;
+  width: var(--scrim-size);
+  height: var(--scrim-size);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--ds-comp-chip-radius);
+  background: none;
+  color: var(--scrim-fg);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: --scrim-layer-op 150ms ease, --scrim-grow 150ms cubic-bezier(0.25, 1, 0.5, 1);
+}
+.ds-scrim-btn--sm { --scrim-size: 24px; --scrim-icon: 16px; }
+.ds-scrim-btn--xs { --scrim-size: 12px; --scrim-icon: 8px; }
+.ds-scrim-btn--primary {
+  --scrim-bg: var(--ds-sys-color-primary);
+  --scrim-op: 1;
+  --scrim-fg: var(--ds-sys-color-on-primary);
+}
+
+.ds-scrim-btn::before {
+  content: "";
+  position: absolute;
+  inset: calc(-1 * var(--scrim-grow));
+  z-index: -1;
+  border-radius: inherit;
+  background:
+    linear-gradient(color-mix(in srgb, var(--scrim-layer) calc(var(--scrim-layer-op) * 100%), transparent), color-mix(in srgb, var(--scrim-layer) calc(var(--scrim-layer-op) * 100%), transparent)),
+    var(--scrim-bg);
+  opacity: var(--scrim-op);
+  box-shadow: var(--scrim-shadow);
+}
+.ds-scrim-btn::after {
+  content: "";
+  position: absolute;
+  inset: calc(-2px - var(--ds-comp-focus-ring-border));
+  border-radius: inherit;
+  border: var(--ds-comp-focus-ring-border) solid var(--ds-comp-focus-ring-color);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ds-scrim-btn__icon {
+  display: block;
+  width: var(--scrim-icon);
+  height: var(--scrim-icon);
+}
+
+@media (hover: hover) {
+  .ds-scrim-btn:hover:not(:disabled) { --scrim-layer-op: 0.08; --scrim-shadow: var(--ds-elevation-component-md); }
+}
+.ds-scrim-btn.is-hovered { --scrim-layer-op: 0.08; --scrim-shadow: var(--ds-elevation-component-md); }
+.ds-scrim-btn:focus-visible,
+.ds-scrim-btn.is-focused { outline: none; --scrim-layer-op: 0.1; }
+.ds-scrim-btn:focus-visible::after,
+.ds-scrim-btn.is-focused::after { opacity: 1; }
+.ds-scrim-btn:active:not(:disabled),
+.ds-scrim-btn.is-pressed { --scrim-layer-op: 0.1; --scrim-grow: 1px; }
+
+.ds-scrim-btn:disabled,
+.ds-scrim-btn.is-disabled {
+  --scrim-bg: var(--ds-sys-color-disable-container);
+  --scrim-op: var(--ds-sys-opacity-2xl);
+  --scrim-fg: var(--ds-sys-color-on-disable);
+  --scrim-shadow: none;
+  cursor: default;
+}

@@ -5,7 +5,9 @@
   "scripts": {
     "tokens": "node scripts/build-tokens.mjs",
     "dev": "npm run tokens && storybook dev -p 6006",
-    "build": "npm run tokens && storybook build -o dist"
+    "build": "npm run tokens && storybook build -o dist",
+    "build:app": "npm run tokens && vite build -c vite.app.config.js",
+    "check:app": "npm run tokens && node scripts/check-app-bundle.mjs"
   },
   "devDependencies": {
     "@storybook/addon-essentials": "8.6.18",

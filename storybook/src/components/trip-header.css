@@ -1,0 +1,119 @@
+/* 頂列 —— Figma「Header」Property 1=floating（161877:13701）
+ *
+ *   底：surface＋bg pattern（8%）、Elevation/surface/soft、下面兩角 radius/sm
+ *   內距：上下 spacing/xl、左右 spacing/4xl
+ *   第一排：團名（Headline/xs/semi-bold：源泉圓體 H、20、字距 5%）＋ ▼（triangel_down duotone、icon/lg 28），
+ *           底下一條 divider/wiggle outline 200；右邊人頭（peoploe_plus sticker、icon/xl 32）；兩組間距 spacing/5xl
+ *   第二排：城市‧日期‧天數‧人數（label/lg/hand-regular：全瀨體 16／20、字距 4%、text 200），間距 spacing/2xs
+ *   兩排間距 spacing/xs
+ * 團名太長：一行，超過用「…」。
+ */
+
+.ds-trip-header {
+  box-sizing: border-box;
+  width: 100%;
+  padding: var(--ds-sys-spacing-xl) var(--ds-sys-spacing-4xl);
+  border-radius: 0 0 var(--ds-sys-radius-sm) var(--ds-sys-radius-sm);
+  box-shadow: var(--ds-elevation-surface-soft);
+  color: var(--ds-sys-color-text-100);
+}
+
+.ds-trip-header__main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-sys-spacing-xs);
+  min-width: 0;
+}
+
+.ds-trip-header__row {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-sys-spacing-5xl);
+  min-height: var(--ds-sys-icon-xl, 32px);
+}
+
+.ds-trip-header__titlebox {
+  position: relative;
+  flex: 0 1 auto;
+  min-width: 0;
+  margin-right: auto;
+}
+.ds-trip-header__titlebox .ds-divider {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 6px;
+}
+
+.ds-trip-header__title {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-sys-spacing-md);
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font-family: var(--ds-sys-font-family-headline);
+  font-weight: 900; /* Headline/xs/semi-bold 用的是源泉圓體 H */
+  font-size: var(--ds-sys-font-size-headline-xs);
+  line-height: 28px;
+  letter-spacing: 0.05em;
+  text-align: left;
+  -webkit-tap-highlight-color: transparent;
+}
+button.ds-trip-header__title { cursor: pointer; }
+button.ds-trip-header__title:focus-visible {
+  outline: var(--ds-comp-focus-ring-border) solid var(--ds-comp-focus-ring-color);
+  outline-offset: 2px;
+  border-radius: var(--ds-sys-radius-sm);
+}
+
+.ds-trip-header__name {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.ds-trip-header__caret {
+  flex: none;
+  width: var(--ds-sys-icon-lg, 28px);
+  height: var(--ds-sys-icon-lg, 28px);
+  transition: transform 200ms ease;
+}
+.ds-trip-header__title[aria-expanded="true"] .ds-trip-header__caret { transform: rotate(180deg); }
+
+.ds-trip-header__people {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: var(--ds-sys-icon-xl, 32px);
+  height: var(--ds-sys-icon-xl, 32px);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--ds-sys-radius-full);
+  background: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.ds-trip-header__people:focus-visible {
+  outline: var(--ds-comp-focus-ring-border) solid var(--ds-comp-focus-ring-color);
+  outline-offset: 2px;
+}
+.ds-trip-header__people-icon { width: 100%; height: 100%; }
+
+.ds-trip-header__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-sys-spacing-2xs);
+  margin: 0;
+  color: var(--ds-sys-color-text-200);
+  font-family: var(--ds-sys-font-family-zhtw-handwriting-zhtw);
+  font-size: var(--ds-sys-font-size-label-lg);
+  line-height: 20px;
+  letter-spacing: 0.04em;
+}
+.ds-trip-header__dot { display: inline-block; min-width: 16px; text-align: center; }
