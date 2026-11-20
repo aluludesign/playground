@@ -57,7 +57,7 @@ export const 全部 = {
 <tr><td class="al">頭像</td><td>頭像 Avatar，大小 <code class="var">--ds-comp-text-area-avatar</code>（icon/lg＝28）</td></tr>
 <tr><td class="al">內容框</td><td>底色 <code class="var">--ds-sys-color-opacity-opacity-primary-50</code>；內距上 2xs、右 5xl、下 <code class="var">--ds-comp-field-height</code>（120）</td></tr>
 <tr><td class="al">字</td><td>手寫 body/lg（20/22、字距 5%）<code class="var">--ds-sys-color-text-100</code>；提示字 <code class="var">--ds-sys-color-text-200</code></td></tr>
-<tr><td class="al">照片列</td><td>「+照片」馬克筆按鈕 secondary・md；照片縮圖 32（radius/sm、outline 50 細框），右上角 Scrim xs 圓鈕；間距 2xl／xl</td></tr>
+<tr><td class="al">照片列</td><td>「+照片」馬克筆按鈕 secondary・md；照片縮圖 32（radius/sm、outline 50 細框），右上角 Scrim sm 圓鈕（16）；間距 2xl／xl</td></tr>
 <tr><td class="al">✕</td><td><code class="var">--ds-comp-text-field-icon-sm</code></td></tr>
 <tr><td class="al">底線</td><td>跟文字輸入框共用 <code class="var">--ds-comp-text-field-line-*</code></td></tr>
 <tr><td class="al">動作列</td><td>靠右、間距 md；取消（可以拿掉）Button Secondary・Text・md；送出 馬克筆按鈕 Primary・lg</td></tr>

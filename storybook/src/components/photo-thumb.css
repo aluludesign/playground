@@ -1,7 +1,7 @@
 /* 照片縮圖 delete photo —— Figma「delete photo」（162373:18638）
  *
  *   32×32 的照片（photo/attraction：圓角 radius/sm、outline 50 細框、照片填滿裁切）
- *   右上角一顆 Scrim 圓鈕 xs（16、scrim 色 80%、Elevation/component/sm、白色 ✕ 8）按了刪掉
+ *   右上角一顆 Scrim 圓鈕 sm（16、scrim 色 80%、Elevation/component/sm、白色 ✕ 8）按了刪掉
  */
 .ds-photo-thumb {
   position: relative;
