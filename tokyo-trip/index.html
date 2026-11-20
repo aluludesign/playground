@@ -1725,6 +1725,27 @@
     body.m-wish-min #m-wish-box .ds-wboard__col{display:contents;}
     body.m-wish-min #m-wish-box .ds-wboard__wall{align-items:flex-start;}
     body.m-wish-min #m-nav{transform:translateY(110%);}
+    /* 許願搜尋(Figma 162186:26093 起):許願鈕按下去變成搜尋框;打字時下面是「熱門地點／不指定地點」;
+       搜完結果標在地圖上,點一個 → 景點卡＋留言框＋送出許願。搜尋本身(三段、強力搜、往外找)照原本的邏輯 */
+    body.m-ws #ss-bar, body.m-ws #ss-sug, body.m-ws #ss-all, body.m-ws #ss-map .mapzoom{display:none !important;}
+    body.m-ws #ss-q-out{display:none !important;}
+    body.m-ws #ss-q-out.m-show-uikit{display:block !important; left:var(--ds-sys-spacing-2xl); right:var(--ds-sys-spacing-2xl); bottom:var(--ds-sys-spacing-2xl);
+      top:auto; background:none; padding:0;}
+    body.m-ws #ss-q-out.m-show-uikit > :not(.uikit){display:none;}
+    #m-ss{position:absolute; inset:0; z-index:5; pointer-events:none;}
+    #m-ss > *{pointer-events:auto;}
+    #m-ss-frame{position:absolute; left:var(--ds-sys-spacing-2xl); right:var(--ds-sys-spacing-2xl); top:calc(16px + env(safe-area-inset-top,0px));}
+    #m-ss-cal{position:absolute; right:var(--ds-sys-spacing-2xl);}
+    /* Figma:打字時那張接在搜尋框下面(搜尋框底 +16),往下到底 */
+    #m-ss-sheet{position:absolute; left:var(--ds-sys-spacing-2xl); right:var(--ds-sys-spacing-2xl); top:var(--m-ss-under,160px); bottom:var(--ds-sys-spacing-2xl); overflow:auto;}
+    #m-ss-sheet[hidden], #m-ss-bottom[hidden], #m-ss-card[hidden]{display:none;}
+    #m-ss-bottom{position:absolute; left:0; right:0; bottom:calc(var(--ds-sys-spacing-4xl) + env(safe-area-inset-bottom,0px)); display:flex; flex-direction:column; align-items:center; gap:var(--ds-sys-spacing-xl);}
+    #m-ss-card{position:absolute; left:var(--ds-sys-spacing-2xl); right:var(--ds-sys-spacing-2xl); bottom:var(--ds-sys-spacing-2xl); max-height:75vh; overflow:auto;
+      display:flex; flex-direction:column; gap:var(--ds-sys-spacing-2xl);}
+    #m-ss-card .m-ss-form{background:var(--ds-sys-color-surface); border-radius:var(--ds-sys-radius-sm); padding:var(--ds-sys-spacing-2xl) var(--ds-sys-spacing-4xl);}
+    #m-ss .m-ss-list{display:flex; flex-direction:column;}
+    #m-ss .m-ss-direct{display:flex; flex-direction:column; gap:var(--ds-sys-spacing-2xl);}
+    #m-ss .m-ss-direct h3{margin:0; font-family:var(--ds-sys-font-family-headline); font-weight:900; font-size:var(--ds-sys-font-size-body-lg); color:var(--ds-sys-color-text-100);}
     /* 當日細節(點地圖上的點、點行程小卡進來):頂列、面板、底部導覽都收起來,
        只剩地圖、日曆鈕和下面一張景點卡;卡片往上滑可以看全部(Figma 162114:14958 → 162119:15938) */
     #m-detail{position:absolute; inset:0; z-index:6; overflow-y:auto; overscroll-behavior:contain; pointer-events:none;
@@ -1739,10 +1760,10 @@
     body.m-in-detail #m-wish-box{display:none !important;}
     body.m-in-detail #map-sheet .mapzoom{display:none;}
     /* 新外框的點:錨點在水滴的尖端;不要原本那顆圓點的底色、框和陰影 */
-    body.member-ui #map .pin{transform:translate(-50%,-100%); min-width:0; height:auto; padding:0; border:0; border-radius:0;
+    body.member-ui #map .pin, body.m-ws #ss-map .pin{transform:translate(-50%,-100%); min-width:0; height:auto; padding:0; border:0; border-radius:0;
       background:none !important; box-shadow:none; color:inherit; display:block;}
-    body.member-ui #map .pin.on{box-shadow:none; z-index:3;}
-    body.member-ui #map .pin.hot{transform:translate(-50%,-100%) scale(1.1);}
+    body.member-ui #map .pin.on, body.m-ws #ss-map .pin.on{box-shadow:none; z-index:3;}
+    body.member-ui #map .pin.hot, body.m-ws #ss-map .pin.hot{transform:translate(-50%,-100%) scale(1.1);}
     body.member-ui #map .mapzoom.ds-zoom{gap:var(--ds-sys-spacing-md); border:0; background:none; box-shadow:none;}
     body.member-ui #map .mapzoom.ds-zoom button{width:auto; height:auto; border:0; background:none; border-radius:var(--ds-comp-btn-icon-xs-radius);}
     /* 地圖的 ＋／− 移到日曆鈕底下(Figma:右邊、日曆鈕下面) */
@@ -4898,6 +4919,7 @@
   function ssSelect(i, fromPin) {
     const out = seekBox(SS), box = ssMap(), r = out && out._hits && out._hits[i];
     if (!r) return;
+    if (document.body.classList.contains("m-ws")) queueMicrotask(mWsSync);
     ssSel = i;
     box._focus = "h" + i;
     /* 選起來也算改過(對話框的關閉規則):Esc 不會把它丟掉 */
@@ -6134,7 +6156,7 @@
         '" title="' + esc(p.tip) + '">' + (mPins(box)
           /* 一般團員的新外框:Figma 的 pin set(名字泡泡＋白色水滴＋塗鴉底編號);選到的那個用大的。願望是 dot、沒有編號 */
           ? DS.pinSetHTML({ size: p.k === box._focus ? "lg" : "sm", label: (p.ap ? "約 " : "") + p.title, number: p.n,
-              color: p.cn || 8, state: p.cls === "plan" ? "default" : "dot" })
+              color: p.cn || 8, state: p.cls === "plan" || p.k[0] === "h" ? "default" : "dot" })
           : esc(p.n) + '<span class="lab">' + esc((p.ap ? "約 " : "") + p.title) + "</span>") + "</a>";
     });
     html += "</div>";
@@ -6153,7 +6175,9 @@
   }
 
   /* 主地圖在一般團員的新外框裡,點和 ＋／− 改用 Storybook 的元件 */
-  function mPins(box) { return box.id === "map" && !!DS && document.body.classList.contains("member-ui"); }
+  function mPins(box) {
+    return !!DS && document.body.classList.contains("member-ui") && (box.id === "map" || (box.id === "ss-map" && document.body.classList.contains("m-ws")));
+  }
   var M_MINUS = '<svg class="ds-btn__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 13H5V11H19V13Z"/></svg>';
   /* 標籤會互相蓋住。照優先序一個一個放:願望／當天行程先,已排的背景點後。
      位置被佔走就改放到標記下面,下面也被佔走就先藏起來 ——
@@ -7386,7 +7410,7 @@
     }
     return mSafe;
   }
-  /* 愛心幾顆:按 +1 的人佔全團的比例,超過 60% 三顆、40% 兩顆、其他有人按就一顆、沒人按是空心(比例怎麼算待 Lulu 確認) */
+  /* 愛心幾顆(Lulu 11-21):按 +1 的人數 ÷ 全團人數,超過 60% 三顆、超過 40% 兩顆,有一個人按就至少一顆實心,沒人按是空心 */
   function mHearts(n) {
     if (!n) return 0;
     const r = n / Math.max(1, MEMBERS.length);
@@ -7405,7 +7429,7 @@
     if (!el("m-iris").firstChild) {
       el("m-iris").innerHTML = DS.irisButtonHTML({ label: "許個願，想去" + ((trip && trip.city) || "") + "哪？", size: "lg" });
       DS.wireIris(el("m-iris"));
-      el("m-iris").addEventListener("click", () => el("add-wish-btn").click());
+      el("m-iris").addEventListener("click", mOpenWishSearch);
     }
     if (!mWishSheet) {
       el("m-wish-box").innerHTML = DS.bottomSheetHTML({ content: '<div id="m-wall"></div>', label: "許願牆", bare: true });
@@ -7449,6 +7473,182 @@
     const p = pinOf(w);
     if (p) focusPin(el("map"), p, "w" + i);
     mLoadPlaceInfo(w);
+  }
+  /* ===== 許願搜尋(第三步) ===== */
+  let mWsTab = "hot";
+  function mOpenWishSearch() {
+    if (!DS) return;
+    /* 願望的欄位(名稱、地點、想說的)還是原本那張表單在記,只是看不到;送出也走它(規則、權限、額度都不變) */
+    openWishAdd();
+    el("wish-add-overlay").hidden = true;
+    ssFor = "wf-title"; ssSel = -1; ssMoved = false;
+    seekTries[SS] = 0; seekArmed[SS] = false; seekUsedStrong[SS] = false;
+    el(SS).value = "";
+    seekClear(SS);
+    const scr = el("seek-screen");
+    scr.hidden = false;
+    document.body.classList.add("m-ws");
+    const box = ssMap();
+    box._hitPts = []; box._focus = null;
+    ssPaintPts(box);
+    box._onPin = k => { if (k[0] === "h") ssSelect(+k.slice(1), true); };
+    box._onMove = ssUserMoved;
+    ssStartView(box);
+    paintMap(box);
+    initMapGestures(box);
+    loadHints();
+    mWsTab = "hot";
+    mWsBuild();
+    setTimeout(() => { const i = el("m-ss-frame").querySelector("input"); if (i) i.focus(); }, 60);
+  }
+  function mCloseWishSearch(sent) {
+    document.body.classList.remove("m-ws");
+    const m = el("m-ss"); if (m) m.remove();
+    if (!el("seek-screen").hidden) closeSeekScreen(!!sent);
+    if (!sent) { el("wish-form").reset(); closeWishAdd(); }
+  }
+  const mCity = () => (trip && trip.city) || "";
+  function mWsBuild() {
+    let root = el("m-ss");
+    if (!root) {
+      root = document.createElement("div");
+      root.id = "m-ss"; root.className = "ds-app";
+      root.innerHTML = '<div id="m-ss-frame"></div><div id="m-ss-cal"></div><div id="m-ss-sheet" hidden></div><div id="m-ss-bottom" hidden></div><div id="m-ss-card" hidden></div>';
+      el("seek-screen").appendChild(root);
+      root.addEventListener("ds-search-close", () => mCloseWishSearch(false));
+      root.addEventListener("ds-segmented-select", e => { mWsTab = e.detail.key; mWsSheet(); });
+      root.addEventListener("click", e => {
+        const it = e.target.closest("[data-m-sug]");
+        if (it) { sugTake(+it.dataset.mSug); el("m-ss-sheet").hidden = true; return; }
+        const px = e.target.closest("[data-proxy]");
+        if (px) { const t = document.querySelector(px.dataset.proxy); if (t) t.click(); return; }
+        if (e.target.closest(".ds-text-field__btn")) { mWsStrong(); return; }
+        if (e.target.closest("#m-ss-cal .ds-scrim-btn")) { el("ss-all").click(); mWsCal(); }
+      });
+      root.addEventListener("ds-text-area-cancel", () => { ssSel = -1; ssMap()._focus = null; paintMap(ssMap()); mWsSync(); });
+      root.addEventListener("ds-text-area-submit", e => mWsSubmit(e.detail.value || "", !!e.target.closest(".m-ss-direct")));
+      new MutationObserver(() => mWsSync()).observe(seekBox(SS), { childList: true, subtree: true });
+    }
+    mWsFrame();
+    mWsCal();
+    mWsSync();
+  }
+  function mWsFrame() {
+    const strong = !!seekArmed[SS];
+    const out = seekBox(SS), n = out && out._hits ? out._hits.length : 0;
+    const searched = !!(out && (out._hits || out.innerHTML));
+    const left = strongMine && strongMine.left != null ? strongMine.left : null;
+    const support = strong ? (left != null ? "今天還能用 " + left + " 次" : "")
+      : searched ? (n ? n + " 搜尋結果，找不到？試試" : "找不到？試試") : "";
+    const cur = el("m-ss-frame").querySelector("input");
+    const val = cur ? cur.value : el(SS).value;
+    el("m-ss-frame").innerHTML = DS.searchFrameHTML({
+      title: strong ? "強力搜，再搜一次" : "想去" + mCity() + "哪? ", closeLabel: "不許願了，回去",
+      content: DS.textFieldHTML({ floatingLabel: false, label: "想去哪", placeholder: mCity() + "鐵塔、一蘭拉麵…等", value: val,
+        leadingIcon: true, trailingIcon: true, supporting: !!support, supportingText: support, button: !strong && searched ? "強力搜" : "" }),
+    });
+    DS.wireSearchFrame(el("m-ss-frame"));
+    DS.wireTextField(el("m-ss-frame"));
+    const inp = el("m-ss-frame").querySelector("input");
+    inp.setAttribute("enterkeyhint", "search");
+    inp.addEventListener("input", () => {
+      el(SS).value = inp.value;
+      el(SS).dispatchEvent(new Event("input"));
+      el("m-ss-sheet").hidden = !inp.value.trim();
+      mWsSheet();
+    });
+    inp.addEventListener("keydown", e => {
+      if (e.key !== "Enter") return;
+      e.preventDefault();
+      el(SS).value = inp.value;
+      if (!inp.value.trim()) return;
+      sugHide();
+      el("m-ss-sheet").hidden = true;
+      inp.blur();
+      runSeek(SS);
+    });
+    if (cur && document.activeElement === cur) inp.focus();
+  }
+  function mWsCal() {
+    const fb = el("m-ss-frame").getBoundingClientRect().bottom;
+    el("m-ss").style.setProperty("--m-ss-under", Math.round(fb + 16) + "px");
+    el("m-ss-cal").style.top = Math.round(fb + 4) + "px";
+    el("m-ss-cal").innerHTML = DS.scrimButtonHTML({ icon: "calender", color: "primary", size: "lg", label: "開關已排的行程", pressed: !!ssAll });
+  }
+  /* 打字時下面那張:熱門地點 = 打字提示的資料(全站選過的地點、搜過的字、相似詞);不指定地點 = 直接許願(Lulu 11-21) */
+  function mWsSheet() {
+    const box = el("m-ss-sheet");
+    if (box.hidden) return;
+    const typed = el(SS).value.trim();
+    let content;
+    if (mWsTab === "hot") {
+      content = '<div class="m-ss-list">' + (sugItems || []).map((it, i) => DS.searchItemHTML({
+        photo: it.type === "p" && it.p.ph ? commonsImg(it.p.ph, 96) : "",
+        name: it.type === "p" ? it.p.n : it.text,
+        info: it.type === "p" ? [[it.p.c, it.p.s].filter(Boolean).join("，"), it.p.k || ""].filter(Boolean) : [it.type === "h" ? "搜過" : "相似的說法"],
+      }).replace("<button ", '<button data-m-sug="' + i + '" ')).join("") + "</div>";
+    } else {
+      content = '<div class="m-ss-direct"><h3>' + esc("直接許願" + (typed ? typed : "")) + "</h3>" +
+        DS.infoHTML({ text: "不選地點直接許願，願望地圖上不會出現地點指標", type: "default", expanded: true, collapseIcon: false, button: false }) +
+        DS.textAreaHTML({ photoButton: "", cancel: "", submit: "送出許願" }) + "</div>";
+    }
+    box.innerHTML = DS.segmentedSheetHTML({ items: [{ key: "hot", label: "熱門地點" }, { key: "none", label: "不指定地點" }], selected: mWsTab, label: "熱門地點或不指定地點", content });
+    DS.wireSegmented(box); DS.wireInfo(box); DS.wireTextArea(box);
+  }
+  /* 原本那塊結果區(#ss-q-out)的狀態 → 新外框的樣子 */
+  function mWsSync() {
+    if (!document.body.classList.contains("m-ws") || !el("m-ss")) return;
+    const out = seekBox(SS);
+    mWsFrame();
+    mWsCal();
+    out.classList.toggle("m-show-uikit", !!out.querySelector(".uikit"));
+    /* 下面那一排:這個範圍找不到 → 提示＋重新搜尋整個「城市」／往外找;拖過地圖 → 搜地圖內的範圍 */
+    const bottom = el("m-ss-bottom");
+    const city = out.querySelector("[data-city]"), wide = out.querySelector("[data-wide]");
+    let html = "";
+    if (city || wide) {
+      html = DS.infoHTML({ text: "這個範圍找不到", type: "info", expanded: true, collapseIcon: false, button: false }) +
+        DS.buttonHTML({ label: city ? "重新搜尋整個「" + (mCity() || "這個城市") + "」" : "往外找", leadingIcon: false })
+          .replace("<button ", '<button data-proxy="#ss-q-out ' + (city ? "[data-city]" : "[data-wide]") + '" ');
+    } else if (ssMoved && out._hits) {
+      html = DS.buttonHTML({ label: "搜地圖內的範圍", leadingIcon: false }).replace("<button ", '<button data-proxy=\'[data-seek="ss-q"]\' ');
+    }
+    bottom.innerHTML = html;
+    DS.wireInfo(bottom);
+    /* 選了一個:景點卡＋留言框 */
+    const card = el("m-ss-card"), r = ssSel >= 0 && out._hits ? out._hits[ssSel] : null;
+    card.hidden = !r;
+    bottom.hidden = !html || !!r;
+    if (r && card.dataset.at !== String(ssSel) + hitName(r)) {
+      card.dataset.at = String(ssSel) + hitName(r);
+      const g = hitGeo(r) || {};
+      card.innerHTML = DS.attractionCardHTML({ photos: r._wiki ? [commonsImg(r._wiki, 720)] : [], title: hitName(r),
+        meta: [[g.c, g.s].filter(Boolean).join("，"), hitCat(r)], mapURL: "https://www.google.com/maps/search/?api=1&query=" + r.lat + "," + r.lon,
+        info: [{ label: "營業時間", value: hitHours(r) }], closeLabel: "",
+        footer: DS.textAreaHTML({ photoButton: "", cancel: "取消", submit: "送出許願" }) });
+      DS.wireAttractionCard(card); DS.wireTextArea(card);
+    }
+    if (!r) card.dataset.at = "";
+  }
+  /* 強力搜:原本要先按「強力搜」上膛(同意花這一次),再按搜尋才走 Google —— 這一顆兩步一起做 */
+  function mWsStrong() {
+    const arm = seekBox(SS).querySelector("[data-arm]");
+    if (arm) arm.click();
+    else seekArmed[SS] = true;
+    paintSeekBtn(SS);
+    mWsSync();
+    const inp = el("m-ss-frame").querySelector("input");
+    if (inp) inp.focus();
+  }
+  /* 送出許願:選了地點 → 那個地點;不指定地點 → 只有名字。留言放「想說的」。之後照原本那張表單送 */
+  function mWsSubmit(note, direct) {
+    const out = seekBox(SS);
+    if (!direct && ssSel >= 0 && out._hits) takeHit("wf-title", ssSel, out);
+    else el("wf-title").value = el(SS).value.trim();
+    if (!el("wf-title").value.trim()) { flash("先打想去的地方"); return; }
+    el("wf-note").value = note;
+    mCloseWishSearch(true);
+    el("wish-form").requestSubmit();
   }
   async function toggleTripMenu() {
     const box = el("m-menu");

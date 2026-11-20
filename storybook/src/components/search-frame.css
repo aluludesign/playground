@@ -1,0 +1,40 @@
+/* 搜尋框 —— Figma「search frame」（162245:10045）
+ *   底：白＋iris 漸層（foundation iris alpha-32）＋bg pattern、外框 outline 50、Elevation/surface/medium、radius/sm
+ *   上下內距 2xl（24）、間距 2xl；標題列：左 4xl、右留 44 給 ✕；標題 Headline/xs/semi-bold
+ *   ✕：Button Secondary・Icon Outlined・xs，右上角
+ *   內容（text field）左右 4xl
+ */
+.ds-search-frame {
+  position: relative;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-sys-spacing-2xl);
+  padding: var(--ds-sys-spacing-4xl) 0;
+  border: var(--ds-sys-border-xs) solid var(--ds-sys-color-outline-50);
+  border-radius: var(--ds-sys-radius-sm);
+  box-shadow: var(--ds-elevation-surface-medium);
+  background:
+    linear-gradient(135deg, var(--ds-foun-color-share-iris-blue-alpha-32) 0%, var(--ds-foun-color-share-iris-purple-alpha-32) 32%, var(--ds-foun-color-share-iris-yellow-alpha-32) 68%, var(--ds-foun-color-share-iris-green-alpha-32) 100%),
+    #fff;
+  color: var(--ds-sys-color-text-100);
+}
+.ds-search-frame__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-sys-spacing-2xl);
+  padding: 0 var(--ds-sys-spacing-xl) 0 var(--ds-sys-spacing-4xl);
+}
+.ds-search-frame__title {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font-family: var(--ds-sys-font-family-headline);
+  font-weight: 900;
+  font-size: var(--ds-sys-font-size-headline-xs);
+  line-height: 20px;
+  letter-spacing: 0.05em;
+}
+.ds-search-frame__head [data-close] { align-self: flex-start; margin-top: -8px; }
+.ds-search-frame__body { padding: 0 var(--ds-sys-spacing-4xl); }

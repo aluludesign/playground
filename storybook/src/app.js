@@ -22,6 +22,8 @@ export { dateCardHTML, dateListHTML, wireDateList, centerDateList, WEATHER_ICONS
 export { timelineHTML, scheduleDetailHTML, attractionPhotosHTML, wireTimeline } from "./components/timeline.js";
 export { photoPreviewHTML, wirePhotoPreview } from "./components/photo-preview.js";
 export { wishCardHTML, wishBoardHTML, likesHTML, heartStickerHTML, wireWishCards } from "./components/wish-card.js";
+export { searchFrameHTML, wireSearchFrame } from "./components/search-frame.js";
+export { textAreaHTML, wireTextArea } from "./components/text-area.js";
 export { bottomSheetHTML, wireBottomSheet } from "./components/bottom-sheet.js";
 export { tripHeaderHTML, wireTripHeader } from "./components/trip-header.js";
 export { scrimButtonHTML } from "./components/scrim-button.js";

@@ -128,3 +128,6 @@ a.ds-acard__loc:focus-visible { outline: var(--ds-comp-focus-ring-border) solid 
   overflow-wrap: anywhere;
 }
 .ds-acard__note .ds-wiggle-line { position: absolute; left: 0; right: 0; bottom: -1px; }
+
+/* 卡片最下面接的東西（Figma 搜尋結果那張的留言框）：跟內容同樣的左右內距 */
+.ds-acard__footer { padding: 0 var(--ds-sys-spacing-4xl) var(--ds-sys-spacing-4xl); }

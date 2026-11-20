@@ -23,10 +23,11 @@ const isURL = (v) => /^https?:\/\/\S+$/i.test(String(v || ""));
  *       值是網址的會變成連結（一律底線＋primary）；沒有的那一列就不給
  * wisher／note：許願人和留言（有人許願有留言才有）
  * likes：likesHTML 的設定（Figma 標題右邊的喜歡；行程的卡沒有就不給）
+ * footer：卡片最下面再接的東西（Figma 搜尋結果那張：留言框 command text area）
  * closeLabel：右上角 ✕ 的名字；不給就不放
  * 點 ✕ 發出 ds-card-close；點照片發出 ds-card-photo（detail.index）
  */
-export function attractionCardHTML({ photos = [], title = "淺草寺", meta = ["日本，東京都", "景點"], mapURL = "", info = [], wisher = "", note = "", likes = null, closeLabel = "關閉" } = {}) {
+export function attractionCardHTML({ photos = [], title = "淺草寺", meta = ["日本，東京都", "景點"], mapURL = "", info = [], wisher = "", note = "", likes = null, footer = "", closeLabel = "關閉" } = {}) {
   const pics = photos.filter(Boolean).slice(0, 6);
   const gallery = pics.length
     ? `<div class="ds-acard__photos">
@@ -60,6 +61,7 @@ ${loc}
 ${rows ? `<ul class="ds-acard__info">${rows}</ul>` : ""}
 ${wish}
 </div>
+${footer ? `<div class="ds-acard__footer">${footer}</div>` : ""}
 </article>`;
 }
 
