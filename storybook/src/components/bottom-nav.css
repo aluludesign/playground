@@ -11,7 +11,7 @@
 .ds-bottom-nav {
   display: inline-flex;
   align-items: center;
-  gap: var(--ds-sys-spacing-2xl);
+  gap: var(--ds-sys-spacing-xl);
   padding: var(--ds-sys-spacing-xs);
   border-radius: var(--ds-comp-bottom-nav-radius);
   box-shadow: var(--ds-elevation-surface-soft);
