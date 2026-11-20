@@ -775,9 +775,9 @@ S:color/customs/on custom 12|C|@F:color/share/fuchsia/950
 S:color/customs/custom 13|C|@F:color/retro/rose/300
 S:color/customs/custom container 13|C|@F:color/retro/rose/100
 S:color/customs/on custom 13|C|@F:color/retro/rose/950
-S:color/customs/custom 14|C|@F:color/share/red/200
+S:color/customs/custom 14|C|@F:color/share/red/400
 S:color/customs/custom container 14|C|@F:color/share/red/100
-S:color/customs/on custom 14|C|@F:color/share/red/400
+S:color/customs/on custom 14|C|@F:color/share/red/950
 S:shadow/length/2xs|F|@F:shadow/length/25
 S:shadow/length/xs|F|@F:shadow/length/50
 S:shadow/length/sm|F|@F:shadow/length/62-5
