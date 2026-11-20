@@ -4,12 +4,12 @@ import "./pen-line.css";
 // Figma divider/wiggle 畫出來的形狀（79 寬時跟 Figma 一模一樣）；viewBox 上面留 3.5、下面留 1.5，左右各多 1（圓頭）
 const PATH = "M0 0L10.05 .08C16.68 .13 21.7 0 25 -.33L35 -1.3C38.3 -1.62 41.66 -1.81 45 -1.86L55 -2.01C58.35 -2.06 61.6 -2.13 64.75 -2.21L74.25 -2.45C77.5 -2.53 79 -2.3 79 -1.92L79 -1.28L78.9 0";
 
-// 筆畫線、螢光筆可以用的顏色：primary、secondary、tertiary 三個主色、disable（停用，on disable），加上 custom 1–14（行程顏色）
+// 筆畫線、螢光筆可以用的顏色：primary、secondary、tertiary 三個主色、disable（停用，disabled 的灰），加上 custom 1–14（行程顏色）
 export const PEN_COLORS = ["primary", "secondary", "tertiary", "disable", ...Array.from({ length: 14 }, (_, i) => `custom ${i + 1}`)];
 
 /** 顏色名稱（PEN_COLORS 裡的）→ token 的 CSS 變數 */
 export function penColorVar(color) {
-  if (color === "disable") return "var(--ds-sys-color-on-disable)";
+  if (color === "disable") return "var(--ds-sys-color-disabled)";
   return color.startsWith("custom") ? `var(--ds-sys-color-customs-${color.replace(" ", "-")})` : `var(--ds-sys-color-${color})`;
 }
 

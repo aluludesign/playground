@@ -53,9 +53,9 @@ export const 全部 = {
   <span class="mo-title mo-title--multi">${penMarkerHTML({ drawn: true })}<span>淺草寺淺淺草寺淺草寺淺草寺淺淺草寺淺草寺</span></span>
 </div>
 <h3 class="mo-sub">可以用的顏色</h3>
-<p class="note">筆畫線、螢光筆的線可以用 primary、secondary、tertiary 三個主色、disable（停用，on disable），和任何一個 custom（1–14，行程顏色）。螢光筆換顏色時，尾巴那團和小點不變。<br>程式：<code>penLineSVG({ color: "custom 3" })</code>、<code>penMarkerHTML({ color: "custom 3" })</code>，可以用的名稱在 <code>PEN_COLORS</code>。</p>
+<p class="note">筆畫線、螢光筆的線可以用 primary、secondary、tertiary 三個主色、disable（停用，disabled 的灰），和任何一個 custom（1–14，行程顏色）。螢光筆換顏色時，尾巴那團和小點不變。<br>程式：<code>penLineSVG({ color: "custom 3" })</code>、<code>penMarkerHTML({ color: "custom 3" })</code>，可以用的名稱在 <code>PEN_COLORS</code>。</p>
 <table class="mo-colors"><thead><tr><th>顏色 token</th><th>筆畫線</th><th>螢光筆</th></tr></thead><tbody>
-${PEN_COLORS.map((c) => `<tr><td><code class="var">${c.startsWith("custom") ? "customs/" + c : c === "disable" ? "on disable" : c}</code></td><td><span class="mo-label">熱門地點${penLineSVG({ drawn: true, color: c })}</span></td><td><span class="mo-title">${penMarkerHTML({ drawn: true, color: c })}<span>淺草寺</span></span></td></tr>`).join("")}
+${PEN_COLORS.map((c) => `<tr><td><code class="var">${c.startsWith("custom") ? "customs/" + c : c === "disable" ? "disabled" : c}</code></td><td><span class="mo-label">熱門地點${penLineSVG({ drawn: true, color: c })}</span></td><td><span class="mo-title">${penMarkerHTML({ drawn: true, color: c })}<span>淺草寺</span></span></td></tr>`).join("")}
 </tbody></table>
 <button type="button" class="mo-replay" data-replay="line">再畫一次</button>
 <table><thead><tr><th>變數</th><th>預設</th><th>說明</th></tr></thead><tbody>
