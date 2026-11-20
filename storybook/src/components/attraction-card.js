@@ -6,6 +6,7 @@ import { wireWiggle } from "../wiggle.js";
 import { penMarkerHTML } from "../pen-line.js";
 import { revealPens } from "../pen-reveal.js";
 import { scrimButtonHTML } from "./scrim-button.js";
+import { likesHTML } from "./wish-card.js";
 import arrow from "../icons/general/icon_subdirectory_arrow_right_outlined.svg?raw";
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
@@ -21,10 +22,11 @@ const isURL = (v) => /^https?:\/\/\S+$/i.test(String(v || ""));
  * info：[{ label: "類別", value: "宗教場所…" }, { label: "網站", value: "https://…" }]
  *       值是網址的會變成連結（一律底線＋primary）；沒有的那一列就不給
  * wisher／note：許願人和留言（有人許願有留言才有）
+ * likes：likesHTML 的設定（Figma 標題右邊的喜歡；行程的卡沒有就不給）
  * closeLabel：右上角 ✕ 的名字；不給就不放
  * 點 ✕ 發出 ds-card-close；點照片發出 ds-card-photo（detail.index）
  */
-export function attractionCardHTML({ photos = [], title = "淺草寺", meta = ["日本，東京都", "景點"], mapURL = "", info = [], wisher = "", note = "", closeLabel = "關閉" } = {}) {
+export function attractionCardHTML({ photos = [], title = "淺草寺", meta = ["日本，東京都", "景點"], mapURL = "", info = [], wisher = "", note = "", likes = null, closeLabel = "關閉" } = {}) {
   const pics = photos.filter(Boolean).slice(0, 6);
   const gallery = pics.length
     ? `<div class="ds-acard__photos">
@@ -51,6 +53,7 @@ ${note ? `<p class="ds-acard__note">${esc(note)}<span class="ds-wiggle-line ds-w
 ${gallery}
 <div class="ds-acard__body">
 <div class="ds-acard__top">
+${likes ? `<div class="ds-acard__likes">${likesHTML(likes)}</div>` : ""}
 <h2 class="ds-acard__title"><span class="ds-acard__mark" data-pen="card-${esc(title)}">${penMarkerHTML({ look: "title" })}<span>${esc(title)}</span></span></h2>
 ${loc}
 </div>
@@ -75,6 +78,8 @@ export function wireAttractionCard(root = document) {
     }
     card.addEventListener("click", (e) => {
       if (e.target.closest(".ds-acard__close")) return card.dispatchEvent(new CustomEvent("ds-card-close", { bubbles: true }));
+      const like = e.target.closest("[data-like]");
+      if (like) return like.dispatchEvent(new CustomEvent("ds-like", { bubbles: true, detail: { key: like.dataset.like } }));
       const p = e.target.closest(".ds-acard__photo");
       if (p) card.dispatchEvent(new CustomEvent("ds-card-photo", { bubbles: true, detail: { index: +p.dataset.index } }));
     });

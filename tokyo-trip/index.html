@@ -1735,7 +1735,8 @@
     #m-detail-card .m-dcard{pointer-events:auto;}
     body.m-in-detail #m-head, body.m-in-detail #m-sheet-box, body.m-in-detail #m-nav,
     body.m-in-detail #m-ended, body.m-in-detail #m-menu{display:none !important;}
-    body.m-in-detail #m-cal{top:calc(16px + env(safe-area-inset-top,0px)) !important;}
+    body.m-in-detail:not([data-view="wish"]) #m-cal{top:calc(16px + env(safe-area-inset-top,0px)) !important;}
+    body.m-in-detail #m-wish-box{display:none !important;}
     body.m-in-detail #map-sheet .mapzoom{display:none;}
     /* 新外框的點:錨點在水滴的尖端;不要原本那顆圓點的底色、框和陰影 */
     body.member-ui #map .pin{transform:translate(-50%,-100%); min-width:0; height:auto; padding:0; border:0; border-radius:0;
@@ -6713,6 +6714,8 @@
   const placeKey = v => String(v || "").replace(/\s+/g, "").toLowerCase();
   const samePlace = (title, place) => { const t = placeKey(title), p = placeKey(place); return !!p && (t === p || t.indexOf(p) >= 0); };
   function renderWishes() {
+    /* 一般團員的新外框:許願牆、許願卡細節跟著換(+1、新願望、別人改了) */
+    queueMicrotask(mAfterWishes);
     const list = wishOrder();
     const me = myName();
     /* 每個願望都給編號,照清單順序。標不出來的就是地圖上缺那個號 ——
@@ -7063,7 +7066,10 @@
     if (mapView) mRenderPlan();
     mRenderWish();
     /* 點地圖上行程的點 → 當日細節(Figma 註解);許願的點第三步再接 */
-    el("map")._onPin = k => { if (k[0] === "d" || k[0] === "p") mOpenDetail(k); };
+    el("map")._onPin = k => {
+      if (k[0] === "d" || k[0] === "p") mOpenDetail(k);
+      else if (k[0] === "w") { const w = wishOrder()[+k.slice(1)]; if (w) mOpenWish(w.id); }
+    };
   }
   /* WMO 天氣代碼 → icons/weather 的名字;舊的快取沒有代碼,就看降雨機率 */
   function wxIconOf(code, pop) {
@@ -7194,10 +7200,11 @@
       renderMemberShell();
     });
     el("m-detail-card").addEventListener("ds-card-close", mCloseDetail);
+    el("m-detail-card").addEventListener("ds-like", e => toggleVote(e.detail.key));
     el("m-detail").addEventListener("scroll", mDetailScrolled, { passive: true });
     el("m-detail-card").addEventListener("ds-card-photo", e => {
       const c = e.target.closest(".m-dcard");
-      const x = mDetail && dayList(mDetail.day)[c ? +c.dataset.i : mDetail.i];
+      const x = mDetail && mDetailList()[c ? +c.dataset.i : mDetail.i];
       if (x) mOpenPhotos(x, e.detail.index);
     });
     el("m-photo").addEventListener("ds-photo-at", e => mPaintPhoto(e.detail.index));
@@ -7244,6 +7251,9 @@
      點地圖上行程的點、或點時間軸的小卡進來。選到的點放到地圖看得到那一塊的正中間、放大;
      下面一張景點卡:照片(最多 6 張)、名稱、地點(點了開 Google 地圖)、地點資料、有人許願有留言才有的許願區。 */
   let mDetail = null;
+  /* 細節卡疊的是哪一串:行程(那一天的行程)或願望(許願牆的順序) */
+  const mDetailList = () => !mDetail ? [] : mDetail.kind === "wish" ? wishOrder() : dayList(mDetail.day);
+  const mDetailKey = i => !mDetail ? null : mDetail.kind === "wish" ? "w" + i : stopKey(mDetail.day, i);
   /* key:時間軸的 key(行程 id,或沒有 id 時 "a"+順序),或地圖上的點(d<順序>／p<日期>-<順序>) */
   function mStopOf(key) {
     let m = /^d(\d+)$/.exec(key);
@@ -7260,7 +7270,7 @@
     const x = dayList(at.day)[at.i];
     if (!x) return;
     if (at.day !== state.day) { state.day = at.day; render(); }
-    mDetail = { day: at.day, i: at.i, id: x.id || "" };
+    mDetail = { kind: "plan", day: at.day, i: at.i, id: x.id || "" };
     document.body.classList.add("m-in-detail");
     el("m-detail").hidden = false;
     el("m-detail").scrollTop = 0;
@@ -7299,11 +7309,13 @@
       photos: stopPhotos(x), title: x.title || "",
       meta: [[g.c, g.s].filter(Boolean).join("，") || (x.place && !samePlace(x.title, x.place) ? x.place : ""), g.k || info.cat || ""],
       mapURL: q ? "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(q) : "",
-      info: rows, wisher: x.by ? nameOf(x.by) : "", note: x.note || "", closeLabel: "回行程",
+      info: rows, wisher: x.by ? nameOf(x.by) : "", note: x.note || "", closeLabel: mDetail && mDetail.kind === "wish" ? "回許願牆" : "回行程",
+      likes: mDetail && mDetail.kind === "wish" ? { key: x.id, count: (x.votes || []).length, hearts: mHearts((x.votes || []).length),
+        givers: (x.votes || []).slice(0, 3).map(mFace), mine: (x.votes || []).indexOf(myName()) > -1, label: "喜歡" } : null,
     });
   }
   function mPaintDetail(_, keepScroll) {
-    const list = dayList(mDetail.day);
+    const list = mDetailList();
     const box = el("m-detail-card");
     const top = el("m-detail").scrollTop;
     box.innerHTML = list.map((x, i) => '<div class="m-dcard" data-i="' + i + '">' + mCardHTML(x) + "</div>").join("");
@@ -7330,9 +7342,9 @@
       const i = best ? +best.dataset.i : mDetail.i;
       if (i === mDetail.i) return;
       mDetail.i = i;
-      const x = dayList(mDetail.day)[i];
+      const x = mDetailList()[i];
       const p = x && pinOf(x);
-      if (p) focusPin(el("map"), p, stopKey(mDetail.day, i));
+      if (p) focusPin(el("map"), p, mDetailKey(i));
       if (x) mLoadPlaceInfo(x);
     }, 120);
   }
@@ -7354,7 +7366,7 @@
       phone: t.phone || t["contact:phone"] || "", web: t.website || t["contact:website"] || "",
     };
     try { localStorage.setItem(PLACE_INFO_LS, JSON.stringify(mPlaceInfo)); } catch (_) {}
-    if (mDetail && dayList(mDetail.day).indexOf(x) >= 0) mPaintDetail(null, true);
+    if (mDetail && mDetailList().indexOf(x) >= 0) mPaintDetail(null, true);
   }
   /* ===== 許願頁(第三步) ===== */
   let mWishSheet = null;
@@ -7419,12 +7431,24 @@
     el("m-wall").innerHTML = DS.wishBoardHTML({ cards, empty: "還沒有人許願。按上面的「許個願」丟一個進來。" });
     DS.wireWishCards(el("m-wall"));
   }
-  /* 許願卡細節:跟當日細節同一張景點卡(Figma 162172:19819),點地圖上的願望點或點卡片進來 —— 下一步做 */
+  function mAfterWishes() {
+    if (!DS || !document.body.classList.contains("member-ui")) return;
+    mRenderWish();
+    if (mDetail && mDetail.kind === "wish") mPaintDetail(null, true);
+  }
+  /* 許願卡細節(Figma 162172:19819):跟當日細節同一張景點卡,點許願牆的卡片或地圖上的願望點進來;往下滑是下一個願望 */
   function mOpenWish(id) {
-    const i = wishOrder().findIndex(w => w.id === id);
+    const list = wishOrder(), i = list.findIndex(w => w.id === id);
     if (i < 0) return;
-    const box = el("map"), w = wishOrder()[i], p = pinOf(w);
-    if (p) focusPin(box, p, "w" + i);
+    const w = list[i];
+    mDetail = { kind: "wish", day: state.day, i, id: w.id };
+    document.body.classList.add("m-in-detail");
+    el("m-detail").hidden = false;
+    el("m-detail").scrollTop = 0;
+    mPaintDetail();
+    const p = pinOf(w);
+    if (p) focusPin(el("map"), p, "w" + i);
+    mLoadPlaceInfo(w);
   }
   async function toggleTripMenu() {
     const box = el("m-menu");
