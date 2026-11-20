@@ -1773,6 +1773,7 @@
   <div id="m-detail" hidden><div id="m-detail-gap"></div><div id="m-detail-card"></div></div>
   <section id="m-me" aria-labelledby="m-me-h" hidden><h2 id="m-me-h">我</h2><p id="m-me-who"></p><div id="m-me-ops"></div></section>
   <div id="m-nav"></div>
+  <div id="m-photo"></div>
 </div>
 <div class="overlay" id="members-overlay" hidden>
   <div class="signin" role="dialog" aria-modal="true" aria-labelledby="mb-title">
@@ -7120,9 +7121,24 @@
   /* 點行程小卡 → 當日細節(地圖上那個點放到正中間、放大,下面一張景點卡) */
   function openDayDetail(key) { mOpenDetail(key); }
   function openStopPhotos(key) {
-    const x = dayList(state.day).find((s, i) => (s.id || "a" + i) === key);
-    if (x && isCommons(x.photo)) openPhoto(commonsImg(x.photo, 1200), x.photo);
+    const x = dayList(state.day).find((r, i) => (r.id || "a" + i) === key);
+    if (x) mOpenPhotos(x, 0);
   }
+  /* 照片預覽(Figma 161747:16541):行程的照片(現在只有維基那一張,團員附圖上線後一起放,最多 6 張) */
+  let mPhotoState = null;
+  function mOpenPhotos(x, at) {
+    const pics = stopPhotos(x).map(u => ({ src: u.replace(/width=\d+/, "width=1200"), thumb: u.replace(/width=\d+/, "width=120") }));
+    if (!pics.length) return;
+    mPhotoState = { pics, title: x.title || "", credit: isCommons(x.photo) ? x.photo : "" };
+    mPaintPhoto(at || 0);
+  }
+  function mPaintPhoto(at) {
+    const p = mPhotoState;
+    el("m-photo").innerHTML = DS.photoPreviewHTML({ photos: p.pics, at, title: p.title,
+      credit: p.credit ? "照片:維基共享資源" : "", creditURL: p.credit });
+    DS.wirePhotoPreview(el("m-photo"), { count: p.pics.length });
+  }
+
   /* 底部導覽的 key ↔ 分頁:交通 = fly、花費 = cost(分帳也算花費)、我 = 選單 */
   const NAV_TAB = { plan: "plan", wish: "wish", transport: "fly", spend: "cost", me: "" };
   function mNavKey() {
@@ -7164,9 +7180,10 @@
     el("m-detail-card").addEventListener("ds-card-photo", e => {
       const c = e.target.closest(".m-dcard");
       const x = mDetail && dayList(mDetail.day)[c ? +c.dataset.i : mDetail.i];
-      const pics = x ? stopPhotos(x) : [];
-      if (pics.length) openPhoto(pics.map(u => u.replace(/width=\d+/, "width=1200")).join(" "), isCommons(x.photo) ? x.photo : "");
+      if (x) mOpenPhotos(x, e.detail.index);
     });
+    el("m-photo").addEventListener("ds-photo-at", e => mPaintPhoto(e.detail.index));
+    el("m-photo").addEventListener("ds-photo-close", () => { el("m-photo").innerHTML = ""; mPhotoState = null; });
     el("m-me-ops").addEventListener("click", e => {
       const b = e.target.closest("[data-for]");
       const orig = b && el(b.dataset.for);

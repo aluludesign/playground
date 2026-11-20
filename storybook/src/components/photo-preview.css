@@ -1,0 +1,109 @@
+/* 照片預覽 —— Figma 161747:16541
+ *
+ *   背景：黑 10%＋背景模糊（後面的畫面糊掉）
+ *   內容：寬 358、離頂 97，間距 spacing/2xl
+ *     大圖 358×358、圓角 radius/3xl
+ *     名稱 Headline/xs/semi-bold、text inverse 100、置中
+ *     縮圖列：上一張／下一張（btn/normal/sm 的大小、圓角，icon 16）＋ 40×40 縮圖（radius/sm），選到的框 primary、border/md
+ *     出處 label/sm、text inverse 100、底線（點了開出處頁）；關閉 Button Primary・Icon Filled・sm
+ */
+
+.ds-photo {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  justify-content: center;
+  overflow-y: auto;
+  background: rgb(0 0 0 / 0.1);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+.ds-photo__content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--ds-sys-spacing-2xl);
+  box-sizing: border-box;
+  width: min(358px, calc(100vw - 2 * var(--ds-sys-spacing-2xl)));
+  padding: 97px 0 var(--ds-sys-spacing-4xl);
+}
+.ds-photo__big {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: var(--ds-sys-radius-3xl);
+  background: var(--ds-sys-color-surf-container-low);
+}
+.ds-photo .ds-photo__title {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  width: 100%;
+  color: var(--ds-sys-color-text-inverse-100);
+  font-family: var(--ds-sys-font-family-headline);
+  font-weight: 900;
+  font-size: var(--ds-sys-font-size-headline-xs);
+  line-height: 20px;
+  letter-spacing: 0.05em;
+  text-align: center;
+}
+.ds-photo__slot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: var(--ds-sys-spacing-2xs) 0;
+}
+.ds-photo__nav {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 42px;
+  padding: var(--ds-sys-spacing-sm) var(--ds-sys-spacing-xl);
+  border: 0;
+  border-radius: var(--ds-comp-btn-normal-sm-radius);
+  background: none;
+  color: var(--ds-sys-color-text-inverse-100);
+  cursor: pointer;
+}
+.ds-photo__nav svg { width: var(--ds-comp-btn-normal-sm-icon); height: var(--ds-comp-btn-normal-sm-icon); }
+.ds-photo__nav:disabled { opacity: 0.3; cursor: default; }
+.ds-photo__nav:focus-visible { outline: var(--ds-comp-focus-ring-border) solid var(--ds-comp-focus-ring-color); }
+.ds-photo__thumbs { display: flex; gap: var(--ds-sys-spacing-md); overflow-x: auto; scrollbar-width: none; }
+.ds-photo__thumb {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--ds-sys-radius-sm);
+  overflow: hidden;
+  background: var(--ds-sys-color-surf-container-low);
+  cursor: pointer;
+}
+.ds-photo__thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.ds-photo__thumb { position: relative; }
+/* 選到的那張：框畫在圖片上面（Figma 的 stroke 是 Inside） */
+.ds-photo__thumb.is-on::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: var(--ds-sys-border-md) solid var(--ds-sys-color-primary);
+  border-radius: inherit;
+}
+.ds-photo__info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--ds-sys-spacing-4xl);
+  padding-top: var(--ds-sys-spacing-5xl);
+}
+.ds-photo__credit {
+  color: var(--ds-sys-color-text-inverse-100);
+  font-family: var(--ds-sys-font-family-label);
+  font-size: var(--ds-sys-font-size-label-sm);
+  line-height: 12px;
+}
+a.ds-photo__credit { text-decoration: underline; }
