@@ -1,0 +1,128 @@
+/* 當日細節卡片 —— Figma「attraction card」（162182:18508）
+ *
+ *   底：surface＋bg pattern、圓角 radius/sm
+ *   照片：358×200，可左右滑（最多 6 張，含團員上傳的）；右上 Scrim ✕；底下 pagination 圓點（active primary、其他 surf container low）
+ *   內容：內距 2xl／4xl，區塊間距 5xl
+ *     標題 Headline/xs/semi-bold（源泉圓體 H 20）＋標題螢光筆（primary）
+ *     地點：label/sm text 200 ＋ open_in_new 16，點了開 Google 地圖
+ *     地點資料：label/md text 200，一列一項；連結一律底線＋primary
+ *     許願：許願人（↳＋名字，label/lg/hand-regular，opacity primary 50 底）＋留言框（同底色、底下抖動線）
+ */
+
+.ds-acard {
+  box-sizing: border-box;
+  overflow: hidden;
+  border-radius: var(--ds-sys-radius-sm);
+  box-shadow: var(--ds-elevation-surface-soft);
+  color: var(--ds-sys-color-text-100);
+}
+
+.ds-acard__photos { position: relative; }
+.ds-acard__track {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  height: 200px;
+}
+.ds-acard__track::-webkit-scrollbar { display: none; }
+.ds-acard__photo {
+  flex: none;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: var(--ds-sys-color-surf-container-low);
+  scroll-snap-align: start;
+  cursor: zoom-in;
+}
+.ds-acard__photo img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.ds-acard__close { position: absolute; top: var(--ds-sys-spacing-2xl); right: var(--ds-sys-spacing-2xl); z-index: 1; }
+.ds-acard__close--bare { position: relative; display: flex; justify-content: flex-end; top: 0; right: 0; padding: var(--ds-sys-spacing-2xl) var(--ds-sys-spacing-2xl) 0; }
+.ds-acard__dots {
+  display: flex;
+  justify-content: center;
+  gap: var(--ds-sys-spacing-xs);
+  height: 18px;
+  align-items: center;
+}
+.ds-acard__dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ds-sys-color-surf-container-low);
+}
+.ds-acard__dots span.is-on { background: var(--ds-sys-color-primary); }
+
+.ds-acard__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-sys-spacing-5xl);
+  padding: var(--ds-sys-spacing-2xl) var(--ds-sys-spacing-4xl) var(--ds-sys-spacing-4xl);
+}
+.ds-acard__top { display: flex; flex-direction: column; align-items: flex-start; gap: var(--ds-sys-spacing-xl); }
+.ds-acard__title {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font-family: var(--ds-sys-font-family-headline);
+  font-weight: 900;
+  font-size: var(--ds-sys-font-size-headline-xs);
+  line-height: 22px;
+  letter-spacing: 0.05em;
+}
+.ds-acard__mark { position: relative; display: inline-block; }
+.ds-acard__mark > span:last-child { position: relative; }
+
+.ds-acard__loc {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-sys-spacing-xs);
+  color: var(--ds-sys-color-text-200);
+  font-family: var(--ds-sys-font-family-label);
+  font-size: var(--ds-sys-font-size-label-sm);
+  line-height: 16px;
+  text-decoration: none;
+}
+.ds-acard__loc-icon { width: 16px; height: 16px; }
+a.ds-acard__loc:focus-visible { outline: var(--ds-comp-focus-ring-border) solid var(--ds-comp-focus-ring-color); outline-offset: 2px; }
+
+.ds-acard__info {
+  margin: 0;
+  padding-left: 1.2em;
+  color: var(--ds-sys-color-text-200);
+  font-family: var(--ds-sys-font-family-label);
+  font-size: var(--ds-sys-font-size-label-md);
+  line-height: 18px;
+}
+.ds-acard__info a {
+  color: var(--ds-sys-color-primary);
+  text-decoration: underline;
+  overflow-wrap: anywhere;
+}
+
+.ds-acard__wish { display: flex; flex-direction: column; align-items: flex-start; gap: var(--ds-sys-spacing-md); }
+.ds-acard__wisher,
+.ds-acard__note {
+  background: var(--ds-sys-color-opacity-opacity-primary-50);
+  font-family: var(--ds-sys-font-family-zhtw-handwriting-zhtw);
+  font-size: var(--ds-sys-font-size-label-lg);
+  line-height: 20px;
+}
+.ds-acard__wisher {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-sys-spacing-2xs);
+  padding: var(--ds-sys-spacing-2xs) var(--ds-sys-spacing-md);
+}
+.ds-acard__wisher-icon { width: 16px; height: 16px; }
+.ds-acard__note {
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  padding: var(--ds-sys-spacing-2xs) var(--ds-sys-spacing-md);
+  overflow-wrap: anywhere;
+}
+.ds-acard__note .ds-wiggle-line { position: absolute; left: 0; right: 0; bottom: -1px; }

@@ -1,0 +1,124 @@
+/* 日期列 —— Figma「date list」（162271:11054），放在行程面板最上面
+ *
+ *   一格 111×120，手繪框（outline 300、wiggle）；格子一格接一格，框線疊在一起像一張表
+ *   上：Day1 ‧ TUE（label/sm：源泉圓體 R 12，‧ 用 B），上下 spacing/md，底下一條抖動線
+ *   中：10/06（Body/md/semi-bold：源泉圓體 B 18），底下螢光筆（那天的顏色）
+ *   下：天氣（label/sm/hand-regular：全瀨體 12）—— 圖示 icon/xs 16＋「24°-29°」；水滴＋「30%」
+ *   active：整格鋪那天的 on custom 色、32%（opacity/md），往右下錯開 3／2
+ *   past（Figma pass by）：沒有天氣，字和螢光筆變淡
+ *   status（Figma coming soon）：倒數／回味中，放在最前面
+ */
+
+.ds-date-list {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+  padding: 0 var(--ds-sys-spacing-md) var(--ds-sys-spacing-4xl);
+}
+.ds-date-list::-webkit-scrollbar { display: none; }
+
+.ds-date {
+  position: relative;
+  isolation: isolate;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--ds-sys-spacing-xl);
+  box-sizing: border-box;
+  width: 111px;
+  height: 120px;
+  margin: 0 -0.5px 0 0;
+  padding: 0 0 var(--ds-sys-spacing-xl);
+  border: 0;
+  background: none;
+  color: var(--ds-sys-color-text-100);
+  font: inherit;
+  text-align: center;
+  scroll-snap-align: center;
+  -webkit-tap-highlight-color: transparent;
+  --wiggle-color: var(--ds-sys-color-outline-300);
+}
+button.ds-date { cursor: pointer; }
+button.ds-date:focus-visible {
+  outline: var(--ds-comp-focus-ring-border) solid var(--ds-comp-focus-ring-color);
+  outline-offset: -4px;
+}
+
+.ds-date__head {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--ds-sys-spacing-xs);
+  box-sizing: border-box;
+  width: 100%;
+  height: 29px;
+  padding: var(--ds-sys-spacing-md) 0;
+  font-family: var(--ds-sys-font-family-label);
+  font-size: var(--ds-sys-font-size-label-sm);
+  line-height: 12px;
+  font-weight: 400;
+}
+/* 抖動線畫在格子頂端那一條的底部 */
+.ds-date__head.ds-wiggle-line { height: 29px; --wiggle-amount: var(--ds-sys-wiggle-amount-border); }
+.ds-date__head.ds-wiggle-line > .ds-wiggle__svg { top: auto; bottom: 0; height: 2px; }
+.ds-date__head b { font-weight: 700; }
+
+.ds-date__big {
+  display: flex;
+  justify-content: center;
+  font-family: var(--ds-sys-font-family-body);
+  font-size: var(--ds-sys-font-size-body-md);
+  line-height: 18px;
+  font-weight: 700; /* Body/md/semi-bold 是源泉圓體 B */
+}
+.ds-date__mark {
+  position: relative;
+  padding: 0 var(--ds-sys-spacing-xs);
+  --pen-marker-bottom: 3px;
+}
+.ds-date__mark > span:last-child { position: relative; }
+
+.ds-date__wx {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--ds-sys-spacing-2xs);
+  font-family: var(--ds-sys-font-family-zhtw-handwriting-zhtw);
+  font-size: var(--ds-sys-font-size-label-sm);
+  line-height: 12px;
+}
+.ds-date__wx-row {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-sys-spacing-2xs);
+}
+.ds-date__wx-icon {
+  width: var(--ds-sys-icon-xs);
+  height: var(--ds-sys-icon-xs);
+  margin-right: var(--ds-sys-spacing-2xs);
+}
+
+/* 選到的那天：整格鋪那天的顏色（往右下錯開一點，像貼上去的） */
+.ds-date--active::before {
+  content: "";
+  position: absolute;
+  inset: 2px -3px 3px 3px;
+  z-index: -1;
+  background: var(--date-on);
+  opacity: var(--ds-sys-opacity-md);
+}
+.ds-date--active .ds-pen-marker { --pen-marker-color: var(--date-on) !important; }
+
+/* 過去的日子：淡掉 */
+.ds-date--past { color: var(--ds-sys-color-text-200); }
+.ds-date--past .ds-date__big,
+.ds-date--past .ds-date__head { opacity: var(--ds-sys-opacity-xl); }
+.ds-date--past .ds-pen-marker { --pen-marker-color: var(--ds-sys-color-outline-100); }
+
+/* 倒數／回味中 */
+.ds-date--status .ds-date__head {
+  font-family: var(--ds-sys-font-family-label);
+}
+.ds-date--status .ds-date__big { margin-top: var(--ds-sys-spacing-md); }

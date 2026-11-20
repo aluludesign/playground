@@ -17,6 +17,9 @@ export { pinBadgeHTML, pinLabelHTML, pinHTML, pinSetHTML, pinTimelineHTML } from
 export { markerButtonHTML } from "./components/marker-button.js";
 export { menuHTML, wireMenu } from "./components/menu.js";
 export { searchItemHTML } from "./components/search-list.js";
+export { attractionCardHTML, wireAttractionCard } from "./components/attraction-card.js";
+export { dateCardHTML, dateListHTML, wireDateList, centerDateList, WEATHER_ICONS } from "./components/date-list.js";
+export { timelineHTML, scheduleDetailHTML, attractionPhotosHTML, wireTimeline } from "./components/timeline.js";
 export { bottomSheetHTML, wireBottomSheet } from "./components/bottom-sheet.js";
 export { tripHeaderHTML, wireTripHeader } from "./components/trip-header.js";
 export { scrimButtonHTML } from "./components/scrim-button.js";
