@@ -45,7 +45,7 @@ export const 全部 = {
 <tr><td class="al">外框線</td><td><code class="var">--ds-sys-color-outline-50</code>・抖動 wiggle 0.3・<code class="var">--ds-sys-border-xs</code></td></tr>
 <tr><td class="al">外框陰影</td><td><code class="var">--ds-elevation-surface-soft</code></td></tr>
 <tr><td class="al">外框圓角</td><td><code class="var">--ds-comp-bottom-nav-radius</code></td></tr>
-<tr><td class="al">外框內距／間距</td><td><code class="var">--ds-sys-spacing-xs</code>／<code class="var">--ds-sys-spacing-2xl</code></td></tr>
+<tr><td class="al">外框內距／間距</td><td><code class="var">--ds-sys-spacing-xs</code>／<code class="var">--ds-sys-spacing-xl</code></td></tr>
 <tr><td class="al">圓的底紋</td><td><code class="var">ds-pattern--tertiary</code></td></tr>
 <tr><td class="al">圓的框</td><td><code class="var">--ds-sys-border-md</code> <code class="var">--ds-sys-color-outline-50</code></td></tr>
 <tr><td class="al">圓的陰影</td><td><code class="var">--ds-elevation-component-sm</code>／hover <code class="var">--ds-elevation-component-md</code></td></tr>
@@ -60,7 +60,7 @@ export const 全部 = {
 .bn-bare { padding: 0; gap: 0; box-shadow: none; background: none; }
 .bn-hover .ds-bottom-nav__circle { box-shadow: var(--ds-elevation-component-md); }
 .bn-pressed .ds-bottom-nav__circle { width: 59px; height: 59px; }
-.bn-focus .ds-bottom-nav__item::after { content: ""; position: absolute; inset: calc(5px - var(--ds-sys-spacing-2xs) - var(--ds-comp-focus-ring-border)); border: var(--ds-comp-focus-ring-border) solid var(--ds-comp-focus-ring-color); border-radius: var(--ds-comp-bottom-nav-radius); pointer-events: none; }
+.bn-focus .ds-bottom-nav__item::after { content: ""; position: absolute; inset: calc(-1 * (var(--ds-sys-spacing-2xs) + var(--ds-comp-focus-ring-border))); border: var(--ds-comp-focus-ring-border) solid var(--ds-comp-focus-ring-color); border-radius: var(--ds-comp-bottom-nav-radius); pointer-events: none; }
 .bn-bare::before, .bn-bare > .ds-wiggle__svg { display: none; }
 .wg-code { background: #f6f2f0; border-radius: 8px; padding: 12px 14px; overflow-x: auto; font-size: 12px; line-height: 1.6; }
 </style>`;
