@@ -6,11 +6,12 @@ import "./bottom-sheet.css";
  * 「按住整個 bottom sheet 可上、下滑動至最低與展開至最大」
  * content：面板裡的東西（Figma 的 slot，例：日期列＋時間軸）
  * label：給讀螢幕的人聽的名字
+ * bare：沒有面板的底和陰影，只有把手（Figma 許願牆：卡片直接浮在地圖上）
  *
  * 面板本身的高度永遠是最高那一段，用 translateY 往下藏；所以拉的時候裡面不會重排。
  */
-export function bottomSheetHTML({ content = "", label = "行程" } = {}) {
-  return `<section class="ds-sheet ds-pattern" aria-label="${label}">
+export function bottomSheetHTML({ content = "", label = "行程", bare = false } = {}) {
+  return `<section class="ds-sheet${bare ? " ds-sheet--bare" : " ds-pattern"}" aria-label="${label}">
 <div class="ds-sheet__header"><button type="button" class="ds-sheet__handle" aria-label="拉開或收起${label}"></button></div>
 <div class="ds-sheet__body">${content}</div>
 </section>`;

@@ -62,3 +62,6 @@
   display: flex;
   flex-direction: column;
 }
+
+/* bare：只有把手，卡片直接浮在地圖上（許願牆） */
+.ds-sheet--bare { background: none; box-shadow: none; }

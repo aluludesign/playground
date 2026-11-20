@@ -1,0 +1,164 @@
+/* 許願卡 —— Figma「card/wishes」（161934:9759）、「likes」（162182:14172）、「sticker」（162182:17965）
+ *         許願牆 —— 「wishes board scroll up」（162182:13188）
+ *
+ *   卡片：250 寬、surface＋bg pattern（5%）、Elevation/surface/medium、radius/sm；內距 2xl、區塊間距 xl
+ *     名稱 Body/lg/hand-regular（全瀨體 20）＋螢光筆，最長一行超過「…」；地區‧類別 label/sm text 200（不可點）
+ *     照片組 90×90 ＋ 喜歡（間距 5xl、上下 xl）；維基摘要 label/md text 200 最多 2 行
+ *     許願人：頭像 md＋名字（label/lg/hand-regular），opacity primary 50 底；留言最多 1 行、底下抖動線
+ *   喜歡：愛心貼紙 73×44（0 顆空心 duotone、1–3 顆 sticker 疊著斜放）＋「+」label/md/semi-bold＋人數 Body/lg/regular＋頭像 sm 疊 -6
+ *   許願牆：欄寬 250、欄距與卡距 2xl、內距 4xl；整面牆一起左右滑
+ */
+
+.ds-wboard {
+  overflow-x: auto;
+  overflow-y: visible;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.ds-wboard::-webkit-scrollbar { display: none; }
+.ds-wboard__wall {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ds-sys-spacing-2xl);
+  width: max-content;
+  padding: var(--ds-sys-spacing-4xl);
+}
+.ds-wboard__col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-sys-spacing-2xl);
+  width: 250px;
+}
+.ds-wboard--empty p {
+  margin: var(--ds-sys-spacing-4xl);
+  color: var(--ds-sys-color-text-200);
+  font-family: var(--ds-sys-font-family-zhtw-handwriting-zhtw);
+  font-size: var(--ds-sys-font-size-label-lg);
+}
+
+.ds-wcard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-sys-spacing-xl);
+  box-sizing: border-box;
+  width: 250px;
+  padding: var(--ds-sys-spacing-2xl);
+  border-radius: var(--ds-sys-radius-sm);
+  box-shadow: var(--ds-elevation-surface-medium);
+  color: var(--ds-sys-color-text-100);
+  cursor: pointer;
+}
+.ds-wcard__head { display: flex; flex-direction: column; gap: var(--ds-sys-spacing-md); padding-right: var(--ds-sys-spacing-5xl); min-width: 0; }
+.ds-wcard__title {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+  font-family: var(--ds-sys-font-family-zhtw-handwriting-zhtw);
+  font-weight: 400;
+  font-size: var(--ds-sys-font-size-body-lg);
+  line-height: 22px;
+}
+.ds-wcard__mark { position: relative; display: inline-block; max-width: 100%; }
+.ds-wcard__mark > span:last-child { position: relative; display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.ds-wcard__info {
+  display: flex;
+  gap: var(--ds-sys-spacing-xs);
+  margin: 0;
+  color: var(--ds-sys-color-text-200);
+  font-family: var(--ds-sys-font-family-label);
+  font-size: var(--ds-sys-font-size-label-sm);
+  line-height: 12px;
+}
+.ds-wcard__body { display: flex; flex-direction: column; gap: var(--ds-sys-spacing-2xl); }
+.ds-wcard__media { display: flex; align-items: flex-start; gap: var(--ds-sys-spacing-5xl); padding: var(--ds-sys-spacing-xl) 0; }
+.ds-wcard__media .ds-photos { margin: 0; }
+.ds-wcard__media .ds-photos--empty { display: none; }
+.ds-wcard__wiki {
+  margin: 0;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  color: var(--ds-sys-color-text-200);
+  font-family: var(--ds-sys-font-family-label);
+  font-size: var(--ds-sys-font-size-label-md);
+  line-height: 18px;
+}
+.ds-wcard__wish { display: flex; flex-direction: column; align-items: flex-start; gap: var(--ds-sys-spacing-sm); }
+.ds-wcard__wisher,
+.ds-wcard__note {
+  background: var(--ds-sys-color-opacity-opacity-primary-50);
+  font-family: var(--ds-sys-font-family-zhtw-handwriting-zhtw);
+  font-size: var(--ds-sys-font-size-label-lg);
+  line-height: 20px;
+}
+.ds-wcard__wisher { display: inline-flex; align-items: center; gap: var(--ds-sys-spacing-2xs); padding: var(--ds-sys-spacing-2xs) var(--ds-sys-spacing-md); }
+.ds-wcard__note {
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  padding: var(--ds-sys-spacing-2xs) var(--ds-sys-spacing-md);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ds-wcard__note .ds-wiggle-line { position: absolute; left: 0; right: 0; bottom: -1px; }
+
+/* 喜歡 */
+.ds-likes {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--ds-sys-spacing-md);
+  width: 73px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ds-sys-color-text-100);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.ds-likes:focus-visible { outline: var(--ds-comp-focus-ring-border) solid var(--ds-comp-focus-ring-color); outline-offset: 4px; }
+.ds-hearts { position: relative; display: block; width: 73px; height: 44px; }
+.ds-hearts__h { position: absolute; width: 40px; height: 40px; }
+.ds-hearts--0 .ds-hearts__h { left: 17px; top: 2px; }
+/* Figma 60% 那一格：三顆的位置和角度 */
+.ds-hearts__h--0 { left: 30px; top: -3px; }
+.ds-hearts__h--1 { left: 9px; top: 7px; transform: rotate(12deg); }
+.ds-hearts__h--2 { left: -12px; top: 4px; transform: rotate(14deg); }
+.ds-hearts--1 .ds-hearts__h--0 { left: 17px; top: 2px; }
+.ds-hearts--2 .ds-hearts__h--0 { left: 26px; top: 0; }
+.ds-hearts--2 .ds-hearts__h--1 { left: 6px; top: 6px; }
+.ds-likes__num {
+  /* Figma：白底＋iris 漸層（藍、紫、黃、綠，foundation iris alpha-32） */
+  background:
+    linear-gradient(135deg, var(--ds-foun-color-share-iris-blue-alpha-32) 0%, var(--ds-foun-color-share-iris-purple-alpha-32) 32%, var(--ds-foun-color-share-iris-yellow-alpha-32) 68%, var(--ds-foun-color-share-iris-green-alpha-32) 100%),
+    #fff;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-sys-spacing-xs);
+  padding: var(--ds-sys-spacing-2xs) var(--ds-sys-spacing-md);
+}
+.ds-likes__plus { font-family: var(--ds-sys-font-family-label); font-weight: 700; font-size: var(--ds-sys-font-size-label-md); line-height: 18px; }
+.ds-likes__n { font-family: var(--ds-sys-font-family-body); font-size: var(--ds-sys-font-size-body-lg); line-height: 22px; }
+.ds-likes__givers { display: inline-flex; }
+.ds-likes__givers > * + * { margin-left: -6px; }
+
+/* 沒照片的頭像（暫時）：名字第一個字、那個人的顏色 */
+.ds-wface {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  border-radius: 50%;
+  background: var(--face);
+  color: #fff;
+  font-family: var(--ds-sys-font-family-label);
+  font-weight: 700;
+  box-shadow: 0 0 0 1px var(--ds-sys-color-surface);
+}
+.ds-wface--sm { width: 16px; height: 16px; font-size: 9px; }
+.ds-wface--md { width: 24px; height: 24px; font-size: 12px; }

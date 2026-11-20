@@ -1710,6 +1710,21 @@
       font-family:var(--ds-sys-font-family-zhtw-handwriting-zhtw); font-size:var(--ds-sys-font-size-label-lg);}
     #m-me-ops{display:flex; flex-direction:column; align-items:stretch; gap:var(--ds-sys-spacing-xl);}
     body.member-ui[data-view="me"] .wrap > main{display:none;}
+    /* 許願頁(Figma 161950:14100):沒有頂列;最上面是「許個願,想去東京哪?」那顆(Dynamic Iris,就是一般的＋許願、不接 AI),
+       日曆鈕是 primary;許願牆沒有面板的底,卡片直接浮在地圖上,三段:下拉只剩一排、預設、上拉到許願鈕下面 */
+    body.member-ui[data-view="wish"] #m-head{display:none;}
+    #m-iris{position:absolute; left:0; right:0; top:calc(75px - 59px + env(safe-area-inset-top,0px)); z-index:4; display:flex; justify-content:center;}
+    /* 許願頁 Figma 沒有 ＋／− */
+    body.member-ui[data-view="wish"] #map-sheet .mapzoom{display:none;}
+    #m-iris[hidden], #m-wish-box[hidden]{display:none;}
+    #m-wish-box{position:absolute; inset:0; pointer-events:none; overflow:hidden;}
+    #m-wish-box .ds-sheet{pointer-events:none;}
+    #m-wish-box .ds-sheet__header, #m-wish-box .ds-wboard{pointer-events:auto;}
+    #m-wish-box .ds-sheet__body{overflow-y:auto; pointer-events:auto; padding-bottom:var(--m-navh,113px);}
+    /* 下拉:只剩一排卡片,一張接一張橫著排 */
+    body.m-wish-min #m-wish-box .ds-wboard__col{display:contents;}
+    body.m-wish-min #m-wish-box .ds-wboard__wall{align-items:flex-start;}
+    body.m-wish-min #m-nav{transform:translateY(110%);}
     /* 當日細節(點地圖上的點、點行程小卡進來):頂列、面板、底部導覽都收起來,
        只剩地圖、日曆鈕和下面一張景點卡;卡片往上滑可以看全部(Figma 162114:14958 → 162119:15938) */
     #m-detail{position:absolute; inset:0; z-index:6; overflow-y:auto; overscroll-behavior:contain; pointer-events:none;
@@ -1770,6 +1785,8 @@
   <div id="m-cal"></div>
   <div id="m-seg" hidden></div>
   <div id="m-sheet-box"></div>
+  <div id="m-iris" hidden></div>
+  <div id="m-wish-box" hidden></div>
   <div id="m-detail" hidden><div id="m-detail-gap"></div><div id="m-detail-card"></div></div>
   <section id="m-me" aria-labelledby="m-me-h" hidden><h2 id="m-me-h">我</h2><p id="m-me-who"></p><div id="m-me-ops"></div></section>
   <div id="m-nav"></div>
@@ -7001,7 +7018,7 @@
     el("m-me").hidden = !mMe;
     if (mMe) mMeOps();
     el("m-cal").hidden = !mapView;
-    el("m-cal").style.top = (headH + 24) + "px";
+    el("m-cal").style.top = (state.tab === "wish" ? 121 - 59 + mSafeTop() : headH + 24) + "px";
     el("m-cal").innerHTML = DS.scrimButtonHTML({
       icon: "calender", color: state.tab === "wish" ? "primary" : "scrim", size: "lg",
       label: "開關其他日子的行程", pressed: !!layers.all,
@@ -7042,8 +7059,9 @@
       mSyncNav();
       if (mSheet) mSheet.refresh();
     }
-    el("m-sheet-box").hidden = !mapView;
+    el("m-sheet-box").hidden = !mapView || state.tab === "wish";
     if (mapView) mRenderPlan();
+    mRenderWish();
     /* 點地圖上行程的點 → 當日細節(Figma 註解);許願的點第三步再接 */
     el("map")._onPin = k => { if (k[0] === "d" || k[0] === "p") mOpenDetail(k); };
   }
@@ -7337,6 +7355,76 @@
     };
     try { localStorage.setItem(PLACE_INFO_LS, JSON.stringify(mPlaceInfo)); } catch (_) {}
     if (mDetail && dayList(mDetail.day).indexOf(x) >= 0) mPaintDetail(null, true);
+  }
+  /* ===== 許願頁(第三步) ===== */
+  let mWishSheet = null;
+  /* 許願牆的三段(Figma):下拉只露出一排的上半截(248)、預設(卡片頂在 394/844)、上拉頂到許願鈕下面 */
+  function mWishSnaps() {
+    /* Figma 的座標含 59 高的狀態列;手機上那一截是 safe area。把手那條在牆上面 40 */
+    const H = window.innerHeight, top = y => y - 59 + mSafeTop();
+    const iris = el("m-iris").getBoundingClientRect();
+    return [H - top(596 - 40), H - top(394 - 40), Math.round(H - (iris.bottom - 40 + 24))];
+  }
+  let mSafe = null;
+  function mSafeTop() {
+    if (mSafe === null) {
+      const p = document.createElement("div");
+      p.style.cssText = "position:fixed;top:0;height:env(safe-area-inset-top,0px);visibility:hidden";
+      document.body.appendChild(p); mSafe = p.offsetHeight; p.remove();
+    }
+    return mSafe;
+  }
+  /* 愛心幾顆:按 +1 的人佔全團的比例,超過 60% 三顆、40% 兩顆、其他有人按就一顆、沒人按是空心(比例怎麼算待 Lulu 確認) */
+  function mHearts(n) {
+    if (!n) return 0;
+    const r = n / Math.max(1, MEMBERS.length);
+    return r > 0.6 ? 3 : r > 0.4 ? 2 : 1;
+  }
+  const mVotesSeen = {};
+  function mFace(id) {
+    const m = MEMBERS.find(x => x.id === id);
+    return { name: nameOf(id), color: m ? m.color : "", src: "" };
+  }
+  function mRenderWish() {
+    const wishView = !mMe && state.tab === "wish";
+    el("m-iris").hidden = !wishView;
+    el("m-wish-box").hidden = !wishView;
+    if (!wishView) { document.body.classList.remove("m-wish-min"); return; }
+    if (!el("m-iris").firstChild) {
+      el("m-iris").innerHTML = DS.irisButtonHTML({ label: "許個願，想去" + ((trip && trip.city) || "") + "哪？", size: "lg" });
+      DS.wireIris(el("m-iris"));
+      el("m-iris").addEventListener("click", () => el("add-wish-btn").click());
+    }
+    if (!mWishSheet) {
+      el("m-wish-box").innerHTML = DS.bottomSheetHTML({ content: '<div id="m-wall"></div>', label: "許願牆", bare: true });
+      mWishSheet = DS.wireBottomSheet(el("m-wish-box").querySelector(".ds-sheet"), { snaps: mWishSnaps, at: 1, scroller: ".ds-sheet__body" });
+      el("m-wish-box").addEventListener("ds-sheet-snap", e => document.body.classList.toggle("m-wish-min", e.detail.index === 0));
+      el("m-wall").addEventListener("ds-like", e => toggleVote(e.detail.key));
+      el("m-wall").addEventListener("ds-wish-open", e => mOpenWish(e.detail.key));
+      el("m-wall").addEventListener("ds-photos-open", e => { const w = state.wishes.find(x => x.id === e.detail.key); if (w) mOpenPhotos(w, 0); });
+    } else mWishSheet.refresh();
+    const me = myName();
+    const cards = wishOrder().map(w => {
+      const g = w.geo || {}, votes = w.votes || [], n = votes.length;
+      const was = mVotesSeen[w.id];
+      mVotesSeen[w.id] = n;
+      return {
+        key: w.id, title: w.title || "", color: 13,
+        meta: [[g.c, g.s].filter(Boolean).join("，") || (w.place && !samePlace(w.title, w.place) ? w.place : ""), g.k || ""],
+        photos: stopPhotos(w), wisher: w.by ? mFace(w.by) : null, note: w.note || "",
+        likes: { count: n, hearts: mHearts(n), givers: votes.slice(0, 3).map(mFace), mine: votes.indexOf(me) > -1,
+          animate: was === 0 && n > 0, label: "喜歡" },
+      };
+    });
+    el("m-wall").innerHTML = DS.wishBoardHTML({ cards, empty: "還沒有人許願。按上面的「許個願」丟一個進來。" });
+    DS.wireWishCards(el("m-wall"));
+  }
+  /* 許願卡細節:跟當日細節同一張景點卡(Figma 162172:19819),點地圖上的願望點或點卡片進來 —— 下一步做 */
+  function mOpenWish(id) {
+    const i = wishOrder().findIndex(w => w.id === id);
+    if (i < 0) return;
+    const box = el("map"), w = wishOrder()[i], p = pinOf(w);
+    if (p) focusPin(box, p, "w" + i);
   }
   async function toggleTripMenu() {
     const box = el("m-menu");
