@@ -4,8 +4,9 @@
  *   上：Day1 ‧ TUE（label/sm：源泉圓體 R 12，‧ 用 B），上下 spacing/md，底下一條抖動線
  *   中：10/06（Body/md/semi-bold：源泉圓體 B 18），底下螢光筆（那天的顏色）
  *   下：天氣（label/sm/hand-regular：全瀨體 12）—— 圖示 icon/xs 16＋「24°-29°」；水滴＋「30%」
- *   active：整格鋪那天的顏色（custom N × opacity/xl），往右下錯開 3／2；螢光筆同色、比底深
- *   past（Figma pass by）：沒有天氣，字和螢光筆變淡
+ *   active：整格鋪那天的顏色（custom N × opacity/md），往右下錯開 3／2；螢光筆同色、比底深
+ *   past（Figma pass by）：沒有天氣；字 on disable、螢光筆 disabled
+ *   status 的螢光筆是 primary
  *   status（Figma coming soon）：倒數／回味中，放在最前面
  */
 
@@ -107,14 +108,12 @@ button.ds-date:focus-visible {
   inset: 2px -3px 3px 3px;
   z-index: -1;
   background: var(--date-color);
-  opacity: var(--ds-sys-opacity-xl);
+  opacity: var(--ds-sys-opacity-md);
 }
 
 /* 過去的日子：淡掉 */
-.ds-date--past { color: var(--ds-sys-color-text-200); }
-.ds-date--past .ds-date__big,
-.ds-date--past .ds-date__head { opacity: var(--ds-sys-opacity-xl); }
-.ds-date--past .ds-pen-marker { --pen-marker-color: var(--ds-sys-color-outline-100); }
+.ds-date--past { color: var(--ds-sys-color-on-disable); }
+.ds-date--past .ds-pen-marker { --pen-marker-color: var(--ds-sys-color-disabled) !important; }
 
 /* 倒數／回味中 */
 .ds-date--status .ds-date__head {
