@@ -3,9 +3,9 @@ import { pinBadgeHTML, pinLabelHTML, pinHTML, pinSetHTML, pinTimelineHTML } from
 
 const USAGE = `import { pinBadgeHTML, pinLabelHTML, pinHTML, pinSetHTML, pinTimelineHTML } from "./components/location-pin.js";
 
-pinBadgeHTML({ number: 1, color: 14, state: "default" }); // state: default | dot | not-on-map | focus
+pinBadgeHTML({ number: 1, color: 8, state: "default" }); // state: default | dot | not-on-map | focus
 pinLabelHTML({ text: "淺草寺", focus: false });
-pinHTML({ size: "sm", number: 1, color: 14 });           // size: sm | lg
+pinHTML({ size: "sm", number: 1, color: 8 });           // size: sm | lg
 pinSetHTML({ size: "lg", label: "淺草寺", number: 1 });   // 名字 + pin
 pinTimelineHTML({ type: "time", time: "08:00", badge: { number: 1 } }); // type: empty | badge | time | text`;
 
@@ -22,12 +22,12 @@ export const 全部 = {
 
 <section class="tk"><h2>badge（pin/draw）</h2>
 <table><thead><tr><th>Property 1</th><th>預覽</th><th>說明</th></tr></thead><tbody>
-<tr><td class="nm">Default</td><td class="lp-cell">${pinBadgeHTML()}</td><td class="al">塗鴉底 <code class="var">on custom N</code> × <code class="var">--ds-comp-pin-badge-opacity</code>，號碼 label/md/semi-bold、文字陰影 Elevation/text/xs</td></tr>
+<tr><td class="nm">Default</td><td class="lp-cell">${pinBadgeHTML()}</td><td class="al">塗鴉底 <code class="var">custom N</code> × <code class="var">--ds-comp-pin-badge-opacity</code>（80%），號碼 label/md/semi-bold、文字陰影 Elevation/text/xs</td></tr>
 <tr><td class="nm">dot</td><td class="lp-cell">${pinBadgeHTML({ state: "dot" })}</td><td class="al">primary 實心塗鴉，中間一顆 <code class="var">on primary</code> 小塗鴉，沒有號碼</td></tr>
 <tr><td class="nm">not on map</td><td class="lp-cell">${pinBadgeHTML({ state: "not-on-map", number: 12 })}</td><td class="al">不在地圖上：塗鴉底換成 <code class="var">on disable</code></td></tr>
 <tr><td class="nm">focuse</td><td class="lp-cell">${pinBadgeHTML({ state: "focus" })}</td><td class="al">外面一圈手繪圈（<code class="var">outline 300</code>、<code class="var">--ds-comp-pin-focus-ring-width</code>）</td></tr>
 </tbody></table>
-<p class="note">塗鴉底的顏色照 Figma 用 <code class="var">on custom 14</code>；<code>color</code> 可以換成別的編號（對應 <code class="var">sys/color/customs/on custom N</code>）。</p>
+<p class="note">塗鴉底的顏色照 Figma 用 <code class="var">custom 8</code>；<code>color</code> 可以換成別的編號（對應 <code class="var">sys/color/customs/custom N</code>）。</p>
 </section>
 
 <section class="tk"><h2>label</h2>
@@ -62,7 +62,7 @@ export const 全部 = {
 <tr><td class="al">塗鴉底透明度</td><td><code class="var">--ds-comp-pin-badge-opacity</code></td></tr>
 <tr><td class="al">focus 手繪圈線寬</td><td><code class="var">--ds-comp-pin-focus-ring-width</code></td></tr>
 <tr><td class="al">時間軸間距</td><td><code class="var">--ds-comp-pin-timeline-gap</code></td></tr>
-<tr><td class="al">塗鴉底顏色</td><td><code class="var">--ds-sys-color-customs-on-custom-1</code>～<code class="var">-14</code>・dot <code class="var">--ds-sys-color-primary</code>・not on map <code class="var">--ds-sys-color-on-disable</code></td></tr>
+<tr><td class="al">塗鴉底顏色</td><td><code class="var">--ds-sys-color-customs-custom-1</code>～<code class="var">-14</code>（× 80%）・dot <code class="var">--ds-sys-color-primary</code>・not on map <code class="var">--ds-sys-color-disabled</code>（不透明）</td></tr>
 <tr><td class="al">白色水滴、名字膠囊</td><td><code class="var">--ds-sys-color-surface-bright</code>・<code class="var">--ds-elevation-component-sm</code></td></tr>
 </tbody></table></section>
 
