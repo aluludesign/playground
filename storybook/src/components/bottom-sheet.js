@@ -22,7 +22,7 @@ export function bottomSheetHTML({ content = "", label = "行程", bare = false }
  *   也可以給函式（每次量的時候才算，畫面大小變了跟著變）
  * at：一開始停在第幾段（預設 1）
  * scroller：面板裡會自己捲的那一塊（選擇器）；拉到最高之後在它裡面上下滑是捲它，捲到頂再往下拉才收面板
- * 停好一段會發出 ds-sheet-snap（detail.index、detail.height）
+ * 停好一段會發出 ds-sheet-snap（detail.index、detail.height）；拖的每一下和停好時發出 ds-sheet-move（detail.shown）
  * 回傳 { snapTo(i), index() }
  */
 export function wireBottomSheet(sheet, { snaps = [186, 450, 707], at = 1, scroller = "" } = {}) {
@@ -41,6 +41,14 @@ export function wireBottomSheet(sheet, { snaps = [186, 450, 707], at = 1, scroll
     sheet.style.transform = `translateY(${max - shown}px)`;
     sheet.classList.toggle("is-max", shown >= max - 1);
     sheet.style.setProperty("--sheet-shown", shown + "px");
+    // iPhone（WebKit）的 touch-action 是從手指底下一路往上取交集，不像 Chrome 到捲動區就重算：
+    // 面板寫 none／內容寫 pan-y，裡面左右捲的東西（日期列、許願牆那排）在 iPhone 上就滑不動（Lulu 11-22）。
+    // 所以面板一律放行左右（pan-x，上下由這裡的 pointer 拖）；拉到最高、而且裡面真的捲得動時才再放行上下給它捲
+    const sc = scroller ? sheet.querySelector(scroller) : null;
+    const canScroll = !!sc && shown >= max - 1 && sc.scrollHeight > sc.clientHeight + 1 && getComputedStyle(sc).overflowY !== "visible";
+    sheet.style.touchAction = canScroll ? "pan-x pan-y" : "pan-x";
+    // 每動一下（拖、停好一段）都講現在露出來多高：外面靠它決定「牆頂到上面的東西了沒」（例：許願鈕淡出）
+    sheet.dispatchEvent(new CustomEvent("ds-sheet-move", { bubbles: true, detail: { shown } }));
   };
   const snapTo = (i, animate = true) => {
     const s = list();
@@ -89,8 +97,7 @@ export function wireBottomSheet(sheet, { snaps = [186, 450, 707], at = 1, scroll
   sheet.addEventListener("pointercancel", end);
   // 只點把手（沒拖）：最低→中間→最高→最低
   sheet.querySelector(".ds-sheet__handle")?.addEventListener("click", () => snapTo(idx >= list().length - 1 ? 0 : idx + 1));
-  if (scroller) sheet.style.touchAction = "none";
-  sheet.querySelectorAll(scroller || "_").forEach((el) => (el.style.touchAction = "pan-y"));
+  sheet.querySelectorAll(scroller || "_").forEach((el) => (el.style.touchAction = "pan-x pan-y"));
 
   snapTo(at, false);
   sheet._sheet = { snapTo, index: () => idx, refresh: () => snapTo(idx, false) };

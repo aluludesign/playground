@@ -1725,28 +1725,49 @@
     /* Figma 許願鈕 218×46(x86):含外框整顆;內層上下左右 10(lg),不是 Storybook lg 的 12 */
     #m-iris .ds-iris-btn{--iris-layer-pad:var(--ds-sys-spacing-lg);}
     #m-iris[hidden], #m-wish-box[hidden]{display:none;}
-    #m-wish-box{position:absolute; inset:0; pointer-events:none; overflow:hidden;}
+    /* 牆在許願鈕上面一層:往上拉時卡片蓋過許願鈕(許願鈕同時淡出) */
+    #m-wish-box{position:absolute; inset:0; z-index:4; pointer-events:none; overflow:hidden;}
     #m-wish-box .ds-sheet{pointer-events:none;}
     #m-wish-box .ds-sheet__header, #m-wish-box .ds-wboard{pointer-events:auto;}
-    #m-wish-box .ds-sheet__body{overflow-y:auto; pointer-events:auto; padding-bottom:var(--m-navh,113px);}
-    /* 上拉後往上捲:捲動區往上撐到畫面頂(上面多的那塊用 padding 補回,內容不會跳),卡片不會在把手底下被切平;
-       許願鈕淡出讓卡片滑過去;把手那條留在卡片上面才拉得動(Lulu 11-22「上方也被切」) */
+    /* 把手那條跟著牆走、永遠在卡片上面(卡片不會滑到它底下);牆本身不切東西,卡片上下的陰影都留著。
+       只有卡片高到畫面放不下(拉到最高還是超過)時才在把手下面捲(body.m-wish-scroll) */
     #m-wish-box .ds-sheet__header{position:relative; z-index:1;}
-    body.m-wish-over #m-wish-box .ds-sheet__body{margin-top:calc(-1 * var(--m-wish-over,0px)); padding-top:var(--m-wish-over,0px);}
-    #m-iris{transition:opacity .2s ease, visibility 0s;}
-    body.m-wish-over #m-iris{opacity:0; visibility:hidden; pointer-events:none; transition:opacity .2s ease, visibility 0s .2s;}
-    /* 下拉:只剩一排卡片,一張接一張橫著排 */
+    #m-wish-box .ds-sheet__body{overflow:visible; pointer-events:auto; padding-bottom:var(--m-navh,113px);}
+    body.m-wish-max.m-wish-scroll #m-wish-box .ds-sheet__body{overflow-y:auto; scrollbar-width:none;}
+    #m-wish-box .ds-sheet__body::-webkit-scrollbar{display:none;}
+    /* 牆的內距(Figma 162182:13499 40/24/24/24:上面 40 就是把手那條)→ 卡片緊接在把手下面、左右下 24;
+       上下多出來的是給陰影的(上 24、下 40),用負的 margin 收回來 */
+    #m-wish-box .ds-wboard__wall{padding-top:calc(var(--ds-sys-blur-lg) - var(--ds-foun-shadow-length-100));}
+    /* 下拉(Figma 162264:33359):只剩一排卡片,一張接一張橫著排;內距 0/16/16/16、卡距 16,牆高 = 把手 40 ＋ 最高那張 ＋ 16 */
     body.m-wish-min #m-wish-box .ds-wboard__col{display:contents;}
-    body.m-wish-min #m-wish-box .ds-wboard__wall{align-items:flex-start;}
+    body.m-wish-min #m-wish-box .ds-wboard__wall{align-items:flex-start; padding-left:var(--ds-sys-spacing-2xl); padding-right:var(--ds-sys-spacing-2xl);}
+    /* 許願鈕:牆的上緣碰到它就淡出(.2s),牆下去再淡回來(Lulu 11-22「沒有淡出啊，是直接消失不見」) */
+    #m-iris{transition:opacity .2s ease, visibility 0s;}
+    body.m-iris-off #m-iris{opacity:0; visibility:hidden; pointer-events:none; transition:opacity .2s ease, visibility 0s .2s;}
+    /* 許願牆拉到最高:後面的地圖糊掉(Figma 162182:13501 背景模糊 8 → CSS 4px),跟著停好那一段淡入淡出;
+       許願鈕、底部導覽在它上面 */
+    #m-shell::before{content:""; position:absolute; inset:0; z-index:3; pointer-events:none; opacity:0; visibility:hidden;
+      -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px); transition:opacity .3s ease, visibility 0s .3s;}
+    body.member-ui[data-view="wish"].m-wish-max:not(.m-in-detail):not(.m-ws) #m-shell::before{opacity:1; visibility:visible; transition:opacity .3s ease, visibility 0s;}
     body.m-wish-min #m-nav{transform:translateY(110%);}
     /* 許願搜尋(Figma 162186:26093 起):許願鈕按下去變成搜尋框;打字時下面是「熱門地點／不指定地點」;
        搜完結果標在地圖上,點一個 → 景點卡＋留言框＋送出許願。搜尋本身(三段、強力搜、往外找)照原本的邏輯 */
     body.m-ws #ss-bar, body.m-ws #ss-sug, body.m-ws #ss-all{display:none !important;}
     body.m-ws #ss-map .mapzoom{top:var(--m-ss-zoom,160px); right:20px;}
     body.m-ws #ss-q-out{display:none !important;}
-    body.m-ws #ss-q-out.m-show-uikit{display:block !important; left:var(--ds-sys-spacing-2xl); right:var(--ds-sys-spacing-2xl); bottom:var(--ds-sys-spacing-2xl);
-      top:auto; background:none; padding:0;}
-    body.m-ws #ss-q-out.m-show-uikit > :not(.uikit){display:none;}
+    /* Google 的清單(Figma 162205:34715 card/searching):358 寬、離底 24;surface＋pattern 5%、Elevation/surface/medium、radius 8、
+       內距 24、間距 16;上面一行「Google Maps　選擇地點」,下面是 UI Kit 的清單 */
+    /* .ds-pattern(沒有 @layer,會贏)把 position 改成 relative,這裡要壓回來 */
+    body.m-ws #ss-q-out.m-show-uikit{display:flex !important; position:absolute !important; flex-direction:column; gap:var(--ds-sys-spacing-2xl);
+      left:var(--ds-sys-spacing-2xl); right:var(--ds-sys-spacing-2xl); bottom:24px; top:auto;
+      max-height:calc(100% - var(--m-ss-under,160px) - 24px); box-sizing:border-box;
+      background:var(--ds-sys-color-surface); padding:var(--ds-sys-spacing-4xl); border-radius:var(--ds-sys-radius-sm);
+      box-shadow:var(--ds-elevation-surface-medium); color:var(--ds-sys-color-text-100);}
+    body.m-ws #ss-q-out.m-show-uikit.ds-pattern::before{opacity:.05;}
+    body.m-ws #ss-q-out.m-show-uikit > :not(.uikit):not(.m-ss-gh){display:none;}
+    body.m-ws #ss-q-out .uikit{flex:none; border:0; border-radius:var(--ds-sys-radius-sm);}
+    body.m-ws #ss-q-out .m-ss-gh{margin:0; display:flex; gap:var(--ds-sys-spacing-md); align-items:baseline;
+      font-family:var(--ds-sys-font-family-body); font-weight:500; font-size:var(--ds-sys-font-size-body-sm); line-height:1.3; letter-spacing:.05em;}
     #m-ss{position:absolute; inset:0; z-index:5; pointer-events:none;}
     #m-ss > *{pointer-events:auto;}
     #m-ss-frame{position:absolute; left:var(--ds-sys-spacing-2xl); right:var(--ds-sys-spacing-2xl); top:calc(16px + env(safe-area-inset-top,0px));}
@@ -1754,7 +1775,9 @@
     /* Figma:打字時那張接在搜尋框下面(搜尋框底 +16),往下到底 */
     #m-ss-sheet{position:absolute; left:var(--ds-sys-spacing-2xl); right:var(--ds-sys-spacing-2xl); top:var(--m-ss-under,160px); bottom:var(--ds-sys-spacing-2xl); overflow:auto;}
     #m-ss-sheet[hidden], #m-ss-bottom[hidden], #m-ss-card[hidden]{display:none;}
-    #m-ss-bottom{position:absolute; left:0; right:0; bottom:calc(var(--ds-sys-spacing-4xl) + env(safe-area-inset-bottom,0px)); display:flex; flex-direction:column; align-items:center; gap:var(--ds-sys-spacing-xl);}
+    /* Figma 162205:34040:「重新搜尋整個「東京都」」底在 759/844(離螢幕底 85),提示在它上面 16;「搜地圖內的範圍」(33620)同一個位置 */
+    #m-ss-bottom{position:absolute; left:0; right:0; bottom:85px; display:flex; flex-direction:column; align-items:center; gap:var(--ds-sys-spacing-2xl); pointer-events:none;}
+    #m-ss-bottom > *{pointer-events:auto;}
     /* 選了一個熱門地點／點了地圖上的結果(Figma 162197:18186):只有一張景點卡,358×400、左右 16、離底 24;
        留言框在卡片裡、資訊下面,整張卡自己上下捲。往上滑 → 展開(162197:20434):卡片頂到上面 16、搜尋框和日曆鈕收起來,
        留言框在卡片最底下。打留言、鍵盤出來(162197:21058):卡片從上面 16 到鍵盤上 24,留言框滑上來蓋住資訊(接在照片下面),
@@ -1763,7 +1786,7 @@
     #m-ss-card{--m-ss-card-top:calc(100% - 24px - min(400px, 100% - 140px));
       position:absolute; left:var(--ds-sys-spacing-2xl); right:var(--ds-sys-spacing-2xl);
       top:var(--m-ss-card-top); bottom:24px;
-      overflow-y:auto; overscroll-behavior:contain; border-radius:var(--ds-sys-radius-sm); touch-action:pan-y;
+      overflow-y:auto; overscroll-behavior:contain; border-radius:var(--ds-sys-radius-sm); touch-action:pan-x pan-y; /* pan-x:卡片裡的照片要能左右滑(iPhone 會取祖先交集) */
       box-shadow:var(--ds-elevation-surface-medium); transition:top .3s ease, bottom .3s ease;}
     #m-ss-card > .ds-acard{min-height:100%; display:flex; flex-direction:column; box-shadow:none;}
     /* Figma command text area:surface＋pattern、Elevation/surface/medium、上下 16;留言框 310 寬(左右 24) */
@@ -1773,6 +1796,9 @@
     #m-ss-card .ds-text-area__content{padding-bottom:calc(var(--ds-comp-field-height) - var(--ds-sys-spacing-sm));}
     #m-ss-card .ds-acard__footer{margin-top:auto; padding:var(--ds-sys-spacing-2xl) var(--ds-sys-spacing-4xl); box-shadow:var(--ds-elevation-surface-medium);}
     body.m-ws-open #m-ss-card, body.m-ws-typing #m-ss-card{--m-ss-card-top:calc(16px + env(safe-area-inset-top,0px));}
+    /* 選了 Google 的一家(Figma 162390:16203):卡片照內容高(照片＋名字＋地點＋留言框),離底 24,最高頂到搜尋框下 16 */
+    body.m-ws-g:not(.m-ws-open):not(.m-ws-typing) #m-ss-card{top:auto; max-height:calc(100% - var(--m-ss-under,160px) - 24px);}
+    body.m-ws-g:not(.m-ws-open):not(.m-ws-typing) #m-ss-card > .ds-acard{min-height:0;}
     body.m-ws-typing #m-ss-card{bottom:calc(var(--m-kb,0px) + 24px); overflow:hidden;}
     body.m-ws-typing #m-ss-card > .ds-acard{position:relative; height:100%;}
     body.m-ws-typing #m-ss-card .ds-acard__footer{position:absolute; left:0; right:0; top:var(--m-ss-ph,0px); bottom:0; z-index:2; overflow-y:auto;}
@@ -1804,6 +1830,10 @@
       display:flex; gap:var(--ds-sys-spacing-2xl); overflow-x:auto; overflow-y:hidden; scroll-snap-type:x mandatory;
       padding:0 var(--m-dpad); scroll-padding:0 var(--m-dpad); scrollbar-width:none; overscroll-behavior-x:contain;}
     #m-detail-card::-webkit-scrollbar{display:none;}
+    /* iPhone 左右滑不動(Lulu 11-22「手機沒辦法左右滑動，電腦可以」):左右捲的是 #m-detail-card 本身,它從 #m-detail 繼承了
+       pointer-events:none —— iOS 的 WebKit 不會把手指交給一個 pointer-events:none 的捲動區(Chrome 會,所以電腦正常)。
+       許願牆那排(.ds-wboard)一直能滑,就是因為它自己是 auto。捲動區自己收手勢;卡片照舊 pan-x(上下滑交給 touchend 判斷展開) */
+    #m-detail-card{pointer-events:auto; -webkit-overflow-scrolling:touch;}
     #m-detail-card .m-dcard{flex:0 0 100%; max-width:390px; height:100%; overflow:hidden; scroll-snap-align:center; scroll-snap-stop:always;
       pointer-events:auto; touch-action:pan-x; border-radius:var(--ds-sys-radius-sm); transition:opacity .3s ease;}
     #m-detail-card .m-dcard > .ds-acard{min-height:100%; box-shadow:var(--ds-elevation-surface-medium);}
@@ -1817,7 +1847,7 @@
       top:max(16px, env(safe-area-inset-top,0px)); bottom:24px;}
     #m-detail-card .m-dcard.is-moving{transition:left .3s ease, top .3s ease, width .3s ease, height .3s ease;}
     #m-detail-card .m-dcard-ph{flex:0 0 100%; max-width:390px; height:100%; scroll-snap-align:center; scroll-snap-stop:always;}
-    #m-detail.is-open #m-detail-card .m-dcard.is-cur{overflow-y:auto; overscroll-behavior:contain; touch-action:pan-y;}
+    #m-detail.is-open #m-detail-card .m-dcard.is-cur{overflow-y:auto; overscroll-behavior:contain; touch-action:pan-x pan-y;} /* 展開時照片一樣能左右滑(iPhone 取交集) */
     #m-detail::before{content:""; position:absolute; inset:0; pointer-events:none; opacity:0; transition:opacity .3s ease;
       -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px);}
     #m-detail.is-open::before{opacity:1;}
@@ -4817,6 +4847,17 @@
   /* 地圖被蓋住的上下兩塊:上面是搜尋框,下面是卡片。`reserve`:搜尋的時候卡片可能還沒出來,先照卡片會佔的高度扣 */
   let ssCardsH = 0;
   function ssCover(reserve) {
+    /* 新外框的許願搜尋:舊的搜尋列和結果區都藏起來了(量到 0,會把整張圖算成被蓋住、一路縮到全世界)——
+       上面是搜尋框,下面是看得到的那幾樣(景點卡、Google 清單、底下那排按鈕) */
+    if (document.body.classList.contains("m-ws") && el("m-ss-frame")) {
+      const mr = ssMap().getBoundingClientRect(), f = el("m-ss-frame").getBoundingClientRect();
+      let bot = 0;
+      ["m-ss-card", "m-ss-bottom", "ss-q-out"].forEach(id => {
+        const e = el(id), r = e && !e.hidden && e.offsetParent ? e.getBoundingClientRect() : null;
+        if (r && r.height) bot = Math.max(bot, mr.bottom - r.top);
+      });
+      return { top: Math.max(0, f.bottom - mr.top), bot: Math.max(0, Math.min(mr.height * 0.6, bot)) };
+    }
     const m = ssMap().getBoundingClientRect(), bar = el("ss-bar").getBoundingClientRect(), out = seekBox(SS);
     const top = Math.max(0, bar.bottom - m.top);
     let bot = out && !out.hidden ? Math.max(0, m.bottom - out.getBoundingClientRect().top) : 0;
@@ -5001,6 +5042,8 @@
     ssMoved = true;
     paintSeekBtn(SS);
     ssFilter();
+    /* 新外框:每一次手動拖、縮放都要再出現「搜地圖內的範圍」(Lulu 11-22),不管上一次按過、還是剛顯示過找不到 */
+    if (document.body.classList.contains("m-ws")) mWsSync();
   }
   /* 選起來:點和卡片一起亮。從點來的 → 清單捲到那張;從卡片來的 → 地圖移到那個點(縮放不動) */
   function ssSelect(i, fromPin) {
@@ -5350,7 +5393,7 @@
     const input = el(id);
     const q = input ? input.value.trim() : "";
     if (!q) { seekSay(id, "先打幾個字,再按搜尋。"); return; }
-    if (id === SS) { sugHide(); histAdd(q); }
+    if (id === SS) { sugHide(); histAdd(q); seekBox(SS)._g = null; }
     /* **一次只跑一個。** 免費那家排在 1100ms 的佇列上(Nominatim 的使用條款),
        所以連按會讓好幾個查詢同時在飛,而先回來的會把後回來的蓋掉 ——
        使用者看到的是「我按了最後一次,畫面卻是前一次的結果」。
@@ -5821,7 +5864,7 @@
     seekReset(id); seekUsedStrong[id] = true;   /* 跟舊的強力搜一樣:只給用一次,跑完退回一般搜 */
     const box = seekBox(id);
     /* 全螢幕搜尋:Google 的結果**不標在地圖上**(Google 的條款不准畫在別家的地圖上),一般搜留下的點也收掉,免得對不上 */
-    if (id === SS) { box._hits = null; ssShow([], false); }
+    if (id === SS) { box._hits = null; box._g = null; ssShow([], false); }
     /* **橫的排法才有照片**(2026-10-02 用真的金鑰量過:直的清單不放照片,Google 自己的範例也一樣)。
        一家一張卡,照片在上,左右滑。內容:照片、評分、價位、營業中 */
     box.innerHTML = '<div class="uikit"><gmp-place-search selectable orientation="horizontal">' +
@@ -5853,7 +5896,9 @@
     const loc = place.location;
     const la = loc && (typeof loc.lat === "function" ? loc.lat() : loc.lat), lo = loc && (typeof loc.lng === "function" ? loc.lng() : loc.lng);
     if (!isFinite(la) || !isFinite(lo)) { seekSay(id, "這一家沒有位置資料,換一家試試", true); return; }
-    seekSay(id, "讀取這一家的名字…");
+    /* 新外框:清單要留著(景點卡按「取消」回到清單),所以不把它換成「讀取中」那一句 */
+    const mWs = id === SS && document.body.classList.contains("m-ws");
+    if (!mWs) seekSay(id, "讀取這一家的名字…");
     let name = "", addr = "";
     try {
       if (!place.displayName && place.fetchFields) await place.fetchFields({ fields: ["displayName", "formattedAddress"] });
@@ -5870,6 +5915,16 @@
     /* 維基照片:名字＋座標比對(100 公尺內)。問到之前存的話就沒有照片 —— 通常不到一秒 */
     wikiNear(name, +la, +lo).then(u => { if (u && pins[name] && pins[name].pid === (place.id || "")) { pins[name].photo = u; savePins(); } }).catch(() => {});
     seekReset(id);
+    /* 新外框的許願搜尋(Figma 162390:16203):選了 Google 的一家 → 不關畫面,下面出那一家的景點卡＋留言框,
+       跟選了一般搜尋的結果一樣;送出許願時才把名字帶回原本那張表單(座標、地點編號上面已經記好了) */
+    if (mWs) {
+      const out = seekBox(SS);
+      const g = out._g = { lat: +la, lon: +lo, display_name: [name, addr].filter(Boolean).join(", "), _n: name, _g: place.id || "1", _wiki: (pins[name] && pins[name].photo) || "" };
+      el(SS).value = name;
+      wikiNear(name, +la, +lo).then(u => { if (u && out._g === g) { g._wiki = u; mWsSync(); } }).catch(() => {});
+      mWsSync();
+      return;
+    }
     if (to !== id) { seekReset(to); closeSeekScreen(true); }
     seekMark(to, name);
   }
@@ -6247,10 +6302,12 @@
           : esc(p.n) + '<span class="lab">' + esc((p.ap ? "約 " : "") + p.title) + "</span>") + "</a>";
     });
     html += "</div>";
-    /* ＋／−:新外框用 Storybook 的 Button(White、Icon Filled、xs),Figma 是兩顆白色小圓鈕 */
+    /* ＋／−／重新定位:新外框用 Storybook 的 Button(White、Icon Filled、xs),Figma map control(162672:41289)是三顆白色小圓鈕,
+       第三顆 place = 回到看得到全部點的畫面 */
     html += mPins(box)
       ? '<div class="mapzoom ds-zoom">' + DS.buttonHTML({ label: "\u653e\u5927", color: "white", variant: "icon", size: "xs" }).replace("<button ", '<button data-zoom="1" ') +
-        DS.buttonHTML({ label: "\u7e2e\u5c0f", color: "white", variant: "icon", size: "xs", icon: M_MINUS }).replace("<button ", '<button data-zoom="-1" ') + "</div>"
+        DS.buttonHTML({ label: "\u7e2e\u5c0f", color: "white", variant: "icon", size: "xs", icon: M_MINUS }).replace("<button ", '<button data-zoom="-1" ') +
+        DS.buttonHTML({ label: "重新定位", color: "white", variant: "icon", size: "xs", icon: DS.PLACE || M_MINUS }).replace("<button ", '<button data-fit="1" ') + "</div>"
       : '<div class="mapzoom"><button type="button" data-zoom="1" aria-label="\u653e\u5927">+</button>' +
         '<button type="button" data-zoom="-1" aria-label="\u7e2e\u5c0f">\u2212</button></div>';
     /* OSM 的圖磚要求標示出處 */
@@ -6261,6 +6318,36 @@
     layoutLabels(box);
   }
 
+  /* 重新定位(Figma map control 的 place,Lulu 11-22「回到看得到全部點的畫面」):地圖上現在畫著的點全部框進
+     沒被蓋住的那一塊(扣掉上面的頂列／許願鈕／搜尋框、下面的面板／許願牆／卡片)。只有一個點時不貼到街區。
+     這是程式自己移動畫面,不算使用者動過(不叫 _onMove,「搜地圖內的範圍」不會因為它跑出來) */
+  function mFitAll(box) {
+    const pts = (box._pts || []).filter(p => isFinite(p.la) && isFinite(p.lo));
+    if (!pts.length || !box._v) return;
+    const lons = pts.map(p => p.lo), lats = pts.map(p => p.la);
+    if (box.id === "ss-map") { ssFit(box, lons, lats, pts.length > 1 ? 16 : 15, false); glide(box); return; }
+    const r = box.getBoundingClientRect(), w = box.clientWidth, h = box.clientHeight;
+    const under = sel => { const e = document.querySelector(sel); if (!e || !e.offsetParent && getComputedStyle(e).position !== "fixed") return null; const b = e.getBoundingClientRect(); return b.height ? b : null; };
+    let top = 0, bot = 0;
+    const cover = mDetail ? under("#m-detail-card") : state.tab === "wish" ? under("#m-wish-box .ds-sheet") : under("#m-sheet-box .ds-sheet");
+    if (cover) bot = Math.max(0, r.bottom - Math.max(r.top, cover.top));
+    const head = mDetail ? null : state.tab === "wish" ? under("#m-iris .ds-iris-btn") : under("#m-head");
+    if (head) top = Math.max(0, head.bottom - r.top);
+    if (h - top - bot < 120) { top = 0; bot = 0; }
+    const vh = h - top - bot;
+    let z = pts.length > 1 ? 16 : 14;
+    if (pts.length > 1) {
+      for (; z > zMin(box); z--) {
+        const xs = lons.map(lo => projX(lo, z)), ys = lats.map(la => projY(la, z));
+        if ((Math.max.apply(null, xs) - Math.min.apply(null, xs)) * TILE < w - 40 &&
+            (Math.max.apply(null, ys) - Math.min.apply(null, ys)) * TILE < vh - 40) break;
+      }
+    }
+    const xs = lons.map(lo => projX(lo, z)), ys = lats.map(la => projY(la, z));
+    box._v = { z: z, cx: (Math.max.apply(null, xs) + Math.min.apply(null, xs)) / 2,
+               cy: (Math.max.apply(null, ys) + Math.min.apply(null, ys)) / 2 - (top - bot) / 2 / TILE };
+    glide(box);
+  }
   /* 主地圖在一般團員的新外框裡,點和 ＋／− 改用 Storybook 的元件 */
   function mPins(box) {
     return !!DS && document.body.classList.contains("member-ui") && (box.id === "map" || (box.id === "ss-map" && document.body.classList.contains("m-ws")));
@@ -6633,6 +6720,7 @@
     box.addEventListener("click", ev => {
       const b = ev.target.closest("[data-zoom]");
       if (b) zoomAt(box, +b.dataset.zoom, box.clientWidth / 2, box.clientHeight / 2);
+      if (ev.target.closest("[data-fit]")) mFitAll(box);
     });
 
     box.addEventListener("wheel", ev => {
@@ -7651,25 +7739,47 @@
   }
   /* ===== 許願頁(第三步) ===== */
   let mWishSheet = null;
-  /* 許願牆的三段(Figma 161950:14100／162186:25406,annotation「這區在畫面最底部」):
-     牆一路到螢幕最底(預設時在底部導覽後面),高度從螢幕底往上算 ——
-     下拉:牆 256 高(588→844),沒有底部導覽;預設:牆 450 高(394→844,跟行程面板一樣照 844 等比);上拉:頂到許願鈕下面。
-     394／588 是整塊(含最上面 40 的把手那條,Figma 的 padding-top 40)的上緣,跟行程面板同一個量法(Lulu 11-22 QA)。
-     上拉那段照舊:牆本體頂到許願鈕下 24 */
-  function mWishOver() {
-    const b = el("m-wish-box").querySelector(".ds-sheet__body");
-    const on = document.body.classList.contains("m-wish-max") && !!b && b.scrollTop > 0;
-    if (on) {
-      const s = el("m-wish-box").querySelector(".ds-sheet").getBoundingClientRect();
-      document.body.style.setProperty("--m-wish-over", Math.max(0, Math.round(s.top + 40)) + "px");
-    }
-    document.body.classList.toggle("m-wish-over", on);
-  }
+  /* 許願牆的三段,高度都從螢幕底往上算(露出來多高):
+     - 下拉(Figma 162264:33359,「這區在畫面最底部」):把手 40 ＋ 最高那張卡 ＋ 底下 16,貼著螢幕最底,沒有底部導覽
+     - 預設(161950:14100):450/844(394→844,跟行程面板一樣照 844 等比),在底部導覽後面
+     - 上拉(Lulu 11-22):牆高 = 把手 40 ＋ 兩張疊起來最高的那一欄 ＋ 底下 24,下緣緊貼底部導覽;不一定撐滿整個畫面。
+       卡片多到放不下才停在狀態列下面、在把手下面捲(m-wish-scroll) */
+  const M_WB_GAP = 16;   /* 卡距 spacing/2xl */
   function mWishSnaps() {
-    const H = window.innerHeight;
-    const iris = el("m-iris").getBoundingClientRect();
-    /* 上拉:Figma 162182:13499 整塊(含把手那條)頂在 115/844,跟許願鈕(75–121)疊 6 */
-    return [256, Math.round(H * 450 / 844), Math.round(H - (iris.bottom - 6))];
+    const H = window.innerHeight, wall = el("m-wall");
+    const cards = wall ? [].slice.call(wall.querySelectorAll(".ds-wcard")) : [];
+    let tallest = 0, colH = 0;
+    if (cards.length) {
+      cards.forEach(c => { tallest = Math.max(tallest, c.offsetHeight); });
+      wall.querySelectorAll(".ds-wboard__col").forEach(col => {
+        const cs = col.querySelectorAll(".ds-wcard");
+        let h = (cs.length - 1) * M_WB_GAP;
+        cs.forEach(c => { h += c.offsetHeight; });
+        colH = Math.max(colH, h);
+      });
+    } else {
+      const e = wall && wall.querySelector(".ds-wboard");
+      tallest = colH = e ? e.offsetHeight : 0;
+    }
+    const min = 40 + tallest + 16, def = Math.round(H * 450 / 844);
+    const hug = el("m-nav").offsetHeight + 40 + colH + 24, cap = H - mSafeTop();
+    document.body.classList.toggle("m-wish-scroll", hug > cap);
+    return [min, def, Math.max(def + 1, Math.min(hug, cap))];
+  }
+  /* 卡片高度變了(字體晚到、換了卡片)→ 三段重算;沒變就不動,不打斷正在跑的動畫 */
+  let mWishKey = "";
+  function mWishRefit() {
+    if (!mWishSheet || el("m-wish-box").hidden) return;
+    const k = mWishSnaps().join();
+    if (k === mWishKey) return;
+    mWishKey = k;
+    mWishSheet.refresh();
+  }
+  /* 牆的上緣碰到許願鈕 → 許願鈕淡出;牆下去 → 淡回來 */
+  function mWishIris(shown) {
+    const iris = el("m-iris");
+    const on = !iris.hidden && !el("m-wish-box").hidden && window.innerHeight - shown < iris.getBoundingClientRect().bottom;
+    document.body.classList.toggle("m-iris-off", on);
   }
   let mSafe = null;
   function mSafeTop() {
@@ -7701,7 +7811,7 @@
     const wishView = !mMe && state.tab === "wish";
     el("m-iris").hidden = !wishView;
     el("m-wish-box").hidden = !wishView;
-    if (!wishView) { document.body.classList.remove("m-wish-min"); return; }
+    if (!wishView) { document.body.classList.remove("m-wish-min", "m-iris-off"); return; }
     if (!el("m-iris").firstChild) {
       el("m-iris").innerHTML = DS.irisButtonHTML({ label: "許個願，想去" + ((trip && trip.city) || "") + "哪？", size: "lg" });
       DS.wireIris(el("m-iris"));
@@ -7713,14 +7823,13 @@
       el("m-wish-box").addEventListener("ds-sheet-snap", e => {
         document.body.classList.toggle("m-wish-min", e.detail.index === 0);
         document.body.classList.toggle("m-wish-max", e.detail.index === mWishSnaps().length - 1);
-        mWishOver();
       });
-      /* 拉到最高、牆往上捲了:卡片可以一路滑到畫面最上面(蓋過許願鈕的位置,許願鈕淡出),不要在把手底下被切一刀(Lulu 11-22) */
-      el("m-wish-box").querySelector(".ds-sheet__body").addEventListener("scroll", mWishOver, { passive: true });
+      el("m-wish-box").addEventListener("ds-sheet-move", e => mWishIris(e.detail.shown));
+      if (typeof ResizeObserver === "function") new ResizeObserver(mWishRefit).observe(el("m-wall"));
       el("m-wall").addEventListener("ds-like", e => toggleVote(e.detail.key));
       el("m-wall").addEventListener("ds-wish-open", e => mOpenWish(e.detail.key));
       el("m-wall").addEventListener("ds-photos-open", e => { const w = state.wishes.find(x => x.id === e.detail.key); if (w) mOpenPhotos(w, 0); });
-    } else mWishSheet.refresh();
+    } else { mWishSheet.refresh(); mWishIris(window.innerHeight - el("m-wish-box").querySelector(".ds-sheet").getBoundingClientRect().top); }
     const me = myName();
     const cards = wishOrder().map(w => {
       const g = w.geo || {}, votes = w.votes || [], n = votes.length;
@@ -7744,6 +7853,7 @@
     const sc2 = el("m-wall").querySelector(".ds-wboard");
     if (sc2) { sc2.scrollLeft = sl; sc2.scrollTop = st; }
     DS.wireWishCards(el("m-wall"));
+    mWishRefit();
   }
   function mAfterWishes() {
     if (!DS || !document.body.classList.contains("member-ui")) return;
@@ -7791,8 +7901,9 @@
     setTimeout(() => { const i = el("m-ss-frame").querySelector("input"); if (i) i.focus(); }, 60);
   }
   function mCloseWishSearch(sent) {
-    document.body.classList.remove("m-ws", "m-ws-open", "m-ws-typing");
+    document.body.classList.remove("m-ws", "m-ws-open", "m-ws-typing", "m-ws-g");
     const m = el("m-ss"); if (m) m.remove();
+    const qo = seekBox(SS); if (qo) { qo.classList.remove("ds-app", "ds-pattern", "m-show-uikit"); qo._g = null; }
     if (!el("seek-screen").hidden) closeSeekScreen(!!sent);
     if (!sent) { el("wish-form").reset(); closeWishAdd(); }
   }
@@ -7819,7 +7930,7 @@
         if (e.target.closest("#m-ss-cal .ds-scrim-btn")) { el("ss-all").click(); mWsCal(); }
       });
       mWireWsCard(el("m-ss-card"));
-      root.addEventListener("ds-text-area-cancel", () => { ssSel = -1; ssMap()._focus = null; paintMap(ssMap()); mWsSync(); });
+      root.addEventListener("ds-text-area-cancel", () => { ssSel = -1; seekBox(SS)._g = null; ssMap()._focus = null; paintMap(ssMap()); mWsSync(); });
       root.addEventListener("ds-text-area-submit", e => mWsSubmit(e.detail.value || "", !!e.target.closest(".m-ss-direct")));
       new MutationObserver(() => mWsSync()).observe(seekBox(SS), { childList: true, subtree: true });
     }
@@ -7828,8 +7939,10 @@
     mWsSync();
   }
   function mWsFrame() {
-    const strong = !!seekArmed[SS];
-    const out = seekBox(SS), n = out && out._hits ? out._hits.length : 0;
+    /* 這一次找不到(畫面上是「重新搜尋整個…」／「往外找」)→ 0 筆,不是上一次的筆數(Figma 162205:34040「找不到？試試」) */
+    const out = seekBox(SS), n = out && out._hits && !out.querySelector("[data-city], [data-wide]") ? out._hits.length : 0;
+    /* 強力搜(Figma 162205:34343 按了強力搜／34715 用了強力搜／162390:16203 選了 Google 的一家):搜尋框整塊變 primary */
+    const strong = !!seekArmed[SS] || !!(out && (out._g || out.querySelector(".uikit")));
     const searched = !!(out && (out._hits || out.innerHTML));
     const left = strongMine && strongMine.left != null ? strongMine.left : null;
     const support = strong ? (left != null ? "今天還能用 " + left + " 次" : "")
@@ -7837,7 +7950,7 @@
     const cur = el("m-ss-frame").querySelector("input");
     /* 框裡的字 = 原本那格(打字時同步過去;選了熱門地點時換成那個地點的名字,Figma 162197:18186) */
     const val = el(SS).value;
-    el("m-ss-frame").innerHTML = DS.searchFrameHTML({
+    el("m-ss-frame").innerHTML = DS.searchFrameHTML({ tone: strong ? "primary" : "",
       title: strong ? "強力搜，再搜一次" : "想去" + mCity() + "哪? ", closeLabel: "不許願了，回去",
       content: DS.textFieldHTML({ floatingLabel: false, label: "想去哪", placeholder: mCity() + "鐵塔、一蘭拉麵…等", value: val,
         leadingIcon: true, trailingIcon: true, supporting: !!support, supportingText: support, button: !strong && searched ? "強力搜" : "" }),
@@ -7877,11 +7990,12 @@
   }
   function mWsCal() {
     const fb = el("m-ss-frame").getBoundingClientRect().bottom;
-    el("m-ss").style.setProperty("--m-ss-under", Math.round(fb + 16) + "px");
+    document.body.style.setProperty("--m-ss-under", Math.round(fb + 16) + "px");   /* Google 清單(#ss-q-out)不在 #m-ss 裡,放 body 兩邊都吃得到 */
     /* Figma 162197:18186:日曆鈕在搜尋框下面 8(241 → 249);＋／− 在日曆鈕下面 77 */
     el("m-ss-cal").style.top = Math.round(fb + 8) + "px";
     document.body.style.setProperty("--m-ss-zoom", Math.round(fb + 8 + 77) + "px");
-    el("m-ss-cal").innerHTML = DS.scrimButtonHTML({ icon: "calender", color: "primary", size: "lg", label: "開關已排的行程", pressed: !!ssAll });
+    /* 跟主畫面同一條規則(Lulu 11-22):已排的行程開著 = primary、關著 = scrim(80%) */
+    el("m-ss-cal").innerHTML = DS.scrimButtonHTML({ icon: "calender", color: ssAll ? "primary" : "scrim", size: "lg", label: "開關已排的行程", pressed: !!ssAll });
   }
   /* 打字時下面那張:熱門地點 = 打字提示的資料(全站選過的地點、搜過的字、相似詞);不指定地點 = 直接許願(Lulu 11-21) */
   function mWsSheet() {
@@ -7914,32 +8028,42 @@
     const out = seekBox(SS);
     mWsFrame();
     mWsCal();
-    out.classList.toggle("m-show-uikit", !!out.querySelector(".uikit"));
-    /* 下面那一排:這個範圍找不到 → 提示＋重新搜尋整個「城市」／往外找;拖過地圖 → 搜地圖內的範圍 */
+    const uikit = out.querySelector(".uikit");
+    const gPick = out._g || null;
+    /* Google 的清單(Figma 162205:34715 card/searching):358 寬、離底 24 的一張卡(surface＋pattern 5%、Elevation/surface/medium、
+       radius 8、內距 24、間距 16),上面一行「Google Maps　選擇地點」;選了一家就換成那一家的景點卡(162390:16203) */
+    out.classList.toggle("m-show-uikit", !!uikit && !gPick);
+    out.classList.toggle("ds-app", true);
+    out.classList.toggle("ds-pattern", !!uikit);
+    if (uikit && !out.querySelector(".m-ss-gh")) uikit.insertAdjacentHTML("beforebegin", '<h3 class="m-ss-gh"><span>Google Maps</span><span>選擇地點</span></h3>');
+    /* 下面那一排(Figma 162205:33620／34040):每一次手動拖、縮放地圖 → 搜地圖內的範圍(Lulu 11-22:每一次都要出現);
+       沒動地圖、這個範圍找不到 → 提示「這個範圍找不到」＋重新搜尋整個「城市」／往外找 */
     const bottom = el("m-ss-bottom");
     const city = out.querySelector("[data-city]"), wide = out.querySelector("[data-wide]");
+    const searched = !!el(SS).value.trim() && !!(out._hits || out.querySelector(".said"));
     let html = "";
-    if (city || wide) {
-      /* 字照原本那一句(這個範圍／這個城市找不到「…」),Figma 畫的是拖過地圖之後那一種 */
-      const said = out.querySelector(".said.hint");
-      html = DS.infoHTML({ text: said ? said.firstChild.textContent.trim() : "這個範圍找不到", type: "info", expanded: true, collapseIcon: false, button: false }) +
+    if (ssMoved && searched && !uikit) {
+      html = DS.buttonHTML({ label: "搜地圖內的範圍", leadingIcon: false }).replace("<button ", '<button data-proxy=\'[data-seek="ss-q"]\' ');
+    } else if (city || wide) {
+      html = DS.infoHTML({ text: ssScope === "view" ? "這個範圍找不到" : ssScope === "city" ? "這個城市找不到" : "找不到", type: "default", expanded: true, collapseIcon: false, button: false }) +
         DS.buttonHTML({ label: city ? "重新搜尋整個「" + (mCity() || "這個城市") + "」" : "往外找", leadingIcon: false })
           .replace("<button ", '<button data-proxy="#ss-q-out ' + (city ? "[data-city]" : "[data-wide]") + '" ');
-    } else if (ssMoved && out._hits) {
-      html = DS.buttonHTML({ label: "搜地圖內的範圍", leadingIcon: false }).replace("<button ", '<button data-proxy=\'[data-seek="ss-q"]\' ');
     }
-    bottom.innerHTML = html;
-    DS.wireInfo(bottom);
-    /* 選了一個:景點卡＋留言框 */
-    const card = el("m-ss-card"), r = ssSel >= 0 && out._hits ? out._hits[ssSel] : null;
+    if (bottom._html !== html) { bottom.innerHTML = html; bottom._html = html; DS.wireInfo(bottom); }
+    /* 選了一個:景點卡＋留言框(一般搜尋的結果,或 Google 清單的一家) */
+    const card = el("m-ss-card"), r = ssSel >= 0 && out._hits ? out._hits[ssSel] : gPick;
     card.hidden = !r;
     bottom.hidden = !html || !!r;
-    if (r && card.dataset.at !== String(ssSel) + hitName(r)) {
-      card.dataset.at = String(ssSel) + hitName(r);
+    document.body.classList.toggle("m-ws-g", !!r && r === gPick);
+    if (r && card.dataset.at !== String(ssSel) + hitName(r) + (r._wiki || "")) {
+      card.dataset.at = String(ssSel) + hitName(r) + (r._wiki || "");
       const g = hitGeo(r) || {};
+      /* Google 的那一家(162390:16203):只有照片、名字、地點,下面接留言框 */
       card.innerHTML = DS.attractionCardHTML({ photos: r._wiki ? [commonsImg(r._wiki, 720)] : [], title: hitName(r),
-        meta: [[g.c, g.s].filter(Boolean).join("，"), hitCat(r)], mapURL: "https://www.google.com/maps/search/?api=1&query=" + r.lat + "," + r.lon,
-        info: [{ label: "營業時間", value: hitHours(r) }], closeLabel: "",
+        meta: r === gPick ? [hitAddr(r)].filter(Boolean) : [[g.c, g.s].filter(Boolean).join("，"), hitCat(r)],
+        mapURL: r === gPick ? "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(hitName(r)) + "&query_place_id=" + encodeURIComponent(r._g)
+          : "https://www.google.com/maps/search/?api=1&query=" + r.lat + "," + r.lon,
+        info: r === gPick ? [] : [{ label: "營業時間", value: hitHours(r) }], closeLabel: "",
         footer: DS.textAreaHTML({ photoButton: "", cancel: "取消", submit: "送出許願" }) });
       DS.wireAttractionCard(card); DS.wireTextArea(card);
       const ft = card.querySelector(".ds-acard__footer");
@@ -8013,6 +8137,7 @@
   function mWsSubmit(note, direct) {
     const out = seekBox(SS);
     if (!direct && ssSel >= 0 && out._hits) takeHit("wf-title", ssSel, out);
+    else if (!direct && out._g) el("wf-title").value = out._g._n;   /* Google 的那一家:座標和地點編號選的時候記好了 */
     else el("wf-title").value = el(SS).value.trim();
     if (!el("wf-title").value.trim()) { flash("先打想去的地方"); return; }
     el("wf-note").value = note;

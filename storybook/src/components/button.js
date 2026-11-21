@@ -1,7 +1,12 @@
 import "./button.css";
+import { faLocationDot } from "@fortawesome/free-solid-svg-icons/faLocationDot";
+import { faSVG } from "../fa.js";
 
 // Figma 的 add（161119:8832），改成吃 currentColor，顏色跟著文字走
 export const ADD = `<svg class="ds-btn__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 13H13V19H11V13H5V11H11V5H13V11H19V13Z"/></svg>`;
+
+// 重新定位（Figma map control 162672:41289 的 place）：Trippps 還沒有這顆 icon，先用 Font Awesome 的 location-dot（Lulu 11-21）
+export const PLACE = faSVG(faLocationDot, "ds-btn__icon");
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 

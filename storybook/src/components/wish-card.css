@@ -24,6 +24,9 @@
    底下多留到 40 給陰影，再用負的 margin 收回來，版面不變 */
 .ds-wboard { margin-bottom: calc(var(--ds-sys-spacing-4xl) - var(--ds-foun-shadow-length-100) - var(--ds-sys-blur-lg)); }
 .ds-wboard > .ds-wboard__wall { padding-bottom: calc(var(--ds-foun-shadow-length-100) + var(--ds-sys-blur-lg)); }
+/* 上面也一樣（往上 32 − 8 = 24）：多留 24 給陰影、用負的 margin 收回來，卡片位置不變（Lulu 11-22「上方也被切」） */
+.ds-wboard { margin-top: calc(var(--ds-foun-shadow-length-100) - var(--ds-sys-blur-lg)); }
+.ds-wboard > .ds-wboard__wall { padding-top: calc(var(--ds-sys-spacing-4xl) + var(--ds-sys-blur-lg) - var(--ds-foun-shadow-length-100)); }
 .ds-wboard__wall {
   display: flex;
   align-items: flex-start;

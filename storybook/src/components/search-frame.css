@@ -44,3 +44,11 @@
 }
 /* Figma：搜尋框的 bg pattern 是 5%（別的地方共用的 8%，只有這裡不同；token 沒有 5%） */
 .ds-search-frame.ds-pattern::before { opacity: 0.05; }
+
+/* 強力搜（Figma 162205:34343）：白＋primary＋bg pattern 10%、外框 outline 50；標題 on primary；區塊間距 md（8，整塊 158 高） */
+.ds-search-frame--primary {
+  gap: var(--ds-sys-spacing-md);
+  background: linear-gradient(var(--ds-sys-color-primary), var(--ds-sys-color-primary)), #fff;
+}
+.ds-search-frame--primary .ds-search-frame__title { color: var(--ds-sys-color-on-primary); }
+.ds-search-frame--primary.ds-pattern::before { opacity: 0.1; }

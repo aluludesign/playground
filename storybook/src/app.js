@@ -9,7 +9,7 @@ import "./icons.css";
 export { wireWiggle } from "./wiggle.js";
 export { avatarHTML } from "./components/avatar.js";
 export { bottomNavHTML, wireBottomNav, DEFAULT_ITEMS as BOTTOM_NAV_ITEMS } from "./components/bottom-nav.js";
-export { buttonHTML, ADD } from "./components/button.js";
+export { buttonHTML, ADD, PLACE } from "./components/button.js";
 export { dividerWiggleHTML, dividerDotHTML, wireDivider } from "./components/divider.js";
 export { infoHTML, wireInfo, infoIconButtonHTML } from "./components/info.js";
 export { irisButtonHTML, wireIris } from "./components/iris-button.js";

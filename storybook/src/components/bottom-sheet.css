@@ -19,7 +19,9 @@
   border-radius: var(--ds-sys-radius-sm) var(--ds-sys-radius-sm) 0 0;
   box-shadow: var(--ds-elevation-surface-soft);
   color: var(--ds-sys-color-text-100);
-  touch-action: none;
+  /* 左右放行（裡面的日期列、許願牆要能左右滑，iPhone 會把祖先的 touch-action 取交集）；上下由 JS 拖。
+     拉到最高、內容捲得動時 JS 再放行 pan-y */
+  touch-action: pan-x;
   will-change: transform;
 }
 .ds-sheet.is-animating { transition: transform 320ms cubic-bezier(0.25, 1, 0.5, 1); }
@@ -32,6 +34,7 @@
   height: 40px;
   padding: var(--ds-sys-spacing-2xl) var(--ds-sys-spacing-4xl) var(--ds-sys-spacing-4xl);
   cursor: grab;
+  touch-action: none; /* 把手那條：永遠是拖面板 */
 }
 
 .ds-sheet__handle {
