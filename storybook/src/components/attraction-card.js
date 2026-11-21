@@ -6,6 +6,7 @@ import { wireWiggle } from "../wiggle.js";
 import { penMarkerHTML } from "../pen-line.js";
 import { revealPens } from "../pen-reveal.js";
 import { scrimButtonHTML } from "./scrim-button.js";
+import { paginationHTML, setPaginationActive } from "./pagination.js";
 import { likesHTML, drawNewHearts } from "./wish-card.js";
 import arrow from "../icons/general/icon_subdirectory_arrow_right_outlined.svg?raw";
 
@@ -34,7 +35,7 @@ export function attractionCardHTML({ photos = [], title = "淺草寺", meta = ["
     ? `<div class="ds-acard__photos">
 <div class="ds-acard__track">${pics.map((src, i) => `<button type="button" class="ds-acard__photo" data-index="${i}" aria-label="看第 ${i + 1} 張照片"><img src="${esc(src)}" alt="" loading="${i ? "lazy" : "eager"}"></button>`).join("")}</div>
 ${closeLabel ? `<div class="ds-acard__close">${scrimButtonHTML({ icon: "cross", size: "md", label: closeLabel })}</div>` : ""}
-${pics.length > 1 ? `<div class="ds-acard__dots" aria-hidden="true">${pics.map((_, i) => `<span${i ? "" : ' class="is-on"'}></span>`).join("")}</div>` : '<div class="ds-acard__dots" aria-hidden="true"></div>'}
+<div class="ds-acard__dots">${pics.length > 1 ? paginationHTML({ count: pics.length, active: 0, label: "照片" }) : ""}</div>
 </div>`
     : closeLabel ? `<div class="ds-acard__close ds-acard__close--bare">${scrimButtonHTML({ icon: "cross", size: "md", label: closeLabel })}</div>` : "";
   const where = meta.filter(Boolean).map((m) => `<span>${esc(m)}</span>`).join('<span aria-hidden="true">‧</span>');
@@ -72,11 +73,10 @@ export function wireAttractionCard(root = document) {
     if (card.dataset.wired) return;
     card.dataset.wired = "1";
     const track = card.querySelector(".ds-acard__track");
-    const dots = card.querySelectorAll(".ds-acard__dots span");
-    if (track && dots.length) {
+    const dots = card.querySelector(".ds-acard__dots .ds-pagination");
+    if (track && dots) {
       track.addEventListener("scroll", () => {
-        const i = Math.round(track.scrollLeft / Math.max(1, track.clientWidth));
-        dots.forEach((d, k) => d.classList.toggle("is-on", k === i));
+        setPaginationActive(dots, Math.round(track.scrollLeft / Math.max(1, track.clientWidth)));
       }, { passive: true });
     }
     card.addEventListener("click", (e) => {
