@@ -128,14 +128,14 @@
 .ds-likes:focus-visible { outline: var(--ds-comp-focus-ring-border) solid var(--ds-comp-focus-ring-color); outline-offset: 4px; }
 .ds-hearts { position: relative; display: block; width: 73px; height: 44px; }
 .ds-hearts__h { position: absolute; width: 40px; height: 40px; }
-.ds-hearts--0 .ds-hearts__h { left: 17px; top: 2px; }
-/* Figma 60% 那一格：三顆的位置和角度 */
-.ds-hearts__h--0 { left: 30px; top: -3px; }
-.ds-hearts__h--1 { left: 9px; top: 7px; transform: rotate(12deg); }
-.ds-hearts__h--2 { left: -12px; top: 4px; transform: rotate(14deg); }
+/* Figma sticker（162182:17965）：40×40 盒子旋轉前的左上角，繞中心轉；Figma 逆時針為正 → CSS 取負號（左邊的心頭往左歪） */
+.ds-hearts--0 .ds-hearts__h,
 .ds-hearts--1 .ds-hearts__h--0 { left: 17px; top: 2px; }
-.ds-hearts--2 .ds-hearts__h--0 { left: 26px; top: 0; }
-.ds-hearts--2 .ds-hearts__h--1 { left: 6px; top: 6px; }
+.ds-hearts--2 .ds-hearts__h--1 { left: 7px; top: 1px; transform: rotate(-14deg); }
+.ds-hearts--2 .ds-hearts__h--0 { left: 28px; top: 0; }
+.ds-hearts--3 .ds-hearts__h--2 { left: -2px; top: 1px; transform: rotate(-14deg); }
+.ds-hearts--3 .ds-hearts__h--1 { left: 18.5px; top: 5.5px; transform: rotate(-12.1deg); }
+.ds-hearts--3 .ds-hearts__h--0 { left: 36px; top: 0; }
 .ds-likes__num {
   /* Figma：白底＋iris 漸層（藍、紫、黃、綠，foundation iris alpha-32） */
   background:

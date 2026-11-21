@@ -105,7 +105,7 @@
   max-width: 100%;
 }
 .ds-info--default .ds-info__bg {
-  background: var(--ds-sys-color-surface);
+  background: var(--ds-sys-color-surface-bright); /* Figma 162201:23111 state=default：active_bg 是 surface bright */
 }
 .ds-info--default .ds-info__body {
   --wiggle-color: var(--ds-sys-color-outline-300);

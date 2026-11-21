@@ -70,6 +70,15 @@
   -webkit-tap-highlight-color: transparent;
 }
 .ds-photos--empty { cursor: default; }
+/* Figma：陰影加在整組上（Elevation/component/sm，兩層），所以上面那張的影子不會落在下面那張上 → 用 filter 對整組合起來的形狀投影 */
+.ds-photos__stack {
+  position: absolute;
+  inset: 0;
+  filter:
+    drop-shadow(0 var(--ds-sys-border-xs) var(--ds-sys-blur-2xs) var(--ds-sys-shadow-md))
+    drop-shadow(0 var(--ds-sys-border-xs) var(--ds-sys-blur-2xs) var(--ds-sys-shadow-md));
+}
+/* 每張 90×90，位移和角度由 attractionPhotosHTML 照 Figma 的 variants 寫在 style 上 */
 .ds-photos__img {
   position: absolute;
   inset: 0;
@@ -79,14 +88,8 @@
   box-sizing: border-box;
   border: var(--ds-sys-border-xs) solid var(--ds-sys-color-outline-50);
   border-radius: var(--ds-sys-radius-sm);
-  box-shadow: var(--ds-elevation-component-sm);
   background: var(--ds-sys-color-surface);
 }
-.ds-photos__img--3-2 { transform: translate(-10px, 6px) rotate(5deg); }
-.ds-photos__img--3-1 { transform: translate(10px, -3px) rotate(-5deg); }
-.ds-photos__img--3-0 { transform: translate(0, -5px); }
-.ds-photos__img--2-1 { transform: translate(8px, -2px) rotate(-5deg); }
-.ds-photos__img--2-0 { transform: translate(-4px, 2px) rotate(2deg); }
 .ds-photos:focus-visible {
   outline: var(--ds-comp-focus-ring-border) solid var(--ds-comp-focus-ring-color);
   outline-offset: 6px;
@@ -163,15 +166,21 @@
   overflow: hidden;
 }
 .ds-stop__note .ds-wiggle-line { position: absolute; left: 0; right: 0; bottom: -1px; }
-/* 泡泡的尖角：朝時間軸那邊（Figma dialogue/ind，8×5、opacity primary 100） */
+/* 泡泡的尖角（Figma dialogue/ind，8×5）：貼齊泡泡上緣、在泡泡外面朝時間軸，顏色和泡泡一樣（opacity primary 50）
+ * alignment=left（小卡在右欄）：尖角在右邊，M0 0 L8 0 L0 5
+ * alignment=right（小卡在左欄）：尖角在左邊，M0 0 L8 0 L8 5 */
 .ds-stop__tail {
   position: absolute;
-  top: 8px;
+  top: 0;
   width: 8px;
   height: 5px;
-  background: var(--ds-sys-color-opacity-opacity-primary-100);
+  background: var(--ds-sys-color-opacity-opacity-primary-50);
 }
-.ds-stop--left .ds-stop__tail { left: -8px; clip-path: polygon(100% 0, 0 50%, 100% 100%); }
-.ds-stop--right .ds-stop__tail { right: -8px; clip-path: polygon(0 0, 100% 50%, 0 100%); }
-.ds-stop--right { align-items: flex-end; text-align: right; margin-left: auto; }
+.ds-stop--left .ds-stop__tail { left: 100%; clip-path: polygon(0 0, 100% 0, 0 100%); }
+.ds-stop--right .ds-stop__tail { right: 100%; clip-path: polygon(0 0, 100% 0, 100% 100%); }
+.ds-stop--right { align-items: flex-end; text-align: right; }
+/* 時間軸裡：小卡寬 134，貼外側（Figma 162057:12098：右欄 x233、左欄 x24，時間軸左右 24） */
+.ds-tl__side--card .ds-stop { max-width: 134px; }
+.ds-tl__side--card .ds-stop--left { margin-left: auto; }
+.ds-tl__side--card .ds-stop--right { margin-right: auto; }
 .ds-stop--right .ds-stop__info { justify-content: flex-end; }

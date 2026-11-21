@@ -89,6 +89,20 @@
   background: currentColor;
 }
 
+/* 一列一列疊起來時（Figma wish/recommands 162187:29613）：列和列之間 spacing/2xl
+ * 用相鄰兄弟加 margin，外層不管是誰包的（例如 App 的 .m-ss-list）都會對；外層若已經用 gap 排就用 .ds-search-list */
+.ds-search-item + .ds-search-item {
+  margin-top: var(--ds-sys-spacing-2xl);
+}
+.ds-search-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-sys-spacing-2xl);
+}
+.ds-search-list > .ds-search-item + .ds-search-item {
+  margin-top: 0;
+}
+
 /* hover */
 .ds-search-item.is-hover::after {
   opacity: 1;

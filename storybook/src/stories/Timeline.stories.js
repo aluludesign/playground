@@ -37,19 +37,19 @@ export const 全部 = {
 
 <section class="tk"><h2>零件</h2>
 <table><thead><tr><th></th><th>預覽</th><th>說明</th></tr></thead><tbody>
-<tr><td class="nm">小卡 left</td><td style="width:200px">${scheduleDetailHTML({ wiki: WIKI, note: "千本鳥居清早去人超少，景色絕美！" })}</td><td class="al">卡在時間軸右邊，泡泡尖角朝左</td></tr>
-<tr><td class="nm">小卡 right</td><td style="width:200px">${scheduleDetailHTML({ align: "right", note: "想吃那家烤布蕾" })}</td><td class="al">卡在時間軸左邊，靠右對齊</td></tr>
-<tr><td class="nm">照片 3／2／1</td><td style="padding:16px">${attractionPhotosHTML({ photos: [photo, photo, photo] })} ${attractionPhotosHTML({ photos: [photo, photo] })} ${attractionPhotosHTML({ photos: [photo] })}</td><td class="al">最多疊 3 張；沒有照片就空著</td></tr>
+<tr><td class="nm">小卡 left</td><td style="width:200px">${scheduleDetailHTML({ wiki: WIKI, note: "千本鳥居清早去人超少，景色絕美！" })}</td><td class="al">卡在時間軸右邊；泡泡尖角貼齊上緣、在右邊外面（Figma alignment=left）</td></tr>
+<tr><td class="nm">小卡 right</td><td style="width:200px">${scheduleDetailHTML({ align: "right", note: "想吃那家烤布蕾" })}</td><td class="al">卡在時間軸左邊，靠右對齊；尖角貼齊上緣、在左邊外面</td></tr>
+<tr><td class="nm">照片 variants</td><td style="padding:16px;display:flex;flex-wrap:wrap;gap:16px" id="photo-variants">${[1, 2, 6, 5, 4, 3].map((v) => `<span data-v="${v}">${attractionPhotosHTML({ photos: [photo, photo, photo].slice(0, v <= 2 ? 3 : v >= 5 ? 2 : 1), variant: v })}</span>`).join("")}</td><td class="al">Figma variants 1、2（3 張）／6、5（2 張）／4、3（1 張）；照片有多種樣式，隨機變化（同一個 key 每次都一樣）；最多疊 3 張，第一張在最上面；沒有照片就空著</td></tr>
 <tr><td class="nm">沒有行程</td><td style="width:342px">${timelineHTML({ items: [] })}</td><td class="al">那天還沒排東西</td></tr>
 </tbody></table></section>
 
 <section class="tk"><h2>Token</h2>
 <table><thead><tr><th>用在</th><th>token</th></tr></thead><tbody>
-<tr><td class="al">名稱</td><td>Body/lg/hand-regular（<code class="var">--ds-sys-font-family-zhtw-handwriting-zhtw</code>・<code class="var">--ds-sys-font-size-body-lg</code>）＋螢光筆（那天的 custom N）</td></tr>
+<tr><td class="al">名稱</td><td>Body/lg/hand-regular（<code class="var">--ds-sys-font-family-zhtw-handwriting-zhtw</code>・<code class="var">--ds-sys-font-size-body-lg</code>）＋螢光筆（固定 custom 5，不跟那天的顏色）</td></tr>
 <tr><td class="al">地區‧類別</td><td>label/sm、<code class="var">--ds-sys-color-text-200</code></td></tr>
 <tr><td class="al">維基摘要</td><td>label/md/regular、<code class="var">--ds-sys-color-text-200</code>、最多 2 行</td></tr>
-<tr><td class="al">留言泡泡</td><td><code class="var">--ds-sys-color-opacity-opacity-primary-50</code>、label/lg/hand-regular、尖角 opacity primary 100、底下抖動線 outline 200</td></tr>
-<tr><td class="al">照片</td><td>90×90、<code class="var">--ds-sys-radius-sm</code>、框 <code class="var">--ds-sys-color-outline-50</code>、<code class="var">--ds-elevation-component-sm</code></td></tr>
+<tr><td class="al">留言泡泡</td><td><code class="var">--ds-sys-color-opacity-opacity-primary-50</code>、label/lg/hand-regular、尖角（8×5、貼齊泡泡上緣、朝時間軸）同泡泡底色、底下抖動線 outline 200</td></tr>
+<tr><td class="al">照片</td><td>90×90、<code class="var">--ds-sys-radius-sm</code>、框 <code class="var">--ds-sys-color-outline-50</code>、Elevation/component/sm 加在整組上（filter drop-shadow，用 <code class="var">--ds-sys-blur-2xs</code>・<code class="var">--ds-sys-shadow-md</code>）</td></tr>
 <tr><td class="al">編號＋時間</td><td>pin_timeline w/time（見 Location pin）</td></tr>
 </tbody></table></section>
 

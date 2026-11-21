@@ -53,7 +53,7 @@ export function wishCardHTML({ key = "", title = "淺草寺", meta = ["日本，
   const info = meta.filter(Boolean).map((m) => `<span>${esc(m)}</span>`).join('<span aria-hidden="true">‧</span>');
   return `<article class="ds-wcard ds-pattern" data-key="${esc(key)}">
 <div class="ds-wcard__head">
-<h3 class="ds-wcard__title"><span class="ds-wcard__mark" data-pen="wish-${esc(key)}">${penMarkerHTML({ color: `custom ${color}` })}<span>${esc(title)}</span></span></h3>
+<h3 class="ds-wcard__title"><span class="ds-wcard__mark" data-pen="wish-${esc(key)}">${penMarkerHTML({ look: "title" })}<span>${esc(title)}</span></span></h3>
 ${info ? `<p class="ds-wcard__info">${info}</p>` : ""}
 </div>
 <div class="ds-wcard__body">
