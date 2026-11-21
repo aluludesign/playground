@@ -4,6 +4,8 @@ import "./date-list.css";
 import { wireWiggle } from "../wiggle.js";
 import { penMarkerHTML } from "../pen-line.js";
 import { revealPens } from "../pen-reveal.js";
+import { faStopwatch } from "@fortawesome/free-solid-svg-icons/faStopwatch";
+import { faSVG } from "../fa.js";
 
 // 天氣圖示：icons/weather 的 color 那一組
 const raw = import.meta.glob("../icons/weather/*_color.svg", { query: "?raw", import: "default", eager: true });
@@ -19,15 +21,28 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&l
  * day：「Day1」；week：「TUE」；date：「10/06」
  * color：那天的顏色（1–14，對應 customs/custom N；選到時整格鋪同一個顏色、淡一點）
  * weather：{ icon: "sun", lo: 24, hi: 29, rain: 30 }；查不到（太遠的日子）就不給，那一塊就空著
- * title／value：state=status 用，例：「正在倒數」「38 天」、「回味中」
+ * state=status（Figma coming soon 162470:24011）：上「今天 ‧ TUE」、中今天的日期（primary 螢光筆）、下「⏱ 倒數 38 天」
+ *   count：還有幾天（數字）；today：今天的 Date（不給就用現在的時間；week／date 有給就用給的）
+ *   title／value：舊參數相容 —— value「38 天」會被讀成 count；沒有 count 時下排寫 title（例：「回味中」）
  */
-export function dateCardHTML({ state = "default", key = "", day = "Day1", week = "TUE", date = "10/06", color = 5, weather = null, title = "正在倒數", value = "38 天" } = {}) {
+const WEEK = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+export function dateCardHTML(opts = {}) {
+  const { state = "default", key = "", day = "Day1", week = "TUE", date = "10/06", color = 5, weather = null, title = "正在倒數", value = "38 天", count = null, today = null, todayLabel = "今天" } = opts;
   const cls = ["ds-date", `ds-date--${state}`];
   const style = ` style="--date-color:var(--ds-sys-color-customs-custom-${color});--date-on:var(--ds-sys-color-customs-on-custom-${color})"`;
   if (state === "status") {
+    const now = today instanceof Date ? today : new Date();
+    const wk = opts.week ? week : WEEK[now.getDay()];
+    const dt = opts.date ? date : `${now.getMonth() + 1}/${now.getDate()}`;
+    const m = count == null && /^\s*(\d+)\s*天\s*$/.exec(String(value || ""));
+    const n = count != null ? count : m ? +m[1] : null;
+    const details = n != null
+      ? `<span class="ds-date__count">${faSVG(faStopwatch, "ds-date__count-icon")}<span class="ds-date__count-text"><span>倒數</span><span class="ds-date__count-n">${esc(n)}</span><span>天</span></span></span>`
+      : title ? `<span class="ds-date__count"><span class="ds-date__count-text"><span>${esc(title)}</span></span></span>` : "";
     return `<div class="${cls.join(" ")} ds-wiggle-border"${style}>
-<div class="ds-date__head"><span>${esc(title)}</span><span class="ds-date__rule ds-wiggle-line ds-wiggle--outline-300" aria-hidden="true"></span></div>
-${value ? `<div class="ds-date__big"><span class="ds-date__mark" data-pen="status-${esc(title)}-${esc(value)}">${penMarkerHTML({ color: "primary" })}<span>${esc(value)}</span></span></div>` : ""}
+<span class="ds-date__head"><span>${esc(todayLabel)}</span><b aria-hidden="true">‧</b><span>${esc(wk)}</span><span class="ds-date__rule ds-wiggle-line ds-wiggle--outline-300" aria-hidden="true"></span></span>
+<span class="ds-date__big"><span class="ds-date__mark" data-pen="status-${esc(dt)}">${penMarkerHTML({ color: "primary" })}<span>${esc(dt)}</span></span></span>
+${details}
 </div>`;
   }
   const wx = weather && state !== "past"

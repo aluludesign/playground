@@ -1,7 +1,8 @@
 /* 底部導覽 bottom nav —— Figma「bottom nav/main」「bottom nav/items」（section 162510:14932）
  *
  *   外框：膠囊、bg pattern/primary-soft、抖動外框（outline 50、wiggle 0.3）、Elevation/surface/soft
- *   每一格：65×65 的點擊區，中間 55×55 的圓（bg pattern/tertiary、2px outline 50 框、Elevation/component/sm；hover 換 md、pressed 長到 59）
+ *   外框：331×63（Figma 162057:12104）＝ 內距 xs（4）＋ 5 格 55 ＋ 格距 xl（12）×4
+ *   每一格：55×55，就是那顆圓（bg pattern/tertiary、2px outline 50 框、Elevation/component/sm；hover 換 md、pressed 長到 59，往外長、不推動旁邊）
  *   default：duotone icon 24（sys/icon/md）＋文字 caption/sm/regular
  *   active ：sticker icon 放大到 comp/bottom nav/active-icon（32），文字藏起來
  *
@@ -21,10 +22,12 @@
 .ds-bottom-nav__item {
   --nav-ease: cubic-bezier(0.25, 1, 0.5, 1);
   position: relative;
-  /* Figma items 是固定 65×65，圓 55×55（沒有對應的 token） */
-  width: 65px;
-  height: 65px;
+  /* Figma items 是固定 55×55（沒有對應的 token），格距 12 量的是圓和圓之間（Lulu 11-22「我說要12」） */
+  width: 55px;
+  height: 55px;
   display: grid;
+  /* 軌道釘在 55：按下去圓長到 59 時往四邊各長 2，不會把軌道撐大、往右偏 */
+  grid-template: 100% / 100%;
   place-items: center;
   padding: 0;
   margin: 0;
@@ -67,7 +70,7 @@
   box-shadow: var(--ds-elevation-component-sm);
 }
 
-/* icon 和文字放在圓外面、對著固定 65×65 的那一格置中（不是對著圓）：
+/* icon 和文字放在圓外面、對著固定 55×55 的那一格置中（不是對著圓）：
  * 按下去圓從 55 長到 59 時，圓的大小一直在變，桌機（1 倍解析度）上對著圓置中的東西會被湊整數像素而上下跳。
  *
  * icon 和文字都用絕對定位，切換時只動 transform／opacity，不重排版面（才不會抖）。
@@ -182,7 +185,7 @@
 .ds-bottom-nav__item:focus-visible::after {
   content: "";
   position: absolute;
-  inset: calc(5px - var(--ds-sys-spacing-2xs) - var(--ds-comp-focus-ring-border));
+  inset: calc(0px - var(--ds-sys-spacing-2xs) - var(--ds-comp-focus-ring-border));
   border: var(--ds-comp-focus-ring-border) solid var(--ds-comp-focus-ring-color);
   border-radius: var(--ds-comp-bottom-nav-radius);
   pointer-events: none;

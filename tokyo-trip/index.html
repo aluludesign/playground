@@ -1672,6 +1672,7 @@
     #m-menu[hidden]{display:none;}
     #m-cal{position:absolute; right:var(--ds-sys-spacing-2xl); z-index:3;}
     #m-ended{position:absolute; left:var(--ds-sys-spacing-4xl); right:72px; z-index:3;}
+    #m-head #m-ended{position:static; margin-top:var(--ds-sys-spacing-2xl);}
     #m-ended[hidden]{display:none;}
     #m-sheet-box{position:absolute; left:0; right:0; top:0; bottom:0; pointer-events:none; overflow:hidden;}
     #m-sheet-box .ds-sheet{pointer-events:auto;}
@@ -1683,11 +1684,12 @@
     body.member-ui[data-view="wish"] #m-scroll .col:not(.wishbox){display:none;}
     body.member-ui #m-scroll #wishbox{margin-top:0; border:0; background:none;}
     #m-nav{position:absolute; left:0; right:0; bottom:0; z-index:5; display:flex; justify-content:center;
-      padding:var(--ds-sys-spacing-2xl) var(--ds-sys-spacing-4xl) calc(var(--ds-sys-spacing-2xl) + env(safe-area-inset-bottom,0px));}
+      padding:var(--ds-sys-spacing-2xl) var(--ds-sys-spacing-4xl) calc(var(--ds-sys-spacing-2xl) + env(safe-area-inset-bottom,0px));
+      /* Figma bottom nav_member 外面那一條(390 寬、膠囊上 16 到螢幕底):白 1% ＋ 背景模糊 8(CSS 是一半 = 4px)(Lulu 11-22) */
+      background:rgb(255 255 255 / .01); -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px);}
     /* 面板拉到最低時底部導覽收起來(Figma 162123:12383 的畫法;待 Lulu 確認) */
     body.member-ui.m-sheet-min #m-nav{transform:translateY(110%); transition:transform .25s ease;}
-    /* 最低時地圖右邊的 ＋／− 也收起來,只留日曆鈕(Lulu 11-21) */
-    body.member-ui.m-sheet-min #map-sheet .mapzoom{display:none;}
+    /* 最低時 ＋／− 照樣在日曆鈕底下(Lulu 11-22「面板最低時的＋／−也要有」,取代 11-21 收起來的那條) */
     #m-nav{transition:transform .25s ease;}
     /* 交通、花費、分帳:頂列和底部導覽中間是一般會捲的頁 */
     body.member-ui:not([data-view="plan"]):not([data-view="wish"]) .wrap{padding-top:calc(var(--m-headh,137px) + 12px);
@@ -1743,8 +1745,27 @@
     #m-ss-sheet{position:absolute; left:var(--ds-sys-spacing-2xl); right:var(--ds-sys-spacing-2xl); top:var(--m-ss-under,160px); bottom:var(--ds-sys-spacing-2xl); overflow:auto;}
     #m-ss-sheet[hidden], #m-ss-bottom[hidden], #m-ss-card[hidden]{display:none;}
     #m-ss-bottom{position:absolute; left:0; right:0; bottom:calc(var(--ds-sys-spacing-4xl) + env(safe-area-inset-bottom,0px)); display:flex; flex-direction:column; align-items:center; gap:var(--ds-sys-spacing-xl);}
-    #m-ss-card{position:absolute; left:var(--ds-sys-spacing-2xl); right:var(--ds-sys-spacing-2xl); bottom:var(--ds-sys-spacing-2xl); max-height:75vh; overflow:auto;
-      display:flex; flex-direction:column; gap:var(--ds-sys-spacing-2xl);}
+    /* 選了一個熱門地點／點了地圖上的結果(Figma 162197:18186):只有一張景點卡,358×400、左右 16、離底 24;
+       留言框在卡片裡、資訊下面,整張卡自己上下捲。往上滑 → 展開(162197:20434):卡片頂到上面 16、搜尋框和日曆鈕收起來,
+       留言框在卡片最底下。打留言、鍵盤出來(162197:21058):卡片從上面 16 到鍵盤上 24,留言框滑上來蓋住資訊(接在照片下面),
+       日曆鈕在右上角 */
+    #m-ss-card{--m-ss-card-top:calc(100% - 24px - env(safe-area-inset-bottom,0px) - min(400px, 100% - 140px));
+      position:absolute; left:var(--ds-sys-spacing-2xl); right:var(--ds-sys-spacing-2xl);
+      top:var(--m-ss-card-top); bottom:calc(24px + env(safe-area-inset-bottom,0px));
+      overflow-y:auto; overscroll-behavior:contain; border-radius:var(--ds-sys-radius-sm); touch-action:pan-y;
+      box-shadow:var(--ds-elevation-surface-medium); transition:top .3s ease, bottom .3s ease;}
+    #m-ss-card > .ds-acard{min-height:100%; display:flex; flex-direction:column; box-shadow:none;}
+    /* Figma command text area:surface＋pattern、Elevation/surface/medium、上下 16;留言框 310 寬(左右 24) */
+    #m-ss-card .ds-acard__footer{margin-top:auto; padding:var(--ds-sys-spacing-2xl) var(--ds-sys-spacing-4xl); box-shadow:var(--ds-elevation-surface-medium);}
+    body.m-ws-open #m-ss-card, body.m-ws-typing #m-ss-card{--m-ss-card-top:calc(16px + env(safe-area-inset-top,0px));}
+    body.m-ws-typing #m-ss-card{bottom:calc(var(--m-kb,0px) + 24px); overflow:hidden;}
+    body.m-ws-typing #m-ss-card > .ds-acard{position:relative; height:100%;}
+    body.m-ws-typing #m-ss-card .ds-acard__footer{position:absolute; left:0; right:0; top:var(--m-ss-ph,0px); bottom:0; z-index:2; overflow-y:auto;}
+    #m-ss-frame, #m-ss-cal, body.m-ws #ss-map .mapzoom{transition:opacity .2s ease, visibility 0s;}
+    body.m-ws-open #m-ss-frame, body.m-ws-typing #m-ss-frame, body.m-ws-open #m-ss-cal,
+    body.m-ws-open #ss-map .mapzoom, body.m-ws-typing #ss-map .mapzoom{opacity:0; visibility:hidden; pointer-events:none; transition:opacity .2s ease, visibility 0s .2s;}
+    body.m-ws-typing #m-ss-cal{top:env(safe-area-inset-top,0px) !important; z-index:3;}
+    body.m-ws-open.m-ws-typing #m-ss-cal{opacity:1; visibility:visible; pointer-events:auto; transition:opacity .2s ease, visibility 0s;}
     #m-ss-card .m-ss-form{background:var(--ds-sys-color-surface); border-radius:var(--ds-sys-radius-sm); padding:var(--ds-sys-spacing-2xl) var(--ds-sys-spacing-4xl);}
     #m-ss .m-ss-list{display:flex; flex-direction:column;}
     #m-ss .m-ss-tip[hidden]{display:none;}
@@ -1761,17 +1782,39 @@
        往上滑 → 展開(162119:15938／162182:19903):只剩這一張,16／59 起、358 寬、到底上 24,裡面可以上下捲,不能左右滑 */
     #m-detail{position:absolute; inset:0; z-index:6; pointer-events:none;}
     #m-detail[hidden]{display:none;}
-    #m-detail-card{position:absolute; left:0; right:0; top:var(--m-detail-top,420px); bottom:calc(24px + env(safe-area-inset-bottom,0px));
+    /* 滑到的那張放在畫面正中間(Lulu 11-22):左右各留 24(342 寬),前、後一張在兩邊各露一點;停下來一律對齊正中間。
+       畫面再寬,卡片最寬 390、一樣置中 */
+    #m-detail-card{--m-dpad:max(var(--ds-sys-spacing-4xl), calc((100% - 390px) / 2));
+      position:absolute; left:0; right:0; top:var(--m-detail-top,420px); bottom:calc(24px + env(safe-area-inset-bottom,0px));
       display:flex; gap:var(--ds-sys-spacing-2xl); overflow-x:auto; overflow-y:hidden; scroll-snap-type:x mandatory;
-      padding:0 var(--ds-sys-spacing-4xl); scroll-padding:0 var(--ds-sys-spacing-4xl); scrollbar-width:none; overscroll-behavior-x:contain;}
+      padding:0 var(--m-dpad); scroll-padding:0 var(--m-dpad); scrollbar-width:none; overscroll-behavior-x:contain;}
     #m-detail-card::-webkit-scrollbar{display:none;}
-    #m-detail-card .m-dcard{flex:0 0 100%; max-width:390px; height:100%; overflow:hidden; scroll-snap-align:start; scroll-snap-stop:always;
-      pointer-events:auto; touch-action:pan-x; border-radius:var(--ds-sys-radius-sm);}
+    #m-detail-card .m-dcard{flex:0 0 100%; max-width:390px; height:100%; overflow:hidden; scroll-snap-align:center; scroll-snap-stop:always;
+      pointer-events:auto; touch-action:pan-x; border-radius:var(--ds-sys-radius-sm); transition:opacity .3s ease;}
     #m-detail-card .m-dcard > .ds-acard{min-height:100%; box-shadow:var(--ds-elevation-surface-medium);}
-    #m-detail.is-open #m-detail-card{top:max(16px, env(safe-area-inset-top,0px)); padding:0 var(--ds-sys-spacing-2xl); overflow:hidden; scroll-snap-type:none;}
-    #m-detail.is-open #m-detail-card .m-dcard:not(.is-cur){display:none;}
-    #m-detail.is-open #m-detail-card .m-dcard.is-cur{flex-basis:100%; overflow-y:auto; overscroll-behavior:contain; touch-action:pan-y;}
-    body.m-detail-open #m-cal, body.m-detail-open #map-sheet .mapzoom{visibility:hidden;}
+    /* 展開(往上滑)= 漸變長大(Lulu 11-22「不要 instant」):那張卡從原本的位置 .3s 長到 16／59、358 寬、到底上 24;
+       旁邊的卡同時淡出,地圖同時糊掉(背景模糊 8 → 4px)。收起來反過來走回原位。
+       動的那張卡由 mDetailOpen() 改成 position:fixed(.is-float),原位留一塊空的(.m-dcard-ph),旁邊的卡才不會擠過來 */
+    #m-detail.is-open #m-detail-card{overflow:hidden; scroll-snap-type:none;}
+    #m-detail.is-open #m-detail-card .m-dcard:not(.is-cur){opacity:0; visibility:hidden; transition:opacity .3s ease, visibility 0s .3s;}
+    #m-detail-card .m-dcard.is-float{position:fixed; z-index:1; margin:0; max-width:none; height:auto;
+      left:max(16px, calc(50% - 195px)); right:max(16px, calc(50% - 195px));
+      top:max(16px, env(safe-area-inset-top,0px)); bottom:calc(24px + env(safe-area-inset-bottom,0px));}
+    #m-detail-card .m-dcard.is-moving{transition:left .3s ease, top .3s ease, width .3s ease, height .3s ease;}
+    #m-detail-card .m-dcard-ph{flex:0 0 100%; max-width:390px; height:100%; scroll-snap-align:center; scroll-snap-stop:always;}
+    #m-detail.is-open #m-detail-card .m-dcard.is-cur{overflow-y:auto; overscroll-behavior:contain; touch-action:pan-y;}
+    #m-detail::before{content:""; position:absolute; inset:0; pointer-events:none; opacity:0; transition:opacity .3s ease;
+      -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px);}
+    #m-detail.is-open::before{opacity:1;}
+    /* 地圖前面有更高一層、正在跟人互動的東西時,地圖不能動:日曆鈕和 ＋／− 都不出現(Figma 162182:13499,Lulu 11-22)——
+       行程面板拉到最高、許願牆拉到最高、細節卡展開。回來就再出現 */
+    #m-cal, body.member-ui #map-sheet .mapzoom{transition:opacity .2s ease, visibility 0s;}
+    body.member-ui[data-view="plan"].m-sheet-max:not(.m-in-detail) #m-cal,
+    body.member-ui[data-view="plan"].m-sheet-max:not(.m-in-detail) #map-sheet .mapzoom,
+    body.member-ui[data-view="wish"].m-wish-max:not(.m-in-detail) #m-cal,
+    body.member-ui[data-view="wish"].m-wish-max:not(.m-in-detail) #map-sheet .mapzoom,
+    body.m-detail-open #m-cal, body.m-detail-open #map-sheet .mapzoom{opacity:0; visibility:hidden; pointer-events:none;
+      transition:opacity .2s ease, visibility 0s .2s;}
     /* 這個點不在地圖上(Figma 162653:32362):底下一個 Info default,三秒後消失 */
     #m-toast{position:absolute; left:16px; right:16px; bottom:calc(24px + env(safe-area-inset-bottom,0px)); z-index:8; display:flex; justify-content:center; pointer-events:none;}
     #m-toast[hidden]{display:none;}
@@ -4412,7 +4455,9 @@
         item: x, k: "p" + d.date + "-" + i, n: i + 1, cls: "plan", color: mDayColor(d).color, on: mDayColor(d).on, cn: dayColorN(d.n),
         tip: "DAY " + d.n + " " + (x.time || "") + " " + x.title,
       })));
-    } else if (layers.plan) {
+    } else if (layers.plan && !(sheetMode === "wish" && memberUI())) {
+      /* 一般團員的許願頁:日曆鈕關著 = 行程的點全部不放,只剩願望(Lulu 11-22「全部地點關閉了為什麼還看得到」,
+         例:地圖上那個抵達 NGO 的點)。團主、副團主的許願地圖照舊。 */
       /* **「Day n」只放選著的那一天**,行程分頁、許願分頁都一樣(Lulu 的決定)。
          要看六天全部是另一顆開關(「全部已排」),不是預設 ——
          畫面上一定有一天是亮著的,預設就放全部的話,地圖會在講另一件事。 */
@@ -7021,7 +7066,7 @@
   function mRestore() {
     while (mMoved.length) { const [node, mark] = mMoved.pop(); mark.parentNode.insertBefore(node, mark); mark.remove(); }
   }
-  let mSheet = null, mBuilt = false, mTrips = null, mTripsLoading = null;
+  let mSheet = null, mBuilt = false, mTrips = null, mTripsLoading = null, mEndedOpen = true;
   /* 面板三段的高度:最低只剩日期列、預設、最高到頂列下面(Figma 186 / 450 / 707,以 844 高為準) */
   function mSnaps() {
     const H = window.innerHeight, head = el("m-head").offsetHeight || 137;
@@ -7056,27 +7101,31 @@
       switchable: mTrips === null || mTrips.length > 1, peopleLabel: "看成員名單",
     });
     if (el("m-head")._html !== headHTML) {
+      /* 結束的提示放在頂列裡面:重畫頂列前先把它拿出來,不然會跟著被清掉 */
+      if (el("m-head").contains(el("m-ended"))) el("m-shell").insertBefore(el("m-ended"), el("m-cal"));
       el("m-head").innerHTML = headHTML;
       el("m-head")._html = headHTML;
       DS.wireTripHeader(el("m-head"));
     }
     /* 團清單先拿好,第一次點團名就直接打開,不用等 */
     if (mTrips === null && !mTripsLoading) mLoadTrips();
-    const headH = el("m-head").offsetHeight;
-    document.body.style.setProperty("--m-headh", headH + "px");
-    el("m-menu").style.top = (headH - 28) + "px";
-    /* 結束的團:頂列底下一張提示 */
+    /* 結束的團(Figma 162507:13824):提示是頂列的一部分 —— 在團名、副標下面 16,342 寬、type info、展開、右邊 ▲ 可以收合;
+       頂列跟著長高(213/844),日曆鈕、面板都跟著頂列往下 */
     const ended = tripEnded();
     el("m-ended").hidden = !ended;
     if (ended) {
-      el("m-ended").style.top = (headH + 10) + "px";
-      el("m-ended").innerHTML = DS.infoHTML({
+      const hdr = el("m-head").querySelector(".ds-trip-header");
+      if (hdr && el("m-ended").parentNode !== hdr) hdr.appendChild(el("m-ended"));
+      const endedHTML = DS.infoHTML({
         text: "這一團已經在 " + String(trip.end || "").slice(5).replace("-", "/") + " 結束了，只能看。" +
           (editable("cost") ? "你還可以記帳、改花費。" : ""),
-        expanded: true, collapseIcon: false, button: false,
+        type: "info", expanded: mEndedOpen, collapseIcon: true, button: false,
       });
-      DS.wireInfo(el("m-ended"));
-    }
+      if (el("m-ended")._html !== endedHTML) { el("m-ended").innerHTML = endedHTML; el("m-ended")._html = endedHTML; DS.wireInfo(el("m-ended")); }
+    } else if (el("m-head").contains(el("m-ended"))) el("m-shell").insertBefore(el("m-ended"), el("m-cal"));
+    const headH = el("m-head").offsetHeight;
+    document.body.style.setProperty("--m-headh", headH + "px");
+    el("m-menu").style.top = (headH - 28) + "px";
     /* 日曆鈕 = 開關其他日子的行程(就是原本的「全部已排」) */
     const mapView = !mMe && (state.tab === "plan" || state.tab === "wish");
     el("m-me").hidden = !mMe;
@@ -7124,6 +7173,8 @@
       mSheet = DS.wireBottomSheet(el("m-sheet-box").querySelector(".ds-sheet"), { snaps: mSnaps, at: 1, scroller: "#m-scroll" });
       el("m-sheet-box").addEventListener("ds-sheet-snap", e => {
         document.body.classList.toggle("m-sheet-min", e.detail.index === 0);
+        /* 拉到最高:地圖前面的面板正在用,日曆鈕和 ＋／− 收起來(Figma 162182:13499) */
+        document.body.classList.toggle("m-sheet-max", e.detail.index === mSnaps().length - 1);
       });
       wireMemberShell();
     } else {
@@ -7164,15 +7215,17 @@
   /* 新外框裡日子的顏色用 Storybook 的 custom 1–14。照這個順序輪,相鄰兩天色相拉得開 */
   const DAY_CUSTOM = [14, 1, 5, 8, 11, 2, 4, 9, 12, 6, 10, 13, 3, 7];
   const dayColorN = n => DAY_CUSTOM[(n - 1) % DAY_CUSTOM.length];
+  /* 日期列最前面那格(Figma 162470:24011)的「今天 ‧ TUE」和日期:用 App 自己的今天(todayISO),不用瀏覽器的時間 */
+  const mToday = t => ({ week: WEEK_EN[new Date(t + "T00:00:00").getDay()], date: +t.slice(5, 7) + "/" + +t.slice(8, 10) });
   function mRenderPlan() {
     const t = todayISO();
     const cards = [];
     /* 最前面一格:開始前倒數、結束後回味中(旅途中不放) */
     if (DAYS.length && t < DAYS[0].date) {
       const left = Math.round((new Date(DAYS[0].date) - new Date(t)) / 864e5);
-      cards.push({ state: "status", title: "正在倒數", value: left + " 天" });
+      cards.push({ state: "status", title: "正在倒數", count: left, ...mToday(t) });
     } else if (tripEnded() || (DAYS.length && t > DAYS[DAYS.length - 1].date)) {
-      cards.push({ state: "status", title: "回味中", value: "" });
+      cards.push({ state: "status", title: "回味中", value: "", ...mToday(t) });
     }
     DAYS.forEach(d => {
       const c = wxCache[wxKey(CITY.lat, CITY.lon)];
@@ -7284,6 +7337,12 @@
       if (orig) orig.click();
     });
     el("m-head").addEventListener("ds-header-people", openMembers);
+    /* 結束提示收合／展開:頂列高度變了,日曆鈕和面板跟著重算 */
+    el("m-shell").addEventListener("ds-info-toggle", e => {
+      if (!e.target.closest("#m-ended")) return;
+      mEndedOpen = !!e.detail.expanded;
+      renderMemberShell();
+    });
     el("m-head").addEventListener("ds-header-title", toggleTripMenu);
     el("m-menu").addEventListener("ds-menu-select", e => {
       const code = e.detail.key;
@@ -7399,19 +7458,73 @@
     /* 卡片頂在畫面 420/844(Figma 162114:14958) */
     el("m-detail").style.setProperty("--m-detail-top", Math.round(window.innerHeight * 420 / 844) + "px");
     const cur = box.querySelector(".m-dcard.is-cur");
+    /* 展開著的時候重畫(地點資料回來、按讚):新的那張直接停在展開的位置 */
+    if (cur && el("m-detail").classList.contains("is-open")) mFloat(cur);
     if (keepScroll) { box.scrollLeft = left; if (cur) cur.scrollTop = inner; }
-    else if (cur) box.scrollLeft = cur.offsetLeft - parseFloat(getComputedStyle(box).paddingLeft);
+    else mCenterCur(box, cur);
   }
-  /* 展開／收起(往上滑展開、展開後在最上面往下拉收起) */
-  function mDetailOpen(on) {
-    el("m-detail").classList.toggle("is-open", on);
-    document.body.classList.toggle("m-detail-open", on);
-    const cur = el("m-detail-card").querySelector(".m-dcard.is-cur");
-    if (cur) cur.scrollTop = 0;
-    if (!on && mDetail) {
-      const box = el("m-detail-card");
-      if (cur) box.scrollLeft = cur.offsetLeft - parseFloat(getComputedStyle(box).paddingLeft);
+  /* 那一張的中心對到可捲區的中心(Lulu 11-22「放在頁面正中間」) */
+  function mCenterCur(box, c) {
+    if (c) box.scrollLeft = c.offsetLeft + c.offsetWidth / 2 - box.clientWidth / 2;
+  }
+  /* 卡片浮起來(position:fixed,展開的位置);原位留一塊空的,旁邊的卡不會擠過來 */
+  function mFloat(c) {
+    if (!c.previousElementSibling || !c.previousElementSibling.classList.contains("m-dcard-ph")) {
+      const ph = document.createElement("div");
+      ph.className = "m-dcard-ph";
+      c.before(ph);
     }
+    c.classList.add("is-float");
+  }
+  /* 從 from 漸變到 to(.3s ease,CSS .is-moving),走完叫 done */
+  let mMoveT = null;
+  function mMoveCard(c, from, to, done) {
+    const set = r => { c.style.left = r.left + "px"; c.style.top = r.top + "px"; c.style.width = r.width + "px"; c.style.height = r.height + "px"; };
+    c.classList.remove("is-moving");
+    set(from);
+    void c.offsetWidth;
+    c.classList.add("is-moving");
+    set(to);
+    mMoveT = setTimeout(() => {
+      c.classList.remove("is-moving");
+      c.style.left = c.style.top = c.style.width = c.style.height = "";
+      done();
+    }, 320);
+  }
+  /* 展開／收起(往上滑展開、展開後在最上面往下拉收起)。animate:手指滑的那一下才漸變;開關細節頁本身是直接到位 */
+  function mDetailOpen(on, animate) {
+    const det = el("m-detail"), box = el("m-detail-card");
+    const was = det.classList.contains("is-open");
+    det.classList.toggle("is-open", on);
+    document.body.classList.toggle("m-detail-open", on);
+    clearTimeout(mMoveT);
+    const cur = box.querySelector(".m-dcard.is-cur");
+    if (cur) cur.scrollTop = 0;
+    const go = !!animate && !!cur && was !== on && !(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
+    if (on) {
+      if (!cur) return;
+      const from = cur.getBoundingClientRect();
+      cur.classList.remove("is-moving");
+      cur.style.left = cur.style.top = cur.style.width = cur.style.height = "";
+      mFloat(cur);
+      if (go) mMoveCard(cur, from, cur.getBoundingClientRect(), () => {});
+      return;
+    }
+    /* 收起來:回到原位(那塊空的),到了才放回卡片列 */
+    const back = () => {
+      box.querySelectorAll(".m-dcard-ph").forEach(p => p.remove());
+      box.querySelectorAll(".m-dcard.is-float").forEach(c => {
+        c.classList.remove("is-float", "is-moving");
+        c.style.left = c.style.top = c.style.width = c.style.height = "";
+      });
+      if (mDetail) mCenterCur(box, box.querySelector(".m-dcard.is-cur"));
+    };
+    const ph = cur && cur.previousElementSibling;
+    if (go && ph && ph.classList.contains("m-dcard-ph") && cur.classList.contains("is-float")) {
+      const from = cur.getBoundingClientRect();
+      mCenterCur(box, ph);
+      mMoveCard(cur, from, ph.getBoundingClientRect(), back);
+    } else back();
   }
   function mWireDetailSwipe() {
     const box = el("m-detail-card");
@@ -7427,16 +7540,16 @@
       y0 = null;
       if (Math.abs(dy) < 40 || Math.abs(dy) < Math.abs(dx) * 1.2) return;
       const open = el("m-detail").classList.contains("is-open");
-      if (!open && dy < 0) mDetailOpen(true);
-      else if (open && dy > 0 && top0 <= 0) mDetailOpen(false);
+      if (!open && dy < 0) mDetailOpen(true, true);
+      else if (open && dy > 0 && top0 <= 0) mDetailOpen(false, true);
     }, { passive: true });
     /* 電腦:滾輪往下 = 往上滑 */
     box.addEventListener("wheel", e => {
       if (Math.abs(e.deltaY) < Math.abs(e.deltaX) || Math.abs(e.deltaY) < 8) return;
       const open = el("m-detail").classList.contains("is-open");
       const c = box.querySelector(".m-dcard.is-cur");
-      if (!open && e.deltaY > 0) { e.preventDefault(); mDetailOpen(true); }
-      else if (open && e.deltaY < 0 && c && c.scrollTop <= 0) { e.preventDefault(); mDetailOpen(false); }
+      if (!open && e.deltaY > 0) { e.preventDefault(); mDetailOpen(true, true); }
+      else if (open && e.deltaY < 0 && c && c.scrollTop <= 0) { e.preventDefault(); mDetailOpen(false, true); }
     }, { passive: false });
   }
   /* 左右滑停下來:停在哪一張,那一站的點就放大、移到地圖看得到那一塊的正中間;不在地圖上的點 → 提示 */
@@ -7444,7 +7557,7 @@
   function mDetailScrolled() {
     clearTimeout(mDetailTimer);
     mDetailTimer = setTimeout(() => {
-      if (!mDetail || el("m-detail").classList.contains("is-open")) return;
+      if (!mDetail || el("m-detail").classList.contains("is-open") || el("m-detail-card").querySelector(".m-dcard.is-float")) return;
       const box = el("m-detail-card"), mid = box.getBoundingClientRect().left + box.clientWidth / 2;
       let best = null, bd = Infinity;
       box.querySelectorAll(".m-dcard").forEach(c => { const r = c.getBoundingClientRect(), d = Math.abs(r.left + r.width / 2 - mid); if (d < bd) { bd = d; best = c; } });
@@ -7498,12 +7611,14 @@
   }
   /* ===== 許願頁(第三步) ===== */
   let mWishSheet = null;
-  /* 許願牆的三段(Figma):下拉只露出一排的上半截(248)、預設(卡片頂在 394/844)、上拉頂到許願鈕下面 */
+  /* 許願牆的三段(Figma 161950:14100／162186:25406,annotation「這區在畫面最底部」):
+     牆一路到螢幕最底(預設時在底部導覽後面),高度從螢幕底往上算 ——
+     下拉:牆 256 高(588→844),沒有底部導覽;預設:牆 450 高(394→844,跟行程面板一樣照 844 等比);上拉:頂到許願鈕下面。
+     把手那條在牆上面 40 */
   function mWishSnaps() {
-    /* Figma 的座標含 59 高的狀態列;手機上那一截是 safe area。把手那條在牆上面 40 */
-    const H = window.innerHeight, top = y => y - 59 + mSafeTop();
+    const H = window.innerHeight;
     const iris = el("m-iris").getBoundingClientRect();
-    return [H - top(596 - 40), H - top(394 - 40), Math.round(H - (iris.bottom - 40 + 24))];
+    return [256 + 40, Math.round(H * 450 / 844) + 40, Math.round(H - (iris.bottom - 40 + 24))];
   }
   let mSafe = null;
   function mSafeTop() {
@@ -7544,7 +7659,10 @@
     if (!mWishSheet) {
       el("m-wish-box").innerHTML = DS.bottomSheetHTML({ content: '<div id="m-wall"></div>', label: "許願牆", bare: true });
       mWishSheet = DS.wireBottomSheet(el("m-wish-box").querySelector(".ds-sheet"), { snaps: mWishSnaps, at: 1, scroller: ".ds-sheet__body" });
-      el("m-wish-box").addEventListener("ds-sheet-snap", e => document.body.classList.toggle("m-wish-min", e.detail.index === 0));
+      el("m-wish-box").addEventListener("ds-sheet-snap", e => {
+        document.body.classList.toggle("m-wish-min", e.detail.index === 0);
+        document.body.classList.toggle("m-wish-max", e.detail.index === mWishSnaps().length - 1);
+      });
       el("m-wall").addEventListener("ds-like", e => toggleVote(e.detail.key));
       el("m-wall").addEventListener("ds-wish-open", e => mOpenWish(e.detail.key));
       el("m-wall").addEventListener("ds-photos-open", e => { const w = state.wishes.find(x => x.id === e.detail.key); if (w) mOpenPhotos(w, 0); });
@@ -7617,7 +7735,7 @@
     setTimeout(() => { const i = el("m-ss-frame").querySelector("input"); if (i) i.focus(); }, 60);
   }
   function mCloseWishSearch(sent) {
-    document.body.classList.remove("m-ws");
+    document.body.classList.remove("m-ws", "m-ws-open", "m-ws-typing");
     const m = el("m-ss"); if (m) m.remove();
     if (!el("seek-screen").hidden) closeSeekScreen(!!sent);
     if (!sent) { el("wish-form").reset(); closeWishAdd(); }
@@ -7644,6 +7762,7 @@
         if (e.target.closest(".ds-text-field__btn")) { mWsStrong(); return; }
         if (e.target.closest("#m-ss-cal .ds-scrim-btn")) { el("ss-all").click(); mWsCal(); }
       });
+      mWireWsCard(el("m-ss-card"));
       root.addEventListener("ds-text-area-cancel", () => { ssSel = -1; ssMap()._focus = null; paintMap(ssMap()); mWsSync(); });
       root.addEventListener("ds-text-area-submit", e => mWsSubmit(e.detail.value || "", !!e.target.closest(".m-ss-direct")));
       new MutationObserver(() => mWsSync()).observe(seekBox(SS), { childList: true, subtree: true });
@@ -7660,7 +7779,8 @@
     const support = strong ? (left != null ? "今天還能用 " + left + " 次" : "")
       : searched ? (n ? n + " 搜尋結果，找不到？試試" : "找不到？試試") : "";
     const cur = el("m-ss-frame").querySelector("input");
-    const val = cur ? cur.value : el(SS).value;
+    /* 框裡的字 = 原本那格(打字時同步過去;選了熱門地點時換成那個地點的名字,Figma 162197:18186) */
+    const val = el(SS).value;
     el("m-ss-frame").innerHTML = DS.searchFrameHTML({
       title: strong ? "強力搜，再搜一次" : "想去" + mCity() + "哪? ", closeLabel: "不許願了，回去",
       content: DS.textFieldHTML({ floatingLabel: false, label: "想去哪", placeholder: mCity() + "鐵塔、一蘭拉麵…等", value: val,
@@ -7702,8 +7822,9 @@
   function mWsCal() {
     const fb = el("m-ss-frame").getBoundingClientRect().bottom;
     el("m-ss").style.setProperty("--m-ss-under", Math.round(fb + 16) + "px");
-    el("m-ss-cal").style.top = Math.round(fb + 4) + "px";
-    document.body.style.setProperty("--m-ss-zoom", Math.round(fb + 4 + 77) + "px");
+    /* Figma 162197:18186:日曆鈕在搜尋框下面 8(241 → 249);＋／− 在日曆鈕下面 77 */
+    el("m-ss-cal").style.top = Math.round(fb + 8) + "px";
+    document.body.style.setProperty("--m-ss-zoom", Math.round(fb + 8 + 77) + "px");
     el("m-ss-cal").innerHTML = DS.scrimButtonHTML({ icon: "calender", color: "primary", size: "lg", label: "開關已排的行程", pressed: !!ssAll });
   }
   /* 打字時下面那張:熱門地點 = 打字提示的資料(全站選過的地點、搜過的字、相似詞);不指定地點 = 直接許願(Lulu 11-21) */
@@ -7765,8 +7886,62 @@
         info: [{ label: "營業時間", value: hitHours(r) }], closeLabel: "",
         footer: DS.textAreaHTML({ photoButton: "", cancel: "取消", submit: "送出許願" }) });
       DS.wireAttractionCard(card); DS.wireTextArea(card);
+      const ft = card.querySelector(".ds-acard__footer");
+      if (ft) ft.classList.add("ds-pattern");
+      card.scrollTop = 0;
     }
-    if (!r) card.dataset.at = "";
+    if (!r) { card.dataset.at = ""; mWsCardState(""); }
+  }
+  /* 結果卡的三種樣子:""=收著、"open"=往上滑展開、打留言時另外加 m-ws-typing(鍵盤收起來就回到原本那一種) */
+  function mWsCardState(st) {
+    document.body.classList.toggle("m-ws-open", st === "open");
+    if (!st) { document.body.classList.remove("m-ws-typing"); const c = el("m-ss-card"); if (c) c.scrollTop = 0; }
+  }
+  /* 鍵盤多高:visualViewport 比畫面矮多少 */
+  function mWsKb() {
+    const vv = window.visualViewport;
+    const kb = vv ? Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop)) : 0;
+    document.body.style.setProperty("--m-kb", kb + "px");
+  }
+  function mWsTyping(on) {
+    const card = el("m-ss-card");
+    if (!card) return;
+    const ft = card.querySelector(".ds-acard__footer");
+    const ph = card.querySelector(".ds-acard__photos");
+    const from = ft ? ft.getBoundingClientRect().top : 0;
+    card.style.setProperty("--m-ss-ph", (ph ? ph.offsetHeight : 0) + "px");
+    mWsKb();
+    document.body.classList.toggle("m-ws-typing", on);
+    /* 留言框從原本的位置滑上來(或滑回去) */
+    if (ft && ft.animate && !(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches)) {
+      const dy = from - ft.getBoundingClientRect().top;
+      if (dy) ft.animate([{ transform: "translateY(" + dy + "px)" }, { transform: "none" }], { duration: 300, easing: "ease" });
+    }
+    if (on) card.scrollTop = 0;
+  }
+  function mWireWsCard(card) {
+    let y0 = null, x0 = 0, top0 = 0;
+    const open = () => document.body.classList.contains("m-ws-open");
+    card.addEventListener("touchstart", e => { y0 = e.touches[0].clientY; x0 = e.touches[0].clientX; top0 = card.scrollTop; }, { passive: true });
+    card.addEventListener("touchend", e => {
+      if (y0 === null || document.body.classList.contains("m-ws-typing")) { y0 = null; return; }
+      const dy = e.changedTouches[0].clientY - y0, dx = e.changedTouches[0].clientX - x0;
+      y0 = null;
+      if (Math.abs(dy) < 40 || Math.abs(dy) < Math.abs(dx) * 1.2) return;
+      if (!open() && dy < 0) mWsCardState("open");
+      else if (open() && dy > 0 && top0 <= 0) mWsCardState("");
+    }, { passive: true });
+    card.addEventListener("wheel", e => {
+      if (document.body.classList.contains("m-ws-typing") || Math.abs(e.deltaY) < Math.abs(e.deltaX) || Math.abs(e.deltaY) < 8) return;
+      if (!open() && e.deltaY > 0) { e.preventDefault(); mWsCardState("open"); }
+      else if (open() && e.deltaY < 0 && card.scrollTop <= 0) { e.preventDefault(); mWsCardState(""); }
+    }, { passive: false });
+    card.addEventListener("focusin", e => { if (e.target.closest(".ds-acard__footer textarea, .ds-acard__footer input")) mWsTyping(true); });
+    card.addEventListener("focusout", e => {
+      if (!e.target.closest(".ds-acard__footer")) return;
+      setTimeout(() => { if (!card.contains(document.activeElement)) mWsTyping(false); }, 0);
+    });
+    if (window.visualViewport) visualViewport.addEventListener("resize", () => { if (document.body.classList.contains("m-ws")) mWsKb(); });
   }
   /* 強力搜:原本要先按「強力搜」上膛(同意花這一次),再按搜尋才走 Google —— 這一顆兩步一起做 */
   function mWsStrong() {

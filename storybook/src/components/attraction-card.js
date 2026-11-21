@@ -6,7 +6,7 @@ import { wireWiggle } from "../wiggle.js";
 import { penMarkerHTML } from "../pen-line.js";
 import { revealPens } from "../pen-reveal.js";
 import { scrimButtonHTML } from "./scrim-button.js";
-import { likesHTML } from "./wish-card.js";
+import { likesHTML, drawNewHearts } from "./wish-card.js";
 import arrow from "../icons/general/icon_subdirectory_arrow_right_outlined.svg?raw";
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
@@ -54,7 +54,7 @@ ${note ? `<p class="ds-acard__note">${esc(note)}<span class="ds-wiggle-line ds-w
   return `<article class="ds-acard ds-pattern">
 ${gallery}
 <div class="ds-acard__body">
-<div class="ds-acard__top">
+<div class="ds-acard__top${likes ? " ds-acard__top--likes" : ""}">
 ${likes ? `<div class="ds-acard__likes">${likesHTML(likes)}</div>` : ""}
 <h2 class="ds-acard__title"><span class="ds-acard__mark" data-pen="card-${esc(title)}">${penMarkerHTML({ look: "title" }).replace('class="ds-pen-marker', 'style="--pen-marker-end:var(--ds-sys-color-opacity-opacity-primary-50)" class="ds-pen-marker')}<span>${esc(title)}</span></span></h2>
 ${loc}
@@ -87,6 +87,7 @@ export function wireAttractionCard(root = document) {
       if (p) card.dispatchEvent(new CustomEvent("ds-card-photo", { bubbles: true, detail: { index: +p.dataset.index } }));
     });
   });
+  drawNewHearts(root); // 細節卡上的愛心從 0 變 1 也要畫出來（以前沒畫，停在只有描邊）
   wireWiggle(root);
   revealPens(root);
 }

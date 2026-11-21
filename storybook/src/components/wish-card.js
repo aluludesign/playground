@@ -80,6 +80,18 @@ export function wishBoardHTML({ cards = [], cols = 0, empty = "還沒有人許�
   return `<div class="ds-wboard"><div class="ds-wboard__wall">${col.map((c) => `<div class="ds-wboard__col">${c.join("")}</div>`).join("")}</div></div>`;
 }
 
+/**
+ * 從 0 變成 0 以上的愛心（heartStickerHTML animate: true）：筆刷上色畫出來。
+ * 許願牆（wireWishCards）和細節卡（wireAttractionCard）都會叫；沒叫到的話愛心會停在只有描邊、沒有填色的樣子。
+ */
+export function drawNewHearts(root = document) {
+  root.querySelectorAll(".ds-hearts__h.ds-pen-brush:not(.is-drawn)").forEach((h) => {
+    if (h.dataset.penQueued) return;
+    h.dataset.penQueued = "1";
+    requestAnimationFrame(() => drawPenBrush(h, true));
+  });
+}
+
 export function wireWishCards(root = document) {
   root.querySelectorAll(".ds-wboard, .ds-wcard").forEach((b) => {
     if (b.dataset.wired || b.closest(".ds-wboard") !== b && b.closest(".ds-wboard")) return;
@@ -93,8 +105,7 @@ export function wireWishCards(root = document) {
       if (card) card.dispatchEvent(new CustomEvent("ds-wish-open", { bubbles: true, detail: { key: card.dataset.key } }));
     });
   });
-  // 從 0 變成 0 以上的愛心：筆刷上色畫出來
-  root.querySelectorAll(".ds-hearts__h.ds-pen-brush:not(.is-drawn)").forEach((h) => requestAnimationFrame(() => drawPenBrush(h, true)));
+  drawNewHearts(root);
   wireWiggle(root);
   revealPens(root);
 }

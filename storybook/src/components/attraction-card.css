@@ -64,6 +64,8 @@
 .ds-acard__top { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: var(--ds-sys-spacing-xl); }
 /* 喜歡：標題右邊（Figma likes 在 top 那一塊的右上） */
 .ds-acard__likes { position: absolute; right: 0; top: -6px; }
+/* 有喜歡時 top 那一塊右邊留 120（Figma 162653:31781 padding-right 120），標題、地點才不會跑到愛心底下 */
+.ds-acard__top--likes { padding-right: 120px; }
 .ds-acard__title {
   margin: 0;
   padding: 0;

@@ -74,7 +74,8 @@
   line-height: 12px;
 }
 .ds-wcard__body { display: flex; flex-direction: column; gap: var(--ds-sys-spacing-2xl); }
-.ds-wcard__media { display: flex; align-items: flex-start; gap: var(--ds-sys-spacing-5xl); padding: var(--ds-sys-spacing-xl) 0; }
+/* Figma「photos and stickers」：H gap 5xl、上下 xl、CENTER/CENTER —— 沒照片時喜歡置中在 218 寬裡（162182:13123） */
+.ds-wcard__media { display: flex; justify-content: center; align-items: center; gap: var(--ds-sys-spacing-5xl); padding: var(--ds-sys-spacing-xl) 0; }
 .ds-wcard__media .ds-photos { margin: 0; }
 .ds-wcard__media .ds-photos--empty { display: none; }
 .ds-wcard__wiki {
@@ -128,6 +129,8 @@
 .ds-likes:focus-visible { outline: var(--ds-comp-focus-ring-border) solid var(--ds-comp-focus-ring-color); outline-offset: 4px; }
 .ds-hearts { position: relative; display: block; width: 73px; height: 44px; }
 .ds-hearts__h { position: absolute; width: 40px; height: 40px; }
+/* 0 顆（status=empty）：Figma 匯出的 duotone 愛心裡面那圈線是 outline 100（#E6DCD8），不是 icon 檔裡的深棕；只改這裡，共用的 icon 檔不動 */
+.ds-hearts--0 .ds-hearts__h path + path { fill: var(--ds-sys-color-outline-100); }
 /* Figma sticker（162182:17965）：40×40 盒子旋轉前的左上角，繞中心轉；Figma 逆時針為正 → CSS 取負號（左邊的心頭往左歪） */
 .ds-hearts--0 .ds-hearts__h,
 .ds-hearts--1 .ds-hearts__h--0 { left: 17px; top: 2px; }
@@ -140,7 +143,10 @@
   /* Figma：白底＋iris 漸層（藍、紫、黃、綠，foundation iris alpha-32） */
   background:
     linear-gradient(135deg, var(--ds-foun-color-share-iris-blue-alpha-32) 0%, var(--ds-foun-color-share-iris-purple-alpha-32) 32%, var(--ds-foun-color-share-iris-yellow-alpha-32) 68%, var(--ds-foun-color-share-iris-green-alpha-32) 100%),
-    #fff;
+    var(--ds-foun-color-white);
+  /* Figma BACKGROUND_BLUR 2 → CSS blur 半徑 1px */
+  -webkit-backdrop-filter: blur(1px);
+  backdrop-filter: blur(1px);
   display: inline-flex;
   align-items: center;
   gap: var(--ds-sys-spacing-xs);

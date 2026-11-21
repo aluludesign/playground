@@ -21,11 +21,14 @@
 }
 
 .ds-tl__set { width: 100%; }
+/* Figma「time point」（162617:14805）：照片 134 ｜ pin_timeline 75 ｜ 小卡 134，SPACE_BETWEEN、中間不另外留間距
+   （342 寬的列：照片 x24、pin x158、小卡 x233；134＋75＋134 比 342 多 1，所以兩邊欄各讓 0.5） */
 .ds-tl__point {
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  grid-template-columns: minmax(0, 134px) 75px minmax(0, 134px);
+  justify-content: space-between;
   align-items: center;
-  gap: var(--ds-sys-spacing-2xl);
+  gap: 0;
   min-height: 115px;
 }
 /* 點點線（divider/dot：線寬 border/md、每 6 一點）要從上一列一路連到下一列，中間不能斷（Lulu 11-21）：

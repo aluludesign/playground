@@ -125,3 +125,27 @@ button.ds-date:focus-visible {
 .ds-date--status .ds-date__head {
   font-family: var(--ds-sys-font-family-label);
 }
+/* coming soon（162470:24011）：下排 ⏱ 16 ＋「倒數 38 天」，圖示和字距 xs、字之間 2xs，置中、18 高、text 100 */
+.ds-date__count {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--ds-sys-spacing-xs);
+  height: 18px;
+  color: var(--ds-sys-color-text-100);
+}
+.ds-date__count-icon { flex: none; width: var(--ds-sys-icon-xs); height: var(--ds-sys-icon-xs); }
+.ds-date__count-text {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-sys-spacing-2xs);
+  font-family: var(--ds-sys-font-family-label);
+  font-size: var(--ds-sys-font-size-label-sm);
+  font-weight: 400;
+  line-height: 12px;
+}
+.ds-date__count-n {
+  font-family: var(--ds-sys-font-family-body);
+  font-size: var(--ds-sys-font-size-body-md);
+  line-height: 18px;
+}
