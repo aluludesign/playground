@@ -923,3 +923,7 @@ C:text field/line/focus-width|F|@S:border/md
 C:text field/line/color|C|@S:color/outline 200
 C:text field/line/focus-color|C|@S:color/outline 300
 C:text area/avatar|F|@S:icon/lg
+C:pagination/dot/size|F|@S:spacing/sm
+C:pagination/gap|F|@S:spacing/xs
+C:pagination/color/active|C|@S:color/primary
+C:pagination/color/inactive|C|@S:color/surf container low
