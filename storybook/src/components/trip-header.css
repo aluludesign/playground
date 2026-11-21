@@ -3,7 +3,7 @@
  *   底：surface＋bg pattern（8%）、Elevation/surface/soft、下面兩角 radius/sm
  *   內距：上下 spacing/xl、左右 spacing/4xl
  *   第一排：團名（Headline/xs/semi-bold：源泉圓體 H、20、字距 5%）＋ ▼（triangel_down duotone、icon/lg 28），
- *           底下一條 divider/wiggle outline 200；右邊人頭（peoploe_plus sticker、icon/xl 32）；兩組間距 spacing/5xl
+ *           底下一條 divider/wiggle primary；右邊人頭（peoploe_plus sticker、icon/xl 32）；兩組間距 spacing/5xl
  *   第二排：城市‧日期‧天數‧人數（label/lg/hand-regular：全瀨體 16／20、字距 4%、text 200），間距 spacing/2xs
  *   兩排間距 spacing/xs
  * 團名太長：一行，超過用「…」。

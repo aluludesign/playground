@@ -28,10 +28,33 @@
   gap: var(--ds-sys-spacing-2xl);
   min-height: 115px;
 }
-.ds-tl__pin { display: flex; justify-content: center; min-width: 34px; }
+/* 點點線（divider/dot：線寬 border/md、每 6 一點）要從上一列一路連到下一列，中間不能斷（Lulu 11-21）：
+   編號那一欄撐滿整列，編號上下各一段點點線填滿，列跟列之間那段也是同一種點點 */
+.ds-tl__pin {
+  --tl-dots: radial-gradient(circle, var(--ds-comp-divider-color-strong) 0 calc(var(--ds-comp-divider-dot-size) / 2), transparent calc(var(--ds-comp-divider-dot-size) / 2 + 0.5px)) center top / var(--ds-comp-divider-dot-size) 6px repeat-y;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--ds-comp-pin-timeline-gap);
+  min-width: 34px;
+}
+.ds-tl__pin::before,
+.ds-tl__pin::after {
+  content: "";
+  flex: 1 1 0;
+  min-height: 9px;
+  width: var(--ds-comp-divider-dot-size);
+  background: var(--tl-dots);
+}
 .ds-tl__side { display: flex; min-width: 0; }
 .ds-tl__point > .ds-tl__side:first-child { justify-content: flex-end; }
-.ds-tl__line { display: flex; justify-content: center; height: 30px; }
+.ds-tl__line {
+  width: var(--ds-comp-divider-dot-size);
+  height: 30px;
+  margin: 0 auto;
+  background: radial-gradient(circle, var(--ds-comp-divider-color-strong) 0 calc(var(--ds-comp-divider-dot-size) / 2), transparent calc(var(--ds-comp-divider-dot-size) / 2 + 0.5px)) center top / var(--ds-comp-divider-dot-size) 6px repeat-y;
+}
 
 /* 照片組 */
 .ds-photos {

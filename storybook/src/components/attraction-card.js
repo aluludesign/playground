@@ -24,10 +24,11 @@ const isURL = (v) => /^https?:\/\/\S+$/i.test(String(v || ""));
  * wisher／note：許願人和留言（有人許願有留言才有）
  * likes：likesHTML 的設定（Figma 標題右邊的喜歡；行程的卡沒有就不給）
  * footer：卡片最下面再接的東西（Figma 搜尋結果那張：留言框 command text area）
+ * color：標題螢光筆的顏色（Figma active_bg/line_lg，custom 1–14，預設 5；行程用那天的顏色，跟時間軸同一個）
  * closeLabel：右上角 ✕ 的名字；不給就不放
  * 點 ✕ 發出 ds-card-close；點照片發出 ds-card-photo（detail.index）
  */
-export function attractionCardHTML({ photos = [], title = "淺草寺", meta = ["日本，東京都", "景點"], mapURL = "", info = [], wisher = "", note = "", likes = null, footer = "", closeLabel = "關閉" } = {}) {
+export function attractionCardHTML({ photos = [], title = "淺草寺", meta = ["日本，東京都", "景點"], mapURL = "", info = [], wisher = "", note = "", likes = null, footer = "", color = 5, closeLabel = "關閉" } = {}) {
   const pics = photos.filter(Boolean).slice(0, 6);
   const gallery = pics.length
     ? `<div class="ds-acard__photos">
@@ -55,7 +56,7 @@ ${gallery}
 <div class="ds-acard__body">
 <div class="ds-acard__top">
 ${likes ? `<div class="ds-acard__likes">${likesHTML(likes)}</div>` : ""}
-<h2 class="ds-acard__title"><span class="ds-acard__mark" data-pen="card-${esc(title)}">${penMarkerHTML({ look: "title" })}<span>${esc(title)}</span></span></h2>
+<h2 class="ds-acard__title"><span class="ds-acard__mark" data-pen="card-${esc(title)}">${penMarkerHTML({ color: `custom ${color}` })}<span>${esc(title)}</span></span></h2>
 ${loc}
 </div>
 ${rows ? `<ul class="ds-acard__info">${rows}</ul>` : ""}

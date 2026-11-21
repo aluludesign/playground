@@ -7,7 +7,6 @@ import { wireWiggle } from "../wiggle.js";
 import { penMarkerHTML } from "../pen-line.js";
 import { revealPens } from "../pen-reveal.js";
 import { pinTimelineHTML } from "./location-pin.js";
-import { dividerDotHTML } from "./divider.js";
 import down from "../icons/general/icon_triangel_down_duotone.svg?raw";
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
@@ -52,12 +51,12 @@ export function timelineHTML({ items = [], start = "Scheduled", end = "Day end",
   const rows = items
     .map((it, i) => {
       const left = i % 2 === 0; // 第 1 個：照片在左、小卡在右（Figma photos+command）
-      const pin = pinTimelineHTML({ type: "time", time: it.time || "", badge: { number: it.n ?? i + 1, color: it.color || 5 }, dotTop: true, dotBottom: true });
+      const pin = pinTimelineHTML({ type: "time", time: it.time || "", badge: { number: it.n ?? i + 1, color: it.color || 5 }, dotTop: false, dotBottom: false });
       const photos = attractionPhotosHTML({ photos: it.photos || [], key: it.key, label: "看「" + (it.title || "") + "」的照片" });
       const card = scheduleDetailHTML({ ...it, align: left ? "left" : "right" });
       return `<div class="ds-tl__set">
 <div class="ds-tl__point">${left ? `<div class="ds-tl__side ds-tl__side--photos">${photos}</div>` : `<div class="ds-tl__side ds-tl__side--card">${card}</div>`}<div class="ds-tl__pin">${pin}</div>${left ? `<div class="ds-tl__side ds-tl__side--card">${card}</div>` : `<div class="ds-tl__side ds-tl__side--photos">${photos}</div>`}</div>
-<div class="ds-tl__line">${dividerDotHTML({ height: 30 })}</div>
+<div class="ds-tl__line" aria-hidden="true"></div>
 </div>`;
     })
     .join("");

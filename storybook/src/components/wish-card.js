@@ -69,11 +69,12 @@ ${note ? `<p class="ds-wcard__note">${esc(note)}<span class="ds-wiggle-line ds-w
 
 /**
  * 許願牆（Figma「wishes board scroll up」162182:13188）：卡片排成好幾欄的瀑布牆，比畫面寬，**整面牆一起**左右滑
- * cards：wishCardHTML 的設定陣列；cols：幾欄（預設照張數算，最多 4）
+ * cards：wishCardHTML 的設定陣列；cols：幾欄（預設照張數算：每欄最多 2 張，最多上下兩排）
  */
 export function wishBoardHTML({ cards = [], cols = 0, empty = "還沒有人許願。" } = {}) {
   if (!cards.length) return `<div class="ds-wboard ds-wboard--empty"><p>${esc(empty)}</p></div>`;
-  const n = cols || Math.max(1, Math.min(4, Math.ceil(cards.length / 2)));
+  // 最多上下兩排（Figma 說明：每欄最多 2 張），欄數跟著卡片數變多，整面牆左右滑
+  const n = cols || Math.max(1, Math.ceil(cards.length / 2));
   const col = Array.from({ length: n }, () => []);
   cards.forEach((c, i) => col[i % n].push(wishCardHTML(c)));
   return `<div class="ds-wboard"><div class="ds-wboard__wall">${col.map((c) => `<div class="ds-wboard__col">${c.join("")}</div>`).join("")}</div></div>`;

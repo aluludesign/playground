@@ -619,6 +619,8 @@
        候選清單的縮圖她說不用套。驗收:adopt-harness/probes/tile-filter.js */
     .map .tile{position:absolute; width:256px; height:256px; pointer-events:none; user-select:none;
       -webkit-user-drag:none; filter:saturate(.6) brightness(1.03) contrast(.93);}
+    /* 一般團員的新外框:地圖再淡一點(Lulu 11-21 選 B) */
+    body.member-ui .map .tile{filter:saturate(.25) brightness(1.1) contrast(.82);}
     .map .mapzoom{position:absolute; right:8px; top:8px; z-index:4; display:flex; flex-direction:column; gap:1px;}
     .map .mapzoom button{width:30px; height:30px; border:var(--ds-sys-border-xs) solid var(--line); background:var(--surface);
       color:var(--ink); font-size:17px; line-height:1; cursor:pointer; padding:0;}
@@ -1753,7 +1755,11 @@
     #m-detail[hidden]{display:none;}
     #m-detail-gap{height:var(--m-detail-gap,370px);}
     #m-detail-card{max-width:430px; margin:0 auto; display:flex; flex-direction:column; gap:var(--ds-sys-spacing-2xl);}
-    #m-detail-card .m-dcard{pointer-events:auto;}
+    /* 一次只看到一張(Lulu 11-21):每張卡佔滿「卡片頂端那條線到螢幕底」那一格,下一張一定在螢幕外;
+       滑動停下來會吸到下一張,頂端一樣停在那條線(位置固定) */
+    #m-detail{scroll-snap-type:y proximity;}
+    #m-detail-card .m-dcard{min-height:var(--m-detail-slot,474px); scroll-snap-align:start; scroll-margin-top:var(--m-detail-gap,370px);}
+    #m-detail-card .m-dcard > *{pointer-events:auto;}
     body.m-in-detail #m-head, body.m-in-detail #m-sheet-box, body.m-in-detail #m-nav,
     body.m-in-detail #m-ended, body.m-in-detail #m-menu{display:none !important;}
     body.m-in-detail:not([data-view="wish"]) #m-cal{top:calc(16px + env(safe-area-inset-top,0px)) !important;}
@@ -2688,7 +2694,7 @@
     if (trip && trip.ended) { can.plan = false; can.seat = false; }
     setMembers(body.members.map(m => ({
       id: m.id, def: m.name || m.id, key: m.id, full: m.name || m.id,
-      color: m.color || "#7E8796", role: m.role || "成員", joinedAt: m.joinedAt || "",
+      color: m.color || "#7E8796", role: m.role || "成員", joinedAt: m.joinedAt || "", avatar: m.avatar || "",
     })));
     applyTrip();
   }
@@ -6994,7 +7000,7 @@
   function mRestore() {
     while (mMoved.length) { const [node, mark] = mMoved.pop(); mark.parentNode.insertBefore(node, mark); mark.remove(); }
   }
-  let mSheet = null, mBuilt = false, mTrips = null;
+  let mSheet = null, mBuilt = false, mTrips = null, mTripsLoading = null;
   /* 面板三段的高度:最低只剩日期列、預設、最高到頂列下面(Figma 186 / 450 / 707,以 844 高為準) */
   function mSnaps() {
     const H = window.innerHeight, head = el("m-head").offsetHeight || 137;
@@ -7020,11 +7026,18 @@
     shell.hidden = false;
     /* 頂列:團名、城市‧日期‧天數‧人數。▼ 只在有別團可以切的時候出現(團清單第一次點才去要) */
     const menuOpen = !el("m-menu").hidden;
-    el("m-head").innerHTML = DS.tripHeaderHTML({
+    /* 內容沒變就不重畫:同步、天氣回來都會跑到這裡,手指按下到放開之間按鈕被換掉,那一下就點不到(Lulu 11-21「要點很多次」) */
+    const headHTML = DS.tripHeaderHTML({
       title: trip.name, meta: mMeta(), ended: tripEnded(), expanded: menuOpen,
       switchable: mTrips === null || mTrips.length > 1, peopleLabel: "看成員名單",
     });
-    DS.wireTripHeader(el("m-head"));
+    if (el("m-head")._html !== headHTML) {
+      el("m-head").innerHTML = headHTML;
+      el("m-head")._html = headHTML;
+      DS.wireTripHeader(el("m-head"));
+    }
+    /* 團清單先拿好,第一次點團名就直接打開,不用等 */
+    if (mTrips === null && !mTripsLoading) mLoadTrips();
     const headH = el("m-head").offsetHeight;
     document.body.style.setProperty("--m-headh", headH + "px");
     el("m-menu").style.top = (headH - 28) + "px";
@@ -7046,10 +7059,12 @@
     if (mMe) mMeOps();
     el("m-cal").hidden = !mapView;
     el("m-cal").style.top = (state.tab === "wish" ? 121 - 59 + mSafeTop() : headH + 24) + "px";
-    el("m-cal").innerHTML = DS.scrimButtonHTML({
-      icon: "calender", color: state.tab === "wish" ? "primary" : "scrim", size: "lg",
+    /* primary = 其他日子的點都打開、scrim = 關起來(Lulu 11-21);沒變就不重畫,免得點不到 */
+    const calHTML = DS.scrimButtonHTML({
+      icon: "calender", color: layers.all ? "primary" : "scrim", size: "lg",
       label: "開關其他日子的行程", pressed: !!layers.all,
     });
+    if (el("m-cal")._html !== calHTML) { el("m-cal").innerHTML = calHTML; el("m-cal")._html = calHTML; }
     /* 花費頁:花費／分帳兩個分頁(分帳併進花費,Lulu 11-20) */
     const costView = !mMe && (state.tab === "cost" || state.tab === "split");
     el("m-seg").hidden = !costView;
@@ -7333,6 +7348,8 @@
       photos: stopPhotos(x), title: x.title || "",
       meta: [[g.c, g.s].filter(Boolean).join("，") || (x.place && !samePlace(x.title, x.place) ? x.place : ""), g.k || info.cat || ""],
       mapURL: q ? "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(q) : "",
+      /* 標題螢光筆:行程用那天的顏色(跟時間軸同一個),願望跟許願卡同一個 */
+      color: mDetail && mDetail.kind === "wish" ? 13 : (d => d ? dayColorN(d.n) : 5)(DAYS.find(d => mDetail && d.date === mDetail.day)),
       info: rows, wisher: x.by ? nameOf(x.by) : "", note: x.note || "", closeLabel: mDetail && mDetail.kind === "wish" ? "回許願牆" : "回行程",
       likes: mDetail && mDetail.kind === "wish" ? { key: x.id, count: (x.votes || []).length, hearts: mHearts((x.votes || []).length),
         givers: (x.votes || []).slice(0, 3).map(mFace), mine: (x.votes || []).indexOf(myName()) > -1, label: "喜歡" } : null,
@@ -7347,7 +7364,7 @@
     /* 卡片頂端停在畫面 44% 的地方(Figma 370/844);最後一張也要能推到那裡 */
     const H = window.innerHeight, gap = Math.round(H * 370 / 844);
     el("m-detail").style.setProperty("--m-detail-gap", gap + "px");
-    box.style.paddingBottom = Math.max(0, H - gap - (box.lastElementChild ? box.lastElementChild.offsetHeight : 0) - 24) + "px";
+    el("m-detail").style.setProperty("--m-detail-slot", (H - gap) + "px");
     if (keepScroll) el("m-detail").scrollTop = top;
     else {
       const cur = box.querySelector('.m-dcard[data-i="' + mDetail.i + '"]');
@@ -7414,12 +7431,14 @@
   function mHearts(n) {
     if (!n) return 0;
     const r = n / Math.max(1, MEMBERS.length);
-    return r > 0.6 ? 3 : r > 0.4 ? 2 : 1;
+    /* 只有一個人按就只有一顆(Lulu 11-21):顆數不超過按的人數 */
+    return Math.min(n, r > 0.6 ? 3 : r > 0.4 ? 2 : 1);
   }
   const mVotesSeen = {};
   function mFace(id) {
     const m = MEMBERS.find(x => x.id === id);
-    return { name: nameOf(id), color: m ? m.color : "", src: "" };
+    /* LINE 大頭貼(伺服器在登入後打開這一團時存的);沒有就是名字第一個字＋顏色 */
+    return { name: nameOf(id), color: m ? m.color : "", src: (m && /^https:\/\//.test(m.avatar || "") && m.avatar) || "" };
   }
   function mRenderWish() {
     const wishView = !mMe && state.tab === "wish";
@@ -7652,13 +7671,19 @@
     mCloseWishSearch(true);
     el("wish-form").requestSubmit();
   }
+
+  function mLoadTrips() {
+    if (!mTripsLoading) mTripsLoading = api("?resource=trips")
+      .then(b => { mTrips = (b.trips || []).filter(t => !t.closed || t.code === TRIP); })
+      .catch(() => { mTrips = []; })
+      .then(() => { if (memberUI()) renderMemberShell(); });
+    return mTripsLoading;
+  }
   async function toggleTripMenu() {
     const box = el("m-menu");
     if (!box.hidden) { box.hidden = true; renderMemberShell(); return; }
-    if (mTrips === null) {
-      try { const b = await api("?resource=trips"); mTrips = (b.trips || []).filter(t => !t.closed || t.code === TRIP); }
-      catch (_) { mTrips = []; }
-    }
+    if (mTrips === null) await mLoadTrips();
+    if (!box.hidden) return;
     if (mTrips.length < 2) { renderMemberShell(); return; }
     box.innerHTML = DS.menuHTML({ items: mTrips.map(t => ({ key: t.code, label: t.name })), selected: TRIP, label: "切換到別團" });
     DS.wireMenu(box);

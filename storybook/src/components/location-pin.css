@@ -66,10 +66,11 @@
 }
 .ds-pin-badge__dot {
   position: absolute;
-  left: 9px;
-  top: 9px;
-  width: 10px;
-  height: 10px;
+  /* 28 裡是 (9, 9) 10×10；用比例，lg（51）跟著變大 */
+  left: 32.14%;
+  top: 32.14%;
+  width: 35.71%;
+  height: 35.71%;
   fill: var(--ds-sys-color-on-primary);
 }
 /* focuse：外面一圈手繪圈（Figma 36 的圓、往外 4，Dynamic stroke 照 Figma 畫出來的那條） */

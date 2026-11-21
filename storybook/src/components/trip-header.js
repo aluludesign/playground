@@ -30,7 +30,7 @@ export function tripHeaderHTML({ title = "東京 PA PA 造 Happy Birithday", met
   const btn = peopleLabel ? `<button type="button" class="ds-trip-header__people" aria-label="${esc(peopleLabel)}">${svg(people, "ds-trip-header__people-icon")}</button>` : "";
   return `<header class="ds-trip-header ds-pattern">
 <div class="ds-trip-header__main">
-<div class="ds-trip-header__row"><div class="ds-trip-header__titlebox">${head}<div class="ds-divider ds-wiggle-line" aria-hidden="true"></div></div>${btn}</div>
+<div class="ds-trip-header__row"><div class="ds-trip-header__titlebox">${head}<div class="ds-divider ds-divider--primary ds-wiggle-line" aria-hidden="true"></div></div>${btn}</div>
 <p class="ds-trip-header__meta">${sub}</p>
 </div>
 </header>`;

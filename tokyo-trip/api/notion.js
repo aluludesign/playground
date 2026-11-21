@@ -525,6 +525,8 @@ function memberOut(page) {
     role: sel(p["角色"]) || "成員",
     line: txt(p["人"]),
     invite: txt(p["邀請碼"]),
+    /* LINE 大頭貼(2026-11-21 Lulu:登入時存起來,許願人、按喜歡的人要顯示) */
+    avatar: (p["頭像"] && p["頭像"].url) || "",
     /* 什麼時候加入:用 Notion 自己的建立時間(「加入時間」那欄只有日期,同一天加入的人分不出先後) */
     joinedAt: page.created_time || "",
     /* 團主最後一次看過「有新成員加入」的通知是什麼時候(2026-09-29)。只有本人拿得到 */
@@ -532,7 +534,7 @@ function memberOut(page) {
   };
 }
 /* 給瀏覽器看的樣子:沒有 LINE ID、沒有 Notion 的頁面編號、沒有別人的邀請碼。 */
-const memberPublic = m => ({ id: m.id, name: m.name, color: m.color, role: m.role, joinedAt: m.joinedAt || "" });
+const memberPublic = m => ({ id: m.id, name: m.name, color: m.color, role: m.role, joinedAt: m.joinedAt || "", avatar: m.avatar || "" });
 
 async function findTrip(code) {
   const page = await notion("/databases/" + DB.trips + "/query", {
@@ -576,10 +578,14 @@ async function addMember(code, me, name, role, inviter, taken) {
       "邀請碼": { rich_text: richText(randomCode(6)) },
       "邀請人": { rich_text: richText(inviter || "") },
       "加入時間": { date: { start: new Date().toISOString().slice(0, 10) } },
+      "頭像": { url: cleanPic(me.pic) },
     },
   }) });
-  return { id, name, color, role };
+  return { id, name, color, role, avatar: cleanPic(me.pic) || "" };
 }
+
+/* 大頭貼只收 LINE 的 https 網址,其他一律當沒有 */
+const cleanPic = v => /^https:\/\/[a-z0-9.-]+\.line-scdn\.net\//i.test(String(v || "")) ? String(v).slice(0, 300) : null;
 
 /* 名字的規則:去頭尾空白、1 到 20 個字。**不驗是不是真名** —— 「媽」就是一個好名字。 */
 const cleanName = v => String(v || "").replace(/\s+/g, " ").trim().slice(0, 20);
@@ -640,6 +646,14 @@ module.exports = async (req, res) => {
     const members = await membersOf(code);
     const mine = members.find(m => m.line && m.line === me.sub);
     if (!mine) return { stop: { status: 403, why: "not_member", error: "你還不是這一團的人 —— 要有邀請碼才能加入" } };
+    /* 大頭貼:登入時拿到的跟存著的不一樣(第一次、或 LINE 換了)就存起來。失敗不擋這次請求 */
+    const pic = cleanPic(me.pic);
+    if (pic && pic !== mine.avatar && mine.page) {
+      try {
+        await notion("/pages/" + mine.page, { method: "PATCH", body: JSON.stringify({ properties: { "頭像": { url: pic } } }) });
+        mine.avatar = pic;
+      } catch (_) {}
+    }
     /* **測試環境的「用成員身分看」。** 開發時要看一般成員看到什麼、動得了什麼,
        團主在 preview 帶著 trip_as=member 這張 cookie,伺服器就把他當成成員(照三個開關算)。
        兩道保險:

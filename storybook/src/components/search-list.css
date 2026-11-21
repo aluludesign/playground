@@ -42,6 +42,15 @@
   object-fit: cover;
   border-radius: var(--ds-sys-radius-sm);
 }
+.ds-search-item__photo--none {
+  display: grid;
+  place-items: center;
+  background: var(--ds-sys-color-opacity-opacity-primary-50);
+}
+.ds-search-item__icon {
+  width: var(--ds-sys-icon-md, 24px);
+  height: var(--ds-sys-icon-md, 24px);
+}
 .ds-search-item__text {
   display: flex;
   flex-direction: column;

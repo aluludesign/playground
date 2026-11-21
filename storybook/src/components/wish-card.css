@@ -9,9 +9,12 @@
  *   許願牆：欄寬 250、欄距與卡距 2xl、內距 4xl；整面牆一起左右滑
  */
 
+/* 左右滑的是牆、上下滑的是外面的面板：一次只會動其中一個方向（瀏覽器一次手勢只鎖一個捲動區），
+   滑到最左最右也不會帶動上一頁 */
 .ds-wboard {
   overflow-x: auto;
-  overflow-y: visible;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
 }
