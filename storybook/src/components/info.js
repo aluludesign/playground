@@ -13,6 +13,9 @@ const arrow = (svg) => svg.replace(/fill="#652D15"/gi, 'fill="currentColor"').re
 const DOWN = arrow(down);
 const UP = arrow(up);
 
+// 關閉鈕的叉叉（Figma「clear」，跟搜尋框的關閉鈕同一個）
+const CROSS = `<svg class="ds-btn__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41Z"/></svg>`;
+
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 // **重點字** → 粗體
 const rich = (s) => esc(s).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
@@ -23,7 +26,8 @@ const rich = (s) => esc(s).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
  * expanded：false = collapse（一行，超過用…）／true = expend
  * type：「info」（淡藍）｜「default」（中性：surface 底、outline 300 框、text 100、按鈕 Secondary、寬度跟著內容）
  * leadingIcon / collapseIcon / button：對應 Figma 的 Show leading icon／Show collapse icon／Show btn
- * buttonLabel：按鈕文字（預設「不再提醒」）
+ * button：true = 文字鈕「不再提醒」；"close" = 圓形叉叉鈕（Figma Button Tertiary／Icon Outlined／xs，icon clear）
+ * buttonLabel：按鈕文字（預設「不再提醒」；close 時是給讀螢幕的人聽的名字，預設「關閉提示」）
  */
 export function infoHTML({
   text = "直接許願**淺草寺**，願望地圖上不會出現地點指標",
@@ -37,7 +41,9 @@ export function infoHTML({
   const toggle = collapseIcon
     ? `<button type="button" class="ds-info__toggle" aria-expanded="${expanded}" aria-label="${expanded ? "收合" : "展開"}">${expanded ? UP : DOWN}</button>`
     : "";
-  const btn = button
+  const btn = button === "close"
+    ? buttonHTML({ label: buttonLabel === "不再提醒" ? "關閉提示" : buttonLabel, color: type === "default" ? "secondary" : "tertiary", variant: "icon-outlined", size: "xs", icon: CROSS }).replace('class="ds-btn', 'class="ds-info__close ds-btn')
+    : button
     ? buttonHTML({ label: buttonLabel, color: type === "default" ? "secondary" : "tertiary", variant: "text", size: "xs", leadingIcon: false }).replace('class="ds-btn', 'class="ds-info__btn ds-btn')
     : "";
   return `<div class="ds-info${type === "default" ? " ds-info--default" : ""}${expanded ? " is-expanded" : ""}" role="note"><span class="ds-info__bg" aria-hidden="true"></span><div class="ds-info__body ds-wiggle-border">${leadingIcon ? INFO : ""}<p class="ds-info__text">${rich(text)}</p>${toggle}${btn}</div></div>`;
@@ -59,8 +65,13 @@ export function wireInfo(root = document) {
         info.dispatchEvent(new CustomEvent("ds-info-toggle", { bubbles: true, detail: { expanded: open } }));
         return;
       }
-      if (e.target.closest(".ds-info__btn")) info.dispatchEvent(new CustomEvent("ds-info-dismiss", { bubbles: true }));
+      if (e.target.closest(".ds-info__btn, .ds-info__close")) info.dispatchEvent(new CustomEvent("ds-info-dismiss", { bubbles: true }));
     });
   });
   wireWiggle(root);
+}
+
+/** 標題後面那顆「i」（Figma info，icon/xs 16、tertiary）：做成按鈕，點了發出 ds-info-show（把關掉的提示叫回來） */
+export function infoIconButtonHTML({ label = "顯示提示" } = {}) {
+  return `<button type="button" class="ds-info-icon" aria-label="${esc(label)}">${INFO.replace('class="ds-info__icon"', 'class="ds-info-icon__svg"')}</button>`;
 }

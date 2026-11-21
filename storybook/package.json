@@ -10,6 +10,7 @@
     "check:app": "npm run tokens && node scripts/check-app-bundle.mjs"
   },
   "devDependencies": {
+    "@fortawesome/free-solid-svg-icons": "^6.7.2",
     "@storybook/addon-essentials": "8.6.18",
     "@storybook/blocks": "8.6.18",
     "@storybook/html-vite": "8.6.18",

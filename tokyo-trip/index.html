@@ -1746,8 +1746,13 @@
       display:flex; flex-direction:column; gap:var(--ds-sys-spacing-2xl);}
     #m-ss-card .m-ss-form{background:var(--ds-sys-color-surface); border-radius:var(--ds-sys-radius-sm); padding:var(--ds-sys-spacing-2xl) var(--ds-sys-spacing-4xl);}
     #m-ss .m-ss-list{display:flex; flex-direction:column;}
+    #m-ss .m-ss-tip[hidden]{display:none;}
+    /* Figma wish contain:提示和留言框之間 spacing/5xl(外層 2xl 之外再補) */
+    #m-ss .m-ss-tip:not([hidden]) + .ds-text-area{margin-top:calc(var(--ds-sys-spacing-5xl) - var(--ds-sys-spacing-2xl));}
     #m-ss .m-ss-direct{display:flex; flex-direction:column; gap:var(--ds-sys-spacing-2xl);}
-    #m-ss .m-ss-direct h3{margin:0; font-family:var(--ds-sys-font-family-headline); font-weight:900; font-size:var(--ds-sys-font-size-body-lg); color:var(--ds-sys-color-text-100);}
+    /* Body/sm/semi-bold(源泉圓體 M 16、字距 5%)、text 100;後面 i 間距 xs */
+    #m-ss .m-ss-direct h3{margin:0; display:flex; align-items:center; gap:var(--ds-sys-spacing-xs); padding-right:var(--ds-sys-spacing-2xl);
+      font-family:var(--ds-sys-font-family-body); font-weight:500; font-size:var(--ds-sys-font-size-body-sm); line-height:1; letter-spacing:.05em; color:var(--ds-sys-color-text-100);}
     /* 當日細節(點地圖上的點、點行程小卡進來):頂列、面板、底部導覽都收起來,
        只剩地圖、日曆鈕和下面一張景點卡;卡片往上滑可以看全部(Figma 162114:14958 → 162119:15938) */
     #m-detail{position:absolute; inset:0; z-index:6; overflow-y:auto; overscroll-behavior:contain; pointer-events:none;
@@ -7494,7 +7499,7 @@
     mLoadPlaceInfo(w);
   }
   /* ===== 許願搜尋(第三步) ===== */
-  let mWsTab = "hot";
+  let mWsTab = "hot", mWsTipOff = false;
   function mOpenWishSearch() {
     if (!DS) return;
     /* 願望的欄位(名稱、地點、想說的)還是原本那張表單在記,只是看不到;送出也走它(規則、權限、額度都不變) */
@@ -7536,6 +7541,10 @@
       el("seek-screen").appendChild(root);
       root.addEventListener("ds-search-close", () => mCloseWishSearch(false));
       root.addEventListener("ds-segmented-select", e => { mWsTab = e.detail.key; mWsSheet(); });
+      /* 說明:叉叉關掉、標題後面的 i 叫回來(不重畫整塊,打到一半的留言不會不見) */
+      const tip = on => { mWsTipOff = !on; const t = root.querySelector(".m-ss-tip"); if (t) t.hidden = !on; };
+      root.addEventListener("ds-info-dismiss", e => { if (e.target.closest(".m-ss-tip")) tip(false); });
+      root.addEventListener("click", e => { if (e.target.closest(".m-ss-direct .ds-info-icon")) tip(true); });
       root.addEventListener("click", e => {
         const it = e.target.closest("[data-m-sug]");
         if (it) { sugTake(+it.dataset.mSug); el("m-ss-sheet").hidden = true; return; }
@@ -7603,12 +7612,15 @@
     if (mWsTab === "hot") {
       content = '<div class="m-ss-list">' + (sugItems || []).map((it, i) => DS.searchItemHTML({
         photo: it.type === "p" && it.p.ph ? commonsImg(it.p.ph, 96) : "",
+        icon: it.type === "h" ? "history" : it.type === "p" ? "place" : "search",
         name: it.type === "p" ? it.p.n : it.text,
         info: it.type === "p" ? [[it.p.c, it.p.s].filter(Boolean).join("，"), it.p.k || ""].filter(Boolean) : [it.type === "h" ? "搜過" : "相似的說法"],
       }).replace("<button ", '<button data-m-sug="' + i + '" ')).join("") + "</div>";
     } else {
-      content = '<div class="m-ss-direct"><h3>' + esc("直接許願" + (typed ? typed : "")) + "</h3>" +
-        DS.infoHTML({ text: "不選地點直接許願，願望地圖上不會出現地點指標", type: "default", expanded: true, collapseIcon: false, button: false }) +
+      /* Figma wish/form:標題 Body/sm/semi-bold ＋ 藍色 i;提示 Info type=info、沒有左邊 icon、右邊叉叉鈕。
+         預設打開;關掉之後點 i 才會再出現 */
+      content = '<div class="m-ss-direct"><h3><span>' + esc("直接許願" + (typed ? typed : "")) + "</span>" + DS.infoIconButtonHTML({ label: "顯示說明" }) + "</h3>" +
+        '<div class="m-ss-tip"' + (mWsTipOff ? " hidden" : "") + ">" + DS.infoHTML({ text: "不選地點直接許願，願望地圖上不會出現地點指標", type: "info", expanded: true, leadingIcon: false, collapseIcon: false, button: "close" }) + "</div>" +
         DS.textAreaHTML({ photoButton: "", cancel: "", submit: "送出許願" }) + "</div>";
     }
     box.innerHTML = DS.segmentedSheetHTML({ items: [{ key: "hot", label: "熱門地點" }, { key: "none", label: "不指定地點" }], selected: mWsTab, label: "熱門地點或不指定地點", content });

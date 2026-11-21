@@ -11,7 +11,7 @@ export { avatarHTML } from "./components/avatar.js";
 export { bottomNavHTML, wireBottomNav, DEFAULT_ITEMS as BOTTOM_NAV_ITEMS } from "./components/bottom-nav.js";
 export { buttonHTML, ADD } from "./components/button.js";
 export { dividerWiggleHTML, dividerDotHTML, wireDivider } from "./components/divider.js";
-export { infoHTML, wireInfo } from "./components/info.js";
+export { infoHTML, wireInfo, infoIconButtonHTML } from "./components/info.js";
 export { irisButtonHTML, wireIris } from "./components/iris-button.js";
 export { pinBadgeHTML, pinLabelHTML, pinHTML, pinSetHTML, pinTimelineHTML } from "./components/location-pin.js";
 export { markerButtonHTML } from "./components/marker-button.js";

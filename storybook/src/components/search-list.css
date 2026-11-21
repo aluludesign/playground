@@ -48,8 +48,9 @@
   background: var(--ds-sys-color-opacity-opacity-primary-50);
 }
 .ds-search-item__icon {
-  width: var(--ds-sys-icon-md, 24px);
-  height: var(--ds-sys-icon-md, 24px);
+  width: var(--ds-sys-icon-xs, 16px);
+  height: var(--ds-sys-icon-xs, 16px);
+  color: var(--ds-sys-color-text-200);
 }
 .ds-search-item__text {
   display: flex;
