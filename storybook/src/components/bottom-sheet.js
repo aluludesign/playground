@@ -32,6 +32,14 @@ export function wireBottomSheet(sheet, { snaps = [186, 450, 707], at = 1, scroll
   let shown = 0; // 現在露出來多高
   const reduce = () => window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+  // 上下放行與否：拉到最高、而且裡面那塊真的捲得動（overflow 不是 visible、內容比它高）
+  // iPhone 一路往上取交集，所以要捲的時候面板本身也得是 pan-x pan-y，不然裡面上下捲不動
+  function syncTouch() {
+    const s = list();
+    const sc = scroller ? sheet.querySelector(scroller) : null;
+    const canScroll = !!sc && shown >= s[s.length - 1] - 1 && sc.scrollHeight > sc.clientHeight + 1 && getComputedStyle(sc).overflowY !== "visible";
+    sheet.style.touchAction = canScroll ? "pan-x pan-y" : "pan-x";
+  }
   const apply = (h, animate) => {
     const s = list();
     const max = s[s.length - 1];
@@ -44,9 +52,7 @@ export function wireBottomSheet(sheet, { snaps = [186, 450, 707], at = 1, scroll
     // iPhone（WebKit）的 touch-action 是從手指底下一路往上取交集，不像 Chrome 到捲動區就重算：
     // 面板寫 none／內容寫 pan-y，裡面左右捲的東西（日期列、許願牆那排）在 iPhone 上就滑不動（Lulu 11-22）。
     // 所以面板一律放行左右（pan-x，上下由這裡的 pointer 拖）；拉到最高、而且裡面真的捲得動時才再放行上下給它捲
-    const sc = scroller ? sheet.querySelector(scroller) : null;
-    const canScroll = !!sc && shown >= max - 1 && sc.scrollHeight > sc.clientHeight + 1 && getComputedStyle(sc).overflowY !== "visible";
-    sheet.style.touchAction = canScroll ? "pan-x pan-y" : "pan-x";
+    syncTouch();
     // 每動一下（拖、停好一段）都講現在露出來多高：外面靠它決定「牆頂到上面的東西了沒」（例：許願鈕淡出）
     sheet.dispatchEvent(new CustomEvent("ds-sheet-move", { bubbles: true, detail: { shown } }));
   };
@@ -55,6 +61,8 @@ export function wireBottomSheet(sheet, { snaps = [186, 450, 707], at = 1, scroll
     idx = Math.max(0, Math.min(s.length - 1, i));
     apply(s[idx], animate);
     sheet.dispatchEvent(new CustomEvent("ds-sheet-snap", { bubbles: true, detail: { index: idx, height: s[idx] } }));
+    // 外面常在 ds-sheet-snap 裡才讓內容變成可捲（例：許願牆拉到最高才 overflow-y:auto），停好之後再量一次
+    syncTouch();
   };
 
   // 拖拉：方向先鎖住（橫的交給裡面的日期列）；拉到最高時在可捲區裡上滑是捲，不是拉面板

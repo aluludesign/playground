@@ -47,6 +47,8 @@
   border-radius: var(--ds-sys-radius-full);
   background: var(--ds-foun-color-share-black-neutral-700);
   cursor: grab;
+  /* 把手本身也寫 none（touch-action 不會繼承）：從把手斜斜往上拉，iPhone 不會當成左右捲而中途 pointercancel */
+  touch-action: none;
 }
 /* 摸得到的範圍比線大很多 */
 .ds-sheet__handle::before {

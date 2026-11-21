@@ -52,3 +52,6 @@
 }
 .ds-search-frame--primary .ds-search-frame__title { color: var(--ds-sys-color-on-primary); }
 .ds-search-frame--primary.ds-pattern::before { opacity: 0.1; }
+/* 強力搜的說明列（Figma 162205:34343「今天還能用 N 次」）：箭頭和字都在 primary 上 → on primary */
+.ds-search-frame--primary .ds-text-field__support-text { color: var(--ds-sys-color-on-primary); }
+.ds-search-frame--primary .ds-text-field__support-icon path { fill: var(--ds-sys-color-on-primary); }

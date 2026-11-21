@@ -5922,11 +5922,28 @@
       const g = out._g = { lat: +la, lon: +lo, display_name: [name, addr].filter(Boolean).join(", "), _n: name, _g: place.id || "1", _wiki: (pins[name] && pins[name].photo) || "" };
       el(SS).value = name;
       wikiNear(name, +la, +lo).then(u => { if (u && out._g === g) { g._wiki = u; mWsSync(); } }).catch(() => {});
+      /* 挑了的那一家在地圖上標一個點(跟一般搜選起來的點同一種樣子),地圖移過去;取消回清單時拿掉(ds-text-area-cancel)。
+         只標使用者挑的這一家 —— 清單的其他結果照舊不標(Google 的條款) */
+      ssGooglePin({ la: +la, lo: +lo, name });
       mWsSync();
       return;
     }
     if (to !== id) { seekReset(to); closeSeekScreen(true); }
     seekMark(to, name);
+  }
+  /* 全螢幕搜尋地圖上「挑了的 Google 那一家」的點;不給 → 拿掉 */
+  function ssGooglePin(g) {
+    const box = ssMap();
+    ssSel = -1;
+    box._hitPts = g ? [{ k: "g0", n: 1, la: g.la, lo: g.lo, title: g.name, place: g.name, tip: g.name }] : [];
+    box._focus = g ? "g0" : null;
+    ssPaintPts(box);
+    if (g && box._v) {
+      const c = ssCover(false);
+      box._v.cx = projX(g.lo, box._v.z);
+      box._v.cy = projY(g.la, box._v.z) - (c.top - c.bot) / 2 / TILE;
+    }
+    glide(box);
   }
   /* 這個地點是從 Google 清單挑的嗎 → 它的地點編號(存進 Notion 用) */
   const pidOf = place => (place && pins[place] && pins[place].pid) || "";
@@ -6298,7 +6315,7 @@
         '" title="' + esc(p.tip) + '">' + (mPins(box)
           /* 一般團員的新外框:Figma 的 pin set(名字泡泡＋白色水滴＋塗鴉底編號);選到的那個用大的。願望是 dot、沒有編號 */
           ? DS.pinSetHTML({ size: p.k === box._focus ? "lg" : "sm", label: (p.ap ? "約 " : "") + p.title, number: p.n,
-              color: p.cn || 8, state: p.cls === "plan" || p.k[0] === "h" ? "default" : "dot" })
+              color: p.cn || 8, state: p.cls === "plan" || p.k[0] === "h" || p.k[0] === "g" ? "default" : "dot" })
           : esc(p.n) + '<span class="lab">' + esc((p.ap ? "約 " : "") + p.title) + "</span>") + "</a>";
     });
     html += "</div>";
@@ -7701,8 +7718,11 @@
   function mFocusDetail(x, key) {
     const box = el("map"), p = pinOf(x);
     if (p) { mToast(""); focusPin(box, p, key); return; }
+    /* 上一張的點不能還亮著、地圖也不能還湊在它那裡(看起來就像現在這張在那裡):
+       取消聚焦 = 回到看得到全部點的畫面(跟 unfocusMap 同一個道理,Figma 162653:32362／31756 沒有放大的點) */
+    const was = box._focus;
     box._focus = null;
-    if (box._v) paintMap(box);
+    if (was) loadSheetMap(true); else if (box._v) paintMap(box);
     mToast("這個點不在地圖上");
   }
   let mToastTimer = null;
@@ -7930,7 +7950,13 @@
         if (e.target.closest("#m-ss-cal .ds-scrim-btn")) { el("ss-all").click(); mWsCal(); }
       });
       mWireWsCard(el("m-ss-card"));
-      root.addEventListener("ds-text-area-cancel", () => { ssSel = -1; seekBox(SS)._g = null; ssMap()._focus = null; paintMap(ssMap()); mWsSync(); });
+      root.addEventListener("ds-text-area-cancel", () => {
+        const g = seekBox(SS)._g;
+        ssSel = -1; seekBox(SS)._g = null;
+        /* Google 那一家的點跟著卡片一起收掉(回到清單) */
+        if (g) ssGooglePin(null); else { ssMap()._focus = null; paintMap(ssMap()); }
+        mWsSync();
+      });
       root.addEventListener("ds-text-area-submit", e => mWsSubmit(e.detail.value || "", !!e.target.closest(".m-ss-direct")));
       new MutationObserver(() => mWsSync()).observe(seekBox(SS), { childList: true, subtree: true });
     }
@@ -8129,6 +8155,12 @@
     if (arm) arm.click();
     else seekArmed[SS] = true;
     paintSeekBtn(SS);
+    /* 進強力搜:一般搜留在地圖上的結果點收掉(接下來是 Google 的清單,對不上)*/
+    const out = seekBox(SS);
+    out._hits = null; out._show = null; out._g = null;
+    ssShow([], false);
+    /* 「今天還能用 N 次」要真的數字:還沒讀到就去問一次(讀不到就不講) */
+    if (!strongMine) loadAIQuota().then(() => { if (strongMine) mWsSync(); });
     mWsSync();
     const inp = el("m-ss-frame").querySelector("input");
     if (inp) inp.focus();
