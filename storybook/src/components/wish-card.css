@@ -19,6 +19,11 @@
   -webkit-overflow-scrolling: touch;
 }
 .ds-wboard::-webkit-scrollbar { display: none; }
+/* 牆是左右捲的區塊（overflow-y 不得不跟著變 hidden），卡片的 Elevation/surface/medium（往下 8、糊 32 → 底下要 40）
+   會在牆的內距 24 那裡被切平（68ab966 起，Lulu 11-22「許願卡組下方陰影被切掉」）：
+   底下多留到 40 給陰影，再用負的 margin 收回來，版面不變 */
+.ds-wboard { margin-bottom: calc(var(--ds-sys-spacing-4xl) - var(--ds-foun-shadow-length-100) - var(--ds-sys-blur-lg)); }
+.ds-wboard > .ds-wboard__wall { padding-bottom: calc(var(--ds-foun-shadow-length-100) + var(--ds-sys-blur-lg)); }
 .ds-wboard__wall {
   display: flex;
   align-items: flex-start;
@@ -140,10 +145,10 @@
 .ds-hearts--3 .ds-hearts__h--1 { left: 18.5px; top: 5.5px; transform: rotate(-12.1deg); }
 .ds-hearts--3 .ds-hearts__h--0 { left: 36px; top: 0; }
 .ds-likes__num {
-  /* Figma：白底＋iris 漸層（藍、紫、黃、綠，foundation iris alpha-32） */
+  /* Figma（Vector 69）：白 20%＋iris 漸層（藍、紫、黃、綠，foundation iris alpha-32）；底是半透明的白，不是實心白 */
   background:
     linear-gradient(135deg, var(--ds-foun-color-share-iris-blue-alpha-32) 0%, var(--ds-foun-color-share-iris-purple-alpha-32) 32%, var(--ds-foun-color-share-iris-yellow-alpha-32) 68%, var(--ds-foun-color-share-iris-green-alpha-32) 100%),
-    var(--ds-foun-color-white);
+    color-mix(in srgb, var(--ds-foun-color-white) 20%, transparent);
   /* Figma BACKGROUND_BLUR 2 → CSS blur 半徑 1px */
   -webkit-backdrop-filter: blur(1px);
   backdrop-filter: blur(1px);

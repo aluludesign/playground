@@ -1666,7 +1666,8 @@
     #m-shell{position:fixed; inset:0; z-index:25; pointer-events:none;}
     #m-shell > *{pointer-events:auto;}
     #m-head{position:absolute; top:0; left:0; right:0; z-index:4; padding-top:env(safe-area-inset-top,0px);}
-    #m-head .ds-trip-header{padding-top:calc(var(--ds-sys-spacing-xl) + env(safe-area-inset-top,0px));}
+    /* Figma:頂列上緣是狀態列 ＋ 10(162057:12098 137 = 59＋10＋56＋12;已結束 162507:13824 padding 69 = 59＋10) */
+    #m-head .ds-trip-header{padding-top:calc(var(--ds-sys-spacing-lg) + env(safe-area-inset-top,0px));}
     #m-head{padding-top:0;}
     #m-menu{position:absolute; left:var(--ds-sys-spacing-4xl); z-index:6;}
     #m-menu[hidden]{display:none;}
@@ -1684,7 +1685,8 @@
     body.member-ui[data-view="wish"] #m-scroll .col:not(.wishbox){display:none;}
     body.member-ui #m-scroll #wishbox{margin-top:0; border:0; background:none;}
     #m-nav{position:absolute; left:0; right:0; bottom:0; z-index:5; display:flex; justify-content:center;
-      padding:var(--ds-sys-spacing-2xl) var(--ds-sys-spacing-4xl) calc(var(--ds-sys-spacing-2xl) + env(safe-area-inset-bottom,0px));
+      padding:var(--ds-sys-spacing-2xl) var(--ds-sys-spacing-4xl) max(var(--ds-sys-spacing-2xl), env(safe-area-inset-bottom,0px));
+      /* Figma 那一條 390×113 = 上 16 ＋ 膠囊 63 ＋ 底 34(就是 home indicator 那塊):有安全區時底下剛好是它,沒有時留 16 */
       /* Figma bottom nav_member 外面那一條(390 寬、膠囊上 16 到螢幕底):白 1% ＋ 背景模糊 8(CSS 是一半 = 4px)(Lulu 11-22) */
       background:rgb(255 255 255 / .01); -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px);}
     /* 面板拉到最低時底部導覽收起來(Figma 162123:12383 的畫法;待 Lulu 確認) */
@@ -1720,11 +1722,19 @@
     #m-iris{position:absolute; left:0; right:0; top:calc(75px - 59px + env(safe-area-inset-top,0px)); z-index:4; display:flex; justify-content:center;}
     /* ＋／− 有地圖的地方都要有(Lulu 11-21);一律在日曆鈕正下方:日曆鈕頂 + 77(Figma 162057:12098 161→238) */
     body.member-ui[data-view="wish"] #map-sheet .mapzoom{top:calc(121px - 59px + 77px + env(safe-area-inset-top,0px));}
+    /* Figma 許願鈕 218×46(x86):含外框整顆;內層上下左右 10(lg),不是 Storybook lg 的 12 */
+    #m-iris .ds-iris-btn{--iris-layer-pad:var(--ds-sys-spacing-lg);}
     #m-iris[hidden], #m-wish-box[hidden]{display:none;}
     #m-wish-box{position:absolute; inset:0; pointer-events:none; overflow:hidden;}
     #m-wish-box .ds-sheet{pointer-events:none;}
     #m-wish-box .ds-sheet__header, #m-wish-box .ds-wboard{pointer-events:auto;}
     #m-wish-box .ds-sheet__body{overflow-y:auto; pointer-events:auto; padding-bottom:var(--m-navh,113px);}
+    /* 上拉後往上捲:捲動區往上撐到畫面頂(上面多的那塊用 padding 補回,內容不會跳),卡片不會在把手底下被切平;
+       許願鈕淡出讓卡片滑過去;把手那條留在卡片上面才拉得動(Lulu 11-22「上方也被切」) */
+    #m-wish-box .ds-sheet__header{position:relative; z-index:1;}
+    body.m-wish-over #m-wish-box .ds-sheet__body{margin-top:calc(-1 * var(--m-wish-over,0px)); padding-top:var(--m-wish-over,0px);}
+    #m-iris{transition:opacity .2s ease, visibility 0s;}
+    body.m-wish-over #m-iris{opacity:0; visibility:hidden; pointer-events:none; transition:opacity .2s ease, visibility 0s .2s;}
     /* 下拉:只剩一排卡片,一張接一張橫著排 */
     body.m-wish-min #m-wish-box .ds-wboard__col{display:contents;}
     body.m-wish-min #m-wish-box .ds-wboard__wall{align-items:flex-start;}
@@ -1749,13 +1759,18 @@
        留言框在卡片裡、資訊下面,整張卡自己上下捲。往上滑 → 展開(162197:20434):卡片頂到上面 16、搜尋框和日曆鈕收起來,
        留言框在卡片最底下。打留言、鍵盤出來(162197:21058):卡片從上面 16 到鍵盤上 24,留言框滑上來蓋住資訊(接在照片下面),
        日曆鈕在右上角 */
-    #m-ss-card{--m-ss-card-top:calc(100% - 24px - env(safe-area-inset-bottom,0px) - min(400px, 100% - 140px));
+    /* 離底 24 是從螢幕最底量起(Figma 820/844),不再加安全區 */
+    #m-ss-card{--m-ss-card-top:calc(100% - 24px - min(400px, 100% - 140px));
       position:absolute; left:var(--ds-sys-spacing-2xl); right:var(--ds-sys-spacing-2xl);
-      top:var(--m-ss-card-top); bottom:calc(24px + env(safe-area-inset-bottom,0px));
+      top:var(--m-ss-card-top); bottom:24px;
       overflow-y:auto; overscroll-behavior:contain; border-radius:var(--ds-sys-radius-sm); touch-action:pan-y;
       box-shadow:var(--ds-elevation-surface-medium); transition:top .3s ease, bottom .3s ease;}
     #m-ss-card > .ds-acard{min-height:100%; display:flex; flex-direction:column; box-shadow:none;}
     /* Figma command text area:surface＋pattern、Elevation/surface/medium、上下 16;留言框 310 寬(左右 24) */
+    /* Figma 留言區 230 = 16 ＋ text area 198(text field 154 ＋ 8 ＋ 動作列 36)＋ 16:沒有標籤那一行(只留給讀螢幕的人),
+       沒有「+照片」列,內容框底下少留 6 → 輸入區 154 */
+    #m-ss-card .ds-text-area__label{position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap;}
+    #m-ss-card .ds-text-area__content{padding-bottom:calc(var(--ds-comp-field-height) - var(--ds-sys-spacing-sm));}
     #m-ss-card .ds-acard__footer{margin-top:auto; padding:var(--ds-sys-spacing-2xl) var(--ds-sys-spacing-4xl); box-shadow:var(--ds-elevation-surface-medium);}
     body.m-ws-open #m-ss-card, body.m-ws-typing #m-ss-card{--m-ss-card-top:calc(16px + env(safe-area-inset-top,0px));}
     body.m-ws-typing #m-ss-card{bottom:calc(var(--m-kb,0px) + 24px); overflow:hidden;}
@@ -1785,7 +1800,7 @@
     /* 滑到的那張放在畫面正中間(Lulu 11-22):左右各留 24(342 寬),前、後一張在兩邊各露一點;停下來一律對齊正中間。
        畫面再寬,卡片最寬 390、一樣置中 */
     #m-detail-card{--m-dpad:max(var(--ds-sys-spacing-4xl), calc((100% - 390px) / 2));
-      position:absolute; left:0; right:0; top:var(--m-detail-top,420px); bottom:calc(24px + env(safe-area-inset-bottom,0px));
+      position:absolute; left:0; right:0; top:var(--m-detail-top,420px); bottom:24px; /* 離螢幕最底 24(Figma 820/844),不加安全區 */
       display:flex; gap:var(--ds-sys-spacing-2xl); overflow-x:auto; overflow-y:hidden; scroll-snap-type:x mandatory;
       padding:0 var(--m-dpad); scroll-padding:0 var(--m-dpad); scrollbar-width:none; overscroll-behavior-x:contain;}
     #m-detail-card::-webkit-scrollbar{display:none;}
@@ -1799,7 +1814,7 @@
     #m-detail.is-open #m-detail-card .m-dcard:not(.is-cur){opacity:0; visibility:hidden; transition:opacity .3s ease, visibility 0s .3s;}
     #m-detail-card .m-dcard.is-float{position:fixed; z-index:1; margin:0; max-width:none; height:auto;
       left:max(16px, calc(50% - 195px)); right:max(16px, calc(50% - 195px));
-      top:max(16px, env(safe-area-inset-top,0px)); bottom:calc(24px + env(safe-area-inset-bottom,0px));}
+      top:max(16px, env(safe-area-inset-top,0px)); bottom:24px;}
     #m-detail-card .m-dcard.is-moving{transition:left .3s ease, top .3s ease, width .3s ease, height .3s ease;}
     #m-detail-card .m-dcard-ph{flex:0 0 100%; max-width:390px; height:100%; scroll-snap-align:center; scroll-snap-stop:always;}
     #m-detail.is-open #m-detail-card .m-dcard.is-cur{overflow-y:auto; overscroll-behavior:contain; touch-action:pan-y;}
@@ -1816,7 +1831,7 @@
     body.m-detail-open #m-cal, body.m-detail-open #map-sheet .mapzoom{opacity:0; visibility:hidden; pointer-events:none;
       transition:opacity .2s ease, visibility 0s .2s;}
     /* 這個點不在地圖上(Figma 162653:32362):底下一個 Info default,三秒後消失 */
-    #m-toast{position:absolute; left:16px; right:16px; bottom:calc(24px + env(safe-area-inset-bottom,0px)); z-index:8; display:flex; justify-content:center; pointer-events:none;}
+    #m-toast{position:absolute; left:16px; right:16px; bottom:24px; z-index:8; display:flex; justify-content:center; pointer-events:none;}
     #m-toast[hidden]{display:none;}
     #m-toast > *{pointer-events:auto;}
     #m-toast .ds-info{width:auto; max-width:100%;}
@@ -7078,6 +7093,30 @@
     const range = trip.start && trip.end ? trip.start.replace(/-/g, "/") + "-" + trip.end.slice(5).replace("-", "/") : "";
     return [trip.city || trip.country || "", range, DAYS.length + " Days", MEMBERS.length + "☻"];
   }
+  /* 頂列的高度、跟著它的東西(日曆鈕、選單、花費分頁、面板最高那段)。
+     第一次畫的時候字體、結束提示還沒排好,量到的會偏高(已結束的團量到 156、其實 138),
+     所以不要只量一次:盯著頂列,它一變就重量(Lulu 11-22 QA) */
+  function mHeadSync() {
+    const headH = el("m-head").offsetHeight;
+    document.body.style.setProperty("--m-headh", headH + "px");
+    el("m-menu").style.top = (headH - 28) + "px";
+    return headH;
+  }
+  let mHeadRO = null;
+  function mWatchHead() {
+    if (mHeadRO || typeof ResizeObserver !== "function") return;
+    let last = -1;
+    mHeadRO = new ResizeObserver(() => {
+      const h = el("m-head").offsetHeight;
+      if (!h || h === last || el("m-shell").hidden) return;   /* 許願頁頂列藏起來(0)時不動,照原本 render 的算法 */
+      last = h;
+      mHeadSync();
+      if (state.tab !== "wish") el("m-cal").style.top = (h + 24) + "px";
+      if (!el("m-seg").hidden) el("m-seg").style.top = (h + 12) + "px";
+      if (mSheet) mSheet.refresh();
+    });
+    mHeadRO.observe(el("m-head"));
+  }
   function renderMemberShell() {
     const on = memberUI();
     document.body.classList.toggle("member-ui", on);
@@ -7123,9 +7162,7 @@
       });
       if (el("m-ended")._html !== endedHTML) { el("m-ended").innerHTML = endedHTML; el("m-ended")._html = endedHTML; DS.wireInfo(el("m-ended")); }
     } else if (el("m-head").contains(el("m-ended"))) el("m-shell").insertBefore(el("m-ended"), el("m-cal"));
-    const headH = el("m-head").offsetHeight;
-    document.body.style.setProperty("--m-headh", headH + "px");
-    el("m-menu").style.top = (headH - 28) + "px";
+    const headH = mHeadSync();
     /* 日曆鈕 = 開關其他日子的行程(就是原本的「全部已排」) */
     const mapView = !mMe && (state.tab === "plan" || state.tab === "wish");
     el("m-me").hidden = !mMe;
@@ -7177,6 +7214,7 @@
         document.body.classList.toggle("m-sheet-max", e.detail.index === mSnaps().length - 1);
       });
       wireMemberShell();
+      mWatchHead();
     } else {
       mSyncNav();
       if (mSheet) mSheet.refresh();
@@ -7453,6 +7491,8 @@
     const html = list.map((x, i) => '<div class="m-dcard' + (i === mDetail.i ? " is-cur" : "") + '" data-i="' + i + '">' + mCardHTML(x) + "</div>").join("");
     /* 沒變就不重畫(按讚會連畫兩次,畫到一半的愛心不能被換掉) */
     if (keepScroll && box._html === html) return;
+    /* 只有喜歡變了(按讚):就地換喜歡那一塊,照片不重載、不閃(Lulu 11-22) */
+    if (keepScroll && DS.patchLikes && DS.patchLikes(box, box._html, html)) { box._html = html; return; }
     box.innerHTML = html; box._html = html;
     DS.wireAttractionCard(box);
     /* 卡片頂在畫面 420/844(Figma 162114:14958) */
@@ -7614,11 +7654,22 @@
   /* 許願牆的三段(Figma 161950:14100／162186:25406,annotation「這區在畫面最底部」):
      牆一路到螢幕最底(預設時在底部導覽後面),高度從螢幕底往上算 ——
      下拉:牆 256 高(588→844),沒有底部導覽;預設:牆 450 高(394→844,跟行程面板一樣照 844 等比);上拉:頂到許願鈕下面。
-     把手那條在牆上面 40 */
+     394／588 是整塊(含最上面 40 的把手那條,Figma 的 padding-top 40)的上緣,跟行程面板同一個量法(Lulu 11-22 QA)。
+     上拉那段照舊:牆本體頂到許願鈕下 24 */
+  function mWishOver() {
+    const b = el("m-wish-box").querySelector(".ds-sheet__body");
+    const on = document.body.classList.contains("m-wish-max") && !!b && b.scrollTop > 0;
+    if (on) {
+      const s = el("m-wish-box").querySelector(".ds-sheet").getBoundingClientRect();
+      document.body.style.setProperty("--m-wish-over", Math.max(0, Math.round(s.top + 40)) + "px");
+    }
+    document.body.classList.toggle("m-wish-over", on);
+  }
   function mWishSnaps() {
     const H = window.innerHeight;
     const iris = el("m-iris").getBoundingClientRect();
-    return [256 + 40, Math.round(H * 450 / 844) + 40, Math.round(H - (iris.bottom - 40 + 24))];
+    /* 上拉:Figma 162182:13499 整塊(含把手那條)頂在 115/844,跟許願鈕(75–121)疊 6 */
+    return [256, Math.round(H * 450 / 844), Math.round(H - (iris.bottom - 6))];
   }
   let mSafe = null;
   function mSafeTop() {
@@ -7662,7 +7713,10 @@
       el("m-wish-box").addEventListener("ds-sheet-snap", e => {
         document.body.classList.toggle("m-wish-min", e.detail.index === 0);
         document.body.classList.toggle("m-wish-max", e.detail.index === mWishSnaps().length - 1);
+        mWishOver();
       });
+      /* 拉到最高、牆往上捲了:卡片可以一路滑到畫面最上面(蓋過許願鈕的位置,許願鈕淡出),不要在把手底下被切一刀(Lulu 11-22) */
+      el("m-wish-box").querySelector(".ds-sheet__body").addEventListener("scroll", mWishOver, { passive: true });
       el("m-wall").addEventListener("ds-like", e => toggleVote(e.detail.key));
       el("m-wall").addEventListener("ds-wish-open", e => mOpenWish(e.detail.key));
       el("m-wall").addEventListener("ds-photos-open", e => { const w = state.wishes.find(x => x.id === e.detail.key); if (w) mOpenPhotos(w, 0); });
@@ -7683,6 +7737,8 @@
     });
     const wallHTML = DS.wishBoardHTML({ cards, empty: "還沒有人許願。按上面的「許個願」丟一個進來。" });
     if (el("m-wall")._html === wallHTML) return;
+    /* 只有喜歡變了(按讚):就地換喜歡那一塊,照片不重載、不閃(Lulu 11-22) */
+    if (DS.patchLikes && DS.patchLikes(el("m-wall"), el("m-wall")._html, wallHTML)) { el("m-wall")._html = wallHTML; return; }
     const sc = el("m-wall").querySelector(".ds-wboard"), sl = sc ? sc.scrollLeft : 0, st = sc ? sc.scrollTop : 0;
     el("m-wall").innerHTML = wallHTML; el("m-wall")._html = wallHTML;
     const sc2 = el("m-wall").querySelector(".ds-wboard");

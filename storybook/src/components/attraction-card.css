@@ -39,7 +39,11 @@
 }
 .ds-acard__photo img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .ds-acard__close { position: absolute; top: var(--ds-sys-spacing-2xl); right: var(--ds-sys-spacing-2xl); z-index: 1; }
-.ds-acard__close--bare { position: relative; display: flex; justify-content: flex-end; top: 0; right: 0; padding: var(--ds-sys-spacing-2xl) var(--ds-sys-spacing-2xl) 0; }
+/* 沒有照片：✕ 一樣疊在卡片右上角（上 16、右 16），不另外佔一排；標題從內容的上內距 16 開始（Lulu 11-22「標題上方 padding 太大」）。
+   標題右邊多留 24（✕ 左緣離卡片右邊 40，內容右邊已有 24），有喜歡時喜歡往左讓 24、躲開 ✕ */
+.ds-acard__close--bare + .ds-acard__body .ds-acard__top { padding-right: var(--ds-sys-spacing-4xl); }
+.ds-acard__close--bare + .ds-acard__body .ds-acard__top--likes { padding-right: 120px; }
+.ds-acard__close--bare + .ds-acard__body .ds-acard__likes { right: var(--ds-sys-spacing-4xl); }
 /* 照片下那排點點：Storybook「分頁點點 Pagination」，這裡只排成 18 高、置中 */
 .ds-acard__dots {
   display: flex;

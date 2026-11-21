@@ -49,7 +49,7 @@ ${closeLabel ? `<div class="ds-acard__close">${scrimButtonHTML({ icon: "cross", 
   const wish = note || wisher
     ? `<div class="ds-acard__wish">
 ${wisher ? `<span class="ds-acard__wisher">${tint(arrow, "ds-acard__wisher-icon")}${esc(wisher)}</span>` : ""}
-${note ? `<p class="ds-acard__note">${esc(note)}<span class="ds-wiggle-line ds-wiggle--outline-200" aria-hidden="true"></span></p>` : ""}
+${note ? `<p class="ds-acard__note">${esc(note)}<span class="ds-wiggle-line ds-wiggle--outline-300" aria-hidden="true"></span></p>` : ""}
 </div>`
     : "";
   return `<article class="ds-acard ds-pattern">

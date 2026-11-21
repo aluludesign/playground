@@ -61,7 +61,7 @@ ${info ? `<p class="ds-wcard__info">${info}</p>` : ""}
 ${wiki ? `<p class="ds-wcard__wiki">${esc(wiki)}</p>` : ""}
 ${wisher || note ? `<div class="ds-wcard__wish">
 ${wisher ? `<span class="ds-wcard__wisher">${face(wisher, "md")}<span>${esc(wisher.name || "")}</span></span>` : ""}
-${note ? `<p class="ds-wcard__note">${esc(note)}<span class="ds-wiggle-line ds-wiggle--outline-200" aria-hidden="true"></span></p>` : ""}
+${note ? `<p class="ds-wcard__note">${esc(note)}<span class="ds-wiggle-line ds-wiggle--outline-300" aria-hidden="true"></span></p>` : ""}
 </div>` : ""}
 </div>
 </article>`;
@@ -90,6 +90,25 @@ export function drawNewHearts(root = document) {
     h.dataset.penQueued = "1";
     requestAnimationFrame(() => drawPenBrush(h, true));
   });
+}
+
+/**
+ * 只有「喜歡」那一塊變了（按讚、取消讚、伺服器回來）：就地換掉那幾顆 .ds-likes，其他節點（照片 <img>）一個都不動，
+ * 照片才不會重新載入、閃一下（Lulu 11-22）。oldHTML／newHTML 是整塊容器前後兩次的 HTML；
+ * 除了喜歡以外還有別的地方不一樣就回 false，交給呼叫的人整塊重畫。
+ */
+const LIKES_RE = /<button type="button" class="ds-likes"[\s\S]*?<\/button>/g;
+export function patchLikes(root, oldHTML, newHTML) {
+  if (!root || !oldHTML || !newHTML) return false;
+  const strip = (h) => h.replace(LIKES_RE, "\u0000");
+  if (strip(oldHTML) !== strip(newHTML)) return false;
+  const olds = oldHTML.match(LIKES_RE) || [];
+  const news = newHTML.match(LIKES_RE) || [];
+  const els = root.querySelectorAll(".ds-likes");
+  if (els.length !== news.length || olds.length !== news.length) return false;
+  news.forEach((h, i) => { if (h !== olds[i]) els[i].outerHTML = h; });
+  drawNewHearts(root);
+  return true;
 }
 
 export function wireWishCards(root = document) {

@@ -24,7 +24,8 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--ds-sys-spacing-2xl);
-  padding: 0 var(--ds-sys-spacing-xl) 0 var(--ds-sys-spacing-4xl);
+  /* Figma 162197:18186：標題 x41（框 16＋線 1＋24）、✕ x333（右邊離框外緣 17 = 線 1＋16） */
+  padding: 0 var(--ds-sys-spacing-2xl) 0 var(--ds-sys-spacing-4xl);
 }
 .ds-search-frame__title {
   margin: 0;
@@ -37,4 +38,9 @@
   letter-spacing: 0.05em;
 }
 .ds-search-frame__head [data-close] { align-self: flex-start; margin-top: -8px; }
-.ds-search-frame__body { padding: 0 var(--ds-sys-spacing-4xl); }
+.ds-search-frame__body {
+  /* Figma 的框線不佔位置，text field 310 寬（358 − 24×2）；CSS 的 border 佔掉左右各 1，右邊少留 2 補回來 → x41、310 寬 */
+  padding: 0 calc(var(--ds-sys-spacing-4xl) - 2 * var(--ds-sys-border-xs)) 0 var(--ds-sys-spacing-4xl);
+}
+/* Figma：搜尋框的 bg pattern 是 5%（別的地方共用的 8%，只有這裡不同；token 沒有 5%） */
+.ds-search-frame.ds-pattern::before { opacity: 0.05; }

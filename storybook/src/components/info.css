@@ -119,6 +119,10 @@
   line-height: 19px;
   letter-spacing: 0.15em;
 }
+/* 字距 15% 在 CSS 會多加在最後一個字後面，Figma 不算那一截（Figma 223 寬 vs 多出 2.1）：扣回來 */
+.ds-info--default .ds-info__text {
+  margin-right: -0.15em;
+}
 
 /* 關閉鈕（button="close"）：叉叉圓鈕，靠上 */
 .ds-info__close {

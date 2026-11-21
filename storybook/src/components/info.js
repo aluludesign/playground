@@ -8,8 +8,8 @@ import up from "../icons/general/icon_triangel_up_duotone.svg?raw";
 
 // Figma Action/info（161193:10387）：16 格裡畫 13.33 的圓
 const INFO = `<svg class="ds-info__icon" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 1.333C4.32 1.333 1.333 4.32 1.333 8S4.32 14.667 8 14.667 14.667 11.68 14.667 8 11.68 1.333 8 1.333ZM8.667 11.333H7.333V7.333H8.667V11.333ZM8.667 6H7.333V4.667H8.667V6Z"/></svg>`;
-// 箭頭跟著文字顏色（Figma 綁 on tertiary container）
-const arrow = (svg) => svg.replace(/fill="#652D15"/gi, 'fill="currentColor"').replace("<svg", '<svg aria-hidden="true"');
+// 收合箭頭：Figma 是 icon/triangel_up（down）Style=duotone 16，照 icon 自己的顏色畫（跟頂列的 ▼ 同一顆），不改成文字色（Lulu 11-22 QA）
+const arrow = (svg) => svg.replace("<svg", '<svg aria-hidden="true"');
 const DOWN = arrow(down);
 const UP = arrow(up);
 

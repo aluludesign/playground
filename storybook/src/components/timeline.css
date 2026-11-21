@@ -13,6 +13,8 @@
   color: var(--ds-sys-color-text-100);
 }
 .ds-tl__caret-icon { display: block; width: 16px; height: 16px; }
+/* 頭尾那兩個字（Scheduled／Day end）：Figma cap 20 高；不用 flex 的話 inline-flex 會吃到行高、變 22.4 */
+.ds-tl__cap { display: flex; justify-content: center; }
 .ds-tl__empty {
   margin: var(--ds-sys-spacing-2xl) 0;
   color: var(--ds-sys-color-text-200);
@@ -21,14 +23,14 @@
 }
 
 .ds-tl__set { width: 100%; }
-/* Figma「time point」（162617:14805）：照片 134 ｜ pin_timeline 75 ｜ 小卡 134，SPACE_BETWEEN、中間不另外留間距
-   （342 寬的列：照片 x24、pin x158、小卡 x233；134＋75＋134 比 342 多 1，所以兩邊欄各讓 0.5） */
+/* Figma「time point」（162617:14805）：照片 ｜ pin_timeline 75 ｜ 小卡，三個之間固定間距 2xl（16）；
+   兩邊欄是 Fill、撐滿剩下的空間（不是寫死 134），中間 pin 固定 75（Lulu 11-22：「兩邊的 134 是撐滿剩下的空間，不是寫死；但是三個物件的間距是固定的」）。
+   342 寬的列 → 117.5 ｜ 75 ｜ 117.5 */
 .ds-tl__point {
   display: grid;
-  grid-template-columns: minmax(0, 134px) 75px minmax(0, 134px);
-  justify-content: space-between;
+  grid-template-columns: minmax(0, 1fr) 75px minmax(0, 1fr);
   align-items: center;
-  gap: 0;
+  gap: var(--ds-sys-spacing-2xl);
   min-height: 115px;
 }
 /* 點點線（divider/dot：線寬 border/md、每 6 一點）要從上一列一路連到下一列，中間不能斷（Lulu 11-21）：
@@ -182,8 +184,8 @@
 .ds-stop--left .ds-stop__tail { left: 100%; clip-path: polygon(0 0, 100% 0, 0 100%); }
 .ds-stop--right .ds-stop__tail { right: 100%; clip-path: polygon(0 0, 100% 0, 100% 100%); }
 .ds-stop--right { align-items: flex-end; text-align: right; }
-/* 時間軸裡：小卡寬 134，貼外側（Figma 162057:12098：右欄 x233、左欄 x24，時間軸左右 24） */
-.ds-tl__side--card .ds-stop { max-width: 134px; }
+/* 時間軸裡：小卡撐滿它那一欄（Fill） */
+.ds-tl__side--card .ds-stop { flex: 1 1 0; min-width: 0; max-width: none; }
 .ds-tl__side--card .ds-stop--left { margin-left: auto; }
 .ds-tl__side--card .ds-stop--right { margin-right: auto; }
 .ds-stop--right .ds-stop__info { justify-content: flex-end; }
