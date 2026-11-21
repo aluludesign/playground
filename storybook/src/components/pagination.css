@@ -1,0 +1,25 @@
+/* 分頁點點 Pagination —— Figma「pagination」（162114:15935）
+ * 一排圓點，現在這頁是主色、其他是 surf container low；點點 6、間距 xs，橫向 hug */
+.ds-pagination {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-comp-pagination-gap);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  line-height: 0;
+}
+.ds-pagination__dot {
+  flex: none;
+  width: var(--ds-comp-pagination-dot-size);
+  height: var(--ds-comp-pagination-dot-size);
+  border-radius: 50%;
+  background: var(--ds-comp-pagination-color-inactive);
+  transition: background-color 0.2s ease;
+}
+.ds-pagination__dot.is-active {
+  background: var(--ds-comp-pagination-color-active);
+}
+@media (prefers-reduced-motion: reduce) {
+  .ds-pagination__dot { transition: none; }
+}

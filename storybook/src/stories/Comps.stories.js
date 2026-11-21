@@ -16,3 +16,4 @@ export const 分隔線 = () => page(table(p("divider/"), { title: "分隔線" })
 export const Focus外框 = () => page(table(p("focus-ring/"), { title: "Focus 外框" }));
 Focus外框.storyName = "Focus 外框";
 export const 底部導覽 = () => page(table(p("bottom nav/"), { title: "底部導覽" }));
+export const 分頁點點 = () => page(table(p("pagination/"), { title: "分頁點點" }));
