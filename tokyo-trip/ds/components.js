@@ -971,8 +971,8 @@ function i4({ photo: C = "", icon: e = "place", name: t = "", info: n = [], stat
 }
 const B3 = (C) => String(C).replace(/[&<>"]/g, (e) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[e]);
 function W2(C) {
-  return B3(C).replace(/https?:\/\/[^\s<>"]+/gi, (e) => {
-    const t = (e.match(/[).,，。！？、」』）]+$/) || [""])[0], n = t ? e.slice(0, -t.length) : e;
+  return B3(C).replace(/https?:\/\/(?:[A-Za-z0-9\-._~:/?#[\]@!$'()*+,;=%]|&amp;)+/g, (e) => {
+    const t = (e.match(/[).,;:!?']+$/) || [""])[0], n = t ? e.slice(0, -t.length) : e;
     return `<a href="${n}" target="_blank" rel="noopener">${n}</a>${t}`;
   });
 }
