@@ -117,6 +117,8 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* 留言裡的網址（自動變連結）：底線＋primary */
+.ds-wcard__note a { color: var(--ds-sys-color-primary); text-decoration: underline; }
 .ds-wcard__note .ds-wiggle-line { position: absolute; left: 0; right: 0; bottom: -1px; }
 
 /* 喜歡 */

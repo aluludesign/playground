@@ -126,6 +126,8 @@ a.ds-acard__loc:focus-visible { outline: var(--ds-comp-focus-ring-border) solid 
   padding: var(--ds-sys-spacing-2xs) var(--ds-sys-spacing-md);
   overflow-wrap: anywhere;
 }
+/* 留言裡的網址（自動變連結）：跟地點資料的連結一樣，底線＋primary */
+.ds-acard__note a { color: var(--ds-sys-color-primary); text-decoration: underline; overflow-wrap: anywhere; }
 .ds-acard__note .ds-wiggle-line { position: absolute; left: 0; right: 0; bottom: -1px; }
 
 /* 卡片最下面接的東西（Figma 搜尋結果那張的留言框）：跟內容同樣的左右內距 */

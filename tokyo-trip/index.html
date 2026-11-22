@@ -1749,7 +1749,15 @@
     #m-shell::before{content:""; position:absolute; inset:0; z-index:3; pointer-events:none; opacity:0; visibility:hidden;
       -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px); transition:opacity .3s ease, visibility 0s .3s;}
     body.member-ui[data-view="wish"].m-wish-max:not(.m-in-detail):not(.m-ws) #m-shell::before{opacity:1; visibility:visible; transition:opacity .3s ease, visibility 0s;}
-    body.m-wish-min #m-nav{transform:translateY(110%);}
+    /* 上拉、下拉都沒有底部導覽,也沒有把手(Figma 162182:13499、162186:25406);一拖離預設那一段就收,回到預設才出來 */
+    body.m-wish-min #m-nav, body.m-wish-max #m-nav, body.m-wb-off[data-view="wish"] #m-nav{transform:translateY(110%);}
+    body.m-wb-off #m-wish-box .ds-sheet__handle{opacity:0; visibility:hidden; transition:opacity .15s ease, visibility 0s .15s;}
+    body.m-wish-max #m-wish-box .ds-sheet__body{padding-bottom:0;}
+    /* 上拉也沒有許願鈕(162182:13499) */
+    body.m-wish-max #m-iris{opacity:0; visibility:hidden; pointer-events:none; transition:opacity .2s ease, visibility 0s .2s;}
+    /* 卡片多到要捲:捲動區會切掉最上面那排卡的陰影(Lulu 11-22)→ 上面那 24 改放在捲動區裡面 */
+    body.m-wish-max.m-wish-scroll #m-wish-box{--m-wb-head:0px;}
+    body.m-wish-max.m-wish-scroll #m-wish-box .ds-sheet__body{padding-top:24px;}
     /* 上拉、下拉(Lulu 11-22):沒有把手,右上一顆 ✕(Figma 162182:13499／162186:25406 Scrim md,右 16、貼在牆的上緣上面)。
        把手那條跟著段落漸變成牆的上內距:預設 40(把手)、下拉 16、上拉 24;跟面板同一條 ease(.32s) */
     #m-wish-box .ds-sheet__header{height:var(--m-wb-head,40px); padding-top:0; padding-bottom:0; align-items:center; overflow:visible;
@@ -5005,7 +5013,8 @@
       const at = pinOf(x);
       if (!inJapan(at)) return;
       /* 編號是那天的行程順序,跟行程頁一樣(2026-11-21,Lulu);是第幾天看顏色 */
-      out.push({ k: "p" + d.date + "-" + i, n: i + 1, cls: "plan", color: d.color, on: d.on, la: at.la, lo: at.lo,
+      /* cn:新外框的點用那一天的 custom 色(跟行程頁同一個顏色;Lulu 11-22「現在都是淡藍色」) */
+      out.push({ k: "p" + d.date + "-" + i, n: i + 1, cls: "plan", color: d.color, on: d.on, cn: dayColorN(d.n), la: at.la, lo: at.lo,
         place: x.place || x.title, title: x.title, tip: "DAY " + d.n + " " + (x.time || "") + " " + x.title });
     }));
     return out;
@@ -7864,8 +7873,9 @@
       tallest = colH = e ? e.offsetHeight : 0;
     }
     /* 下拉:上 16 ＋ 最高那張 ＋ 下 16(Figma 162264:33359 內距 16);上拉:上 24 ＋ 最高那一欄 ＋ 下 24(162182:13525 內距 24),坐在底部導覽上 */
+    /* 上拉沒有底部導覽(Figma 162182:13499 上拉卡片組裡沒有 nav):牆從螢幕底往上 hug;上面留 ✕ 那 24 */
     const min = 16 + tallest + 16, def = Math.round(H * 450 / 844);
-    const hug = el("m-nav").offsetHeight + 24 + colH + 24, cap = H - mSafeTop() - 24;
+    const hug = 24 + colH + 24, cap = H - mSafeTop() - 16 - 24;
     document.body.classList.toggle("m-wish-scroll", hug > cap);
     return [min, def, Math.max(def + 1, Math.min(hug, cap))];
   }
@@ -7933,9 +7943,10 @@
   }
   function mRenderWish() {
     const wishView = !mMe && state.tab === "wish";
-    el("m-iris").hidden = !wishView;
+    /* 結束的團不能再許願:沒有許願鈕(Lulu 11-22) */
+    el("m-iris").hidden = !wishView || tripEnded();
     el("m-wish-box").hidden = !wishView;
-    if (!wishView) { document.body.classList.remove("m-wish-min", "m-iris-off"); return; }
+    if (!wishView) { document.body.classList.remove("m-wish-min", "m-wish-max", "m-wb-off", "m-iris-off"); return; }
     if (!el("m-iris").firstChild) {
       el("m-iris").innerHTML = DS.irisButtonHTML({ label: "許個願，想去" + ((trip && trip.city) || "") + "哪？", size: "lg" });
       DS.wireIris(el("m-iris"));
@@ -7957,7 +7968,11 @@
         /* 兩排 ↔ 一整排:卡片從原本的位置滑到新位置(Lulu 11-22「下滑變整排也是用位移漸變」) */
         if (min !== document.body.classList.contains("m-wish-min")) mWishFlip(go); else go();
       });
-      el("m-wish-box").addEventListener("ds-sheet-move", e => mWishIris(e.detail.shown));
+      el("m-wish-box").addEventListener("ds-sheet-move", e => {
+        mWishIris(e.detail.shown);
+        /* 拖離預設那一段:把手、底部導覽先收起來(上拉、下拉都沒有它們) */
+        document.body.classList.toggle("m-wb-off", Math.abs(e.detail.shown - mWishSnaps()[1]) > 8);
+      });
       if (typeof ResizeObserver === "function") new ResizeObserver(mWishRefit).observe(el("m-wall"));
       el("m-wall").addEventListener("ds-like", e => toggleVote(e.detail.key));
       el("m-wall").addEventListener("ds-wish-open", e => mOpenWish(e.detail.key));
@@ -8074,6 +8089,15 @@
         }
       });
       mWireWsCard(el("m-ss-card"));
+      el("m-ss-sheet").addEventListener("keydown", e => {
+        const it = e.target.closest && e.target.closest("[data-m-sug]");
+        if (!it || (e.key !== "ArrowDown" && e.key !== "ArrowUp")) return;
+        e.preventDefault();
+        const all = [].slice.call(el("m-ss-sheet").querySelectorAll("[data-m-sug]")), i = all.indexOf(it);
+        const next = e.key === "ArrowDown" ? all[i + 1] : all[i - 1];
+        if (next) next.focus();
+        else if (e.key === "ArrowUp") { const inp = el("m-ss-frame").querySelector("input"); if (inp) inp.focus(); }
+      });
       root.addEventListener("ds-text-area-cancel", () => {
         const g = seekBox(SS)._g;
         ssSel = -1; seekBox(SS)._g = null;
@@ -8116,6 +8140,12 @@
       mWsSheet();
     });
     inp.addEventListener("keydown", e => {
+      /* 電腦:打字後按 ↓ 直接走進熱門地點清單(Lulu 11-22);在清單裡 ↑↓ 換、Enter 選(選了就直接搜) */
+      if (e.key === "ArrowDown") {
+        const first = el("m-ss-sheet").hidden ? null : el("m-ss-sheet").querySelector("[data-m-sug]");
+        if (first) { e.preventDefault(); first.focus(); }
+        return;
+      }
       if (e.key !== "Enter") return;
       e.preventDefault();
       el(SS).value = inp.value;

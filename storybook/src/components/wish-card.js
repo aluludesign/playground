@@ -1,3 +1,4 @@
+import { linkifyHTML } from "../linkify.js";
 import "../pattern.css";
 import "../wiggle.css";
 import "../pen-line.css";
@@ -61,7 +62,7 @@ ${info ? `<p class="ds-wcard__info">${info}</p>` : ""}
 ${wiki ? `<p class="ds-wcard__wiki">${esc(wiki)}</p>` : ""}
 ${wisher || note ? `<div class="ds-wcard__wish">
 ${wisher ? `<span class="ds-wcard__wisher">${face(wisher, "md")}<span>${esc(wisher.name || "")}</span></span>` : ""}
-${note ? `<p class="ds-wcard__note">${esc(note)}<span class="ds-wiggle-line ds-wiggle--outline-300" aria-hidden="true"></span></p>` : ""}
+${note ? `<p class="ds-wcard__note">${linkifyHTML(note)}<span class="ds-wiggle-line ds-wiggle--outline-300" aria-hidden="true"></span></p>` : ""}
 </div>` : ""}
 </div>
 </article>`;
@@ -116,6 +117,7 @@ export function wireWishCards(root = document) {
     if (b.dataset.wired || b.closest(".ds-wboard") !== b && b.closest(".ds-wboard")) return;
     b.dataset.wired = "1";
     b.addEventListener("click", (e) => {
+      if (e.target.closest(".ds-wcard__note a")) return; // 留言裡的連結：開新分頁，不打開細節
       const like = e.target.closest("[data-like]");
       if (like) return like.dispatchEvent(new CustomEvent("ds-like", { bubbles: true, detail: { key: like.dataset.like } }));
       const ph = e.target.closest(".ds-photos[data-key]");

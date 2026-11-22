@@ -3,6 +3,7 @@ import "../wiggle.css";
 import "../pen-line.css";
 import "./attraction-card.css";
 import { wireWiggle } from "../wiggle.js";
+import { linkifyHTML } from "../linkify.js";
 import { penMarkerHTML } from "../pen-line.js";
 import { revealPens } from "../pen-reveal.js";
 import { scrimButtonHTML } from "./scrim-button.js";
@@ -49,7 +50,7 @@ ${closeLabel ? `<div class="ds-acard__close">${scrimButtonHTML({ icon: "cross", 
   const wish = note || wisher
     ? `<div class="ds-acard__wish">
 ${wisher ? `<span class="ds-acard__wisher">${tint(arrow, "ds-acard__wisher-icon")}${esc(wisher)}</span>` : ""}
-${note ? `<p class="ds-acard__note">${esc(note)}<span class="ds-wiggle-line ds-wiggle--outline-300" aria-hidden="true"></span></p>` : ""}
+${note ? `<p class="ds-acard__note">${linkifyHTML(note)}<span class="ds-wiggle-line ds-wiggle--outline-300" aria-hidden="true"></span></p>` : ""}
 </div>`
     : "";
   return `<article class="ds-acard ds-pattern">
@@ -80,6 +81,7 @@ export function wireAttractionCard(root = document) {
       }, { passive: true });
     }
     card.addEventListener("click", (e) => {
+      if (e.target.closest(".ds-acard__note a")) return; // 留言裡的連結：照常開新分頁
       if (e.target.closest(".ds-acard__close")) return card.dispatchEvent(new CustomEvent("ds-card-close", { bubbles: true }));
       const like = e.target.closest("[data-like]");
       if (like) return like.dispatchEvent(new CustomEvent("ds-like", { bubbles: true, detail: { key: like.dataset.like } }));
