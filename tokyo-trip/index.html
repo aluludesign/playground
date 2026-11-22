@@ -1750,6 +1750,19 @@
       -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px); transition:opacity .3s ease, visibility 0s .3s;}
     body.member-ui[data-view="wish"].m-wish-max:not(.m-in-detail):not(.m-ws) #m-shell::before{opacity:1; visibility:visible; transition:opacity .3s ease, visibility 0s;}
     body.m-wish-min #m-nav{transform:translateY(110%);}
+    /* 上拉、下拉(Lulu 11-22):沒有把手,右上一顆 ✕(Figma 162182:13499／162186:25406 Scrim md,右 16、貼在牆的上緣上面)。
+       把手那條跟著段落漸變成牆的上內距:預設 40(把手)、下拉 16、上拉 24;跟面板同一條 ease(.32s) */
+    #m-wish-box .ds-sheet__header{height:var(--m-wb-head,40px); padding-top:0; padding-bottom:0; align-items:center; overflow:visible;
+      transition:height .32s cubic-bezier(.25,1,.5,1);}
+    #m-wish-box .ds-sheet__handle{transition:opacity .2s ease, visibility 0s;}
+    body.m-wish-min #m-wish-box{--m-wb-head:16px;}
+    body.m-wish-max #m-wish-box{--m-wb-head:24px;}
+    body.m-wish-min #m-wish-box .ds-sheet__handle, body.m-wish-max #m-wish-box .ds-sheet__handle{opacity:0; visibility:hidden; pointer-events:none;
+      transition:opacity .2s ease, visibility 0s .2s;}
+    #m-wb-close{position:absolute; right:var(--ds-sys-spacing-2xl); bottom:100%; z-index:2; pointer-events:auto; line-height:0;
+      opacity:0; visibility:hidden; transition:opacity .2s ease, visibility 0s .2s;}
+    body.m-wish-min #m-wb-close, body.m-wish-max #m-wb-close{opacity:1; visibility:visible; transition:opacity .2s ease .12s, visibility 0s;}
+    @media (prefers-reduced-motion: reduce){ #m-wish-box .ds-sheet__header{transition:none;} }
     /* 許願搜尋(Figma 162186:26093 起):許願鈕按下去變成搜尋框;打字時下面是「熱門地點／不指定地點」;
        搜完結果標在地圖上,點一個 → 景點卡＋留言框＋送出許願。搜尋本身(三段、強力搜、往外找)照原本的邏輯 */
     body.m-ws #ss-bar, body.m-ws #ss-sug, body.m-ws #ss-all{display:none !important;}
@@ -1876,7 +1889,11 @@
       background:none !important; box-shadow:none; color:inherit; display:block;}
     body.member-ui #map .pin.on, body.m-ws #ss-map .pin.on{box-shadow:none; z-index:3;}
     body.member-ui #map .pin.hot, body.m-ws #ss-map .pin.hot{transform:translate(-50%,-100%) scale(1.1);}
-    body.member-ui .map .mapzoom.ds-zoom{gap:var(--ds-sys-spacing-md); border:0; background:none; box-shadow:none;}
+    body.member-ui .map .mapzoom.ds-zoom{gap:var(--ds-sys-spacing-2xl); border:0; background:none; box-shadow:none;}
+    /* 位置由 mPlaceZoom 算(地圖看得到的那一塊的正中間) */
+    body.member-ui .map.m-zoom-placed .mapzoom.ds-zoom{top:var(--m-zoom-top) !important;}
+    /* 滑過搜尋地圖上的點:跟行程地圖一樣微微放大(Lulu 11-22) */
+    @media (hover:hover){ body.m-ws #ss-map .pin:hover{transform:translate(-50%,-100%) scale(1.1); z-index:4;} }
     /* #map 自己往下 1px 又有 1px 框:扣回來,＋／− 才會剛好在日曆鈕下 77、同一條中線 */
     body.member-ui #map .mapzoom.ds-zoom{margin:-2px -1px 0 0;}
     body.member-ui .map .mapzoom.ds-zoom button{width:auto; height:auto; border:0; background:none; border-radius:var(--ds-comp-btn-icon-xs-radius);}
@@ -4909,6 +4926,7 @@
           (Math.max.apply(null, ys) - Math.min.apply(null, ys)) * TILE <= vh - 40) break;
     }
     const xs = lons.map(lo => projX(lo, z)), ys = lats.map(la => projY(la, z));
+    box._atCity = false;   /* 換了畫面就不是「在城市」了(房子鈕再出現);ssHome／一進來在城市時自己再設回來 */
     /* 看得到的那一塊的中心在元素中心往下 (top - bot)/2 的地方 */
     box._v = { z: z, cx: (Math.max.apply(null, xs) + Math.min.apply(null, xs)) / 2,
                cy: (Math.max.apply(null, ys) + Math.min.apply(null, ys)) / 2 - (c.top - c.bot) / 2 / TILE };
@@ -4926,6 +4944,7 @@
     }
     const cv = cityView().split(",").map(Number);
     ssFit(box, [cv[0], cv[2]], [cv[1], cv[3]], Z_MAX, true);
+    box._atCity = true;
   }
 
   function openSeekScreen(id) {
@@ -4944,7 +4963,8 @@
     box._hitPts = []; box._focus = null;
     ssPaintPts(box);
     /* 搜到的點:選起來。已排行程的點:只是把名字亮出來看是哪一個,不能選(要的是新地點) */
-    box._onPin = k => { if (k[0] === "h") ssSelect(+k.slice(1), true); else { box._focus = k; paintMap(box); } };
+    box._onPin = k => { if (k[0] === "h") ssSelect(+k.slice(1), true); else if (k === "c") ssHome(box); else { box._focus = k; paintMap(box); } };
+    box._atCity = false;
     box._onMove = ssUserMoved;
     ssStartView(box);
     paintMap(box);
@@ -4990,8 +5010,21 @@
     }));
     return out;
   }
+  /* 搜尋時設定的城市:一顆 secondary＋房子的點(Figma 162205:34156),房子鈕就是回到它 */
+  function ssCityPt() {
+    if (!document.body.classList.contains("m-ws") || !hasCity()) return [];
+    const name = (trip && trip.city) || "";
+    return [{ k: "c", n: "", la: CITY.lat, lo: CITY.lon, title: name, place: name, tip: name }];
+  }
+  /* 房子(許願搜尋):回到設定城市的範圍,以城市那顆點為中心;到了就把房子收起來,使用者一動地圖再出現 */
+  function ssHome(box) {
+    const cv = cityView().split(",").map(Number);
+    ssFit(box, [cv[0], cv[2]], [cv[1], cv[3]], Z_MAX, false);
+    box._atCity = true;
+    glide(box);
+  }
   function ssPaintPts(box) {
-    box._pts = (ssAll ? ssPlanPts() : []).concat(box._hitPts || []);
+    box._pts = (ssAll ? ssPlanPts() : []).concat(ssCityPt(), box._hitPts || []);
     if (box._focus && !box._pts.some(p => p.k === box._focus)) box._focus = ssSel >= 0 ? "h" + ssSel : null;
     el("ss-all").setAttribute("aria-pressed", String(ssAll));
   }
@@ -5040,6 +5073,8 @@
   }
   function ssUserMoved() {
     ssMoved = true;
+    const box = ssMap();
+    if (box._atCity) { box._atCity = false; paintMap(box); }
     paintSeekBtn(SS);
     ssFilter();
     /* 新外框:每一次手動拖、縮放都要再出現「搜地圖內的範圍」(Lulu 11-22),不管上一次按過、還是剛顯示過找不到 */
@@ -6315,16 +6350,19 @@
         '" title="' + esc(p.tip) + '">' + (mPins(box)
           /* 一般團員的新外框:Figma 的 pin set(名字泡泡＋白色水滴＋塗鴉底編號);選到的那個用大的。願望是 dot、沒有編號 */
           ? DS.pinSetHTML({ size: p.k === box._focus ? "lg" : "sm", label: (p.ap ? "約 " : "") + p.title, number: p.n,
-              color: p.cn || 8, state: p.cls === "plan" || p.k[0] === "h" || p.k[0] === "g" ? "default" : "dot" })
+              color: p.cn || 8,
+              /* 搜尋結果(h 一般搜尋、g Google 那一家)= primary(Figma 162214:35999);設定的城市 = secondary＋房子(162205:34156) */
+              state: p.k[0] === "h" || p.k[0] === "g" ? "primary" : p.k === "c" ? "icon" : p.cls === "plan" ? "default" : "dot" })
           : esc(p.n) + '<span class="lab">' + esc((p.ap ? "約 " : "") + p.title) + "</span>") + "</a>";
     });
     html += "</div>";
-    /* ＋／−／重新定位:新外框用 Storybook 的 Button(White、Icon Filled、xs),Figma map control(162672:41289)是三顆白色小圓鈕,
-       第三顆 place = 回到看得到全部點的畫面 */
+    /* ＋／−／房子:新外框用 Storybook 的 Button(White、Icon Filled、xs),Figma map control(162672:41289)是三顆白色小圓鈕、間距 16。
+       房子(Lulu 11-22):許願搜尋裡 = 回到設定的城市(以城市那顆點為中心);其他地圖 = 回到看得到全部點的畫面。
+       搜尋時已經在城市的畫面就不放房子(Figma 162205:34156 只有 ＋／−) */
     html += mPins(box)
       ? '<div class="mapzoom ds-zoom">' + DS.buttonHTML({ label: "\u653e\u5927", color: "white", variant: "icon", size: "xs" }).replace("<button ", '<button data-zoom="1" ') +
         DS.buttonHTML({ label: "\u7e2e\u5c0f", color: "white", variant: "icon", size: "xs", icon: M_MINUS }).replace("<button ", '<button data-zoom="-1" ') +
-        DS.buttonHTML({ label: "重新定位", color: "white", variant: "icon", size: "xs", icon: DS.PLACE || M_MINUS }).replace("<button ", '<button data-fit="1" ') + "</div>"
+        (box.id === "ss-map" && box._atCity ? "" : DS.buttonHTML({ label: box.id === "ss-map" ? "回到" + ((trip && trip.city) || "城市") : "看全部的點", color: "white", variant: "icon", size: "xs", icon: DS.HOME || DS.PLACE || M_MINUS }).replace("<button ", '<button data-fit="1" ')) + "</div>"
       : '<div class="mapzoom"><button type="button" data-zoom="1" aria-label="\u653e\u5927">+</button>' +
         '<button type="button" data-zoom="-1" aria-label="\u7e2e\u5c0f">\u2212</button></div>';
     /* OSM 的圖磚要求標示出處 */
@@ -6333,6 +6371,34 @@
     box._ref = { z: v.z, cx: v.cx, cy: v.cy };
     box.querySelector(".layer")._ref = box._ref;
     layoutLabels(box);
+    if (mPins(box)) mPlaceZoom(box);
+  }
+  /* 地圖控制鈕組的位置(Figma 162672:41289 annotation):「永遠在地圖『可視範圍』的水平正中間」——
+     地圖上緣到下面蓋住地圖的那一塊(面板／許願牆／細節卡／搜尋結果卡)上緣,兩者的正中間(Figma 162205:33620:0～844 → 中心 422)。
+     不能壓到日曆鈕:最高只到日曆鈕下 16;也不能掉進下面那一塊。拖面板時跟著動 */
+  function mPlaceZoom(box) {
+    if (!box || !mPins(box)) return;
+    const z = box.querySelector(".mapzoom.ds-zoom"), r = box.getBoundingClientRect();
+    if (!z || !r.height) return;
+    const vis = e => {
+      if (!e || e.hidden) return null;
+      const c = getComputedStyle(e);
+      if (c.display === "none" || c.visibility === "hidden") return null;
+      const b = e.getBoundingClientRect();
+      return b.height ? b : null;
+    };
+    const ss = box.id === "ss-map";
+    const covers = ss ? ["#m-ss-card", "#m-ss-sheet", "#ss-q-out.m-show-uikit"]
+      : mDetail ? ["#m-detail-card"] : state.tab === "wish" ? ["#m-wish-box .ds-sheet"] : ["#m-sheet-box .ds-sheet"];
+    let bot = r.bottom;
+    covers.forEach(q => { const b = vis(document.querySelector(q)); if (b && b.top > r.top && b.top < bot) bot = b.top; });
+    const cal = vis(el(ss ? "m-ss-cal" : "m-cal"));
+    const lim = cal ? cal.bottom + 16 : r.top + 16;
+    const zh = z.offsetHeight;
+    let t = (r.top + bot) / 2 - zh / 2;
+    t = Math.max(lim, Math.min(t, bot - zh - 16));
+    box.style.setProperty("--m-zoom-top", Math.round(t - r.top) + "px");
+    box.classList.add("m-zoom-placed");
   }
 
   /* 重新定位(Figma map control 的 place,Lulu 11-22「回到看得到全部點的畫面」):地圖上現在畫著的點全部框進
@@ -6342,6 +6408,7 @@
     const pts = (box._pts || []).filter(p => isFinite(p.la) && isFinite(p.lo));
     if (!pts.length || !box._v) return;
     const lons = pts.map(p => p.lo), lats = pts.map(p => p.la);
+    if (box.id === "ss-map" && document.body.classList.contains("m-ws") && hasCity()) { ssHome(box); return; }
     if (box.id === "ss-map") { ssFit(box, lons, lats, pts.length > 1 ? 16 : 15, false); glide(box); return; }
     const r = box.getBoundingClientRect(), w = box.clientWidth, h = box.clientHeight;
     const under = sel => { const e = document.querySelector(sel); if (!e || !e.offsetParent && getComputedStyle(e).position !== "fixed") return null; const b = e.getBoundingClientRect(); return b.height ? b : null; };
@@ -6369,6 +6436,11 @@
   function mPins(box) {
     return !!DS && document.body.classList.contains("member-ui") && (box.id === "map" || (box.id === "ss-map" && document.body.classList.contains("m-ws")));
   }
+  /* 拖面板、許願牆、換畫面大小 → 控制鈕組重新對到看得到的那一塊的中間 */
+  document.addEventListener("ds-sheet-move", () => { const m = el("map"); if (m && mPins(m)) mPlaceZoom(m); });
+  /* 停好一段時面板還在動畫(.32s),量到的是起點 → 動畫走完再對一次 */
+  document.addEventListener("ds-sheet-snap", () => setTimeout(() => { const m = el("map"); if (m && mPins(m)) mPlaceZoom(m); }, 340));
+  window.addEventListener("resize", () => { [el("map"), el("ss-map")].forEach(b => { if (b && mPins(b)) mPlaceZoom(b); }); });
   var M_MINUS = '<svg class="ds-btn__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 13H5V11H19V13Z"/></svg>';
   /* 標籤會互相蓋住。照優先序一個一個放:願望／當天行程先,已排的背景點後。
      位置被佔走就改放到標記下面,下面也被佔走就先藏起來 ——
@@ -7523,8 +7595,18 @@
      下面一張景點卡:照片(最多 6 張)、名稱、地點(點了開 Google 地圖)、地點資料、有人許願有留言才有的許願區。 */
   let mDetail = null;
   /* 細節卡疊的是哪一串:行程(那一天的行程)或願望(許願牆的順序) */
-  const mDetailList = () => !mDetail ? [] : mDetail.kind === "wish" ? wishOrder() : dayList(mDetail.day);
-  const mDetailKey = i => !mDetail ? null : mDetail.kind === "wish" ? "w" + i : stopKey(mDetail.day, i);
+  /* 願望細節那一排的順序在打開時就定住(Lulu 11-22「按喜歡小卡的位置不要變」):許願牆照喜歡數排序,
+     按了喜歡順序會變,這一排不跟著換。新加的願望接在最後面 */
+  function mWishFrozen() {
+    const all = wishOrder();
+    if (!mDetail.order) mDetail.order = all.map(w => w.id);
+    const out = mDetail.order.map(id => all.find(w => w.id === id)).filter(Boolean);
+    all.forEach(w => { if (out.indexOf(w) < 0) out.push(w); });
+    return out;
+  }
+  const mDetailList = () => !mDetail ? [] : mDetail.kind === "wish" ? mWishFrozen() : dayList(mDetail.day);
+  /* 地圖上願望的點照 wishOrder 編 key,這一排的順序是定住的 → 用那一個願望去找它現在的 key */
+  const mDetailKey = i => !mDetail ? null : mDetail.kind === "wish" ? "w" + wishOrder().indexOf(mDetailList()[i]) : stopKey(mDetail.day, i);
   /* key:時間軸的 key(行程 id,或沒有 id 時 "a"+順序),或地圖上的點(d<順序>／p<日期>-<順序>) */
   function mStopOf(key) {
     let m = /^d(\d+)$/.exec(key);
@@ -7760,9 +7842,9 @@
   /* ===== 許願頁(第三步) ===== */
   let mWishSheet = null;
   /* 許願牆的三段,高度都從螢幕底往上算(露出來多高):
-     - 下拉(Figma 162264:33359,「這區在畫面最底部」):把手 40 ＋ 最高那張卡 ＋ 底下 16,貼著螢幕最底,沒有底部導覽
+     - 下拉(Figma 162264:33359,「這區在畫面最底部」):上 16 ＋ 最高那張卡 ＋ 底下 16,貼著螢幕最底,沒有底部導覽、沒有把手(右上 ✕)
      - 預設(161950:14100):450/844(394→844,跟行程面板一樣照 844 等比),在底部導覽後面
-     - 上拉(Lulu 11-22):牆高 = 把手 40 ＋ 兩張疊起來最高的那一欄 ＋ 底下 24,下緣緊貼底部導覽;不一定撐滿整個畫面。
+     - 上拉(Lulu 11-22):牆高 = 上 24 ＋ 兩張疊起來最高的那一欄 ＋ 底下 24,下緣緊貼底部導覽;不一定撐滿整個畫面;沒有把手(右上 ✕)。
        卡片多到放不下才停在狀態列下面、在把手下面捲(m-wish-scroll) */
   const M_WB_GAP = 16;   /* 卡距 spacing/2xl */
   function mWishSnaps() {
@@ -7781,10 +7863,32 @@
       const e = wall && wall.querySelector(".ds-wboard");
       tallest = colH = e ? e.offsetHeight : 0;
     }
-    const min = 40 + tallest + 16, def = Math.round(H * 450 / 844);
-    const hug = el("m-nav").offsetHeight + 40 + colH + 24, cap = H - mSafeTop();
+    /* 下拉:上 16 ＋ 最高那張 ＋ 下 16(Figma 162264:33359 內距 16);上拉:上 24 ＋ 最高那一欄 ＋ 下 24(162182:13525 內距 24),坐在底部導覽上 */
+    const min = 16 + tallest + 16, def = Math.round(H * 450 / 844);
+    const hug = el("m-nav").offsetHeight + 24 + colH + 24, cap = H - mSafeTop() - 24;
     document.body.classList.toggle("m-wish-scroll", hug > cap);
     return [min, def, Math.max(def + 1, Math.min(hug, cap))];
+  }
+  /* FLIP:先記每張卡在哪、換排法、再從舊位置用 transform 滑到新位置(跟面板同一條 ease、.32s) */
+  function mWishFlip(change) {
+    const cards = [].slice.call(el("m-wall").querySelectorAll(".ds-wcard"));
+    const before = cards.map(c => c.getBoundingClientRect());
+    change();
+    if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const moved = [];
+    cards.forEach((c, i) => {
+      const a = c.getBoundingClientRect(), dx = before[i].left - a.left, dy = before[i].top - a.top;
+      if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
+      c.style.transition = "none";
+      c.style.transform = "translate(" + dx + "px," + dy + "px)";
+      moved.push(c);
+    });
+    if (!moved.length) return;
+    void el("m-wall").offsetWidth;
+    requestAnimationFrame(() => {
+      moved.forEach(c => { c.style.transition = "transform .32s cubic-bezier(.25,1,.5,1)"; c.style.transform = ""; });
+      setTimeout(() => moved.forEach(c => { c.style.transition = ""; }), 400);
+    });
   }
   /* 卡片高度變了(字體晚到、換了卡片)→ 三段重算;沒變就不動,不打斷正在跑的動畫 */
   let mWishKey = "";
@@ -7840,9 +7944,18 @@
     if (!mWishSheet) {
       el("m-wish-box").innerHTML = DS.bottomSheetHTML({ content: '<div id="m-wall"></div>', label: "許願牆", bare: true });
       mWishSheet = DS.wireBottomSheet(el("m-wish-box").querySelector(".ds-sheet"), { snaps: mWishSnaps, at: 1, scroller: ".ds-sheet__body" });
+      /* ✕(上拉、下拉才有):回到預設那一段 */
+      el("m-wish-box").querySelector(".ds-sheet").insertAdjacentHTML("afterbegin", '<div id="m-wb-close">' + DS.scrimButtonHTML({ icon: "cross", size: "md", color: "scrim", label: "收回許願牆" }) + "</div>");
+      el("m-wb-close").addEventListener("click", () => mWishSheet.snapTo(1));
+      el("m-wb-close").addEventListener("pointerdown", e => e.stopPropagation());
       el("m-wish-box").addEventListener("ds-sheet-snap", e => {
-        document.body.classList.toggle("m-wish-min", e.detail.index === 0);
-        document.body.classList.toggle("m-wish-max", e.detail.index === mWishSnaps().length - 1);
+        const min = e.detail.index === 0;
+        const go = () => {
+          document.body.classList.toggle("m-wish-min", min);
+          document.body.classList.toggle("m-wish-max", e.detail.index === mWishSnaps().length - 1);
+        };
+        /* 兩排 ↔ 一整排:卡片從原本的位置滑到新位置(Lulu 11-22「下滑變整排也是用位移漸變」) */
+        if (min !== document.body.classList.contains("m-wish-min")) mWishFlip(go); else go();
       });
       el("m-wish-box").addEventListener("ds-sheet-move", e => mWishIris(e.detail.shown));
       if (typeof ResizeObserver === "function") new ResizeObserver(mWishRefit).observe(el("m-wall"));
@@ -7878,7 +7991,12 @@
   function mAfterWishes() {
     if (!DS || !document.body.classList.contains("member-ui")) return;
     mRenderWish();
-    if (mDetail && mDetail.kind === "wish") mPaintDetail(null, true);
+    if (mDetail && mDetail.kind === "wish") {
+      mPaintDetail(null, true);
+      /* 按了喜歡,地圖上願望的編號(順序)會變:聚焦的點跟著那一個願望走 */
+      const m = el("map"), k = mDetailKey(mDetail.i);
+      if (m && m._focus && m._focus[0] === "w" && m._focus !== k) { m._focus = k; paintMap(m); }
+    }
   }
   /* 許願卡細節(Figma 162172:19819):跟當日細節同一張景點卡,點許願牆的卡片或地圖上的願望點進來;往下滑是下一個願望 */
   function mOpenWish(id) {
@@ -7947,7 +8065,13 @@
         const px = e.target.closest("[data-proxy]");
         if (px) { const t = document.querySelector(px.dataset.proxy); if (t) t.click(); return; }
         if (e.target.closest(".ds-text-field__btn")) { mWsStrong(); return; }
-        if (e.target.closest("#m-ss-cal .ds-scrim-btn")) { el("ss-all").click(); mWsCal(); }
+        if (e.target.closest("#m-ss-cal .ds-scrim-btn")) {
+          el("ss-all").click(); mWsCal();
+          /* 打開:畫面拉到看得到已排的行程(連同搜到的點)。搜完常常放大在結果上,已排的點都在畫面外,
+             看起來像沒出現(Lulu 11-22「點日曆很像沒有看到出現目前已排行程」) */
+          const box = ssMap(), pts = ssAll ? (box._pts || []).filter(p => p.k !== "c" && isFinite(p.la) && isFinite(p.lo)) : [];
+          if (pts.some(p => p.cls === "plan")) { ssFit(box, pts.map(p => p.lo), pts.map(p => p.la), 16, false); glide(box); }
+        }
       });
       mWireWsCard(el("m-ss-card"));
       root.addEventListener("ds-text-area-cancel", () => {
@@ -8031,6 +8155,11 @@
     const typed = el(SS).value.trim();
     let content;
     if (mWsTab === "hot") {
+      /* 點分頁籤算「點在提示外面」,原本的清單會被 sugHide 清掉 → 切到「不指定地點」再切回來就空了(Lulu 11-22「熱門地點會消失」)。
+         同一串字的清單留一份,清掉了就拿回來 */
+      if ((sugItems || []).length) box._sug = { typed, items: sugItems };
+      else if (box._sug && box._sug.typed === typed) sugItems = box._sug.items;
+      else if (typed) sugItems = sugList(typed);
       content = '<div class="m-ss-list">' + (sugItems || []).map((it, i) => DS.searchItemHTML({
         photo: it.type === "p" && it.p.ph ? commonsImg(it.p.ph, 96) : "",
         icon: it.type === "h" ? "history" : it.type === "p" ? "place" : "search",
@@ -8097,6 +8226,7 @@
       card.scrollTop = 0;
     }
     if (!r) { card.dataset.at = ""; mWsCardState(""); }
+    requestAnimationFrame(() => mPlaceZoom(ssMap()));
   }
   /* 結果卡的三種樣子:""=收著、"open"=往上滑展開、打留言時另外加 m-ws-typing(鍵盤收起來就回到原本那一種) */
   function mWsCardState(st) {

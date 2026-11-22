@@ -73,6 +73,27 @@
   height: 35.71%;
   fill: var(--ds-sys-color-on-primary);
 }
+/* primary：搜尋結果的點（Figma 162214:35999）：塗鴉底 primary × 80%（comp/pin/badge/opacity）、號碼 on primary */
+.ds-pin-badge--primary {
+  --pin-color: var(--ds-sys-color-primary);
+}
+.ds-pin-badge--primary .ds-pin-badge__num {
+  color: var(--ds-sys-color-on-primary);
+}
+/* icon：設定的城市（Figma 162205:34156）：塗鴉底 secondary 不透明、中間 home 16（text inverse 100、Elevation/text/xs） */
+.ds-pin-badge--icon {
+  --pin-color: var(--ds-sys-color-secondary);
+}
+.ds-pin-badge--icon .ds-pin-badge__bg {
+  opacity: 1;
+}
+.ds-pin-badge__icon {
+  position: relative;
+  width: 16px;
+  height: 16px;
+  fill: var(--ds-sys-color-text-inverse-100);
+  filter: drop-shadow(0 0.5px 0.75px rgb(0 0 0 / 0.48));
+}
 /* focuse：外面一圈手繪圈（Figma 36 的圓、往外 4，Dynamic stroke 照 Figma 畫出來的那條） */
 .ds-pin-badge__ring {
   position: absolute;

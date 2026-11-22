@@ -3,7 +3,7 @@ import { pinBadgeHTML, pinLabelHTML, pinHTML, pinSetHTML, pinTimelineHTML } from
 
 const USAGE = `import { pinBadgeHTML, pinLabelHTML, pinHTML, pinSetHTML, pinTimelineHTML } from "./components/location-pin.js";
 
-pinBadgeHTML({ number: 1, color: 8, state: "default" }); // state: default | dot | not-on-map | focus
+pinBadgeHTML({ number: 1, color: 8, state: "default" }); // state: default | dot | not-on-map | focus | primary | icon
 pinLabelHTML({ text: "淺草寺", focus: false });
 pinHTML({ size: "sm", number: 1, color: 8 });           // size: sm | lg
 pinSetHTML({ size: "lg", label: "淺草寺", number: 1 });   // 名字 + pin
@@ -25,6 +25,8 @@ export const 全部 = {
 <tr><td class="nm">Default</td><td class="lp-cell">${pinBadgeHTML()}</td><td class="al">塗鴉底 <code class="var">custom N</code> × <code class="var">--ds-comp-pin-badge-opacity</code>（80%），號碼 label/md/semi-bold、文字陰影 Elevation/text/xs</td></tr>
 <tr><td class="nm">dot</td><td class="lp-cell">${pinBadgeHTML({ state: "dot" })}</td><td class="al">primary 實心塗鴉，中間一顆 <code class="var">on primary</code> 小塗鴉，沒有號碼</td></tr>
 <tr><td class="nm">not on map</td><td class="lp-cell">${pinBadgeHTML({ state: "not-on-map", number: 12 })}</td><td class="al">不在地圖上：塗鴉底換成 <code class="var">on disable</code></td></tr>
+<tr><td class="nm">primary</td><td class="lp-cell">${pinBadgeHTML({ state: "primary", number: 1 })}</td><td class="al">搜尋結果的點（162214:35999）：塗鴉底 <code class="var">primary</code> 80%、號碼 <code class="var">on primary</code></td></tr>
+<tr><td class="nm">icon</td><td class="lp-cell">${pinBadgeHTML({ state: "icon" })}</td><td class="al">搜尋時設定的城市（162205:34156）：塗鴉底 <code class="var">secondary</code>、中間白色 home</td></tr>
 <tr><td class="nm">focuse</td><td class="lp-cell">${pinBadgeHTML({ state: "focus" })}</td><td class="al">外面一圈手繪圈（<code class="var">outline 300</code>、<code class="var">--ds-comp-pin-focus-ring-width</code>）</td></tr>
 </tbody></table>
 <p class="note">塗鴉底的顏色照 Figma 用 <code class="var">custom 8</code>；<code>color</code> 可以換成別的編號（對應 <code class="var">sys/color/customs/custom N</code>）。</p>

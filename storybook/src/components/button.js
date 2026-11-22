@@ -5,8 +5,10 @@ import { faSVG } from "../fa.js";
 // Figma 的 add（161119:8832），改成吃 currentColor，顏色跟著文字走
 export const ADD = `<svg class="ds-btn__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 13H13V19H11V13H5V11H11V5H13V11H19V13Z"/></svg>`;
 
-// 重新定位（Figma map control 162672:41289 的 place）：Trippps 還沒有這顆 icon，先用 Font Awesome 的 location-dot（Lulu 11-21）
+// 重新定位（Figma map control 162672:41289 的 place）：舊的 Font Awesome location-dot，留著相容
 export const PLACE = faSVG(faLocationDot, "ds-btn__icon");
+// 回到原點（Figma map control 162672:41289 第三顆，Lulu 11-22 改成房子）：Figma「home」161193:10356，填色 secondary
+export const HOME = `<svg class="ds-btn__icon" viewBox="0 0 16 16" aria-hidden="true"><path style="fill:var(--ds-sys-color-secondary)" d="M6.66634 13.3333V9.33333H9.33301V13.3333H12.6663V8H14.6663L7.99967 2L1.33301 8H3.33301V13.3333H6.66634Z"/></svg>`;
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 

@@ -3,12 +3,17 @@ import "./divider.css";
 import { dividerDotHTML } from "./divider.js";
 import { BADGE_BG, DOT_MARK, FOCUS_RING, PIN_S, PIN_L } from "./location-pin-shapes.js";
 
+// Figma「home」（161193:10356）
+export const HOME = "M6.66634 13.3333V9.33333H9.33301V13.3333H12.6663V8H14.6663L7.99967 2L1.33301 8H3.33301V13.3333H6.66634Z";
+
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 
 /**
  * badge（Figma pin/draw）
  * number：號碼；color：1–14，對應 sys/color/customs/custom N（預設 8，照 Figma Default）
- * state：「default」|「dot」|「not-on-map」|「focus」；size：「sm」(28) |「lg」(51)
+ * state：「default」|「dot」|「not-on-map」|「focus」|「primary」|「icon」；size：「sm」(28) |「lg」(51)
+ *   primary：搜尋結果的點（Figma 162214:35999）—— 塗鴉底 primary 80%、號碼 on primary
+ *   icon：搜尋時這一團設定的城市（Figma 162205:34156 pin/draw Property 1=icon）—— 塗鴉底 secondary、中間白色房子 16，沒有號碼
  */
 export function pinBadgeHTML({ number = 1, color = 8, state = "default", size = "sm" } = {}) {
   const cls = ["ds-pin-badge"];
@@ -18,7 +23,9 @@ export function pinBadgeHTML({ number = 1, color = 8, state = "default", size = 
   const ring = state === "focus" ? `<svg class="ds-pin-badge__ring" viewBox="0 0 36 36" aria-hidden="true"><path d="${FOCUS_RING}"/></svg>` : "";
   const inner = state === "dot"
     ? `<svg class="ds-pin-badge__dot" viewBox="0 0 10 10" aria-hidden="true"><path d="${DOT_MARK}"/></svg>`
-    : `<span class="ds-pin-badge__num">${esc(number)}</span>`;
+    : state === "icon"
+      ? `<svg class="ds-pin-badge__icon" viewBox="0 0 16 16" aria-hidden="true"><path d="${HOME}"/></svg>`
+      : `<span class="ds-pin-badge__num">${esc(number)}</span>`;
   return `<span class="${cls.join(" ")}"${style}>${ring}<svg class="ds-pin-badge__bg" viewBox="0 0 25.15 24.95" preserveAspectRatio="none" aria-hidden="true"><path d="${BADGE_BG}"/></svg>${inner}</span>`;
 }
 
