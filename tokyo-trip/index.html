@@ -1677,6 +1677,11 @@
     #m-ended[hidden]{display:none;}
     #m-sheet-box{position:absolute; left:0; right:0; top:0; bottom:0; pointer-events:none; overflow:hidden;}
     #m-sheet-box .ds-sheet{pointer-events:auto;}
+    /* 行程頁面板拉到最大:面板和上面的標題區塊四個角都變直角(Lulu 11-22),跟著面板同一條 ease 漸變 */
+    #m-sheet-box .ds-sheet, #m-head .ds-trip-header{transition:border-radius .32s cubic-bezier(.25,1,.5,1);}
+    #m-sheet-box .ds-sheet.is-animating{transition:transform .32s cubic-bezier(.25,1,.5,1), border-radius .32s cubic-bezier(.25,1,.5,1);}
+    body.member-ui[data-view="plan"].m-sheet-max:not(.m-in-detail) #m-sheet-box .ds-sheet,
+    body.member-ui[data-view="plan"].m-sheet-max:not(.m-in-detail) #m-head .ds-trip-header{border-radius:0;}
     #m-scroll{flex:1 1 auto; min-height:0; overflow-y:auto; overscroll-behavior:contain;
       padding:0 var(--ds-sys-spacing-4xl) calc(var(--m-navh,113px) + 12px);} /* Figma timeline scroll area 左右 24 */
     #m-days{flex:none;}
