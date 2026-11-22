@@ -7415,6 +7415,12 @@
         /* 拉到最高:地圖前面的面板正在用,日曆鈕和 ＋／− 收起來(Figma 162182:13499) */
         document.body.classList.toggle("m-sheet-max", e.detail.index === mSnaps().length - 1);
       });
+      /* 行程頁一樣:面板在中間那一段時拖、捏地圖 → 面板縮到最低,把地圖讓出來(Lulu 11-23) */
+      document.addEventListener("m-map-drag", e => {
+        const sh = el("m-sheet-box").querySelector(".ds-sheet");
+        if (e.target.id !== "map" || state.tab !== "plan" || mMe || mDetail || !sh || !sh.offsetParent || mSheet.index() !== 1) return;
+        mSheet.snapTo(0);
+      });
       wireMemberShell();
       mWatchHead();
     } else {
@@ -7873,7 +7879,8 @@
      - 預設(161950:14100):450/844(394→844,跟行程面板一樣照 844 等比),在底部導覽後面
      - 上拉(Lulu 11-22):牆高 = 上 24 ＋ 兩張疊起來最高的那一欄 ＋ 底下 24,下緣緊貼底部導覽;不一定撐滿整個畫面;沒有把手(右上 ✕)。
        卡片多到放不下才停在狀態列下面、在把手下面捲(m-wish-scroll) */
-  const M_WB_GAP = 16;   /* 卡距 spacing/2xl */
+  const M_WB_GAP = 16;
+  let mWishColH = 0;   /* 卡距 spacing/2xl */
   function mWishSnaps() {
     const H = window.innerHeight, wall = el("m-wall");
     const cards = wall ? [].slice.call(wall.querySelectorAll(".ds-wcard")) : [];
@@ -7889,12 +7896,18 @@
         return h;
       };
       cards.forEach(c => { tallest = Math.max(tallest, trimmed(c)); });
-      wall.querySelectorAll(".ds-wboard__col").forEach(col => {
-        const cs = col.querySelectorAll(".ds-wcard");
-        let h = (cs.length - 1) * M_WB_GAP;
-        cs.forEach(c => { h += c.offsetHeight; });
-        colH = Math.max(colH, h);
-      });
+      /* 上拉那一段要的是兩排「完整的卡」疊起來的高度;下拉時卡被裁短、拉成一樣高,量出來不準 →
+         沿用上次完整時量的。不然下拉之後三段會被改掉、面板在動畫途中被重新定位 → 變完抖一下(Lulu 11-23) */
+      if (document.body.classList.contains("m-wish-min") && mWishColH) colH = mWishColH;
+      else {
+        wall.querySelectorAll(".ds-wboard__col").forEach(col => {
+          const cs = col.querySelectorAll(".ds-wcard");
+          let h = (cs.length - 1) * M_WB_GAP;
+          cs.forEach(c => { h += c.offsetHeight; });
+          colH = Math.max(colH, h);
+        });
+        mWishColH = colH;
+      }
     } else {
       const e = wall && wall.querySelector(".ds-wboard");
       tallest = colH = e ? e.offsetHeight : 0;
@@ -7915,25 +7928,29 @@
     const sc = el("m-wall").querySelector(".ds-wboard"), mid = window.innerWidth / 2;
     let ai = -1, best = Infinity;
     before.forEach((r, i) => { const d = Math.abs(r.left + r.width / 2 - mid); if (r.right > 0 && r.left < window.innerWidth && d < best) { best = d; ai = i; } });
+    /* 把手那條(上內距)直接跳到新高度、不另外漸變:它是看不見的,卡片的位移已經把它算進去。
+       讓它自己漸變的話,卡片停好之後還會被它再推 6〜24px → 變完抖一下(Lulu 11-23 錄影) */
+    const head = el("m-wish-box").querySelector(".ds-sheet__header");
+    if (head) head.style.transition = "none";
     change();
     if (sc && ai >= 0) {
       sc.scrollLeft += cards[ai].getBoundingClientRect().left - before[ai].left;
       sc.scrollLeft = Math.max(0, Math.min(sc.scrollWidth - sc.clientWidth, sc.scrollLeft));
     }
+    const after = cards.map(c => c.getBoundingClientRect());
+    if (head) requestAnimationFrame(() => { head.style.transition = ""; });
     if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const moved = [];
+    /* Web Animations 的 transform:iPhone 交給 GPU 跑,不會因為同時在拖地圖就卡(Lulu 11-23「很卡」) */
     cards.forEach((c, i) => {
-      const a = c.getBoundingClientRect(), dx = before[i].left - a.left, dy = before[i].top - a.top;
-      if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
-      c.style.transition = "none";
-      c.style.transform = "translate(" + dx + "px," + dy + "px)";
-      moved.push(c);
-    });
-    if (!moved.length) return;
-    void el("m-wall").offsetWidth;
-    requestAnimationFrame(() => {
-      moved.forEach(c => { c.style.transition = "transform .32s cubic-bezier(.25,1,.5,1)"; c.style.transform = ""; });
-      setTimeout(() => moved.forEach(c => { c.style.transition = ""; }), 400);
+      const dx = before[i].left - after[i].left, dy = before[i].top - after[i].top;
+      const onScreen = (before[i].right > 0 && before[i].left < window.innerWidth) || (after[i].right > 0 && after[i].left < window.innerWidth);
+      if ((Math.abs(dx) < 1 && Math.abs(dy) < 1) || !onScreen || !c.animate) return;
+      if (c._flip) c._flip.cancel();
+      c._flip = c.animate([{ transform: "translate(" + dx + "px," + dy + "px)" }, { transform: "none" }],
+        { duration: 320, easing: "cubic-bezier(.25,1,.5,1)" });
+      /* 下拉→兩排:留言、許願人跟著淡進來,不要突然冒出來 */
+      const extra = c.querySelectorAll(".ds-wcard__wish, .ds-wcard__wiki");
+      if (!document.body.classList.contains("m-wish-min")) extra.forEach(x => x.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 320, easing: "ease" }));
     });
   }
   /* 卡片高度變了(字體晚到、換了卡片)→ 三段重算;沒變就不動,不打斷正在跑的動畫 */
