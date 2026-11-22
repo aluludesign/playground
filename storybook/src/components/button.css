@@ -117,7 +117,7 @@
 /* ---------- 樣式 ---------- */
 .ds-btn--outlined,
 .ds-btn--icon-outlined {
-  --btn-bg: transparent;
+  --btn-bg: var(--ds-comp-btn-outlined-container); /* Figma：外框按鈕填 surface（11-22） */
   --btn-fg: var(--btn-c);
   --btn-layer: var(--btn-c);
   --btn-bw: var(--ds-sys-border-xs);
