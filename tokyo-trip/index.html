@@ -1740,7 +1740,9 @@
     #m-wish-box .ds-wboard__wall{padding-top:calc(var(--ds-sys-blur-lg) - var(--ds-foun-shadow-length-100));}
     /* 下拉(Figma 162264:33359):只剩一排卡片,一張接一張橫著排;內距 0/16/16/16、卡距 16,牆高 = 把手 40 ＋ 最高那張 ＋ 16 */
     body.m-wish-min #m-wish-box .ds-wboard__col{display:contents;}
-    body.m-wish-min #m-wish-box .ds-wboard__wall{align-items:flex-start; padding-left:var(--ds-sys-spacing-2xl); padding-right:var(--ds-sys-spacing-2xl);}
+    body.m-wish-min #m-wish-box .ds-wboard__wall{align-items:stretch; padding-left:var(--ds-sys-spacing-2xl); padding-right:var(--ds-sys-spacing-2xl);}
+    /* 下拉成一整排(Figma 162186:25406「排成一整排時看不到許願留言」):每張只剩標題＋照片／愛心,不顯示留言、許願人(Lulu 11-22),一律一樣高 */
+    body.m-wish-min #m-wish-box .ds-wcard__wish, body.m-wish-min #m-wish-box .ds-wcard__wiki{display:none;}
     /* 許願鈕:牆的上緣碰到它就淡出(.2s),牆下去再淡回來(Lulu 11-22「沒有淡出啊，是直接消失不見」) */
     #m-iris{transition:opacity .2s ease, visibility 0s;}
     body.m-iris-off #m-iris{opacity:0; visibility:hidden; pointer-events:none; transition:opacity .2s ease, visibility 0s .2s;}
@@ -7863,7 +7865,16 @@
     const cards = wall ? [].slice.call(wall.querySelectorAll(".ds-wcard")) : [];
     let tallest = 0, colH = 0;
     if (cards.length) {
-      cards.forEach(c => { tallest = Math.max(tallest, c.offsetHeight); });
+      /* 下拉那一段的高度用「拿掉留言、許願人之後」的卡算(下拉時不顯示它們) */
+      const trimmed = c => {
+        let h = c.offsetHeight;
+        c.querySelectorAll(".ds-wcard__wish, .ds-wcard__wiki").forEach(x => {
+          if (!x.offsetParent) return;
+          h -= x.offsetHeight + (parseFloat(getComputedStyle(x.parentNode).rowGap) || 0);
+        });
+        return h;
+      };
+      cards.forEach(c => { tallest = Math.max(tallest, trimmed(c)); });
       wall.querySelectorAll(".ds-wboard__col").forEach(col => {
         const cs = col.querySelectorAll(".ds-wcard");
         let h = (cs.length - 1) * M_WB_GAP;
