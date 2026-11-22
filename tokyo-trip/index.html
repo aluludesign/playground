@@ -6754,6 +6754,13 @@
       else if (pt.size === 2) { mode = "pinch"; from = mid(); }
     });
 
+    /* 手動拖、捏地圖(每一下只通知一次):給外面決定要不要讓位(例:許願牆預設高度 → 縮成一排) */
+    function mapDragged(b) {
+      if (b._dragSaid) return;
+      b._dragSaid = true;
+      b.dispatchEvent(new CustomEvent("m-map-drag", { bubbles: true }));
+    }
+    box.addEventListener("pointerdown", () => { box._dragSaid = false; }, true);
     box.addEventListener("pointermove", ev => {
       if (!pt.has(ev.pointerId) || !mode) return;
       pt.set(ev.pointerId, local(ev));
@@ -6762,11 +6769,13 @@
       if (mode === "pan") {
         const n = local(ev), dx = n.x - from.x, dy = panDy(n.y - from.y);
         moved = Math.max(moved, Math.abs(dx) + Math.abs(dy));
+        if (moved >= 6) mapDragged(box);
         L.style.transform = "translate(" + dx + "px," + dy + "px)";
       } else if (pt.size === 2) {
         /* 捏小也不能小過最小那一級(不然旁邊露出空白) */
         const m = mid(), s = Math.max(from.d ? m.d / from.d : 1, box._v ? Math.pow(2, zMin(box) - box._v.z) : 0);
         moved = 99;
+        mapDragged(box);
         L.style.transform = "translate(" + (m.x - from.x) + "px," + (m.y - from.y) + "px) " +
           "scale(" + s + ")";
         L.style.transformOrigin = from.x + "px " + from.y + "px";
@@ -7999,6 +8008,11 @@
         mWishIris(e.detail.shown);
         /* 拖離預設那一段:把手、底部導覽先收起來(上拉、下拉都沒有它們) */
         document.body.classList.toggle("m-wb-off", Math.abs(e.detail.shown - mWishSnaps()[1]) > 8);
+      });
+      /* 許願牆在預設高度時滑動地圖 → 牆自動縮成一排(Lulu 11-23),把地圖讓出來;跟拖的一樣用位移漸變 */
+      document.addEventListener("m-map-drag", e => {
+        if (e.target.id !== "map" || el("m-wish-box").hidden || mWishSheet.index() !== 1) return;
+        mWishSheet.snapTo(0);
       });
       if (typeof ResizeObserver === "function") new ResizeObserver(mWishRefit).observe(el("m-wall"));
       el("m-wall").addEventListener("ds-like", e => toggleVote(e.detail.key));
