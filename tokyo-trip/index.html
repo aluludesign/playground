@@ -7503,6 +7503,8 @@
   }
   function mPaintPhoto(at) {
     const p = mPhotoState;
+    /* 許願搜尋那一層不在 #m-shell 裡(疊在它上面):照片預覽放到最外層,哪一層點開都蓋得過去 */
+    if (el("m-photo").parentNode !== document.body) { el("m-photo").classList.add("ds-app"); document.body.appendChild(el("m-photo")); }
     el("m-photo").innerHTML = DS.photoPreviewHTML({ photos: p.pics, at, title: p.title,
       credit: p.credit ? "照片:維基共享資源" : "", creditURL: p.credit });
     DS.wirePhotoPreview(el("m-photo"), { count: p.pics.length });
@@ -7883,7 +7885,16 @@
   function mWishFlip(change) {
     const cards = [].slice.call(el("m-wall").querySelectorAll(".ds-wcard"));
     const before = cards.map(c => c.getBoundingClientRect());
+    /* 左右滑過之後再換排法:正在看的那張(最靠畫面中間)留在原本的左右位置,其他卡從它旁邊滑過來。
+       不自己對位的話,iPhone 會在下一格才把捲動位置夾回範圍內 → 看到的卡瞬間被換掉(Lulu 11-22 錄影) */
+    const sc = el("m-wall").querySelector(".ds-wboard"), mid = window.innerWidth / 2;
+    let ai = -1, best = Infinity;
+    before.forEach((r, i) => { const d = Math.abs(r.left + r.width / 2 - mid); if (r.right > 0 && r.left < window.innerWidth && d < best) { best = d; ai = i; } });
     change();
+    if (sc && ai >= 0) {
+      sc.scrollLeft += cards[ai].getBoundingClientRect().left - before[ai].left;
+      sc.scrollLeft = Math.max(0, Math.min(sc.scrollWidth - sc.clientWidth, sc.scrollLeft));
+    }
     if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const moved = [];
     cards.forEach((c, i) => {
@@ -8089,6 +8100,11 @@
         }
       });
       mWireWsCard(el("m-ss-card"));
+      /* 結果卡上的照片點了一樣放大(Lulu 11-22「搜尋結果有圖的細節卡上照片點了怎麼沒有放大」) */
+      el("m-ss-card").addEventListener("ds-card-photo", e => {
+        const out = seekBox(SS), r = ssSel >= 0 && out._hits ? out._hits[ssSel] : out._g || null;
+        if (r && r._wiki) mOpenPhotos({ photo: r._wiki, title: hitName(r) }, e.detail.index);
+      });
       el("m-ss-sheet").addEventListener("keydown", e => {
         const it = e.target.closest && e.target.closest("[data-m-sug]");
         if (!it || (e.key !== "ArrowDown" && e.key !== "ArrowUp")) return;
