@@ -1707,17 +1707,20 @@
     body.member-ui #panel-cost .sec-head h2{font-family:var(--ds-sys-font-family-headline); font-weight:900; font-size:var(--ds-sys-font-size-label-lg);
       letter-spacing:.05em; color:var(--ds-sys-color-text-100);}
     body.member-ui #panel-cost .sec-head .hint{font-family:var(--ds-sys-font-family-label); font-size:var(--ds-sys-font-size-label-sm); color:var(--ds-sys-color-text-200);}
-    /* 四格:2×2,每格自己一圈抖動框;外面那層是白底格紋＋陰影 */
-    body.member-ui #cost-stats{display:grid; grid-template-columns:1fr 1fr; gap:0; background:var(--ds-sys-pattern-bright-bg); border:0; overflow:visible;
-      border-radius:var(--ds-comp-menu-radius); box-shadow:var(--ds-elevation-surface-soft);}
-    body.member-ui #cost-stats .stat{background:none; border-radius:var(--ds-comp-menu-radius); padding:var(--ds-sys-spacing-3xl) 0;
+    /* 四格(Figma menu 162709:49933):外面那層沒有底,2×2、間距 8(spacing/md);每格是白底格紋＋深咖抖動框(outline 300、border/xs)、直角,
+       陰影 Elevation/surface/soft 掛在外面那層 → Figma 照每一格的形狀投影,所以這裡每格各自一個 */
+    body.member-ui #cost-stats{display:grid; grid-template-columns:1fr 1fr; gap:var(--ds-sys-spacing-md); background:none; border:0; border-radius:0; overflow:visible;}
+    body.member-ui #cost-stats .stat{border-radius:0; box-shadow:var(--ds-elevation-surface-soft); padding:var(--ds-sys-spacing-3xl) 0;
       display:flex; flex-direction:column; align-items:center; gap:var(--ds-sys-spacing-md); text-align:center; min-width:0;}
+    /* label/sm/regular:12、字框高 12 */
     body.member-ui #cost-stats .lb, body.member-ui #cost-stats .sb{margin:0; font-family:var(--ds-sys-font-family-label); font-size:var(--ds-sys-font-size-label-sm);
-      font-weight:400; letter-spacing:normal; line-height:1; color:var(--ds-sys-color-text-200);}
-    /* 金額:Body/lg/extra-bold,底下一條 primary 的抖動線(跟字一樣寬,左右多 4) */
+      font-weight:400; letter-spacing:.05em; line-height:12px; color:var(--ds-sys-color-text-200);}
+    /* 金額:Body/lg/extra-bold(20/22,源泉圓體 B = 700),左右內距 4;底下 divider 絕對定位在 y=21,線是 primary、border/md 2 */
     body.member-ui #cost-stats .vl{position:relative; margin:0; padding:0 var(--ds-sys-spacing-xs); font-family:var(--ds-sys-font-family-body);
-      font-size:var(--ds-sys-font-size-body-lg); font-weight:var(--ds-sys-font-weight-extra-bold); letter-spacing:normal; line-height:22px; color:var(--ds-sys-color-text-100);}
-    body.member-ui #cost-stats .vl .ds-divider{position:absolute; left:0; right:0; bottom:-1px; width:auto;}
+      font-size:var(--ds-sys-font-size-body-lg); font-weight:700; letter-spacing:.05em; line-height:22px; color:var(--ds-sys-color-text-100);}
+    body.member-ui #cost-stats .vl .ds-divider{position:absolute; left:0; right:0; top:21px; translate:0 -50%; width:auto; --wiggle-width:var(--ds-sys-border-md);}
+    /* 花費頁的頂列(Figma 162709:48793):直角、沒有陰影 —— 下面接著的是 bottom sheet,陰影由頁籤那張 sheet 投 */
+    body.member-ui[data-view="cost"] #m-head .ds-trip-header, body.member-ui[data-view="split"] #m-head .ds-trip-header{border-radius:0; box-shadow:none;}
     /* 分類佔比、每一筆:同一個 menu 樣子 */
     body.member-ui #panel-cost .card, body.member-ui #panel-cost .exp{background:var(--ds-sys-pattern-bright-bg); border:0;
       border-radius:var(--ds-comp-menu-radius); box-shadow:var(--ds-elevation-surface-soft);}
@@ -1733,9 +1736,9 @@
       letter-spacing:.04em; color:var(--ds-sys-color-text-200); margin:var(--ds-sys-spacing-3xl) 0 var(--ds-sys-spacing-md);}
     body.member-ui #panel-cost .datehead .num{font-family:var(--ds-sys-font-family-label); font-size:var(--ds-sys-font-size-label-md);}
     body.member-ui #panel-cost .datehead .rule{background:var(--ds-sys-color-outline-100);}
-    body.member-ui #panel-cost .exp .ti{font-family:var(--ds-sys-font-family-body); font-size:var(--ds-sys-font-size-body-sm); font-weight:var(--ds-sys-font-weight-semi-bold);
+    body.member-ui #panel-cost .exp .ti{font-family:var(--ds-sys-font-family-body); font-size:var(--ds-sys-font-size-body-sm); font-weight:500; /* Body/sm/semi-bold 是源泉圓體 M */
       color:var(--ds-sys-color-text-100);}
-    body.member-ui #panel-cost .exp .amt{font-family:var(--ds-sys-font-family-body); font-size:var(--ds-sys-font-size-body-sm); font-weight:var(--ds-sys-font-weight-extra-bold);
+    body.member-ui #panel-cost .exp .amt{font-family:var(--ds-sys-font-family-body); font-size:var(--ds-sys-font-size-body-sm); font-weight:700;
       color:var(--ds-sys-color-text-100);}
     body.member-ui #panel-cost .exp .amt .sub, body.member-ui #panel-cost .exp .mt{font-family:var(--ds-sys-font-family-label); font-size:var(--ds-sys-font-size-label-sm);
       color:var(--ds-sys-color-text-200);}
@@ -1781,7 +1784,10 @@
     /* 花費／分帳分頁(Figma 162709:49813):靠左,第一格從 12 開始;後面一整條格紋底,捲動的內容從底下過去不會露出來。
        格線位置對齊整頁的底(#m-bg),接起來看不出是兩塊 */
     #m-seg{position:absolute; left:0; right:0; z-index:3;}
-    #m-seg .m-segband{display:flex; justify-content:flex-start; padding:var(--ds-sys-spacing-xl) 0 0;}
+    /* Figma:後面是 bottom sheet(surface 格紋),上緣往下 12(spacing/xl)才是 segmented sheet(頁籤＋底,Elevation/surface/medium 照形狀投影)。
+       這裡只露出頁籤那一條:sheet 的底往下多畫一截再被這條裁掉,頁籤和底的上緣投在後面那層的陰影才會跟 Figma 一樣 */
+    #m-seg .m-segband{height:calc(var(--ds-sys-spacing-xl) + 38px); padding-top:var(--ds-sys-spacing-xl); overflow:hidden; box-sizing:border-box;}
+    #m-seg .ds-segmented-sheet__body{height:80px; flex:none;}
     #m-seg[hidden]{display:none;}
     /* 花費／分帳上面多一排分頁(要壓過上面那條 :not() 疊出來的權重) */
     body.member-ui[data-view="cost"]:not([data-view="plan"]) .wrap,
@@ -7305,7 +7311,7 @@
   function renderCost() {
     const dsOn = memberUI() && !!DS;
     el("panel-cost").classList.toggle("ds-app", dsOn);
-    const tile = !dsOn ? tileOld : (lb, vl, sb) => '<div class="stat ds-wiggle-border"><div class="lb">' + lb + '</div><div class="vl">' + vl +
+    const tile = !dsOn ? tileOld : (lb, vl, sb) => '<div class="stat"><div class="lb">' + lb + '</div><div class="vl">' + vl +
       DS.dividerWiggleHTML({ color: "primary" }) + '</div><div class="sb">' + sb + "</div></div>";
     const total = state.expenses.reduce((s, e) => s + toTWD(e), 0);
     const tripTotal = state.expenses.filter(e => e.date >= (trip && trip.start || "")).reduce((s, e) => s + toTWD(e), 0);
@@ -7356,8 +7362,7 @@
   function mDressCost(on) {
     if (!on) return;
     const p = el("panel-cost");
-    p.querySelectorAll("#cost-stats, .card, .exp").forEach(c => c.classList.add("ds-pattern", "ds-pattern--bright"));
-    p.querySelectorAll(".card, .exp").forEach(c => c.classList.add("ds-wiggle-border"));
+    p.querySelectorAll("#cost-stats .stat, .card, .exp").forEach(c => c.classList.add("ds-pattern", "ds-pattern--bright", "ds-wiggle-border"));
     DS.wireWiggle(p);
   }
 
@@ -7628,8 +7633,8 @@
     if (!costView) { el("m-seg")._html = null; el("m-seg")._penKey = null; }
     if (costView) {
       el("m-seg").style.top = headH + "px";
-      const segHTML = DS.segmentedHTML({
-        items: [{ key: "cost", label: "花費" }, { key: "split", label: "分帳" }], selected: state.tab, label: "花費或分帳",
+      const segHTML = DS.segmentedSheetHTML({
+        items: [{ key: "cost", label: "費用" }, { key: "split", label: "分帳" }], selected: state.tab, label: "費用或分帳",
       });
       if (el("m-seg")._html !== segHTML) {
         el("m-seg").innerHTML = '<div class="m-segband ds-pattern">' + segHTML + "</div>"; el("m-seg")._html = segHTML;
