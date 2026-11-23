@@ -5055,7 +5055,32 @@
     const box = ssMap();
     ssPaintPts(box);
     paintMap(box);
+    if (ssAll) ssFillPlan(true);
   });
+  /* 打開日曆:還沒查過座標的行程(這支手機沒打開過那一天的地圖)一筆一筆查,查到就補畫上去。
+     原本只畫「已經有座標的」,結果有排行程、日曆打開卻一顆都沒有(Lulu 11-23「日曆打開沒看到行程pin」)。
+     查的是行程頁地圖本來就會查的同一份(pinForItem,查到存在這支手機),搜尋按下去時排在它後面也只差一兩秒 */
+  let ssFilling = false;
+  async function ssFillPlan(fit) {
+    if (ssFilling) return;
+    ssFilling = true;
+    try {
+      const todo = [];
+      DAYS.forEach(d => dayList(d.date).forEach(x => { if ((x.place || x.title) && !pinOf(x)) todo.push(x); }));
+      let fitted = !fit;   /* 一打開搜尋就是開著的:不移畫面(從城市開始),只補畫 */
+      for (const x of todo) {
+        if (!ssAll || el("seek-screen").hidden) break;
+        await pinForItem(x);
+        if (!ssAll || el("seek-screen").hidden || !pinOf(x)) continue;
+        const box = ssMap();
+        ssPaintPts(box);
+        /* 第一顆補上時,畫面拉到看得到全部已排的(跟按日曆時同一條規則);之後只補畫,不再一直移畫面 */
+        const pts = (box._pts || []).filter(p => p.k !== "c" && isFinite(p.la) && isFinite(p.lo));
+        if (!fitted && pts.length) { fitted = true; ssFit(box, pts.map(p => p.lo), pts.map(p => p.la), 16, false); glide(box); }
+        else paintMap(box);
+      }
+    } finally { ssFilling = false; }
+  }
 
   /* 搜到一批:全部標在地圖上。`fit`:把畫面拉到框得住全部的最大縮放(只有一個點時不貼到街區);0 筆畫面不動 */
   function ssShow(res, fit) {
@@ -8198,8 +8223,82 @@
   }
   /* ===== 許願搜尋(第三步) ===== */
   let mWsTab = "hot", mWsTipOff = false;
+  /* 許願鈕 ⇄ 許願搜尋框(Lulu 11-23「許願按鈕點擊變許願輸入框時也要漸變 形狀 文字 顏色等 輸入框淡入」)
+     同一個東西換樣子,所以是一個在變形,不是一個消失、一個出現:
+     - 形狀:搜尋框用 clip-path 從膠囊(按鈕的位置、大小、全圓角)長成整塊(圓角 sm);陰影另外一層跟著長(clip-path 會切掉框自己的陰影)
+     - 顏色:按鈕的虹光那層疊在框上,跟著同一個形狀長,邊長邊淡掉,露出框的底色
+     - 文字:按鈕上的「許個願，想去○○哪？」淡掉,標題「想去○○哪?」從按鈕字的位置和大小移到標題的位置
+     - 輸入框、✕、日曆鈕、說明列:後半段淡入
+     - 後面的地圖:淡入(底下原本的地圖撐著,不會閃一塊空白)
+     關掉(按 ✕、送出許願)整段倒著播,播完才真的關。prefers-reduced-motion → 直接換 */
+  let mIrisB = null, mWsBusy = false;
+  function mWsMorph(open, done) {
+    const fin = () => { if (done) done(); };
+    const f = el("m-ss-frame") && el("m-ss-frame").querySelector(".ds-search-frame"), root = el("m-ss"), B = mIrisB;
+    if (!f || !root || !B || (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)) { fin(); return; }
+    const R = f.getBoundingClientRect(), M = root.getBoundingClientRect();
+    if (!R.width || !B.r.width) { fin(); return; }
+    const cs = getComputedStyle(f), rr = parseFloat(cs.borderTopLeftRadius) || 8, br = B.r.height / 2;
+    /* 形狀和位置用標準的 ease(前後都柔);淡入淡出的分段(offset)要照時間算,所以用 linear */
+    const dur = open ? 420 : 340, opt = { duration: dur, easing: "cubic-bezier(.4,0,.2,1)", fill: "both", direction: open ? "normal" : "reverse" };
+    const lin = Object.assign({}, opt, { easing: "linear" });
+    const box = (r, o, rad) => ({ left: (r.left - o.left) + "px", top: (r.top - o.top) + "px", width: r.width + "px", height: r.height + "px", borderRadius: rad + "px" });
+    const anims = [], extra = [];
+    /* 形狀 */
+    anims.push(f.animate([{ clipPath: "inset(" + (B.r.top - R.top) + "px " + (R.right - B.r.right) + "px " + (R.bottom - B.r.bottom) + "px " + (B.r.left - R.left) + "px round " + br + "px)" },
+      { clipPath: "inset(0px 0px 0px 0px round " + rr + "px)" }], opt));
+    /* 陰影跟著長 */
+    const sg = document.createElement("div");
+    sg.style.cssText = "position:absolute; pointer-events:none; box-shadow:" + cs.boxShadow + ";";
+    root.insertBefore(sg, root.firstChild); extra.push(sg);
+    anims.push(sg.animate([box(B.r, M, br), box(R, M, rr)], opt));
+    /* 顏色:按鈕那層(複製一顆,不能按)跟著形狀長、淡掉 */
+    const ib = el("m-iris") && el("m-iris").querySelector(".ds-iris-btn");
+    if (ib) {
+      const ov = ib.cloneNode(true);
+      ov.setAttribute("aria-hidden", "true"); ov.tabIndex = -1;
+      ov.style.cssText = "position:absolute; margin:0; z-index:3; pointer-events:none; justify-content:center; box-shadow:none;";
+      f.appendChild(ov); extra.push(ov);
+      const a = box(B.r, R, br), b = box(R, R, rr);
+      anims.push(ov.animate([a, b], opt));
+      anims.push(ov.animate([{ opacity: 1 }, { opacity: 1, offset: 0.15 }, { opacity: 0, offset: 0.7 }, { opacity: 0 }], lin));
+      /* 按鈕上的字比底色早一點淡掉,兩行字疊在一起的時間短一點 */
+      const ol = ov.querySelector(".ds-iris-btn__layer");
+      if (ol) anims.push(ol.animate([{ opacity: 1 }, { opacity: 0, offset: 0.3 }, { opacity: 0 }], lin));
+    }
+    /* 文字:標題從按鈕字的位置、大小過來 */
+    const t = f.querySelector(".ds-search-frame__title");
+    if (t && B.l) {
+      const T = t.getBoundingClientRect(), k = B.l.height / (T.height || 1);
+      t.style.transformOrigin = "0 0";
+      anims.push(t.animate([{ transform: "translate(" + (B.l.left - T.left) + "px," + (B.l.top - T.top + (B.l.height - T.height * k) / 2) + "px) scale(" + k + ")" }, { transform: "none" }], opt));
+      anims.push(t.animate([{ opacity: 0 }, { opacity: 0, offset: 0.2 }, { opacity: 1, offset: 0.55 }, { opacity: 1 }], lin));
+    }
+    /* 其他:後半段淡入 */
+    const rest = [].slice.call(f.querySelectorAll(".ds-search-frame__head > :not(.ds-search-frame__title), .ds-search-frame > :not(.ds-search-frame__head):not(.ds-iris-btn)"))
+      .concat([el("m-ss-cal"), el("ss-map")].filter(Boolean));
+    rest.forEach(e => anims.push(e.animate([{ opacity: 0 }, { opacity: 0, offset: 0.45 }, { opacity: 1 }], lin)));
+    /* 底下那一頁(許願牆、導覽、地圖鈕)同時淡出;許願鈕本身整段藏著(它就是正在變形的那個) */
+    ["#map .mapzoom", "#m-cal", "#m-wish-box", "#m-nav"].forEach(q => { const e = document.querySelector(q); if (e) anims.push(e.animate([{ opacity: 1 }, { opacity: 0, offset: 0.6 }, { opacity: 0 }], lin)); });
+    if (el("m-iris")) anims.push(el("m-iris").animate([{ opacity: 0 }, { opacity: 0 }], lin));
+    /* 後面那塊不透明的底先拿掉,地圖淡入時看到的是底下原本的地圖 */
+    const scr = el("seek-screen"); scr.style.background = "transparent";
+    let left = anims.length;
+    const end = () => {
+      if (--left) return;
+      extra.forEach(e => e.remove());
+      scr.style.background = "";
+      if (t) t.style.transformOrigin = "";
+      fin();
+      anims.forEach(a => a.cancel());
+    };
+    anims.forEach(a => { a.onfinish = end; a.oncancel = null; });
+  }
   function mOpenWishSearch() {
     if (!DS) return;
+    if (mWsBusy) return;
+    { const ib = el("m-iris") && el("m-iris").querySelector(".ds-iris-btn"), lb = ib && ib.querySelector(".ds-iris-btn__label");
+      mIrisB = ib && ib.offsetParent ? { r: ib.getBoundingClientRect(), l: lb ? lb.getBoundingClientRect() : null } : null; }
     /* 願望的欄位(名稱、地點、想說的)還是原本那張表單在記,只是看不到;送出也走它(規則、權限、額度都不變) */
     openWishAdd();
     el("wish-add-overlay").hidden = true;
@@ -8218,12 +8317,26 @@
     ssStartView(box);
     paintMap(box);
     initMapGestures(box);
+    if (ssAll) ssFillPlan(false);
     loadHints();
     mWsTab = "hot";
     mWsBuild();
+    mWsBusy = true;
+    mWsMorph(true, () => { mWsBusy = false; });
     setTimeout(() => { const i = el("m-ss-frame").querySelector("input"); if (i) i.focus(); }, 60);
   }
   function mCloseWishSearch(sent) {
+    if (mWsBusy) return;
+    if (document.body.classList.contains("m-ws") && el("m-ss")) {
+      /* 倒著播回許願鈕,播完才真的關。送出的話表單照原本的順序馬上送,畫面上的收回不擋它 */
+      mWsBusy = true;
+      const ae = document.activeElement; if (ae && ae.blur) ae.blur();
+      mWsMorph(false, () => { mWsBusy = false; mCloseWishSearchNow(sent); });
+      return;
+    }
+    mCloseWishSearchNow(sent);
+  }
+  function mCloseWishSearchNow(sent) {
     document.body.classList.remove("m-ws", "m-ws-open", "m-ws-typing", "m-ws-g");
     const m = el("m-ss"); if (m) m.remove();
     const qo = seekBox(SS); if (qo) { qo.classList.remove("ds-app", "ds-pattern", "m-show-uikit"); qo._g = null; }
