@@ -6567,6 +6567,13 @@
   /* 圖磚和標記都放在一層 .layer 裡。拖曳和捏合時只動這一層的 transform ——
      每次都重畫 innerHTML 的話圖磚會整個閃掉,手指還在螢幕上就看得出來。
      手放開才把位移換算回中心座標,重畫一次。 */
+  /* 地圖上名字泡泡多寬(Storybook pin label:12px 源泉圓體、字距 .04em、左右各 6) */
+  let mLabCtx = null;
+  function mLabelW(t) {
+    mLabCtx = mLabCtx || document.createElement("canvas").getContext("2d");
+    mLabCtx.font = '12px "GenSenRounded2 TW"';
+    return Math.ceil(mLabCtx.measureText(t).width + [...t].length * 12 * 0.04 + 12);
+  }
   function paintMap(box) {
     const v = box._v, pts = box._pts || [];
     const w = box.clientWidth, h = box.clientHeight;
@@ -6595,12 +6602,16 @@
     const at = sorted.map(p => ({ x: Math.round(left + nearX(p.lo, v) * TILE), y: Math.round(top + projY(p.la, v.z) * TILE) }));
     const grp = [];
     at.forEach((q, i) => { const g = grp.find(g => Math.abs(at[g[0]].x - q.x) <= 2 && Math.abs(at[g[0]].y - q.y) <= 2); if (g) g.push(i); else grp.push([i]); });
-    const apart = 6 + 30 * Math.max(0, Math.min(1, (v.z - 13) / 4));
-    grp.forEach(g => { if (g.length > 1) g.forEach((i, j) => { at[i].x += Math.round((j - (g.length - 1) / 2) * apart); }); });
-    /* 名字(新外框的點):同一個地方只留一個 —— 選到的那顆,不然是畫在最上面那顆 —— 移到那幾顆的正中間;不然一樣的字錯開疊成一團 */
-    const noLab = new Set(), labDx = {};
-    if (mPins(box)) grp.forEach(g => {
+    /* 放大到 z18 再繼續拉開,拉到名字泡泡也不會疊 → 每顆各自顯示自己的名字(Lulu 11-24「隨著地圖放大,各別名字就要各別顯示出來」)。
+       z13 → 17:6 → 36(點並排,名字只留一個放中間);z17 → 18:36 → 最寬的名字寬 ＋ 4;z18 以上各自一個名字 */
+    const noLab = new Set(), labDx = {}, mNew = mPins(box);
+    grp.forEach(g => {
       if (g.length < 2) return;
+      const lw = mNew ? Math.max(...g.map(i => mLabelW((sorted[i].ap ? "約 " : "") + sorted[i].title))) + 4 : 36;
+      const apart = v.z < 17 ? 6 + 30 * Math.max(0, (v.z - 13) / 4) : 36 + Math.max(0, lw - 36) * Math.min(1, v.z - 17);
+      g.forEach((i, j) => { at[i].x += Math.round((j - (g.length - 1) / 2) * apart); });
+      if (!mNew || apart >= lw) return;
+      /* 還放不下:名字只留一個 —— 選到的那顆,不然是畫在最上面那顆 —— 移到那幾顆的正中間;不然一樣的字錯開疊成一團 */
       const k = g.find(i => sorted[i].k === box._focus) ?? g[g.length - 1];
       g.forEach(i => { if (i !== k) noLab.add(i); });
       labDx[k] = Math.round(g.reduce((t, i) => t + at[i].x, 0) / g.length - at[k].x);
