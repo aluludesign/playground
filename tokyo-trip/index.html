@@ -1956,9 +1956,6 @@
     /* 滑過搜尋地圖上的點:跟行程地圖一樣微微放大(Lulu 11-22) */
     @media (hover:hover){ body.m-ws #ss-map .pin:hover{transform:translate(-50%,-100%) scale(1.1); z-index:4;} }
     /* 疊在一起的點:滑鼠移到後面那個露出來的部分,它就跳到前面(Lulu 11-23) */
-    /* 同一個地方並排時,重複的名字藏起來(paintMap 標 m-nolab) */
-    .map .pin.m-nolab .ds-pin-label{visibility:hidden;}
-    .map .pin .ds-pin-label{translate:var(--m-labdx,0px) 0;}
     @media (hover:hover){
       body.member-ui #map .pin:hover{z-index:4;}
       /* 摸得到的範圍只有點的形狀和上面的字,不是整個長方形 —— 不然後面那個露出來的地方被前面的空白蓋住,摸不到 */
@@ -6511,56 +6508,23 @@
       }
     }
     /* 已排進行程的點畫在底下一層,願望疊在上面 —— 願望才是要挑的東西 */
-    /* 同一層裡偏南的先畫、偏北的疊在上面:名字泡泡是往上長的,這樣只會被上面的點蓋到名字,不會蓋住別的點(Lulu 11-23 縮小地圖時) */
-    const sorted = pts.slice().sort((a, b) => (a.cls === "plan" ? 0 : 1) - (b.cls === "plan" ? 0 : 1) || (mPins(box) ? (a.la || 0) - (b.la || 0) : 0));
+    const sorted = pts.slice().sort((a, b) => (a.cls === "plan" ? 0 : 1) - (b.cls === "plan" ? 0 : 1));
     /* 同一個地方的點(例:同一間店排在不同天)會完全疊在一起,只看得到一顆 →
        位置一樣(差不到 2px)的那幾顆左右各錯開一點點,看得出來是兩顆就好(Lulu 11-23「一點一點看得出來就好」)。
        錯開的是畫面上的 px,不是經緯度,放大縮小都一樣是一點點 */
     const at = sorted.map(p => ({ x: Math.round(left + nearX(p.lo, v) * TILE), y: Math.round(top + projY(p.la, v.z) * TILE) }));
     const grp = [];
     at.forEach((q, i) => { const g = grp.find(g => Math.abs(at[g[0]].x - q.x) <= 2 && Math.abs(at[g[0]].y - q.y) <= 2); if (g) g.push(i); else grp.push([i]); });
-    /* 新外框(手機、電腦都一樣):畫面上疊到的點(不只同一個地方,縮小地圖時靠太近的也算)分開並排,
-       每顆都整個看得到、點得到;一排最多 5 顆,再多往上疊一排(Lulu 11-23)。電腦另外保留滑鼠摸到就跳到前面(標籤還是會疊) */
-    const spread = mPins(box);
-    const noLab = new Set(), labDx = {};
-    if (spread) {
-      const PW = 32, PH = 36, GAP = 4;   /* 小的 pin 形狀 32×36 */
-      const root = at.map((_, i) => i), find = i => root[i] === i ? i : (root[i] = find(root[i]));
-      for (let i = 0; i < at.length; i++) for (let j = i + 1; j < at.length; j++)
-        if (Math.abs(at[i].x - at[j].x) < PW + GAP && Math.abs(at[i].y - at[j].y) < PH) root[find(i)] = find(j);
-      const cl = {};
-      at.forEach((_, i) => (cl[find(i)] = cl[find(i)] || []).push(i));
-      Object.values(cl).forEach(g => {
-        if (g.length < 2) return;
-        const cx = g.reduce((s, i) => s + at[i].x, 0) / g.length, cy = g.reduce((s, i) => s + at[i].y, 0) / g.length;
-        /* 左右順序照原本的位置,看起來還是「西邊的在左邊」 */
-        g.sort((i, j) => at[i].x - at[j].x || i - j);
-        /* 同一個地方並排時名字只留一個(選到的那顆優先,不然留畫在最上面那顆),不然幾個一樣的名字疊成一團 */
-        const keep = {};
-        g.forEach(i => { const t = sorted[i].title, cur = keep[t];
-          if (cur === undefined || sorted[i].k === box._focus || (sorted[cur].k !== box._focus && i > cur)) keep[t] = i; });
-        g.forEach(i => { if (keep[sorted[i].title] !== i) noLab.add(i); });
-        /* 留下來的名字放在同名那幾顆的正中間 */
-
-        const cols = Math.min(g.length, 5), rows = Math.ceil(g.length / cols);
-        g.forEach((i, j) => {
-          const r = Math.floor(j / cols), inRow = Math.min(cols, g.length - r * cols), c = j % cols;
-          at[i].x = Math.round(cx + (c - (inRow - 1) / 2) * (PW + GAP));
-          at[i].y = Math.round(cy - (rows - 1 - r) * (PH + GAP));
-        });
-        Object.keys(keep).forEach(t => { const same = g.filter(i => sorted[i].title === t); if (same.length < 2) return;
-          const k = keep[t], mid = same.reduce((s, i) => s + at[i].x, 0) / same.length; labDx[k] = Math.round(mid - at[k].x); });
-      });
-    } else grp.forEach(g => { if (g.length > 1) g.forEach((i, j) => { at[i].x += Math.round((j - (g.length - 1) / 2) * 6); }); });
+    grp.forEach(g => { if (g.length > 1) g.forEach((i, j) => { at[i].x += Math.round((j - (g.length - 1) / 2) * 6); }); });
     sorted.forEach((p, i) => {
       /* 虛線圈 = 「機器只查到大概的範圍,而且還沒有人看過」。人按了「對」之後
          (p.ok)就換回實線 —— 標記的工作做完了。**「約 」留著**:那顆座標仍然是
          行政區的中心,人可以說「這個位置我接受」,不能把它變成一個精確的點。 */
-      html += '<a class="pin' + (p.cls ? " " + p.cls : "") + (p.ap && !p.ok ? " approx" : "") + (noLab.has(i) ? " m-nolab" : "") +
+      html += '<a class="pin' + (p.cls ? " " + p.cls : "") + (p.ap && !p.ok ? " approx" : "") +
         (p.k === box._focus ? " on" : "") + '" data-k="' + esc(p.k) +
         '" href="' + gmap(p.place, p) + '" target="_blank" rel="noopener" style="left:' +
         at[i].x + "px; top:" + at[i].y +
-        "px" + (labDx[i] ? "; --m-labdx:" + labDx[i] + "px" : "") + (p.color ? "; background:" + p.color : "") +
+        "px" + (p.color ? "; background:" + p.color : "") +
         (p.on ? "; color:" + p.on : "") +
         '" title="' + esc(p.tip) + '">' + (mPins(box)
           /* 一般團員的新外框:Figma 的 pin set(名字泡泡＋白色水滴＋塗鴉底編號);選到的那個用大的。願望是 dot、沒有編號 */
