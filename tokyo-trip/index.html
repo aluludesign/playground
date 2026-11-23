@@ -1702,11 +1702,11 @@
     body.member-ui #board-wrap .seat.moved b{color:var(--ds-sys-color-primary);}
     /* 花費頁(一般團員,Figma 162709:47051,Lulu 11-24):每一塊都是 menu 的樣子(白底格紋＋深咖抖動框),字換成設計系統的字;
        上面四格、分類佔比的長條照 Figma,其他排法照舊 */
-    body.member-ui #panel-cost{padding-inline:var(--ds-sys-spacing-md); color:var(--ds-sys-color-text-100); font-family:var(--ds-sys-font-family-label);}
-    body.member-ui #panel-cost .sec{margin-top:var(--ds-sys-spacing-2xl);}
-    body.member-ui #panel-cost .sec-head h2{font-family:var(--ds-sys-font-family-headline); font-weight:900; font-size:var(--ds-sys-font-size-label-lg);
+    body.member-ui :is(#panel-cost, #panel-split){padding-inline:var(--ds-sys-spacing-md); color:var(--ds-sys-color-text-100); font-family:var(--ds-sys-font-family-label);}
+    body.member-ui :is(#panel-cost, #panel-split) .sec{margin-top:var(--ds-sys-spacing-2xl);}
+    body.member-ui :is(#panel-cost, #panel-split) .sec-head h2{font-family:var(--ds-sys-font-family-headline); font-weight:900; font-size:var(--ds-sys-font-size-label-lg);
       letter-spacing:.05em; color:var(--ds-sys-color-text-100);}
-    body.member-ui #panel-cost .sec-head .hint{font-family:var(--ds-sys-font-family-label); font-size:var(--ds-sys-font-size-label-sm); color:var(--ds-sys-color-text-200);}
+    body.member-ui :is(#panel-cost, #panel-split) .sec-head .hint{font-family:var(--ds-sys-font-family-label); font-size:var(--ds-sys-font-size-label-sm); color:var(--ds-sys-color-text-200);}
     /* 四格(Figma menu 162709:49933):外面那層沒有底,2×2、間距 8(spacing/md);每格是白底格紋＋深咖抖動框(outline 300、border/xs)、圓角 comp/menu/radius 6(Lulu 11-24),
        陰影 Elevation/surface/soft 掛在外面那層 → Figma 照每一格的形狀投影,所以這裡每格各自一個 */
     body.member-ui #cost-stats{display:grid; grid-template-columns:1fr 1fr; gap:var(--ds-sys-spacing-md); background:none; border:0; border-radius:0; overflow:visible;}
@@ -1747,7 +1747,28 @@
     body.member-ui #panel-cost .exp .amt .sub, body.member-ui #panel-cost .exp .mt{font-family:var(--ds-sys-font-family-label); font-size:var(--ds-sys-font-size-label-sm);
       color:var(--ds-sys-color-text-200);}
     body.member-ui #panel-cost .exp .mt .num{font-family:var(--ds-sys-font-family-label);}
-    body.member-ui #panel-cost .empty{font-family:var(--ds-sys-font-family-label); font-size:var(--ds-sys-font-size-label-md); color:var(--ds-sys-color-text-200);}
+    body.member-ui :is(#panel-cost, #panel-split) .empty{font-family:var(--ds-sys-font-family-label); font-size:var(--ds-sys-font-size-label-md); color:var(--ds-sys-color-text-200);}
+    /* 分帳頁(一般團員,Lulu 11-24):區塊標題跟費用一樣;預收、每個人、結清方式都是 menu 的樣子;預收的長條跟分類佔比同一種紙膠帶 */
+    body.member-ui #panel-split .fund, body.member-ui #panel-split .person, body.member-ui #panel-split .pay{background:var(--ds-sys-pattern-bright-bg); border:0;
+      border-radius:var(--ds-comp-menu-radius); box-shadow:var(--ds-elevation-surface-soft);}
+    body.member-ui #panel-split .fund{padding:var(--ds-sys-spacing-3xl) var(--ds-sys-spacing-2xl);}
+    body.member-ui #panel-split .person{padding:var(--ds-sys-spacing-xl) var(--ds-sys-spacing-2xl);}
+    body.member-ui #panel-split .people{gap:var(--ds-sys-spacing-xl);}
+    body.member-ui #panel-split .pay{padding:var(--ds-sys-spacing-xl) var(--ds-sys-spacing-2xl); margin-bottom:var(--ds-sys-spacing-xl);}
+    body.member-ui #panel-split .fund .ds-progress{margin:var(--ds-sys-spacing-xl) 0 var(--ds-sys-spacing-xs);}
+    body.member-ui #panel-split .fp .ds-progress{min-width:0;}
+    body.member-ui #panel-split .fund-top .used{font-family:var(--ds-sys-font-family-body); font-size:var(--ds-sys-font-size-body-lg); font-weight:700; letter-spacing:.05em; color:var(--ds-sys-color-text-100);}
+    body.member-ui #panel-split .fund-top .left, body.member-ui #panel-split .fund-note, body.member-ui #panel-split .fp .amt, body.member-ui #panel-split .kv,
+    body.member-ui #panel-split .st-hint{font-family:var(--ds-sys-font-family-label); font-size:var(--ds-sys-font-size-label-sm); letter-spacing:normal; color:var(--ds-sys-color-text-200);}
+    body.member-ui #panel-split .fund-top .left b, body.member-ui #panel-split .fp .amt b{font-family:var(--ds-sys-font-family-body); font-weight:700;}
+    body.member-ui #panel-split .fund-top .left b{font-size:var(--ds-sys-font-size-body-sm);}
+    body.member-ui #panel-split .fund-people, body.member-ui #panel-split .net{border-top-color:var(--ds-sys-color-outline-100);}
+    body.member-ui #panel-split .fp .nm, body.member-ui #panel-split .net{font-family:var(--ds-sys-font-family-label); font-size:var(--ds-sys-font-size-label-md); color:var(--ds-sys-color-text-100);}
+    body.member-ui #panel-split .kv .num{font-family:var(--ds-sys-font-family-label); color:var(--ds-sys-color-text-100);}
+    body.member-ui #panel-split .person .nm, body.member-ui #panel-split .pay .who1, body.member-ui #panel-split .pay .who2{font-family:var(--ds-sys-font-family-body);
+      font-size:var(--ds-sys-font-size-body-sm); font-weight:500; color:var(--ds-sys-color-text-100);}
+    body.member-ui #panel-split .net .v, body.member-ui #panel-split .pay .v{font-family:var(--ds-sys-font-family-body); font-size:var(--ds-sys-font-size-body-sm); font-weight:700;}
+    body.member-ui #panel-split .pay .arr{font-family:var(--ds-sys-font-family-label); color:var(--ds-sys-color-text-200);}
     #m-shell > *{pointer-events:auto;}
     #m-head{position:absolute; top:0; left:0; right:0; z-index:4; padding-top:env(safe-area-inset-top,0px);}
     /* Figma:頂列上緣是狀態列 ＋ 10(162057:12098 137 = 59＋10＋56＋12;已結束 162507:13824 padding 69 = 59＋10) */
@@ -7423,24 +7444,30 @@
     /* 每個人:交了多少、用掉多少(分攤到的**所有**花費,不管當初誰付的)、還剩多少(2026-10-19,Lulu:「還是可以顯示每人目前花掉多少」)。
        帳多半記成收款人自己付的,只算「付款人 = 預收」的話每個人都是 0,看不出錢用到哪。
        沒自己另外付錢的人,「剩」就是結清時收款人要退給他的錢 */
+    /* 一般團員:長條換成紙膠帶(跟分類佔比同一個元件):用掉的 primary、還剩的 disable;不夠時整條 custom 14(紅) */
+    const dsOn = memberUI() && !!DS;
+    const tape = (u, all, lbl) => DS.progressBarHTML({ label: lbl, items: u > all
+      ? [{ value: 1, color: "custom 14", label: "不夠 " + twd(u - all) }]
+      : [{ value: u, color: "primary", label: "用了 " + twd(u) }, { value: all - u, color: "disable", label: "還剩 " + twd(all - u) }] });
     const rows = who.map(m => {
       const put = FUND.shares[m.id], u = res.book[m.id].owed, rest = put - u;
       const p = put > 0 ? Math.min(100, u / put * 100) : 0;
       return '<div class="fp fp2' + (rest < 0 ? " over" : "") + '" style="--fc:' + m.color + '">' +
         '<span class="nm"><span class="dot" style="background:' + m.color + '"></span>' + esc(nameOf(m.id)) + "</span>" +
-        '<span class="track"><i style="width:' + p + '%"></i></span>' +
+        (dsOn ? tape(u, put, nameOf(m.id) + "的預收") : '<span class="track"><i style="width:' + p + '%"></i></span>') +
         '<span class="amt">交了 ' + twd(put) + " · 用 <b>" + twd(u) + "</b> · " + (rest < 0 ? "不夠 " : "剩 ") + twd(Math.abs(rest)) + "</span></div>";
     }).join("");
     el("fund").innerHTML =
       '<div class="fund-top"><span class="used">用了 ' + twd(used) + "</span>" +
       '<span class="left">' + (left < 0 ? "不夠 <b style=\"color:var(--neg)\">" + twd(-left) + "</b>" : "還剩 <b>" + twd(left) + "</b>") + "</span></div>" +
-      '<div class="fund-bar' + (left < 0 ? " over" : "") + '"><i style="width:' + pct + '%"></i></div>' +
+      (dsOn ? tape(used, pot, "預收用了多少") : '<div class="fund-bar' + (left < 0 ? " over" : "") + '"><i style="width:' + pct + '%"></i></div>') +
       '<div class="fund-note">' + (kname ? "錢在 " + esc(kname) + " 手上 · " : FUND.keeperGone ? "收款人已經不在這一團,請團主重選 · " : "") + "收了 " + twd(pot) +
       (left < 0 ? " · 不夠的照結清方式補" : left > 0 ? " · 剩的照結清方式退" : "") +
       " · 用了 = 交錢的人分到的花費" + (res.fundPaid >= 0.5 ? " · 其中 " + twd(res.fundPaid) + " 直接用預收付" : "") + "</div>" +
       '<div class="fund-people">' + rows + "</div>" +
       (canTop ? '<div class="fund-ops"><button type="button" class="btn btn-sm" id="fund-top-btn">補交預收</button></div>' : "");
     if (el("fund-top-btn")) el("fund-top-btn").addEventListener("click", openTopup);
+    mDressSplit();
   }
 
   function renderSplit() {
@@ -7485,6 +7512,15 @@
       ? (kn < -0.5 ? "預收剩的錢在 " + kname + " 手上,所以退給大家的錢由 " + kname + " 轉。"
         : kn > 0.5 ? kname + " 手上剩的預收,已經從大家要給 " + kname + " 的錢裡扣掉了。" : "") : "";
     if (fn) { fn.textContent = say; fn.hidden = !say; }
+    mDressSplit();
+  }
+  /* 分帳頁(一般團員):預收、每個人、結清方式的卡套 menu 的樣子(白底格紋＋深咖抖動框) */
+  function mDressSplit() {
+    const p = el("panel-split"), on = memberUI() && !!DS;
+    p.classList.toggle("ds-app", on);
+    if (!on) return;
+    p.querySelectorAll(".fund, .person, .pay").forEach(c => c.classList.add("ds-pattern", "ds-pattern--bright", "ds-wiggle-border"));
+    DS.wireWiggle(p);
   }
 
   /* 平常就是那一句;只有一種情況要講:這台瀏覽器連存都存不了(離開就會不見),那是使用者必須知道的 */
@@ -7580,6 +7616,7 @@
       /* 換回團主畫面:交通卡片變回原本的深色登機證 */
       if (el("board-wrap") && el("board-wrap").classList.contains("ds-app")) renderSeats();
       if (el("panel-cost").classList.contains("ds-app")) renderCost();
+      if (el("panel-split").classList.contains("ds-app")) { el("fund").classList.remove("ds-pattern", "ds-pattern--bright", "ds-wiggle-border"); renderFund(); renderSplit(); }
       return;
     }
     if (!DS) { loadDS(); return; }
@@ -7587,6 +7624,7 @@
     /* 交通卡片可能在元件載入前就畫好了:這裡補上 menu 的外框 */
     if (el("board-wrap") && !el("board-wrap").classList.contains("ds-app")) mDressLegs(el("board-wrap"));
     if (!el("panel-cost").classList.contains("ds-app")) renderCost();
+    if (!el("panel-split").classList.contains("ds-app")) { renderFund(); renderSplit(); }
     /* 頂列:團名、城市‧日期‧天數‧人數。▼ 只在有別團可以切的時候出現(團清單第一次點才去要) */
     const menuOpen = !el("m-menu").hidden;
     /* 內容沒變就不重畫:同步、天氣回來都會跑到這裡,手指按下到放開之間按鈕被換掉,那一下就點不到(Lulu 11-21「要點很多次」) */
