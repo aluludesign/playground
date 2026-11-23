@@ -4696,11 +4696,13 @@
     /* 表裡沒有的城市(名古屋、福岡…):以開團設的城市為中心,框一塊跟東京那塊差不多大的範圍。
        以前退回東京那塊 → 名古屋團的「名古屋城」「犬山城」被拿去東京裡找,找到東京附近名字像的地方
        (Lulu 11-23「這些點看起來不像是 pin 在名古屋」)。框的座標要等 CITY 查好(resolveCity),所以用 getter 每次現算 */
-    if (hit) TRIP_REGION = hit;
-    else if (countryName() === "台灣") TRIP_REGION = REGIONS[REGIONS.length - 1];
-    else if (city) TRIP_REGION = { key: [city], cc: (COUNTRY_CC[countryName()] || "JP").toLowerCase(), dyn: true,
-      get view() { return [CITY.lon - 0.7, CITY.lat + 0.6, CITY.lon + 0.7, CITY.lat - 0.6].map(x => x.toFixed(3)).join(","); } };
-    else TRIP_REGION = REGIONS[0];
+    /* 台灣那條是整座島(key 裡有各縣市名,一定會命中):台灣的團也改成先框城市,整座島留給找不到時放寬(見 pinFor) */
+    if (hit && hit.cc !== "tw") TRIP_REGION = hit;
+    else if (!city) TRIP_REGION = countryName() === "台灣" ? REGIONS[REGIONS.length - 1] : REGIONS[0];
+    else TRIP_REGION = { key: [city], cc: (COUNTRY_CC[countryName()] || "JP").toLowerCase(), dyn: true,
+      /* 日本的城市框 ±0.7／±0.6 度(約 130 公里見方,跟東京那塊差不多);台灣縣市靠得近,框小一點(約 60 公里),不然台北的「老街」會配到新竹 */
+      get view() { const dx = this.cc === "tw" ? 0.35 : 0.7, dy = this.cc === "tw" ? 0.3 : 0.6;
+        return [CITY.lon - dx, CITY.lat + dy, CITY.lon + dx, CITY.lat - dy].map(x => x.toFixed(3)).join(","); } };
   }
 
   /* 這個字串要在哪一塊裡查。講了別的地方就去那一塊,沒講就用這趟的 —— 所以東京行
@@ -4836,6 +4838,8 @@
         if (res && res[0]) { found = { la: +res[0].lat, lo: +res[0].lon }; break; }
       } catch (_) { break; }
     }
+    /* 城市附近找不到,**不**放寬到全國:試過(11-23)名古屋團的「大須商店街」放寬後跑到大阪、「白川郷」配到別的白川。
+       標錯比沒標更糟(人會照著錯的點走),所以找不到就不畫,由人從搜尋清單選(選的座標一定對) */
     pins[place] = found;   /* 查不到也記下來,不要每次重畫都再問一次 */
     savePins();
     return found;
