@@ -8418,7 +8418,7 @@
     const val = el(SS).value;
     el("m-ss-frame").innerHTML = DS.searchFrameHTML({ tone: strong ? "primary" : "",
       title: strong ? "強力搜，再搜一次" : "想去" + mCity() + "哪? ", closeLabel: "不許願了，回去",
-      content: DS.textFieldHTML({ floatingLabel: false, label: "想去哪", placeholder: mCity() + "鐵塔、一蘭拉麵…等", value: val,
+      content: DS.textFieldHTML({ floatingLabel: false, label: "想去哪", placeholder: "東京鐵塔、一蘭拉麵…等", value: val,
         leadingIcon: true, trailingIcon: true, supporting: !!support, supportingText: support, button: !strong && searched ? "強力搜" : "" }),
     });
     DS.wireSearchFrame(el("m-ss-frame"));
