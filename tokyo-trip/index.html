@@ -7407,13 +7407,8 @@
       el("m-sheet-box").innerHTML = DS.bottomSheetHTML({ content: '<div id="m-days"></div><div id="m-scroll"><div id="m-tl"></div></div>', label: "行程" });
       /* 許願頁的清單還是原本那一份(第三步才換),先搬進面板 */
       mMove(el("plan-cols"), el("m-scroll"));
-      el("m-days").addEventListener("ds-date-select", e => {
-        if (!e.detail.key || e.detail.key === state.day) return;
-        leaveAllDays();
-        state.day = e.detail.key;
-        render();
-        if (sheetMode) loadSheetMap(true);
-      });
+      el("m-days").addEventListener("ds-date-select", e => mGoDay(e.detail.key));
+      mSwipeDays();
       el("m-tl").addEventListener("ds-stop-open", e => openDayDetail(e.detail.key));
       el("m-tl").addEventListener("ds-photos-open", e => openStopPhotos(e.detail.key));
       el("m-nav").innerHTML = DS.bottomNavHTML({ active: mNavKey(), label: "主要導覽" });
@@ -7478,6 +7473,75 @@
       if (k[0] === "d" || k[0] === "p") mOpenDetail(k);
       else if (k[0] === "w") { const w = wishOrder()[+k.slice(1)]; if (w) mOpenWish(w.id); }
     };
+  }
+  /* 換一天:點日期卡、或在行程表區左右滑(Lulu 11-23「行程表區左右滑也可以切換天」)。
+     同一個元件換狀態一律位移漸變:舊的那天往滑的方向出去,新的那天從另一邊進來。
+     from = 手指放開時行程表已經跟著手指移了多少(px),從那裡接著走,不會跳回 0 再出去 */
+  function mGoDay(key, from) {
+    if (!key || key === state.day) return;
+    const tl = el("m-tl"), keys = DAYS.map(d => d.date);
+    const a = keys.indexOf(state.day), b = keys.indexOf(key);
+    const dir = a < 0 || b < 0 ? 0 : b > a ? -1 : 1;   /* 往後一天 → 內容往左走 */
+    const W = tl.offsetWidth || innerWidth;
+    const still = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const swap = () => {
+      leaveAllDays();
+      state.day = key;
+      render();
+      if (sheetMode) loadSheetMap(true);
+      const sc = el("m-scroll"); if (sc) sc.scrollTop = 0;
+      if (dir && !still) tl._slide = tl.animate([{ transform: "translateX(" + (-dir * W) + "px)" }, { transform: "none" }], { duration: 300, easing: "cubic-bezier(.25,1,.5,1)" });
+      else tl.style.transform = "";
+    };
+    if (tl._slide) tl._slide.cancel();
+    if (!dir || still) { tl.style.transform = ""; swap(); return; }
+    tl.style.transform = "";
+    tl._slide = tl.animate([{ transform: "translateX(" + (from || 0) + "px)" }, { transform: "translateX(" + (dir * W) + "px)" }], { duration: 160, easing: "cubic-bezier(.5,0,.75,0)", fill: "forwards" });
+    tl._slide.onfinish = () => { tl._slide.cancel(); swap(); };
+  }
+  /* 行程表區的左右滑:先動 10px 決定方向,橫的才接手(直的照舊捲動／拖面板)。行程表跟著手指走;
+     放開時走超過 1/4 寬或甩得夠快 → 換到前／後一天,不夠 → 滑回原位。第一天再往前、最後一天再往後 → 只會被拉一點點再彈回。
+     照片那種本來就能左右滑的東西上面不接 */
+  function mSwipeDays() {
+    const sc = el("m-scroll"), tl = el("m-tl");
+    let st = null;
+    const sideScroll = t => { for (let n = t; n && n !== sc; n = n.parentElement) if (n.scrollWidth > n.clientWidth + 1 && /auto|scroll/.test(getComputedStyle(n).overflowX)) return true; return false; };
+    const keys = () => DAYS.map(d => d.date);
+    sc.addEventListener("touchstart", e => {
+      st = null;
+      if (e.touches.length !== 1 || tl.hidden || state.tab !== "plan" || sideScroll(e.target)) return;
+      const p = e.touches[0];
+      st = { x: p.clientX, y: p.clientY, t: performance.now(), axis: "", dx: 0 };
+    }, { passive: true });
+    sc.addEventListener("touchmove", e => {
+      if (!st) return;
+      const p = e.touches[0], dx = p.clientX - st.x, dy = p.clientY - st.y;
+      if (!st.axis) {
+        if (Math.hypot(dx, dy) < 10) return;
+        st.axis = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
+        if (st.axis === "x" && tl._slide) { tl._slide.cancel(); tl._slide = null; }
+      }
+      if (st.axis !== "x") return;
+      e.preventDefault();
+      const k = keys(), i = k.indexOf(state.day);
+      const edge = (dx > 0 && i <= 0) || (dx < 0 && i >= k.length - 1);
+      st.dx = edge ? dx / 4 : dx;
+      st.lt = performance.now(); st.lx = p.clientX;
+      tl.style.transform = "translateX(" + st.dx + "px)";
+    }, { passive: false });
+    const end = () => {
+      if (!st || st.axis !== "x") { st = null; return; }
+      const s = st; st = null;
+      const k = keys(), i = k.indexOf(state.day), W = tl.offsetWidth || innerWidth;
+      const v = s.dx / Math.max(1, performance.now() - s.t);   /* px/ms,整段平均 */
+      const go = Math.abs(s.dx) > W / 4 || Math.abs(v) > 0.5;
+      const j = s.dx < 0 ? i + 1 : i - 1;
+      if (go && i >= 0 && j >= 0 && j < k.length) { mGoDay(k[j], s.dx); return; }
+      tl.style.transform = "";
+      tl._slide = tl.animate([{ transform: "translateX(" + s.dx + "px)" }, { transform: "none" }], { duration: 260, easing: "cubic-bezier(.25,1,.5,1)" });
+    };
+    sc.addEventListener("touchend", end);
+    sc.addEventListener("touchcancel", end);
   }
   /* WMO 天氣代碼 → icons/weather 的名字;舊的快取沒有代碼,就看降雨機率 */
   function wxIconOf(code, pop) {
