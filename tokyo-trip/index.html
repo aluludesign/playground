@@ -1955,6 +1955,13 @@
     body.member-ui .map.m-zoom-placed .mapzoom.ds-zoom{top:var(--m-zoom-top) !important;}
     /* 滑過搜尋地圖上的點:跟行程地圖一樣微微放大(Lulu 11-22) */
     @media (hover:hover){ body.m-ws #ss-map .pin:hover{transform:translate(-50%,-100%) scale(1.1); z-index:4;} }
+    /* 疊在一起的點:滑鼠移到後面那個露出來的部分,它就跳到前面(Lulu 11-23) */
+    @media (hover:hover){
+      body.member-ui #map .pin:hover{z-index:4;}
+      /* 摸得到的範圍只有點的形狀和上面的字,不是整個長方形 —— 不然後面那個露出來的地方被前面的空白蓋住,摸不到 */
+      body.member-ui #map .pin, body.member-ui #map .pin .ds-pin-set, body.member-ui #map .pin .ds-pin, body.member-ui #map .pin .ds-pin__shape{pointer-events:none;}
+      body.member-ui #map .pin .ds-pin__shape path, body.member-ui #map .pin .ds-pin-badge, body.member-ui #map .pin .ds-pin-label{pointer-events:auto;}
+    }
     /* #map 自己往下 1px 又有 1px 框:扣回來,＋／− 才會剛好在日曆鈕下 77、同一條中線 */
     body.member-ui #map .mapzoom.ds-zoom{margin:-2px -1px 0 0;}
     body.member-ui .map .mapzoom.ds-zoom button{width:auto; height:auto; border:0; background:none; border-radius:var(--ds-comp-btn-icon-xs-radius);}
