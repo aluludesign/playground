@@ -7431,6 +7431,39 @@
         if (e.target.id !== "map" || state.tab !== "plan" || mMe || mDetail || !sh || !sh.offsetParent || mSheet.index() !== 1) return;
         mSheet.snapTo(0);
       });
+      /* 打字中離開打字框 → 鍵盤收起來(Lulu 11-23「只要有打字行為時離開打字框鍵盤就要收起」):
+         - 手指在別的地方滑(例:打字時滑熱門地點)→ 一滑就收
+         - 點地圖、空白處這類不能按的地方 → 一按就收
+         - 點按鈕、清單那一列 → 等那一下做完(click 之後)才收:按下去就收的話,鍵盤一收畫面會跳,手指放開時已經不在那一列上
+         同一格的 ✕(清空)、送出鈕算在打字框裡,不收。只在一般團員的新外框 */
+      (function () {
+        const typing = () => { const a = document.activeElement; return a && a.matches && a.matches("input:not([type=checkbox]):not([type=radio]):not([type=button]), textarea, [contenteditable=true]") ? a : null; };
+        const inField = (a, t) => { const f = a.closest(".ds-text-field, .ds-text-area, label") || a; return f.contains(t); };
+        const tappable = t => t.closest && t.closest("button, a, input, textarea, select, label, [role=tab], [role=button], [tabindex], [data-m-sug]");
+        let sx = 0, sy = 0, armed = false;
+        document.addEventListener("pointerdown", e => {
+          armed = false;
+          if (!document.body.classList.contains("member-ui")) return;
+          const a = typing();
+          if (!a || inField(a, e.target)) return;
+          if (!tappable(e.target)) { a.blur(); return; }
+          armed = true; sx = e.clientX; sy = e.clientY;
+        }, true);
+        /* 滑動:pointermove 在 iOS 捲動開始後就不來了,touchmove 才可靠 */
+        document.addEventListener("touchmove", e => {
+          if (!armed && !typing()) return;
+          const a = typing(), p = e.touches[0];
+          if (!a || !p || inField(a, e.target)) return;
+          if (Math.hypot(p.clientX - sx, p.clientY - sy) > 8 || !armed) { armed = false; a.blur(); }
+        }, { capture: true, passive: true });
+        document.addEventListener("touchstart", e => { const p = e.touches[0]; if (p) { sx = p.clientX; sy = p.clientY; } }, { capture: true, passive: true });
+        document.addEventListener("click", e => {
+          if (!armed) return;
+          armed = false;
+          const a = typing();
+          if (a && !inField(a, e.target)) a.blur();
+        });
+      })();
       wireMemberShell();
       mWatchHead();
     } else {
