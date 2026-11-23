@@ -1859,9 +1859,11 @@
     /* 滑到的那張放在畫面正中間(Lulu 11-22):左右各留 24(342 寬),前、後一張在兩邊各露一點;停下來一律對齊正中間。
        畫面再寬,卡片最寬 390、一樣置中 */
     #m-detail-card{--m-dpad:max(var(--ds-sys-spacing-4xl), calc((100% - 390px) / 2));
-      position:absolute; left:0; right:0; top:var(--m-detail-top,420px); bottom:24px; /* 離螢幕最底 24(Figma 820/844),不加安全區 */
+      /* 陰影(Elevation/surface/medium)要露得出來(Lulu 11-23「兩邊的卡片怎麼都沒有加陰影」):捲動區上下各多 24 的空間放陰影,
+         卡片本身的位置不變(上緣 --m-detail-top、離螢幕最底 24,Figma 820/844,不加安全區) */
+      position:absolute; left:0; right:0; top:calc(var(--m-detail-top,420px) - 24px); bottom:0;
       display:flex; gap:var(--ds-sys-spacing-2xl); overflow-x:auto; overflow-y:hidden; scroll-snap-type:x mandatory;
-      padding:0 var(--m-dpad); scroll-padding:0 var(--m-dpad); scrollbar-width:none; overscroll-behavior-x:contain;}
+      padding:24px var(--m-dpad) 24px; scroll-padding:0 var(--m-dpad); scrollbar-width:none; overscroll-behavior-x:contain;}
     #m-detail-card::-webkit-scrollbar{display:none;}
     /* iPhone 左右滑不動(Lulu 11-22「手機沒辦法左右滑動，電腦可以」):左右捲的是 #m-detail-card 本身,它從 #m-detail 繼承了
        pointer-events:none —— iOS 的 WebKit 不會把手指交給一個 pointer-events:none 的捲動區(Chrome 會,所以電腦正常)。
@@ -1869,7 +1871,9 @@
     #m-detail-card{pointer-events:auto; -webkit-overflow-scrolling:touch;}
     #m-detail-card .m-dcard{flex:0 0 100%; max-width:390px; height:100%; overflow:hidden; scroll-snap-align:center; scroll-snap-stop:always;
       pointer-events:auto; touch-action:pan-x; border-radius:var(--ds-sys-radius-sm); transition:opacity .3s ease;}
-    #m-detail-card .m-dcard > .ds-acard{min-height:100%; box-shadow:var(--ds-elevation-surface-medium);}
+    /* 陰影畫在外面那層(.m-dcard 有 overflow:hidden,畫在裡面的卡上會被自己切掉) */
+    #m-detail-card .m-dcard{box-shadow:var(--ds-elevation-surface-medium);}
+    #m-detail-card .m-dcard > .ds-acard{min-height:100%; box-shadow:none;}
     /* 展開(往上滑)= 漸變長大(Lulu 11-22「不要 instant」):那張卡從原本的位置 .3s 長到 16／59、358 寬、到底上 24;
        旁邊的卡同時淡出,地圖同時糊掉(背景模糊 8 → 4px)。收起來反過來走回原位。
        動的那張卡由 mDetailOpen() 改成 position:fixed(.is-float),原位留一塊空的(.m-dcard-ph),旁邊的卡才不會擠過來 */
@@ -4329,6 +4333,36 @@
     { keys: ["迪士尼", "舞濱", "舞浜"],    lat: 35.633, lon: 139.880 },
     { keys: ["成田", "NRT"],             lat: 35.772, lon: 140.393 },
     { keys: ["桃園", "TPE"],             lat: 25.080, lon: 121.234 },
+    /* 11-23(Lulu「全加」):其他城市常去的一日遊。座標都用 Nominatim 查過、核對過所在的縣(別府第一次查到兵庫縣那個,改用大分縣的)。
+       key 刻意用不會撞名的寫法:「伊勢」會吃到伊勢丹、「白浜」千葉也有、「長崎」會吃到長崎ちゃんぽん、「高山」太常見,所以都寫完整 */
+    /* 名古屋出發 */
+    { keys: ["白川鄉", "白川郷", "合掌村"],           lat: 36.257, lon: 136.907 },
+    { keys: ["飛驒高山", "飛騨高山", "高山陣屋", "高山老街"], lat: 36.140, lon: 137.258 },
+    { keys: ["下呂"],                               lat: 35.923, lon: 137.448 },
+    { keys: ["伊勢神宮", "托福橫丁", "おかげ横丁", "おはらい町"], lat: 34.457, lon: 136.723 },
+    /* 關西出發 */
+    { keys: ["姬路", "姫路"],                        lat: 34.839, lon: 134.694 },
+    { keys: ["天橋立"],                             lat: 35.568, lon: 135.191 },
+    { keys: ["高野山"],                             lat: 34.214, lon: 135.584 },
+    { keys: ["南紀白濱", "南紀白浜", "白濱溫泉", "白浜温泉", "冒險大世界", "アドベンチャーワールド"], lat: 33.694, lon: 135.336 },
+    /* 福岡出發 */
+    { keys: ["由布院", "湯布院"],                     lat: 33.263, lon: 131.355 },
+    { keys: ["別府"],                               lat: 33.279, lon: 131.500 },
+    { keys: ["豪斯登堡", "ハウステンボス"],            lat: 33.086, lon: 129.788 },
+    { keys: ["哥拉巴園", "グラバー園"],               lat: 32.733, lon: 129.869 },
+    /* 札幌出發 */
+    { keys: ["富良野"],                             lat: 43.347, lon: 142.392 },
+    { keys: ["美瑛"],                               lat: 43.591, lon: 142.461 },
+    { keys: ["旭山動物園"],                          lat: 43.769, lon: 142.479 },
+    { keys: ["登別"],                               lat: 42.495, lon: 141.145 },
+    { keys: ["洞爺湖"],                             lat: 42.602, lon: 140.896 },
+    { keys: ["二世古", "ニセコ"],                     lat: 42.809, lon: 140.685 },
+    /* 台灣 */
+    { keys: ["奮起湖"],                             lat: 23.505, lon: 120.695 },
+    { keys: ["阿里山森林", "阿里山國家", "阿里山小火車", "阿里山遊樂區"], lat: 23.532, lon: 120.805 },
+    { keys: ["墾丁"],                               lat: 21.945, lon: 120.799 },
+    { keys: ["清境"],                               lat: 24.059, lon: 121.163 },
+    { keys: ["日月潭"],                             lat: 23.852, lon: 120.929 },
   ];
 
   /* 一個字串比對這張表。三個消費者(天氣的 resolvePlace / stopWx、地圖的 pinFor)
@@ -6477,7 +6511,7 @@
     };
     const ss = box.id === "ss-map";
     const covers = ss ? ["#m-ss-card", "#m-ss-sheet", "#ss-q-out.m-show-uikit"]
-      : mDetail ? ["#m-detail-card"] : state.tab === "wish" ? ["#m-wish-box .ds-sheet"] : ["#m-sheet-box .ds-sheet"];
+      : mDetail ? ["#m-detail-card .m-dcard"] : state.tab === "wish" ? ["#m-wish-box .ds-sheet"] : ["#m-sheet-box .ds-sheet"];
     let bot = r.bottom;
     covers.forEach(q => { const b = vis(document.querySelector(q)); if (b && b.top > r.top && b.top < bot) bot = b.top; });
     const cal = vis(el(ss ? "m-ss-cal" : "m-cal"));
@@ -6501,7 +6535,7 @@
     const r = box.getBoundingClientRect(), w = box.clientWidth, h = box.clientHeight;
     const under = sel => { const e = document.querySelector(sel); if (!e || !e.offsetParent && getComputedStyle(e).position !== "fixed") return null; const b = e.getBoundingClientRect(); return b.height ? b : null; };
     let top = 0, bot = 0;
-    const cover = mDetail ? under("#m-detail-card") : state.tab === "wish" ? under("#m-wish-box .ds-sheet") : under("#m-sheet-box .ds-sheet");
+    const cover = mDetail ? under("#m-detail-card .m-dcard") : state.tab === "wish" ? under("#m-wish-box .ds-sheet") : under("#m-sheet-box .ds-sheet");
     if (cover) bot = Math.max(0, r.bottom - Math.max(r.top, cover.top));
     const head = mDetail ? null : state.tab === "wish" ? under("#m-iris .ds-iris-btn") : under("#m-head");
     if (head) top = Math.max(0, head.bottom - r.top);
@@ -6759,7 +6793,7 @@
   function mapCoveredBottom(box) {
     /* 一般團員的新外框:蓋住地圖的是新面板,或當日細節那張卡 */
     if (document.body.classList.contains("member-ui")) {
-      const cov = mDetail ? el("m-detail-card") : document.querySelector("#m-sheet-box .ds-sheet");
+      const cov = mDetail ? (el("m-detail-card").querySelector(".m-dcard") || el("m-detail-card")) : document.querySelector("#m-sheet-box .ds-sheet");
       if (!cov) return 0;
       const r = box.getBoundingClientRect(), c = cov.getBoundingClientRect();
       return Math.max(0, Math.min(r.height, r.bottom - Math.max(r.top, c.top)));
