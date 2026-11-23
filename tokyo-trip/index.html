@@ -1736,6 +1736,9 @@
       letter-spacing:.04em; color:var(--ds-sys-color-text-200); margin:var(--ds-sys-spacing-3xl) 0 var(--ds-sys-spacing-md);}
     body.member-ui #panel-cost .datehead .num{font-family:var(--ds-sys-font-family-label); font-size:var(--ds-sys-font-size-label-md);}
     body.member-ui #panel-cost .datehead .rule{background:var(--ds-sys-color-outline-100);}
+    /* 分類圓章和名稱隔 16(.hd 本來的間距 8 再加 8) */
+    /* icon 跟名稱的字級一樣大(18,Lulu 11-24) */
+    body.member-ui #panel-cost .exp .hd .ds-cat-badge{margin-right:var(--ds-sys-spacing-md); --cat-icon:var(--ds-sys-font-size-body-md);}
     /* 每一筆的名稱(計程車、押上…)用全瀨體、18(body-md)(Lulu 11-24);全瀨體只有一種粗細 */
     body.member-ui #panel-cost .exp .ti{font-family:var(--ds-sys-font-family-zhtw-handwriting-zhtw); font-size:var(--ds-sys-font-size-body-md); font-weight:400;
       color:var(--ds-sys-color-text-100);}
@@ -7307,8 +7310,8 @@
 
   const tileOld = (lb, vl, sb) => '<div class="stat"><div class="lb">' + lb + '</div><div class="vl">' + vl + '</div><div class="sb">' + sb + "</div></div>";
 
-  /* 一般團員的花費頁:分類的顏色換成設計系統的 custom 色(長條是紙膠帶,Figma 162714:50264),跟格子前面的小色塊一樣 */
-  const M_CAT_COLOR = { transport: "custom 8", stay: "custom 11", food: "custom 1", sight: "custom 4", shop: "custom 14", other: "disable" };
+  /* 一般團員的花費頁:分類的顏色是設計系統的 custom 色(DS.CATEGORIES,長條、小色塊、每一筆的分類圓章同一組) */
+  const mCatColor = id => (DS.CATEGORIES[id] || DS.CATEGORIES.other).color;
   function renderCost() {
     const dsOn = memberUI() && !!DS;
     el("panel-cost").classList.toggle("ds-app", dsOn);
@@ -7334,12 +7337,12 @@
 
     const sums = CATS.map(c => Object.assign({}, c, { v: state.expenses.filter(e => e.category === c.id).reduce((s, e) => s + toTWD(e), 0) }));
     const shown = sums.filter(c => c.v > 0);
-    const sw = c => dsOn ? DS.progressColor(M_CAT_COLOR[c.id] || "disable") : c.color;
+    const sw = c => dsOn ? DS.progressColor(mCatColor(c.id)) : c.color;
     el("catbar").hidden = dsOn;
     const bar = el("panel-cost").querySelector(".ds-progress");
     if (bar) bar.remove();
     if (dsOn && total > 0) el("catbar").insertAdjacentHTML("afterend", DS.progressBarHTML({ label: "分類佔比",
-      items: shown.map(c => ({ value: c.v, color: M_CAT_COLOR[c.id] || "disable", label: c.name + " " + Math.round(c.v / total * 100) + "%" })) }));
+      items: shown.map(c => ({ value: c.v, color: mCatColor(c.id), label: c.name + " " + Math.round(c.v / total * 100) + "%" })) }));
     el("catbar").innerHTML = total > 0
       ? shown.map(c => '<span style="width:' + (c.v / total * 100) + "%;background:" + c.color + '" title="' + c.name + '"></span>').join("") : "";
     el("catlist").innerHTML = (shown.length ? shown : sums).map(c =>
@@ -7384,7 +7387,10 @@
         '<div class="ops">' + (e.sendErr ? '<button type="button" class="btn btn-ghost btn-sm" data-resend-exp="' + e.id + '">再送一次</button>' : "") +
         '<button type="button" class="btn btn-ghost btn-sm" data-del-exp="' + e.id + '">取消這筆</button></div>'
       : "";
-    return '<div class="exp"><div class="hd"><span class="ti">' + linkify(e.title) + '</span><span class="rm-chip cat" style="background:' + c.color + '">' + c.name + "</span>" + photoThumb(e.photos && e.photos.length ? e.photos : e.photo) + "</div>" +
+    /* 一般團員:分類改成名稱前面一顆實心圓＋icon(Lulu 11-24),不放 chip */
+    const mBadge = memberUI() && DS;
+    return '<div class="exp"><div class="hd">' + (mBadge ? DS.categoryBadgeHTML({ key: c.id, label: c.name }) : "") + '<span class="ti">' + linkify(e.title) + "</span>" +
+      (mBadge ? "" : '<span class="rm-chip cat" style="background:' + c.color + '">' + c.name + "</span>") + photoThumb(e.photos && e.photos.length ? e.photos : e.photo) + "</div>" +
       '<div class="amt">' + twd(v) + (e.currency === "JPY" ? '<span class="sub">¥' + Math.round(e.amount).toLocaleString("en-US") + "</span>" : "") + "</div>" +
       '<div class="mt"><span>' + payer + "</span><span>·</span><span>" + whoShared + "</span>" +
       (ps.length && !custom ? '<span>·</span><span class="num">每人 ' + twd(v / ps.length) + "</span>" : "") +

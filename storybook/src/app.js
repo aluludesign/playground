@@ -30,3 +30,4 @@ export { scrimButtonHTML } from "./components/scrim-button.js";
 export { segmentedHTML, segmentedSheetHTML, segmentedItemHTML, wireSegmented } from "./components/segmented.js";
 export { textFieldHTML, wireTextField } from "./components/text-field.js";
 export { progressBarHTML, progressItemHTML, progressColor } from "./components/progress-bar.js";
+export { categoryBadgeHTML, CATEGORIES } from "./components/category-badge.js";

@@ -1,0 +1,17 @@
+/* 分類圓章 category badge（Lulu 11-24，花費每一筆的分類）
+ *   實心圓：分類的 custom 色；裡面的 icon（Font Awesome，Trippps 還沒有自己的）填 text inverse 100
+ *   icon 預設 16（--cat-icon 可以改，例如跟旁邊文字的字級一樣），圓＝icon 上下左右各多 6
+ */
+.ds-cat-badge {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  --cat-icon: 16px;
+  width: calc(var(--cat-icon) + 2 * var(--ds-sys-spacing-sm));
+  height: calc(var(--cat-icon) + 2 * var(--ds-sys-spacing-sm));
+  border-radius: var(--ds-sys-radius-full);
+  background: var(--cat-color, var(--ds-sys-color-disabled));
+  color: var(--ds-sys-color-text-inverse-100);
+}
+.ds-cat-badge__icon { width: var(--cat-icon); height: var(--cat-icon); display: block; }
