@@ -5364,6 +5364,8 @@
     if (!box) return;
     box.innerHTML = msg ? '<div class="said' + (hint ? " hint" : "") + '">' + esc(msg) + "</div>" + seekTail(id) : "";
     box.hidden = !msg;
+    /* 新外框的許願搜尋:提示要畫到看得到的地方(見 mWsSync 下面那一排) */
+    if (hint && id === SS && document.body.classList.contains("m-ws")) mWsSync();
   }
 
   function seekClear(id) {
@@ -8304,6 +8306,10 @@
       html = DS.infoHTML({ text: ssScope === "view" ? "這個範圍找不到" : ssScope === "city" ? "這個城市找不到" : "找不到", type: "default", expanded: true, collapseIcon: false, button: false }) +
         DS.buttonHTML({ label: city ? "重新搜尋整個「" + (mCity() || "這個城市") + "」" : "往外找", leadingIcon: false })
           .replace("<button ", '<button data-proxy="#ss-q-out ' + (city ? "[data-city]" : "[data-wide]") + '" ');
+    } else if ((seekUsedStrong[SS] || seekArmed[SS]) && !uikit && out.querySelector(".said.hint")) {
+      /* 強力搜沒拿到清單(載入出錯、Google 也找不到、今天用完了):那句話原本寫在 #ss-q-out 裡,新外框把它整塊藏起來 →
+         按了像沒反應(Lulu 11-23「現在好像不能用？」)。搬到下面這一排講出來,跟「這個範圍找不到」同一種提示 */
+      html = DS.infoHTML({ text: out.querySelector(".said.hint").textContent, type: "default", expanded: true, collapseIcon: false, button: false });
     }
     if (bottom._html !== html) { bottom.innerHTML = html; bottom._html = html; DS.wireInfo(bottom); }
     /* 選了一個:景點卡＋留言框(一般搜尋的結果,或 Google 清單的一家) */
