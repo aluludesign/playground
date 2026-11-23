@@ -1666,7 +1666,8 @@
     #m-shell{position:fixed; inset:0; z-index:25; pointer-events:none;}
     /* 交通頁:整頁鋪頂列那種格子底,看起來像行程面板拉到最高。.ds-pattern 沒有 @layer 會把 position 改成 relative,要 !important */
     #m-bg{display:none; position:fixed !important; inset:0; z-index:-1; pointer-events:none;}
-    body.member-ui[data-view="fly"] #m-bg, body.member-ui[data-view="me"] #m-bg{display:block;}
+    body.member-ui[data-view="fly"] #m-bg, body.member-ui[data-view="me"] #m-bg,
+    body.member-ui[data-view="cost"] #m-bg, body.member-ui[data-view="split"] #m-bg{display:block;}
     /* 交通卡片(一般團員):設計系統 menu 的外框＋設計系統的字(Lulu 11-23)。登機證的深色變數換成淺色 token,版面不動 */
     body.member-ui #board-wrap .board, body.member-ui #board-wrap .tleg{
       --board-bg:var(--ds-sys-pattern-bright-bg); --board-ink:var(--ds-sys-color-text-100); --board-muted:var(--ds-sys-color-text-200);
@@ -1699,6 +1700,47 @@
     body.member-ui #board-wrap .seat span{font-size:var(--ds-sys-font-size-label-md);}
     body.member-ui #board-wrap .seat.moved{border-color:var(--ds-sys-color-primary);}
     body.member-ui #board-wrap .seat.moved b{color:var(--ds-sys-color-primary);}
+    /* 花費頁(一般團員,Figma 162709:47051,Lulu 11-24):每一塊都是 menu 的樣子(白底格紋＋深咖抖動框),字換成設計系統的字;
+       上面四格、分類佔比的長條照 Figma,其他排法照舊 */
+    body.member-ui #panel-cost{padding-inline:var(--ds-sys-spacing-md); color:var(--ds-sys-color-text-100); font-family:var(--ds-sys-font-family-label);}
+    body.member-ui #panel-cost .sec{margin-top:var(--ds-sys-spacing-2xl);}
+    body.member-ui #panel-cost .sec-head h2{font-family:var(--ds-sys-font-family-headline); font-weight:900; font-size:var(--ds-sys-font-size-label-lg);
+      letter-spacing:.05em; color:var(--ds-sys-color-text-100);}
+    body.member-ui #panel-cost .sec-head .hint{font-family:var(--ds-sys-font-family-label); font-size:var(--ds-sys-font-size-label-sm); color:var(--ds-sys-color-text-200);}
+    /* 四格:2×2,每格自己一圈抖動框;外面那層是白底格紋＋陰影 */
+    body.member-ui #cost-stats{display:grid; grid-template-columns:1fr 1fr; gap:0; background:var(--ds-sys-pattern-bright-bg); border:0; overflow:visible;
+      border-radius:var(--ds-comp-menu-radius); box-shadow:var(--ds-elevation-surface-soft);}
+    body.member-ui #cost-stats .stat{background:none; border-radius:var(--ds-comp-menu-radius); padding:var(--ds-sys-spacing-3xl) 0;
+      display:flex; flex-direction:column; align-items:center; gap:var(--ds-sys-spacing-md); text-align:center; min-width:0;}
+    body.member-ui #cost-stats .lb, body.member-ui #cost-stats .sb{margin:0; font-family:var(--ds-sys-font-family-label); font-size:var(--ds-sys-font-size-label-sm);
+      font-weight:400; letter-spacing:normal; line-height:1; color:var(--ds-sys-color-text-200);}
+    /* 金額:Body/lg/extra-bold,底下一條 primary 的抖動線(跟字一樣寬,左右多 4) */
+    body.member-ui #cost-stats .vl{position:relative; margin:0; padding:0 var(--ds-sys-spacing-xs); font-family:var(--ds-sys-font-family-body);
+      font-size:var(--ds-sys-font-size-body-lg); font-weight:var(--ds-sys-font-weight-extra-bold); letter-spacing:normal; line-height:22px; color:var(--ds-sys-color-text-100);}
+    body.member-ui #cost-stats .vl .ds-divider{position:absolute; left:0; right:0; bottom:-1px; width:auto;}
+    /* 分類佔比、每一筆:同一個 menu 樣子 */
+    body.member-ui #panel-cost .card, body.member-ui #panel-cost .exp{background:var(--ds-sys-pattern-bright-bg); border:0;
+      border-radius:var(--ds-comp-menu-radius); box-shadow:var(--ds-elevation-surface-soft);}
+    body.member-ui #panel-cost .card{padding:var(--ds-sys-spacing-3xl) var(--ds-sys-spacing-2xl) !important;}
+    body.member-ui #panel-cost .card .ds-progress{margin-bottom:var(--ds-sys-spacing-2xl);}
+    body.member-ui #panel-cost .exp{margin-bottom:var(--ds-sys-spacing-xl); padding:var(--ds-sys-spacing-xl) var(--ds-sys-spacing-2xl);}
+    body.member-ui #panel-cost .catrow{font-family:var(--ds-sys-font-family-label); font-size:var(--ds-sys-font-size-label-md); color:var(--ds-sys-color-text-100);}
+    body.member-ui #panel-cost .catrow .vv{font-family:var(--ds-sys-font-family-label);}
+    body.member-ui #panel-cost .catrow .pc{font-family:var(--ds-sys-font-family-label); font-size:var(--ds-sys-font-size-label-sm); color:var(--ds-sys-color-text-200);}
+    body.member-ui #panel-cost .swatch{border-radius:2px;}
+    /* 「DAY 3 · 日期」那一行:跟交通頁的日期同一種手寫字 */
+    body.member-ui #panel-cost .datehead{font-family:var(--ds-sys-font-family-zhtw-handwriting-zhtw); font-size:var(--ds-sys-font-size-label-lg);
+      letter-spacing:.04em; color:var(--ds-sys-color-text-200); margin:var(--ds-sys-spacing-3xl) 0 var(--ds-sys-spacing-md);}
+    body.member-ui #panel-cost .datehead .num{font-family:var(--ds-sys-font-family-label); font-size:var(--ds-sys-font-size-label-md);}
+    body.member-ui #panel-cost .datehead .rule{background:var(--ds-sys-color-outline-100);}
+    body.member-ui #panel-cost .exp .ti{font-family:var(--ds-sys-font-family-body); font-size:var(--ds-sys-font-size-body-sm); font-weight:var(--ds-sys-font-weight-semi-bold);
+      color:var(--ds-sys-color-text-100);}
+    body.member-ui #panel-cost .exp .amt{font-family:var(--ds-sys-font-family-body); font-size:var(--ds-sys-font-size-body-sm); font-weight:var(--ds-sys-font-weight-extra-bold);
+      color:var(--ds-sys-color-text-100);}
+    body.member-ui #panel-cost .exp .amt .sub, body.member-ui #panel-cost .exp .mt{font-family:var(--ds-sys-font-family-label); font-size:var(--ds-sys-font-size-label-sm);
+      color:var(--ds-sys-color-text-200);}
+    body.member-ui #panel-cost .exp .mt .num{font-family:var(--ds-sys-font-family-label);}
+    body.member-ui #panel-cost .empty{font-family:var(--ds-sys-font-family-label); font-size:var(--ds-sys-font-size-label-md); color:var(--ds-sys-color-text-200);}
     #m-shell > *{pointer-events:auto;}
     #m-head{position:absolute; top:0; left:0; right:0; z-index:4; padding-top:env(safe-area-inset-top,0px);}
     /* Figma:頂列上緣是狀態列 ＋ 10(162057:12098 137 = 59＋10＋56＋12;已結束 162507:13824 padding 69 = 59＋10) */
@@ -1736,11 +1778,14 @@
     /* 交通、花費、分帳:頂列和底部導覽中間是一般會捲的頁 */
     body.member-ui:not([data-view="plan"]):not([data-view="wish"]) .wrap{padding-top:calc(var(--m-headh,137px) + 12px);
       padding-bottom:calc(var(--m-navh,113px) + 12px);}
-    #m-seg{position:absolute; left:var(--ds-sys-spacing-2xl); right:var(--ds-sys-spacing-2xl); z-index:3; display:flex; justify-content:center;}
+    /* 花費／分帳分頁(Figma 162709:49813):靠左,第一格從 12 開始;後面一整條格紋底,捲動的內容從底下過去不會露出來。
+       格線位置對齊整頁的底(#m-bg),接起來看不出是兩塊 */
+    #m-seg{position:absolute; left:0; right:0; z-index:3;}
+    #m-seg .m-segband{display:flex; justify-content:flex-start; padding:var(--ds-sys-spacing-xl) 0 0;}
     #m-seg[hidden]{display:none;}
     /* 花費／分帳上面多一排分頁(要壓過上面那條 :not() 疊出來的權重) */
     body.member-ui[data-view="cost"]:not([data-view="plan"]) .wrap,
-    body.member-ui[data-view="split"]:not([data-view="plan"]) .wrap{padding-top:calc(var(--m-headh,137px) + 72px);}
+    body.member-ui[data-view="split"]:not([data-view="plan"]) .wrap{padding-top:calc(var(--m-headh,137px) + 12px + 38px + 24px);}
     @media (min-width:768px){
       #m-sheet-box .ds-sheet{right:auto; width:430px; left:var(--ds-sys-spacing-2xl);}
     }
@@ -7253,9 +7298,15 @@
       }).join("");
   }
 
-  const tile = (lb, vl, sb) => '<div class="stat"><div class="lb">' + lb + '</div><div class="vl">' + vl + '</div><div class="sb">' + sb + "</div></div>";
+  const tileOld = (lb, vl, sb) => '<div class="stat"><div class="lb">' + lb + '</div><div class="vl">' + vl + '</div><div class="sb">' + sb + "</div></div>";
 
+  /* 一般團員的花費頁:分類的顏色換成設計系統的 custom 色(長條是紙膠帶,Figma 162714:50264),跟格子前面的小色塊一樣 */
+  const M_CAT_COLOR = { transport: "custom 8", stay: "custom 11", food: "custom 1", sight: "custom 4", shop: "custom 14", other: "disable" };
   function renderCost() {
+    const dsOn = memberUI() && !!DS;
+    el("panel-cost").classList.toggle("ds-app", dsOn);
+    const tile = !dsOn ? tileOld : (lb, vl, sb) => '<div class="stat ds-wiggle-border"><div class="lb">' + lb + '</div><div class="vl">' + vl +
+      DS.dividerWiggleHTML({ color: "primary" }) + '</div><div class="sb">' + sb + "</div></div>";
     const total = state.expenses.reduce((s, e) => s + toTWD(e), 0);
     const tripTotal = state.expenses.filter(e => e.date >= (trip && trip.start || "")).reduce((s, e) => s + toTWD(e), 0);
     /* 記完一筆最想馬上知道的是基金還剩多少,所以擺在第一格 */
@@ -7276,14 +7327,20 @@
 
     const sums = CATS.map(c => Object.assign({}, c, { v: state.expenses.filter(e => e.category === c.id).reduce((s, e) => s + toTWD(e), 0) }));
     const shown = sums.filter(c => c.v > 0);
+    const sw = c => dsOn ? DS.progressColor(M_CAT_COLOR[c.id] || "disable") : c.color;
+    el("catbar").hidden = dsOn;
+    const bar = el("panel-cost").querySelector(".ds-progress");
+    if (bar) bar.remove();
+    if (dsOn && total > 0) el("catbar").insertAdjacentHTML("afterend", DS.progressBarHTML({ label: "分類佔比",
+      items: shown.map(c => ({ value: c.v, color: M_CAT_COLOR[c.id] || "disable", label: c.name + " " + Math.round(c.v / total * 100) + "%" })) }));
     el("catbar").innerHTML = total > 0
       ? shown.map(c => '<span style="width:' + (c.v / total * 100) + "%;background:" + c.color + '" title="' + c.name + '"></span>').join("") : "";
     el("catlist").innerHTML = (shown.length ? shown : sums).map(c =>
-      '<div class="catrow"><span class="swatch" style="background:' + c.color + '"></span><span class="nm">' + c.name +
+      '<div class="catrow"><span class="swatch" style="background:' + sw(c) + '"></span><span class="nm">' + c.name +
       '</span><span class="vv">' + twd(c.v) + '</span><span class="pc">' + (total > 0 ? Math.round(c.v / total * 100) : 0) + "%</span></div>").join("");
 
     const list = el("exp-list");
-    if (!state.expenses.length) { list.innerHTML = '<div class="empty">還沒有任何花費紀錄。</div>'; return; }
+    if (!state.expenses.length) { list.innerHTML = '<div class="empty">還沒有任何花費紀錄。</div>'; mDressCost(dsOn); return; }
     const byDate = {};
     state.expenses.forEach(e => (byDate[e.date] = byDate[e.date] || []).push(e));
     list.innerHTML = Object.keys(byDate).sort().reverse().map(date => {
@@ -7293,6 +7350,15 @@
       return '<div class="datehead"><span>' + label + '</span><span class="rule"></span><span class="num">' + twd(sub) + "</span></div>" +
         byDate[date].map(expRow).join("");
     }).join("");
+    mDressCost(dsOn);
+  }
+  /* 白底格紋＋抖動框(menu 的樣子)套到四格、分類佔比、每一筆上,畫抖動線 */
+  function mDressCost(on) {
+    if (!on) return;
+    const p = el("panel-cost");
+    p.querySelectorAll("#cost-stats, .card, .exp").forEach(c => c.classList.add("ds-pattern", "ds-pattern--bright"));
+    p.querySelectorAll(".card, .exp").forEach(c => c.classList.add("ds-wiggle-border"));
+    DS.wireWiggle(p);
   }
 
   function expRow(e) {
@@ -7501,12 +7567,14 @@
       delete el("map")._onPin;
       /* 換回團主畫面:交通卡片變回原本的深色登機證 */
       if (el("board-wrap") && el("board-wrap").classList.contains("ds-app")) renderSeats();
+      if (el("panel-cost").classList.contains("ds-app")) renderCost();
       return;
     }
     if (!DS) { loadDS(); return; }
     shell.hidden = false;
     /* 交通卡片可能在元件載入前就畫好了:這裡補上 menu 的外框 */
     if (el("board-wrap") && !el("board-wrap").classList.contains("ds-app")) mDressLegs(el("board-wrap"));
+    if (!el("panel-cost").classList.contains("ds-app")) renderCost();
     /* 頂列:團名、城市‧日期‧天數‧人數。▼ 只在有別團可以切的時候出現(團清單第一次點才去要) */
     const menuOpen = !el("m-menu").hidden;
     /* 內容沒變就不重畫:同步、天氣回來都會跑到這裡,手指按下到放開之間按鈕被換掉,那一下就點不到(Lulu 11-21「要點很多次」) */
@@ -7559,15 +7627,16 @@
     el("m-seg").hidden = !costView;
     if (!costView) { el("m-seg")._html = null; el("m-seg")._penKey = null; }
     if (costView) {
-      el("m-seg").style.top = (headH + 12) + "px";
+      el("m-seg").style.top = headH + "px";
       const segHTML = DS.segmentedHTML({
         items: [{ key: "cost", label: "花費" }, { key: "split", label: "分帳" }], selected: state.tab, label: "花費或分帳",
       });
       if (el("m-seg")._html !== segHTML) {
-        el("m-seg").innerHTML = segHTML; el("m-seg")._html = segHTML;
+        el("m-seg").innerHTML = '<div class="m-segband ds-pattern">' + segHTML + "</div>"; el("m-seg")._html = segHTML;
         DS.wireSegmented(el("m-seg"));
         mPenSeg(el("m-seg"), state.tab);
       }
+      el("m-seg").firstElementChild.style.setProperty("--pattern-position", "0 " + (-headH) + "px");
     }
     if (!mBuilt) {
       mBuilt = true;

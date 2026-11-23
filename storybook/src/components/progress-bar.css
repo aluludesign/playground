@@ -1,0 +1,27 @@
+/* 長條圖 progress bar —— Figma「progress bar」「progress item」(162714:50264、162713:14940 那一組)
+ *
+ *   一段＝一條紙膠帶:左邊撕開的毛邊(4)、色塊、右邊撕開的毛邊(5)＋壓在上面的一小塊陰影(opacity primary 150)
+ *   每段不透明度 .88、高 17、段和段之間沒有間距;寬度照比例分(flex-grow = 數值)
+ *   顏色:primary／secondary／tertiary／disable／custom 1–14(Figma 的 color 屬性)
+ */
+.ds-progress {
+  display: flex;
+  width: 100%;
+  height: var(--ds-comp-progress-height, 17px);
+}
+.ds-progress__item {
+  position: relative;
+  display: flex;
+  flex: var(--progress-value, 1) 1 0;
+  /* 太小的一段至少留得下兩邊毛邊 */
+  min-width: 10px;
+  height: 100%;
+  color: var(--progress-color, var(--ds-sys-color-primary));
+}
+.ds-progress__item > * { opacity: 0.88; }
+.ds-progress__edge { flex: none; height: 100%; fill: currentColor; display: block; }
+.ds-progress__edge--l { width: 4px; }
+/* 右邊那塊比色塊早 0.76 開始(陰影壓到色塊上) */
+.ds-progress__edge--r { width: 5.76px; margin-left: -0.76px; }
+.ds-progress__edge .shade { fill: var(--ds-sys-color-opacity-opacity-primary-150); }
+.ds-progress__body { flex: 1 1 0; min-width: 0; background: currentColor; }

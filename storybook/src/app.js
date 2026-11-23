@@ -29,3 +29,4 @@ export { tripHeaderHTML, wireTripHeader } from "./components/trip-header.js";
 export { scrimButtonHTML } from "./components/scrim-button.js";
 export { segmentedHTML, segmentedSheetHTML, segmentedItemHTML, wireSegmented } from "./components/segmented.js";
 export { textFieldHTML, wireTextField } from "./components/text-field.js";
+export { progressBarHTML, progressItemHTML, progressColor } from "./components/progress-bar.js";
