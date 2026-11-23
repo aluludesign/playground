@@ -1877,7 +1877,9 @@
     /* 展開(往上滑)= 漸變長大(Lulu 11-22「不要 instant」):那張卡從原本的位置 .3s 長到 16／59、358 寬、到底上 24;
        旁邊的卡同時淡出,地圖同時糊掉(背景模糊 8 → 4px)。收起來反過來走回原位。
        動的那張卡由 mDetailOpen() 改成 position:fixed(.is-float),原位留一塊空的(.m-dcard-ph),旁邊的卡才不會擠過來 */
-    #m-detail.is-open #m-detail-card{overflow:hidden; scroll-snap-type:none;}
+    #m-detail.is-open #m-detail-card, #m-detail-card.is-closing{overflow:hidden; scroll-snap-type:none;}
+    /* .is-closing:收回的那 .3s 也不能變回可以捲的(overflow-x:auto)—— iPhone 的 WebKit 會把裡面 position:fixed 的那張卡切在捲動區裡,
+       一往下拉卡片就被切成下半截、標題不見,滑到定位才補回來(Lulu 11-23 錄影「往下拉時頓了一下」)。卡片放回卡片列才拿掉 */
     #m-detail.is-open #m-detail-card .m-dcard:not(.is-cur){opacity:0; visibility:hidden; transition:opacity .3s ease, visibility 0s .3s;}
     #m-detail-card .m-dcard.is-float{position:fixed; z-index:1; margin:0; max-width:none; height:auto;
       left:max(16px, calc(50% - 195px)); right:max(16px, calc(50% - 195px));
@@ -7958,6 +7960,7 @@
   function mDetailOpen(on, animate) {
     const det = el("m-detail"), box = el("m-detail-card");
     const was = det.classList.contains("is-open");
+    if (!on && was) box.classList.add("is-closing"); else if (on) box.classList.remove("is-closing");
     det.classList.toggle("is-open", on);
     document.body.classList.toggle("m-detail-open", on);
     clearTimeout(mMoveT);
@@ -7975,6 +7978,7 @@
     }
     /* 收起來:回到原位(那塊空的),到了才放回卡片列 */
     const back = () => {
+      box.classList.remove("is-closing");
       box.querySelectorAll(".m-dcard-ph").forEach(p => p.remove());
       box.querySelectorAll(".m-dcard.is-float").forEach(c => {
         c.classList.remove("is-float", "is-moving");
