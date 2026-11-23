@@ -2031,6 +2031,9 @@
     body.member-ui .map.m-zoom-placed .mapzoom.ds-zoom{top:var(--m-zoom-top) !important;}
     /* 滑過搜尋地圖上的點:跟行程地圖一樣微微放大(Lulu 11-22) */
     @media (hover:hover){ body.m-ws #ss-map .pin:hover{transform:translate(-50%,-100%) scale(1.1); z-index:4;} }
+    /* 同一個地方的幾顆點只留一個名字,放在它們正中間(paintMap 標 m-nolab、--m-labdx) */
+    .map .pin.m-nolab .ds-pin-label{visibility:hidden;}
+    .map .pin .ds-pin-label{translate:var(--m-labdx,0px) 0;}
     /* 疊在一起的點:滑鼠移到後面那個露出來的部分,它就跳到前面(Lulu 11-23) */
     @media (hover:hover){
       body.member-ui #map .pin:hover{z-index:4;}
@@ -6587,20 +6590,30 @@
     const sorted = pts.slice().sort((a, b) => (a.cls === "plan" ? 0 : 1) - (b.cls === "plan" ? 0 : 1));
     /* 同一個地方的點(例:同一間店排在不同天)會完全疊在一起,只看得到一顆 →
        位置一樣(差不到 2px)的那幾顆左右各錯開一點點,看得出來是兩顆就好(Lulu 11-23「一點一點看得出來就好」)。
-       錯開的是畫面上的 px,不是經緯度,放大縮小都一樣是一點點 */
+       錯開的是畫面上的 px:縮小時一點點(6),**放大時跟著拉開**,z 13 → 17 從 6 漸漸變成 36(點寬 32 ＋ 4),到 17 以上整顆分開
+       (Lulu 11-24「隨著地圖放大,疊著的點就會分開」;同一個地方座標一樣,光靠放大永遠分不開) */
     const at = sorted.map(p => ({ x: Math.round(left + nearX(p.lo, v) * TILE), y: Math.round(top + projY(p.la, v.z) * TILE) }));
     const grp = [];
     at.forEach((q, i) => { const g = grp.find(g => Math.abs(at[g[0]].x - q.x) <= 2 && Math.abs(at[g[0]].y - q.y) <= 2); if (g) g.push(i); else grp.push([i]); });
-    grp.forEach(g => { if (g.length > 1) g.forEach((i, j) => { at[i].x += Math.round((j - (g.length - 1) / 2) * 6); }); });
+    const apart = 6 + 30 * Math.max(0, Math.min(1, (v.z - 13) / 4));
+    grp.forEach(g => { if (g.length > 1) g.forEach((i, j) => { at[i].x += Math.round((j - (g.length - 1) / 2) * apart); }); });
+    /* 名字(新外框的點):同一個地方只留一個 —— 選到的那顆,不然是畫在最上面那顆 —— 移到那幾顆的正中間;不然一樣的字錯開疊成一團 */
+    const noLab = new Set(), labDx = {};
+    if (mPins(box)) grp.forEach(g => {
+      if (g.length < 2) return;
+      const k = g.find(i => sorted[i].k === box._focus) ?? g[g.length - 1];
+      g.forEach(i => { if (i !== k) noLab.add(i); });
+      labDx[k] = Math.round(g.reduce((t, i) => t + at[i].x, 0) / g.length - at[k].x);
+    });
     sorted.forEach((p, i) => {
       /* 虛線圈 = 「機器只查到大概的範圍,而且還沒有人看過」。人按了「對」之後
          (p.ok)就換回實線 —— 標記的工作做完了。**「約 」留著**:那顆座標仍然是
          行政區的中心,人可以說「這個位置我接受」,不能把它變成一個精確的點。 */
-      html += '<a class="pin' + (p.cls ? " " + p.cls : "") + (p.ap && !p.ok ? " approx" : "") +
+      html += '<a class="pin' + (p.cls ? " " + p.cls : "") + (p.ap && !p.ok ? " approx" : "") + (noLab.has(i) ? " m-nolab" : "") +
         (p.k === box._focus ? " on" : "") + '" data-k="' + esc(p.k) +
         '" href="' + gmap(p.place, p) + '" target="_blank" rel="noopener" style="left:' +
         at[i].x + "px; top:" + at[i].y +
-        "px" + (p.color ? "; background:" + p.color : "") +
+        "px" + (labDx[i] ? "; --m-labdx:" + labDx[i] + "px" : "") + (p.color ? "; background:" + p.color : "") +
         (p.on ? "; color:" + p.on : "") +
         '" title="' + esc(p.tip) + '">' + (mPins(box)
           /* 一般團員的新外框:Figma 的 pin set(名字泡泡＋白色水滴＋塗鴉底編號);選到的那個用大的。願望是 dot、沒有編號 */
