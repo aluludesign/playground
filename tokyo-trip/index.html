@@ -1666,7 +1666,7 @@
     #m-shell{position:fixed; inset:0; z-index:25; pointer-events:none;}
     /* 交通頁:整頁鋪頂列那種格子底,看起來像行程面板拉到最高。.ds-pattern 沒有 @layer 會把 position 改成 relative,要 !important */
     #m-bg{display:none; position:fixed !important; inset:0; z-index:-1; pointer-events:none;}
-    body.member-ui[data-view="fly"] #m-bg{display:block;}
+    body.member-ui[data-view="fly"] #m-bg, body.member-ui[data-view="me"] #m-bg{display:block;}
     #m-shell > *{pointer-events:auto;}
     #m-head{position:absolute; top:0; left:0; right:0; z-index:4; padding-top:env(safe-area-inset-top,0px);}
     /* Figma:頂列上緣是狀態列 ＋ 10(162057:12098 137 = 59＋10＋56＋12;已結束 162507:13824 padding 69 = 59＋10) */
@@ -1960,7 +1960,7 @@
 </svg>
 
 <!-- 一般團員的新外框(介面改版,2026-11-20)。內容由 renderMemberShell() 用 ds/components.js 畫 -->
-<!-- 交通頁整頁的格子底(跟頂列、行程面板同一種 surface pattern;Lulu 11-23) -->
+<!-- 交通、我頁整頁的格子底(跟頂列、行程面板同一種 surface pattern;Lulu 11-23) -->
 <div id="m-bg" class="ds-app ds-pattern" aria-hidden="true"></div>
 <div id="m-shell" class="ds-app" hidden>
   <div id="m-head"></div>
@@ -7776,7 +7776,8 @@
       const tab = NAV_TAB[b.dataset.key];
       /* 「我」=原本右上角漢堡選單裡的項目(Lulu 11-21),功能和權限不變 */
       if (b.dataset.key === "me") { mShowMe(); return; }
-      if (tab && tab !== state.tab) switchTab(tab);
+      /* 從「我」回來:state.tab 還是進「我」之前那頁,同一頁也要換回去 */
+      if (tab && (tab !== state.tab || mMe)) switchTab(tab);
     });
     el("m-seg").addEventListener("click", e => {
       const b = e.target.closest("[data-key]");
