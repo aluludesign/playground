@@ -7399,6 +7399,12 @@
     const days = el("m-days") && el("m-days").offsetHeight || 144;
     return [Math.min(H - head, 40 + days + 2), Math.round(H * 450 / 844), H - head];
   }
+  const M_PAGE_HEAD = {
+    fly: ["交通", "去回程航班和座位"],
+    cost: ["花費", "大家的記帳和分帳"],
+    split: ["花費", "大家的記帳和分帳"],
+    me: ["我", "帳號和這一團的設定"],
+  };
   function mMeta() {
     const range = trip.start && trip.end ? trip.start.replace(/-/g, "/") + "-" + trip.end.slice(5).replace("-", "/") : "";
     return [trip.city || trip.country || "", range, DAYS.length + " Days", MEMBERS.length + "☻"];
@@ -7445,7 +7451,11 @@
     /* 頂列:團名、城市‧日期‧天數‧人數。▼ 只在有別團可以切的時候出現(團清單第一次點才去要) */
     const menuOpen = !el("m-menu").hidden;
     /* 內容沒變就不重畫:同步、天氣回來都會跑到這裡,手指按下到放開之間按鈕被換掉,那一下就點不到(Lulu 11-21「要點很多次」) */
-    const headHTML = DS.tripHeaderHTML({
+    /* 交通、花費、我:團名那格換成頁名、副標換成一句說明(10 字內),不能切團(Lulu 11-23) */
+    const page = mMe ? M_PAGE_HEAD.me : M_PAGE_HEAD[state.tab];
+    const headHTML = page
+      ? DS.tripHeaderHTML({ title: page[0], meta: [page[1]], ended: false, expanded: false, switchable: false, peopleLabel: "看成員名單" })
+      : DS.tripHeaderHTML({
       title: trip.name, meta: mMeta(), ended: tripEnded(), expanded: menuOpen,
       switchable: mTrips === null || mTrips.length > 1, peopleLabel: "看成員名單",
     });
