@@ -1667,6 +1667,38 @@
     /* 交通頁:整頁鋪頂列那種格子底,看起來像行程面板拉到最高。.ds-pattern 沒有 @layer 會把 position 改成 relative,要 !important */
     #m-bg{display:none; position:fixed !important; inset:0; z-index:-1; pointer-events:none;}
     body.member-ui[data-view="fly"] #m-bg, body.member-ui[data-view="me"] #m-bg{display:block;}
+    /* 交通卡片(一般團員):設計系統 menu 的外框＋設計系統的字(Lulu 11-23)。登機證的深色變數換成淺色 token,版面不動 */
+    body.member-ui #board-wrap .board, body.member-ui #board-wrap .tleg{
+      --board-bg:var(--ds-sys-pattern-bright-bg); --board-ink:var(--ds-sys-color-text-100); --board-muted:var(--ds-sys-color-text-200);
+      --board-line:var(--ds-sys-color-outline-100); --board-amber:var(--ds-sys-color-primary);
+      border:0; border-radius:var(--ds-comp-menu-radius); box-shadow:var(--ds-elevation-surface-soft); overflow:visible;
+      margin:0 0 var(--ds-sys-spacing-2xl); color:var(--ds-sys-color-text-100); font-family:var(--ds-sys-font-family-label);}
+    body.member-ui #board-wrap .tl-group{margin-block:var(--ds-sys-spacing-2xl);}
+    body.member-ui #board-wrap .tl-day{font-family:var(--ds-sys-font-family-zhtw-handwriting-zhtw); font-size:var(--ds-sys-font-size-label-lg);
+      font-weight:400; letter-spacing:.04em; color:var(--ds-sys-color-text-200); margin:0 0 var(--ds-sys-spacing-md);}
+    /* 種類(去程／火車…):跟景點卡標題同一種字 */
+    body.member-ui #board-wrap .leg-tag, body.member-ui #board-wrap .tl-kind{font-family:var(--ds-sys-font-family-headline); font-weight:900;
+      font-size:var(--ds-sys-font-size-label-lg); letter-spacing:.05em; color:var(--ds-sys-color-text-100);}
+    body.member-ui #board-wrap .leg-tag .i, body.member-ui #board-wrap .tl-kind .i{color:var(--ds-sys-color-primary);}
+    body.member-ui #board-wrap .leg-co, body.member-ui #board-wrap .leg-no, body.member-ui #board-wrap .tl-no,
+    body.member-ui #board-wrap .port .sub, body.member-ui #board-wrap .tl-pt small,
+    body.member-ui #board-wrap .seats, body.member-ui #board-wrap .tl-bits, body.member-ui #board-wrap .tl-who small{
+      font-family:var(--ds-sys-font-family-label); font-size:var(--ds-sys-font-size-label-sm); letter-spacing:normal; color:var(--ds-sys-color-text-200);}
+    /* 機場代碼、時間:大字用 headline */
+    body.member-ui #board-wrap .port .code{font-family:var(--ds-sys-font-family-headline); font-weight:900; font-size:var(--ds-sys-font-size-headline-sm);
+      letter-spacing:.05em; color:var(--ds-sys-color-text-100);}
+    body.member-ui #board-wrap .port .time, body.member-ui #board-wrap .tl-pt b{font-family:var(--ds-sys-font-family-headline); font-weight:900;
+      font-size:var(--ds-sys-font-size-headline-xs); letter-spacing:.04em; color:var(--ds-sys-color-text-100);}
+    body.member-ui #board-wrap .port .time .next{font-size:var(--ds-sys-font-size-label-sm); color:var(--ds-sys-color-primary);}
+    body.member-ui #board-wrap .tl-pt span{font-family:var(--ds-sys-font-family-label); font-size:var(--ds-sys-font-size-label-md); color:var(--ds-sys-color-text-100);}
+    /* 座位小牌 */
+    body.member-ui #board-wrap .seat, body.member-ui #board-wrap .tl-seat{font-family:var(--ds-sys-font-family-label); font-size:var(--ds-sys-font-size-label-md);
+      background:var(--ds-sys-color-surface); border:var(--ds-sys-border-xs) solid var(--ds-sys-color-outline-100); color:var(--ds-sys-color-text-100);}
+    body.member-ui #board-wrap .seat b, body.member-ui #board-wrap .tl-seat b{font-family:var(--ds-sys-font-family-label); font-size:var(--ds-sys-font-size-label-md);
+      font-weight:700; letter-spacing:.04em; color:var(--ds-sys-color-text-100);}
+    body.member-ui #board-wrap .seat span{font-size:var(--ds-sys-font-size-label-md);}
+    body.member-ui #board-wrap .seat.moved{border-color:var(--ds-sys-color-primary);}
+    body.member-ui #board-wrap .seat.moved b{color:var(--ds-sys-color-primary);}
     #m-shell > *{pointer-events:auto;}
     #m-head{position:absolute; top:0; left:0; right:0; z-index:4; padding-top:env(safe-area-inset-top,0px);}
     /* Figma:頂列上緣是狀態列 ＋ 10(162057:12098 137 = 59＋10＋56＋12;已結束 162507:13824 padding 69 = 59＋10) */
@@ -4046,6 +4078,7 @@
       box.innerHTML = '<div class="tleg tl-empty"><p>還沒有交通。' +
         (can ? "加上去程、回程,或路上的火車、巴士、船、租車、通票 —— 倒數和行程上的出發/抵達就會跟著出現。" : "團主加了之後會出現在這裡。") +
         "</p>" + addBtn + "</div>";
+      mDressLegs(box);
       return;
     }
     const firstSeat = {};   /* 每個人第一班飛機的座位 —— 之後換了位子的標成琥珀色,免得照去程的記憶亂坐 */
@@ -4057,6 +4090,16 @@
       html += kindOf(f) === "飛機" ? planeCard(f, S, can, firstSeat) : legCard(f, S, can);
     });
     box.innerHTML = '<div class="tl">' + html + "</div></div>" + (addBtn ? '<div class="tl-foot">' + addBtn + "</div>" : "");
+    mDressLegs(box);
+  }
+  /* 一般團員:交通卡片換成設計系統 menu 的外框(bright 格紋底、抖動 outline 300 框、surface soft 陰影),
+     不再是深色登機證(Lulu 11-23);團主、副團主的畫面不動 */
+  function mDressLegs(box) {
+    const on = memberUI() && !!DS;
+    box.classList.toggle("ds-app", on);
+    if (!on) return;
+    box.querySelectorAll(".board, .tleg").forEach(c => c.classList.add("ds-pattern", "ds-pattern--bright", "ds-wiggle-border"));
+    DS.wireWiggle(box);
   }
 
   /* ---------- 加一段交通 / 改這一段 ---------- */
@@ -7449,10 +7492,14 @@
     if (!on) {
       if (!shell.hidden) { shell.hidden = true; mRestore(); }
       delete el("map")._onPin;
+      /* 換回團主畫面:交通卡片變回原本的深色登機證 */
+      if (el("board-wrap") && el("board-wrap").classList.contains("ds-app")) renderSeats();
       return;
     }
     if (!DS) { loadDS(); return; }
     shell.hidden = false;
+    /* 交通卡片可能在元件載入前就畫好了:這裡補上 menu 的外框 */
+    if (el("board-wrap") && !el("board-wrap").classList.contains("ds-app")) mDressLegs(el("board-wrap"));
     /* 頂列:團名、城市‧日期‧天數‧人數。▼ 只在有別團可以切的時候出現(團清單第一次點才去要) */
     const menuOpen = !el("m-menu").hidden;
     /* 內容沒變就不重畫:同步、天氣回來都會跑到這裡,手指按下到放開之間按鈕被換掉,那一下就點不到(Lulu 11-21「要點很多次」) */
