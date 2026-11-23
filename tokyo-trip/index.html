@@ -6353,14 +6353,22 @@
       }
     }
     /* 已排進行程的點畫在底下一層,願望疊在上面 —— 願望才是要挑的東西 */
-    pts.slice().sort((a, b) => (a.cls === "plan" ? 0 : 1) - (b.cls === "plan" ? 0 : 1)).forEach(p => {
+    const sorted = pts.slice().sort((a, b) => (a.cls === "plan" ? 0 : 1) - (b.cls === "plan" ? 0 : 1));
+    /* 同一個地方的點(例:同一間店排在不同天)會完全疊在一起,只看得到一顆 →
+       位置一樣(差不到 2px)的那幾顆左右各錯開一點點,看得出來是兩顆就好(Lulu 11-23「一點一點看得出來就好」)。
+       錯開的是畫面上的 px,不是經緯度,放大縮小都一樣是一點點 */
+    const at = sorted.map(p => ({ x: Math.round(left + nearX(p.lo, v) * TILE), y: Math.round(top + projY(p.la, v.z) * TILE) }));
+    const grp = [];
+    at.forEach((q, i) => { const g = grp.find(g => Math.abs(at[g[0]].x - q.x) <= 2 && Math.abs(at[g[0]].y - q.y) <= 2); if (g) g.push(i); else grp.push([i]); });
+    grp.forEach(g => { if (g.length > 1) g.forEach((i, j) => { at[i].x += Math.round((j - (g.length - 1) / 2) * 6); }); });
+    sorted.forEach((p, i) => {
       /* 虛線圈 = 「機器只查到大概的範圍,而且還沒有人看過」。人按了「對」之後
          (p.ok)就換回實線 —— 標記的工作做完了。**「約 」留著**:那顆座標仍然是
          行政區的中心,人可以說「這個位置我接受」,不能把它變成一個精確的點。 */
       html += '<a class="pin' + (p.cls ? " " + p.cls : "") + (p.ap && !p.ok ? " approx" : "") +
         (p.k === box._focus ? " on" : "") + '" data-k="' + esc(p.k) +
         '" href="' + gmap(p.place, p) + '" target="_blank" rel="noopener" style="left:' +
-        Math.round(left + nearX(p.lo, v) * TILE) + "px; top:" + Math.round(top + projY(p.la, v.z) * TILE) +
+        at[i].x + "px; top:" + at[i].y +
         "px" + (p.color ? "; background:" + p.color : "") +
         (p.on ? "; color:" + p.on : "") +
         '" title="' + esc(p.tip) + '">' + (mPins(box)
