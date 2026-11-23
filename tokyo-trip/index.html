@@ -8293,6 +8293,10 @@
       anims.forEach(a => a.cancel());
     };
     anims.forEach(a => { a.onfinish = end; a.oncancel = null; });
+    /* 先停在第一格,等畫面蓋好(建搜尋畫面、畫地圖會卡住頭一兩格,手機上一格要 75～100ms)才開始計時 ——
+       不然時間照走、畫面跟不上,一出現就已經長到一半(Lulu 11-23 錄影「卡卡的抖抖的」) */
+    anims.forEach(a => a.pause());
+    requestAnimationFrame(() => requestAnimationFrame(() => anims.forEach(a => a.play())));
   }
   function mOpenWishSearch() {
     if (!DS) return;
