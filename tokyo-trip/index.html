@@ -1952,7 +1952,8 @@
     /* 選了 Google 的一家(Figma 162390:16203):卡片照內容高(照片＋名字＋地點＋留言框),離底 24,最高頂到搜尋框下 16 */
     body.m-ws-g:not(.m-ws-open):not(.m-ws-typing) #m-ss-card{top:auto; max-height:calc(100% - var(--m-ss-under,160px) - 24px);}
     body.m-ws-g:not(.m-ws-open):not(.m-ws-typing) #m-ss-card > .ds-acard{min-height:0;}
-    body.m-ws-typing #m-ss-card{bottom:calc(var(--m-kb,0px) + 24px); overflow:hidden;}
+    /* 打留言:搜尋畫面已經貼齊看得到的那一塊(mWsVV),卡片離底 24 就是鍵盤上 24。鍵盤動的時候不要再加 transition(會追著跳) */
+    body.m-ws-typing #m-ss-card{bottom:24px; overflow:hidden; transition:none;}
     body.m-ws-typing #m-ss-card > .ds-acard{position:relative; height:100%;}
     body.m-ws-typing #m-ss-card .ds-acard__footer{position:absolute; left:0; right:0; top:var(--m-ss-ph,0px); bottom:0; z-index:2; overflow-y:auto;}
     #m-ss-frame, #m-ss-cal, body.m-ws #ss-map .mapzoom{transition:opacity .2s ease, visibility 0s;}
@@ -8719,6 +8720,9 @@
       });
       mWireWsCard(el("m-ss-card"));
       /* 結果卡上的照片點了一樣放大(Lulu 11-22「搜尋結果有圖的細節卡上照片點了怎麼沒有放大」) */
+      el("m-ss-card").addEventListener("ds-card-close", () => mWsBackToRecs());
+      /* 搜尋框的 ✕ 清掉字:一樣回到推薦那一頁(Lulu 11-25) */
+      root.addEventListener("ds-text-field-clear", e => { if (e.target.closest("#m-ss-frame")) mWsBackToRecs(true); });
       el("m-ss-card").addEventListener("ds-card-photo", e => {
         const out = seekBox(SS), r = ssSel >= 0 && out._hits ? out._hits[ssSel] : out._g || null;
         if (r && r._wiki) mOpenPhotos({ photo: r._wiki, geo: { ph: wikiList(r).slice(1) }, title: hitName(r) }, e.detail.index);
@@ -8953,7 +8957,8 @@
         meta: r === gPick ? [hitAddr(r)].filter(Boolean) : [[g.c, g.s].filter(Boolean).join("，"), hitCat(r)],
         mapURL: r === gPick ? "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(hitName(r)) + "&query_place_id=" + encodeURIComponent(r._g)
           : "https://www.google.com/maps/search/?api=1&query=" + r.lat + "," + r.lon,
-        info: r === gPick ? [] : [{ label: "營業時間", value: hitHours(r) }], closeLabel: "",
+        /* 右上角 ✕(Lulu 11-25,Figma 162197:21058):回到沒打字、有推薦清單的那一頁 */
+        info: r === gPick ? [] : [{ label: "營業時間", value: hitHours(r) }], closeLabel: "不選這個，回到推薦",
         footer: DS.textAreaHTML({ photoButton: "", cancel: "取消", submit: "送出許願" }) });
       DS.wireAttractionCard(card); DS.wireTextArea(card);
       const ft = card.querySelector(".ds-acard__footer");
@@ -8963,10 +8968,43 @@
     if (!r) { card.dataset.at = ""; mWsCardState(""); }
     requestAnimationFrame(() => mPlaceZoom(ssMap()));
   }
+  /* 回到「沒打字、有推薦清單」那一頁(Lulu 11-25):卡片的 ✕、搜尋框的 ✕ 都走這裡。
+     搜到的點、選的那一家都收掉,字清空,下面出現推薦。keep:搜尋框的 ✕(游標留在框裡,鍵盤不收) */
+  function mWsBackToRecs(keep) {
+    const out = seekBox(SS), card = el("m-ss-card");
+    const ae = document.activeElement;
+    if (!keep && ae && ae.blur && (card.contains(ae) || el("m-ss-frame").contains(ae))) ae.blur();
+    document.body.classList.remove("m-ws-typing");
+    mWsVV();
+    el(SS).value = "";
+    seekReset(SS);
+    seekTurn[SS] = (seekTurn[SS] || 0) + 1;   /* 還在飛的那一輪搜尋作廢 */
+    if (out._g) ssGooglePin(null);
+    out._g = null; out._hits = null; out._show = null;
+    seekClear(SS);
+    ssShow([], false);
+    mWsCardState("");
+    const sh = el("m-ss-sheet"); sh.hidden = false; sh._penKey = null;
+    mWsSync();
+    mWsSheet();
+    if (keep) { const i = el("m-ss-frame").querySelector("input"); if (i) i.focus({ preventScroll: true }); }
+  }
+  /* 打留言時,整個搜尋畫面貼齊「看得到的那一塊」(visualViewport):iPhone 鍵盤出來時會把畫面往上推、又推回來,
+     照鍵盤高度去算卡片位置會跟著跳(Lulu 11-25 錄影)。改成畫面本身就等於看得到的範圍 → 卡片上 16、下 24(Figma 162197:21058)
+     永遠剛好在鍵盤上面,不管 iPhone 怎麼捲 */
+  function mWsVV() {
+    const scr = el("seek-screen"), vv = window.visualViewport;
+    if (!scr) return;
+    if (vv && document.body.classList.contains("m-ws-typing")) {
+      scr.style.top = Math.round(vv.offsetTop) + "px";
+      scr.style.height = Math.round(vv.height) + "px";
+      scr.style.bottom = "auto";
+    } else { scr.style.top = ""; scr.style.height = ""; scr.style.bottom = ""; }
+  }
   /* 結果卡的三種樣子:""=收著、"open"=往上滑展開、打留言時另外加 m-ws-typing(鍵盤收起來就回到原本那一種) */
   function mWsCardState(st) {
     document.body.classList.toggle("m-ws-open", st === "open");
-    if (!st) { document.body.classList.remove("m-ws-typing"); const c = el("m-ss-card"); if (c) c.scrollTop = 0; }
+    if (!st) { document.body.classList.remove("m-ws-typing"); mWsVV(); const c = el("m-ss-card"); if (c) c.scrollTop = 0; }
   }
   /* 鍵盤多高:visualViewport 比畫面矮多少 */
   function mWsKb() {
@@ -8983,6 +9021,7 @@
     card.style.setProperty("--m-ss-ph", (ph ? ph.offsetHeight : 0) + "px");
     mWsKb();
     document.body.classList.toggle("m-ws-typing", on);
+    mWsVV();
     /* 留言框從原本的位置滑上來(或滑回去) */
     if (ft && ft.animate && !(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches)) {
       const dy = from - ft.getBoundingClientRect().top;
@@ -9012,7 +9051,11 @@
       if (!e.target.closest(".ds-acard__footer")) return;
       setTimeout(() => { if (!card.contains(document.activeElement)) mWsTyping(false); }, 0);
     });
-    if (window.visualViewport) visualViewport.addEventListener("resize", () => { if (document.body.classList.contains("m-ws")) mWsKb(); });
+    if (window.visualViewport) {
+      const follow = () => { if (document.body.classList.contains("m-ws")) { mWsKb(); mWsVV(); } };
+      visualViewport.addEventListener("resize", follow);
+      visualViewport.addEventListener("scroll", follow);
+    }
   }
   /* 強力搜:原本要先按「強力搜」上膛(同意花這一次),再按搜尋才走 Google —— 這一顆兩步一起做 */
   function mWsStrong() {
