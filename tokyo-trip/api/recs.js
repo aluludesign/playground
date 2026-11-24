@@ -209,7 +209,7 @@ module.exports = async (req, res) => {
     const a = Array.from(new Set([label(e, ["zh"]), label(e, ["ja"]), label(e, ["en"]), o && o.ja, o && o.osm].filter(x => x && x !== n)));
     const imgs = wdFiles(e);
     items.push({ n, a, la: +(+pla).toFixed(5), lo: +(+plo).toFixed(5), k: kind,
-      ph: imgs[0] ? filePage(imgs[0]) : "", ps: imgs.map(filePage), cat: claim(e, "P373")[0] || "", web: (claim(e, "P856").find(u => /^https?:\/\//.test(u)) || ""),
+      ph: imgs[0] ? filePage(imgs[0]) : "", ps: imgs.map(filePage), cat: claim(e, "P373")[0] || "", web: (claim(e, "P856").find(u => /^https?:\/\//.test(u)) || ""), zw: (e.sitelinks && e.sitelinks.zhwiki && e.sitelinks.zhwiki.title) || "",
       w: Object.keys(e.sitelinks || {}).length, _id: id });
   });
   items.sort((x, y) => y.w - x.w);

@@ -5457,7 +5457,8 @@
   const wikiList = r => (r && r._wikis && r._wikis.length ? r._wikis : r && r._wiki ? [r._wiki] : []).filter(isCommons).slice(0, 3);
   async function wdEntities(ids, labels) {
     if (!ids.length) return {};
-    const r = await fetch(WD + "action=wbgetentities&props=claims" + (labels ? "|labels&languages=zh-tw|zh-hant|zh|ja|en" : "") +
+    /* sitelinks(只要中文維基):景點卡的簡介用那一頁的摘要 */
+    const r = await fetch(WD + "action=wbgetentities&sitefilter=zhwiki&props=claims|sitelinks" + (labels ? "|labels&languages=zh-tw|zh-hant|zh|ja|en" : "") +
       "&ids=" + ids.slice(0, 50).join("|")).then(x => x.json()).catch(() => null);
     return (r && r.entities) || {};
   }
@@ -5468,8 +5469,10 @@
     const ids = Array.from(new Set(want.filter(r => r._wiki === undefined).map(r => r.extratags.wikidata)));
     const ents = await wdEntities(ids, false);
     await Promise.all(want.filter(r => r._wiki === undefined).map(async r => {
-      const ps = await wdPhotos(ents[r.extratags.wikidata] || {}).catch(() => []);
+      const e = ents[r.extratags.wikidata] || {};
+      const ps = await wdPhotos(e).catch(() => []);
       r._wikis = ps; r._wiki = ps[0] || "";
+      r._zw = (e.sitelinks && e.sitelinks.zhwiki && e.sitelinks.zhwiki.title) || "";
     }));
   }
   /* 強力搜挑的:名字＋座標比對(100 公尺內、名字對得上) */
@@ -5487,7 +5490,8 @@
        最後那一層要卡長度:實測「淺草寺」附近 100 公尺內有「淺草」(地區)這個條目,「淺草」包在「淺草寺」裡,會拿到地區的照片 */
     const tiers = [x => x === n, x => x.includes(n), x => x.length >= 3 && n.includes(x) && x.length / n.length >= 0.7];
     /* 回傳最多 3 張(第 1 張就是原本那張) */
-    for (const t of tiers) { const c = cands.find(c => c.names.some(t)); if (c) { const ps = await wdPhotos(c.e).catch(() => []); return ps.length ? ps : [commonsPage(c.f)]; } }
+    for (const t of tiers) { const c = cands.find(c => c.names.some(t)); if (c) { const ps = await wdPhotos(c.e).catch(() => []); const out = ps.length ? ps : [commonsPage(c.f)];
+      out.zw = (c.e.sitelinks && c.e.sitelinks.zhwiki && c.e.sitelinks.zhwiki.title) || ""; return out; } }
     return [];
   }
 
@@ -5629,6 +5633,7 @@
       _k: p.k || "", _geo: { la: p.la, lo: p.lo, c: p.c || "", s: p.s || "", k: p.k || "" } };
     if (p.src) r._src = p.src;
     if (p.web) r._web = p.web;
+    if (p.zw) r._zw = p.zw;
     if (p.ph) { r._wiki = p.ph; r._wikis = [p.ph].concat(p.more || []).filter(isCommons).slice(0, 3); }
     seekList(SS, [r]);
     ssSelect(0, false);
@@ -6081,11 +6086,29 @@
   };
   /* 景點卡名稱下面那串(Figma 162197:20434,Lulu 11-25 重給):類別、營業時間、門票、輪椅、電話、網站、資料來源。
      OpenStreetMap 上有標才寫;沒標的那一行不放 */
+  /* 簡介(Lulu 11-25「看能抓到什麼就寫什麼,簡易介紹的文字即可」):中文維基那一頁的摘要,台灣用字,
+     只留前一、兩句(最多約 90 字)。找得到那一頁才有:推薦的、一般搜有標維基的、強力搜對得上維基的 */
+  const introCache = {};
+  function wikiIntro(title) {
+    if (!title) return Promise.resolve("");
+    if (!introCache[title]) introCache[title] = fetch("https://zh.wikipedia.org/api/rest_v1/page/summary/" + encodeURIComponent(title.replace(/ /g, "_")), { headers: { "Accept-Language": "zh-tw" } })
+      .then(x => x.ok ? x.json() : null).then(j => {
+        const t = String((j && j.type !== "disambiguation" && j.extract) || "").replace(/\s+/g, " ").trim();
+        if (!t) return "";
+        const ss = t.match(/[^。！？]+[。！？]?/g) || [t];
+        let out = ss[0];
+        if (ss[1] && (out + ss[1]).length <= 90) out += ss[1];
+        return out.length > 100 ? out.slice(0, 96) + "…" : out;
+      }).catch(() => "");
+    return introCache[title];
+  }
+  const zwOf = r => r._zw || (/^zh:/.test((r.extratags || {}).wikipedia || "") ? r.extratags.wikipedia.slice(3) : "");
   function hitInfo(r) {
     const x = r.extratags || {};
     const yn = (v, yes, no, part) => v === "yes" ? yes : v === "no" ? no : v === "limited" && part ? part : v || "";
     const fee = yn(String(x.fee || ""), "要", "不用");
     return [
+      { label: "簡介", value: r._intro || "" },
       { label: "類別", value: hitCat(r) },
       { label: "營業時間", value: hitHours(r) },
       { label: "門票", value: fee && x.charge ? fee + "（" + x.charge + "）" : fee },
@@ -6273,7 +6296,7 @@
       const out = seekBox(SS);
       const g = out._g = { lat: +la, lon: +lo, display_name: [name, addr].filter(Boolean).join(", "), _n: name, _g: place.id || "1", _wiki: (pins[name] && pins[name].photo) || "" };
       el(SS).value = name;
-      wikiNear(name, +la, +lo).then(ps => { if (ps.length && out._g === g) { g._wiki = ps[0]; g._wikis = ps; mWsSync(); } }).catch(() => {});
+      wikiNear(name, +la, +lo).then(ps => { if (ps.length && out._g === g) { g._wiki = ps[0]; g._wikis = ps; g._zw = ps.zw || ""; mWsSync(); } }).catch(() => {});
       /* 挑了的那一家在地圖上標一個點(跟一般搜選起來的點同一種樣子),地圖移過去;取消回清單時拿掉(ds-text-area-cancel)。
          只標使用者挑的這一家 —— 清單的其他結果照舊不標(Google 的條款) */
       ssGooglePin({ la: +la, lo: +lo, name });
@@ -8861,14 +8884,14 @@
     if (!c) { mRecs = { key: "", items: null, fail: true, busy: false }; return; }
     const key = (Math.round(c.la * 100) / 100).toFixed(2) + "," + (Math.round(c.lo * 100) / 100).toFixed(2);
     if (mRecs.key === key && (mRecs.items || mRecs.busy)) return;
-    const lsKey = "trippps-recs4:" + key;   /* 2:多了國家、都道府縣;3:照片最多 3 張;4:官方網站(11-25),舊的不要 */
+    const lsKey = "trippps-recs5:" + key;   /* 2:多了國家、都道府縣;3:照片最多 3 張;4:官方網站(11-25),舊的不要 */
     try {
       const keep = JSON.parse(localStorage.getItem(lsKey) || "null");
       if (keep && Date.now() - keep.t < 7 * 864e5 && Array.isArray(keep.items) && keep.items.length) { mRecs = { key, items: keep.items, fail: false, busy: false }; return; }
     } catch (_) {}
     mRecs = { key, items: null, fail: false, busy: true };
     const [la, lo] = key.split(",");
-    fetch(RECS_API + "?v=4&lat=" + la + "&lon=" + lo).then(r => r.ok ? r.json() : null).catch(() => null).then(j => {
+    fetch(RECS_API + "?v=5&lat=" + la + "&lon=" + lo).then(r => r.ok ? r.json() : null).catch(() => null).then(j => {
       if (mRecs.key !== key) return;
       const items = j && Array.isArray(j.items) ? j.items.filter(x => x && x.n && isFinite(x.la) && isFinite(x.lo)) : [];
       mRecs = { key, items: items.length ? items : null, fail: !items.length, busy: false };
@@ -8895,7 +8918,7 @@
   function mRecTake(x) {
     if (!x) return;
     const ps = (x.ps || [x.ph]).filter(isCommons);
-    sugItems = [{ type: "p", p: { n: x.n, la: x.la, lo: x.lo, c: x.c || "", s: x.s || "", k: x.k || "", ph: ps[0] || "", more: ps.slice(1), src: "wiki", web: /^https?:\/\//.test(x.web || "") ? x.web : "" } }];
+    sugItems = [{ type: "p", p: { n: x.n, la: x.la, lo: x.lo, c: x.c || "", s: x.s || "", k: x.k || "", ph: ps[0] || "", more: ps.slice(1), src: "wiki", zw: x.zw || "", web: /^https?:\/\//.test(x.web || "") ? x.web : "" } }];
     sugTake(0);
   }
   /* 許願搜尋下面那張(Lulu 11-25):
@@ -8979,8 +9002,10 @@
     card.hidden = !r;
     bottom.hidden = !html || !!r;
     document.body.classList.toggle("m-ws-g", !!r && r === gPick);
-    if (r && card.dataset.at !== String(ssSel) + hitName(r) + wikiList(r).join()) {
-      card.dataset.at = String(ssSel) + hitName(r) + wikiList(r).join();
+    /* 簡介還沒拿:去拿,拿到再畫一次 */
+    if (r && r._intro === undefined && zwOf(r)) { r._intro = ""; wikiIntro(zwOf(r)).then(t => { r._intro = t; if (t) mWsSync(); }); }
+    if (r && card.dataset.at !== String(ssSel) + hitName(r) + wikiList(r).join() + (r._intro || "")) {
+      card.dataset.at = String(ssSel) + hitName(r) + wikiList(r).join() + (r._intro || "");
       const g = hitGeo(r) || {};
       /* Google 的那一家(162390:16203):只有照片、名字、地點,下面接留言框 */
       card.innerHTML = DS.attractionCardHTML({ photos: wikiList(r).map(u => commonsImg(u, 720)), title: hitName(r),
