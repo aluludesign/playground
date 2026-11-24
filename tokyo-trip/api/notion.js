@@ -72,6 +72,20 @@ async function hasCidCol() {
    沒有這一欄就寫進去的話,Notion 會把整筆拒絕,行程、願望都存不了 */
 let geoCol = { has: false, at: 0 };
 let hintCache = { rows: null, at: 0 };
+/* 「附圖」欄(2026-11-25,Lulu:許願可以放自己的照片,最多 3 張):行程表(願望也住這裡)的檔案欄。
+   沒有就第一次要掛照片時自動加上去 —— 舊的團不用先去 Notion 開欄位 */
+let attachCol = { has: false, at: 0 };
+async function ensureAttachCol() {
+  if (attachCol.has && Date.now() - attachCol.at < 10 * 60 * 1000) return true;
+  try {
+    const d = await notion("/databases/" + DB.itinerary);
+    if (!(d.properties && d.properties["附圖"])) {
+      await notion("/databases/" + DB.itinerary, { method: "PATCH", body: JSON.stringify({ properties: { "附圖": { files: {} } } }) });
+    }
+    attachCol = { has: true, at: Date.now() };
+    return true;
+  } catch (_) { return false; }
+}
 async function hasGeoCol() {
   if (Date.now() - geoCol.at < 10 * 60 * 1000) return geoCol.has;
   try {
@@ -222,6 +236,7 @@ function stopOut(page) {
     placeId: p["地點編號"] ? txt(p["地點編號"]) : "",
     photo: photoUrl(p["照片"]),
     geo: geoOut(p["地點資訊"]),
+    pics: photosOut(p["附圖"]),   /* 從願望排進來的,團員放的照片跟著 */
   };
 }
 function stopIn(b) {
@@ -258,6 +273,8 @@ function wishOut(page) {
     placeId: p["地點編號"] ? txt(p["地點編號"]) : "",
     photo: photoUrl(p["照片"]),
     geo: geoOut(p["地點資訊"]),
+    /* 團員自己放的照片(「附圖」欄):Notion 的網址 1 小時後失效,重讀就有新的 */
+    pics: photosOut(p["附圖"]),
     createdAt: page.created_time,
   };
 }
@@ -273,6 +290,8 @@ function wishIn(b) {
     ...(b.placeId !== undefined ? { "地點編號": { rich_text: richText(String(b.placeId || "").slice(0, 200)) } } : {}),
     ...(b.photo !== undefined ? { "照片": photoProp(b.photo) } : {}),
     "票": { rich_text: richText(ids(b.votes).join(",")) },
+    /* 團員放的照片:上傳編號(resource=photo&for=wish 拿到的),最多 3 張;沒帶就不動 */
+    ...(Array.isArray(b.pics) && b.pics.length ? { "附圖": photoIn(photoIds({ photos: b.pics })) } : {}),
   };
 }
 
@@ -926,7 +945,9 @@ module.exports = async (req, res) => {
     try {
       const c = await context(q.t);
       if (c.stop) return stop(c.stop);
-      if (!c.can("cost") && !c.can("seat")) return res.status(403).json({ error: "這一塊目前只有團主動得了" });
+      /* 許願附圖(2026-11-25):團裡每個人都能許願,所以都能傳;結束的團不能再許願 */
+      const forWish = q.for === "wish" || body.for === "wish";
+      if (forWish ? c.trip.ended : (!c.can("cost") && !c.can("seat"))) return res.status(403).json({ error: forWish ? "這一團已經結束了,不能再許願" : "這一塊目前只有團主動得了" });
       const b64 = typeof body.image === "string" ? body.image : "";
       if (!b64) return res.status(400).json({ error: "沒有照片" });
       if (b64.length > 3_000_000) return res.status(413).json({ error: "照片太大" });
@@ -1277,7 +1298,9 @@ module.exports = async (req, res) => {
       const mineId = c.mine.id;
       if (c.trip.ended) return res.status(403).json({ why: "ended", error: "這一團已經結束了,不能再許願或投票" });
       if (method === "POST") {
-        const props = await shapeIn({ ...body, by: mineId, votes: ids(body.votes).filter(v => v === mineId) });
+        /* 有附圖 → 先確定行程表有「附圖」欄;加不上去就不掛照片(願望照樣存) */
+        const wantPics = Array.isArray(body.pics) && body.pics.length && (await ensureAttachCol());
+        const props = await shapeIn({ ...body, pics: wantPics ? body.pics : undefined, by: mineId, votes: ids(body.votes).filter(v => v === mineId) });
         const page = await notion("/pages", { method: "POST",
           body: JSON.stringify({ parent: { database_id: shape.db }, properties: withTrip(props) }) });
         await log("許願", me2 + " 許願:" + said(body.title || "想去的地方"));

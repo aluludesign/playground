@@ -75,6 +75,8 @@ export function wireTextArea(root = document) {
     const photos = ta.querySelector(".ds-text-area__photos");
     const file = ta.querySelector(".ds-text-area__file");
     const files = [];
+    // 一開始就放著的照片（photos 參數）不在 files 裡；新選的才有，刪的時候要對到同一張
+    let preset = photos ? photos.children.length : 0;
     const max = +(ta.querySelector(".ds-text-area__add")?.dataset.max || 3);
     const photoBtn = ta.querySelector(".ds-text-area__photo-btn");
     // 放滿了就不能再加（這個旅行專案最多 3 張）
@@ -118,6 +120,7 @@ export function wireTextArea(root = document) {
       const img = thumb.querySelector("img");
       if (img.src.startsWith("blob:")) URL.revokeObjectURL(img.src);
       thumb.remove();
+      if (i >= preset) files.splice(i - preset, 1); else preset--;
       syncMax();
       ta.dispatchEvent(new CustomEvent("ds-photo-delete", { bubbles: true, detail: { index: i } }));
     });

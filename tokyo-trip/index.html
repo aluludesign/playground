@@ -1943,11 +1943,9 @@
       box-shadow:var(--ds-elevation-surface-medium); transition:top .3s ease, bottom .3s ease;}
     #m-ss-card > .ds-acard{min-height:100%; display:flex; flex-direction:column; box-shadow:none;}
     /* Figma command text area:surface＋pattern、Elevation/surface/medium、上下 16;留言框 310 寬(左右 24) */
-    /* Figma 162197:20434(11-25 重讀):留言區有「有什麼想說的？」標籤、留言框、「+照片」、取消／送出。
-       「+照片」要等許願附圖做好才放,先把它那一列的高度留著(內容框底下多留) */
+    /* Figma 162197:20434(11-25 重讀):留言區有「有什麼想說的？」標籤、留言框、「+照片」(許願附圖,最多 3 張)、取消／送出 */
     /* 頭像只在打留言時出現(Figma 162197:21058 有、20434 沒有) */
     body:not(.m-ws-typing) #m-ss-card .ds-text-area__avatar{display:none;}
-    #m-ss-card .ds-text-area__content{padding-bottom:calc(var(--ds-comp-field-height) - var(--ds-sys-spacing-sm));}
     #m-ss-card .ds-acard__footer{margin-top:auto; padding:var(--ds-sys-spacing-2xl) var(--ds-sys-spacing-4xl); box-shadow:var(--ds-elevation-surface-medium);}
     body.m-ws-open #m-ss-card, body.m-ws-typing #m-ss-card{--m-ss-card-top:calc(16px + env(safe-area-inset-top,0px));}
     /* 選了 Google 的一家(Figma 162390:16203):卡片照內容高(照片＋名字＋地點＋留言框),離底 24,最高頂到搜尋框下 16 */
@@ -3076,7 +3074,7 @@
   });
   /* by:從願望排進來的那一筆記著是誰許的 —— 有它才退得回願望區 */
   const stopFromRow = r => ({ id: r.id, day: r.day, time: r.time || "", title: r.title, place: r.place || "", note: r.note || "", by: r.by || "", placeId: r.placeId || "",
-    photo: r.photo || "", photoAt: r.place || "", geo: r.geo || null });
+    photo: r.photo || "", photoAt: r.place || "", geo: r.geo || null, pics: (r.pics || []).slice() });
   const stopToRow = s => ({ title: s.title, day: s.day, time: s.time, place: s.place, note: s.note, kind: "其他", placeId: pidOf(s.place) || s.placeId || "", photo: photoOf(s), geo: geoOf(s) });
 
   /* --- 本機 --- */
@@ -3461,11 +3459,21 @@
   /* --- 許願 --- */
   /* 願望跟行程住同一個 Notion 資料庫,差別只在有沒有填日期。
      +1 不需要通行碼,所以非管理員也動得了 —— 後端對 wishes 開了這個口。 */
+  /* 許願附圖(Lulu 11-25,最多 3 張):送出時才傳 —— 每張縮到長邊 1600 的 JPEG,一張一張上傳拿編號,
+     跟願望一起存,伺服器掛到「附圖」欄。傳不上去的那張就不掛,願望照樣存 */
+  let wishFiles = [];
+  const wishPhotoUpload = f => shrinkImage(f, 1600, 0.85)
+    .then(b64 => api("?resource=photo&for=wish", { method: "POST", body: JSON.stringify({ image: b64, for: "wish" }) }))
+    .then(r => (r && r.photo) || "").catch(() => "");
   async function addWish(w) {
+    const files = w._files || []; delete w._files;
     state.wishes.push(w); renderWishes();
     if (!online) { saveLocal(); return; }
     try {
-      const { row } = await api("?resource=wishes", { method: "POST", body: JSON.stringify(Object.assign({}, w, { placeId: pidOf(w.place), photo: photoOf(w, ""), geo: geoOf(w, "") })) });
+      const picIds = files.length ? (await Promise.all(files.map(wishPhotoUpload))).filter(Boolean) : [];
+      if (files.length && picIds.length < files.length) flash("有 " + (files.length - picIds.length) + " 張照片沒存到");
+      const body = Object.assign({}, w, { placeId: pidOf(w.place), photo: photoOf(w, ""), geo: geoOf(w, ""), pics: picIds });
+      const { row } = await api("?resource=wishes", { method: "POST", body: JSON.stringify(body) });
       const k = state.wishes.indexOf(w);
       if (k > -1) state.wishes[k] = row;
       renderWishes();
@@ -3555,7 +3563,7 @@
     const k = state.wishes.findIndex(x => x.id === id);
     if (k < 0) return;
     const w = state.wishes.splice(k, 1)[0];
-    const stop = { id: w.id, day: day, time: time, title: w.title, place: w.place || "", note: w.note || "", by: w.by || "", placeId: w.placeId || "", photo: w.photo || "", photoAt: w.place || "", geo: w.geo || null };
+    const stop = { id: w.id, day: day, time: time, title: w.title, place: w.place || "", note: w.note || "", by: w.by || "", placeId: w.placeId || "", photo: w.photo || "", photoAt: w.place || "", geo: w.geo || null, pics: (w.pics || []).slice() };
     state.stops.push(stop);
     renderWishes(); render();
     if (!online) { saveLocal(); checkPlace(stop, "wish-msg"); return; }
@@ -7997,9 +8005,10 @@
   /* 行程的照片:現在只有維基共享資源那一張(團員放的附圖還沒上線,上了再加進來,最多疊 3 張) */
   function stopPhotos(x) {
     /* 維基照片最多 3 張(Lulu 11-25):第 1 張在「照片」欄,第 2、3 張在地點資訊裡 */
-    if (!isCommons(x.photo)) return [];
-    const more = (x.geo && Array.isArray(x.geo.ph) ? x.geo.ph : []).filter(isCommons);
-    return [x.photo].concat(more).slice(0, 3).map(u => commonsImg(u, 360));
+    /* 團員自己放的照片排前面(許願附圖,Lulu 11-25),再補維基的;整個 App 照片最多 3 張 */
+    const mine = (Array.isArray(x.pics) ? x.pics : []).filter(u => /^(https:|blob:)/.test(String(u || "")));
+    const wiki = isCommons(x.photo) ? [x.photo].concat((x.geo && Array.isArray(x.geo.ph) ? x.geo.ph : []).filter(isCommons)).map(u => commonsImg(u, 360)) : [];
+    return mine.concat(wiki).slice(0, 3);
   }
   /* 點行程小卡 → 當日細節(地圖上那個點放到正中間、放大,下面一張景點卡) */
   function openDayDetail(key) { mOpenDetail(key); }
@@ -8764,7 +8773,7 @@
         if (g) ssGooglePin(null); else { ssMap()._focus = null; paintMap(ssMap()); }
         mWsSync();
       });
-      root.addEventListener("ds-text-area-submit", e => mWsSubmit(e.detail.value || "", !!e.target.closest(".m-ss-direct")));
+      root.addEventListener("ds-text-area-submit", e => mWsSubmit(e.detail.value || "", !!e.target.closest(".m-ss-direct"), e.detail.files || []));
       new MutationObserver(() => mWsSync()).observe(seekBox(SS), { childList: true, subtree: true });
     }
     mWsFrame();
@@ -8924,7 +8933,7 @@
          預設打開;關掉之後點 i 才會再出現 */
       content = '<div class="m-ss-direct"><h3><span>' + esc("直接許願" + (typed ? typed : "")) + "</span>" + DS.infoIconButtonHTML({ label: "顯示說明" }) + "</h3>" +
         '<div class="m-ss-tip"' + (mWsTipOff ? " hidden" : "") + ">" + DS.infoHTML({ text: "不選地點直接許願，願望地圖上不會出現地點指標", type: "info", expanded: true, leadingIcon: false, collapseIcon: false, button: "close" }) + "</div>" +
-        DS.textAreaHTML({ photoButton: "", cancel: "", submit: "送出許願" }) + "</div>";
+        DS.textAreaHTML({ photoButton: "+照片", cancel: "", submit: "送出許願" }) + "</div>";
     }
     const tabs = typed ? [{ key: "hot", label: "熱門地點" }, { key: "none", label: "不指定地點" }] : [{ key: "hot", label: "熱門地點" }];
     /* 分頁數變了(1 ↔ 2)籤的線要重畫 */
@@ -8981,7 +8990,7 @@
         /* 右上角 ✕(Lulu 11-25,Figma 162197:21058):回到沒打字、有推薦清單的那一頁 */
         info: r === gPick ? [] : hitInfo(r), closeLabel: "不選這個，回到推薦",
         /* Figma 162197:20434／21058(Lulu 11-25 重給):「有什麼想說的？」標籤要看得到;打字時前面放自己的頭像 */
-        footer: DS.textAreaHTML({ photoButton: "", cancel: "取消", submit: "送出許願",
+        footer: DS.textAreaHTML({ photoButton: "+照片", cancel: "取消", submit: "送出許願",
           avatar: myMember ? mFace(myMember.id).src : "", avatarAlt: myMember ? nameOf(myMember.id) : "" }) });
       DS.wireAttractionCard(card); DS.wireTextArea(card);
       const ft = card.querySelector(".ds-acard__footer");
@@ -9097,13 +9106,14 @@
     if (inp) inp.focus();
   }
   /* 送出許願:選了地點 → 那個地點;不指定地點 → 只有名字。留言放「想說的」。之後照原本那張表單送 */
-  function mWsSubmit(note, direct) {
+  function mWsSubmit(note, direct, files) {
     const out = seekBox(SS);
     if (!direct && ssSel >= 0 && out._hits) takeHit("wf-title", ssSel, out);
     else if (!direct && out._g) el("wf-title").value = out._g._n;   /* Google 的那一家:座標和地點編號選的時候記好了 */
     else el("wf-title").value = el(SS).value.trim();
     if (!el("wf-title").value.trim()) { flash("先打想去的地方"); return; }
     el("wf-note").value = note;
+    wishFiles = (files || []).slice(0, 3);   /* 許願附圖:wishSave 拿去跟這個願望一起存 */
     mCloseWishSearch(true);
     el("wish-form").requestSubmit();
   }
@@ -9460,7 +9470,14 @@
   let photoRetryAt = 0;
   document.addEventListener("error", ev => {
     const img = ev.target;
-    if (!img || img.tagName !== "IMG" || !img.closest(".ph-thumb")) return;
+    if (!img || img.tagName !== "IMG") return;
+    /* 新畫面的許願附圖(許願卡、細節卡、照片預覽):一樣是 Notion 的網址,過期就重讀一次(Lulu 11-25) */
+    if (!img.closest(".ph-thumb")) {
+      if (/amazonaws\.com|notion\.so|notion-static|notionusercontent/.test(img.currentSrc || img.src || "") && online && Date.now() - photoRetryAt > 60e3) {
+        photoRetryAt = Date.now(); pull().then(render).catch(() => {});
+      }
+      return;
+    }
     /* 維基的照片不會過期,載不到就是那張沒了 —— 藏起來就好,不要重讀資料 */
     if (img.closest(".ph-thumb.wiki")) { img.closest(".wiki-ph").hidden = true; return; }
     if (online && Date.now() - photoRetryAt > 60e3) { photoRetryAt = Date.now(); pull().then(render).catch(() => {}); }
@@ -11030,10 +11047,13 @@
   function wishSave() {
     const title = el("wf-title").value.trim(), by = el("wf-by").value;
     const place = locatedAt(title) ? title : "";
+    const files = wishFiles; wishFiles = [];
     addWish({
       id: uid(), title: title, place: place,
       note: el("wf-note").value.trim(), by: by, votes: [by],
       createdAt: new Date().toISOString(),
+      /* 還沒傳上去之前,先用手機裡的那張給自己看 */
+      pics: files.map(f => URL.createObjectURL(f)), _files: files,
     });
     /* 許願**以前完全沒有這個回饋**,而它正是最需要的地方:願望有一大半不填地點,
        存進去之後地圖上就是沒有它,而使用者分不出那是「我沒填」「還在查」還是「壞了」。
