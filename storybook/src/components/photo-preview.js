@@ -12,7 +12,8 @@ const CROSS = `<svg class="ds-btn__icon" viewBox="0 0 24 24" aria-hidden="true">
  * 照片預覽（Figma 161747:16541）：整頁蓋在畫面上，背景模糊
  * photos：[{ src, thumb }]（thumb 不給就用 src）；at：現在是第幾張
  * title：名稱；credit／creditURL：出處（例：「照片:維基共享資源」，點了開那一頁）
- * 左右箭頭、點縮圖換張 → 發出 ds-photo-at（detail.index）；✕ → ds-photo-close
+ * 左右箭頭、點縮圖換張、在大圖上左右滑 → 發出 ds-photo-at（detail.index）；✕ → ds-photo-close
+ * 換張時新的那張從那一側滑進來（同一個元件換狀態一律位移漸變）：重畫後呼叫 slidePhotoIn(root, dir)
  */
 export function photoPreviewHTML({ photos = [], at = 0, title = "", credit = "", creditURL = "" } = {}) {
   const list = photos.filter((p) => p && p.src);
@@ -50,4 +51,41 @@ export function wirePhotoPreview(root, { count = 0 } = {}) {
       box.dispatchEvent(new CustomEvent("ds-photo-at", { bubbles: true, detail: { index: Math.max(0, Math.min((count || 99) - 1, i)) } }));
     }
   });
+  // 在大圖上左右滑換張：手指拖著圖走，放開超過 48px（或甩得夠快）就換，不夠就彈回原位
+  const big = box.querySelector(".ds-photo__big");
+  if (!big || count < 2) return;
+  let x0 = null, y0 = 0, t0 = 0, dx = 0, horiz = null;
+  const curIndex = () => { const c = box.querySelector(".ds-photo__thumb.is-on"); return c ? +c.dataset.index : 0; };
+  big.addEventListener("pointerdown", (e) => { x0 = e.clientX; y0 = e.clientY; t0 = performance.now(); dx = 0; horiz = null; big.style.transition = "none"; });
+  big.addEventListener("pointermove", (e) => {
+    if (x0 === null) return;
+    dx = e.clientX - x0;
+    if (horiz === null && (Math.abs(dx) > 8 || Math.abs(e.clientY - y0) > 8)) horiz = Math.abs(dx) > Math.abs(e.clientY - y0);
+    if (!horiz) return;
+    const i = curIndex(), edge = (i === 0 && dx > 0) || (i >= count - 1 && dx < 0);
+    big.style.transform = `translateX(${edge ? dx / 3 : dx}px)`;   // 沒有上／下一張了：拖得動但變重
+  });
+  const end = () => {
+    if (x0 === null) return;
+    x0 = null;
+    const i = curIndex(), fast = Math.abs(dx) / Math.max(1, performance.now() - t0) > 0.5;
+    const step = horiz && (Math.abs(dx) > 48 || (fast && Math.abs(dx) > 16)) ? (dx < 0 ? 1 : -1) : 0;
+    const to = i + step;
+    if (step && to >= 0 && to < count) {
+      box.dispatchEvent(new CustomEvent("ds-photo-at", { bubbles: true, detail: { index: to, dir: step } }));
+    } else {
+      big.style.transition = "transform .25s ease";
+      big.style.transform = "";
+    }
+  };
+  big.addEventListener("pointerup", end);
+  big.addEventListener("pointercancel", end);
+}
+
+/** 換張之後：新的那張從 dir 那一側（1＝右邊進來、-1＝左邊進來）滑進來 */
+export function slidePhotoIn(root, dir) {
+  const big = root.querySelector(".ds-photo__big");
+  if (!big || !dir || !big.animate) return;
+  if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  big.animate([{ transform: `translateX(${dir * 60}%)`, opacity: 0 }, { transform: "none", opacity: 1 }], { duration: 280, easing: "cubic-bezier(.2,.8,.2,1)" });
 }

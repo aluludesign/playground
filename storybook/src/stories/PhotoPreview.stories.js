@@ -1,5 +1,5 @@
 // 照片預覽：Figma 161747:16541
-import { photoPreviewHTML, wirePhotoPreview } from "../components/photo-preview.js";
+import { photoPreviewHTML, wirePhotoPreview, slidePhotoIn } from "../components/photo-preview.js";
 import photo from "../images/sample-attraction.jpg";
 
 const USAGE = `import { photoPreviewHTML, wirePhotoPreview } from "./components/photo-preview.js";
@@ -9,7 +9,8 @@ box.innerHTML = photoPreviewHTML({
   title: "淺草寺", credit: "照片:維基共享資源", creditURL: "https://commons.wikimedia.org/…",
 });
 wirePhotoPreview(box, { count: 2 });
-box.addEventListener("ds-photo-at", (e) => e.detail.index);   // 換張（重畫一次）
+box.addEventListener("ds-photo-at", (e) => e.detail.index);   // 換張（重畫一次），再 slidePhotoIn(box, 方向) 讓新的那張滑進來
+// 在大圖上左右滑也會換張
 box.addEventListener("ds-photo-close", () => {});`;
 
 const esc = (s) => s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]);
@@ -44,7 +45,7 @@ export const 全部 = {
     };
     requestAnimationFrame(() => {
       paint(0);
-      el.addEventListener("ds-photo-at", (e) => { paint(e.detail.index); el.querySelector("#pp-now").textContent = "第 " + (e.detail.index + 1) + " 張"; });
+      el.addEventListener("ds-photo-at", (e) => { const from = +(el.querySelector(".ds-photo__thumb.is-on")?.dataset.index || 0); paint(e.detail.index); slidePhotoIn(el, Math.sign(e.detail.index - from)); el.querySelector("#pp-now").textContent = "第 " + (e.detail.index + 1) + " 張"; });
       el.addEventListener("ds-photo-close", () => (el.querySelector("#pp-now").textContent = "按了 ✕"));
     });
     return el;

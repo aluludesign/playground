@@ -8049,11 +8049,15 @@
   }
   function mPaintPhoto(at) {
     const p = mPhotoState;
+    /* 換張:新的那張從那一側滑進來(左右滑、箭頭、點縮圖都一樣;Lulu 11-25 要能在照片上左右滑) */
+    const from = p.at, dir = from === undefined || at === from ? 0 : at > from ? 1 : -1;
+    p.at = at;
     /* 許願搜尋那一層不在 #m-shell 裡(疊在它上面):照片預覽放到最外層,哪一層點開都蓋得過去 */
     if (el("m-photo").parentNode !== document.body) { el("m-photo").classList.add("ds-app"); document.body.appendChild(el("m-photo")); }
     el("m-photo").innerHTML = DS.photoPreviewHTML({ photos: p.pics, at, title: p.title,
       credit: p.credit ? "照片:維基共享資源" : "", creditURL: p.credit });
     DS.wirePhotoPreview(el("m-photo"), { count: p.pics.length });
+    DS.slidePhotoIn(el("m-photo"), dir);
   }
 
   /* 底部導覽的 key ↔ 分頁:交通 = fly、花費 = cost(分帳也算花費)、我 = 選單 */

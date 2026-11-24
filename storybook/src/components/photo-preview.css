@@ -107,3 +107,6 @@
   line-height: 12px;
 }
 a.ds-photo__credit { text-decoration: underline; }
+
+/* 大圖可以左右滑換張：橫向手勢交給程式，直的照常（iPhone 會跟祖先取交集，這裡本身不能擋直的） */
+.ds-photo__big { touch-action: pan-y; user-select: none; -webkit-user-drag: none; }

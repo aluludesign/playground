@@ -20,7 +20,7 @@ export { searchItemHTML } from "./components/search-list.js";
 export { attractionCardHTML, wireAttractionCard } from "./components/attraction-card.js";
 export { dateCardHTML, dateListHTML, wireDateList, centerDateList, WEATHER_ICONS } from "./components/date-list.js";
 export { timelineHTML, scheduleDetailHTML, attractionPhotosHTML, wireTimeline } from "./components/timeline.js";
-export { photoPreviewHTML, wirePhotoPreview } from "./components/photo-preview.js";
+export { photoPreviewHTML, wirePhotoPreview, slidePhotoIn } from "./components/photo-preview.js";
 export { wishCardHTML, wishBoardHTML, likesHTML, heartStickerHTML, wireWishCards, patchLikes } from "./components/wish-card.js";
 export { searchFrameHTML, wireSearchFrame } from "./components/search-frame.js";
 export { textAreaHTML, wireTextArea } from "./components/text-area.js";
