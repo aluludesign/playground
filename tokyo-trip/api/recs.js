@@ -104,6 +104,45 @@ async function twTitles(titles) {
 const claim = (e, p) => { try { return e.claims[p].map(c => c.mainsnak.datavalue.value); } catch (_) { return []; } };
 const label = (e, langs) => { for (const l of langs) if (e.labels && e.labels[l]) return e.labels[l].value; return ""; };
 
+/* 國家、第一級行政區(日本＝都道府縣)(Lulu 11-25:推薦跟熱門地點一樣寫「日本，三重縣 · 主題樂園」)。
+   條目的「所在行政區」(P131)往上找,找到上一層就是國家的那一層;一層一層批次問(最多 5 層) */
+async function placeNames(items, ents) {
+  const all = Object.assign({}, ents);
+  const want = ids => { const need = Array.from(new Set(ids.filter(id => id && !all[id]))); return need.length ? entities(need).then(x => Object.assign(all, x)) : null; };
+  const zh = e => e ? label(e, ["zh-tw", "zh-hant", "zh-hk", "zh", "ja", "en"]) : "";
+  const first = (e, p) => { const v = claim(e || {}, p)[0]; return v && v.id; };
+  const walk = items.map(x => { const e = all[x._id]; return { x, land: first(e, "P17"), cur: first(e, "P131"), last: "" }; });
+  await want(walk.map(w => w.cur));
+  for (let round = 0; round < 5; round++) {
+    const go = walk.filter(w => w.cur && !w.done);
+    if (!go.length) break;
+    go.forEach(w => {
+      const e = all[w.cur]; if (!e) { w.done = true; return; }
+      const up = first(e, "P131");
+      if (!w.land) w.land = first(e, "P17");
+      w.last = w.cur;
+      if (!up || up === w.land) w.done = true; else w.cur = up;
+    });
+    await want(walk.filter(w => !w.done).map(w => w.cur));
+  }
+  /* 國家的條目很大(日本整份資料 10 秒內常常拿不完),國家只要名字:另外問,只拿名字 */
+  const lands = Array.from(new Set(walk.map(w => w.land).filter(id => id && !(all[id] && all[id].labels))));
+  if (lands.length) {
+    try {
+      const u = "https://www.wikidata.org/w/api.php?format=json&action=wbgetentities&props=labels&languages=zh-tw|zh-hant|zh-hk|zh|ja|en&ids=" + lands.join("|");
+      /* 被回 429(太多次)就等 1.5 秒再試一次 */
+      const j = await timed(u, {}, 8000).catch(() => new Promise(r => setTimeout(r, 1500)).then(() => timed(u, {}, 8000)));
+      Object.assign(all, j.entities || {});
+    } catch (_) { /* 拿不到就不寫國家 */ }
+  }
+  walk.forEach(w => {
+    w.x.c = zh(all[w.land]);
+    const s = w.last && w.last !== w.land ? zh(all[w.last]) : "";
+    if (s && s !== w.x.c) w.x.s = s;
+    delete w.x._id;
+  });
+}
+
 module.exports = async (req, res) => {
   if (req.method !== "GET") return res.status(405).json({ error: "只收 GET" });
   /* 座標取到小數第 2 位(約 1 公里):同一個城市的人打同一個網址,CDN 存的那份大家共用 */
@@ -137,10 +176,11 @@ module.exports = async (req, res) => {
     const img = claim(e, "P18")[0];
     items.push({ n, a, la: +(+pla).toFixed(5), lo: +(+plo).toFixed(5), k: kind,
       ph: img ? "https://commons.wikimedia.org/wiki/File:" + encodeURIComponent(String(img).replace(/ /g, "_")) : "",
-      w: Object.keys(e.sitelinks || {}).length });
+      w: Object.keys(e.sitelinks || {}).length, _id: id });
   });
   items.sort((x, y) => y.w - x.w);
   const top = items.slice(0, 40);
+  await placeNames(top, ents);
   /* 查到東西才存:CDN 一週,過期後兩週內先給舊的、背景再查(stale-while-revalidate) */
   if (top.length) {
     res.setHeader("Cache-Control", "public, max-age=86400");

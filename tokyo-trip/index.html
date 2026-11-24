@@ -1957,7 +1957,8 @@
     #m-ss-card .m-ss-form{background:var(--ds-sys-color-surface); border-radius:var(--ds-sys-radius-sm); padding:var(--ds-sys-spacing-2xl) var(--ds-sys-spacing-4xl);}
     #m-ss .m-ss-list{display:flex; flex-direction:column;}
     /* 推薦／人氣(Lulu 11-25):標題跟「直接許願」同一種(Body/sm/semi-bold、text 100);兩段中間抖動線 outline 300 */
-    #m-ss .m-ss-sec{display:flex; flex-direction:column; gap:var(--ds-sys-spacing-md);}
+    /* 標題到第一個項目 24(Lulu 11-25) */
+    #m-ss .m-ss-sec{display:flex; flex-direction:column; gap:var(--ds-sys-spacing-4xl);}
     #m-ss .m-ss-sec h3{margin:0; font-family:var(--ds-sys-font-family-body); font-weight:500; font-size:var(--ds-sys-font-size-body-sm); line-height:1; letter-spacing:.05em; color:var(--ds-sys-color-text-100);}
     /* 清單長到要捲的時候,這一欄會把沒有內容的線壓成 0 高(SVG 0 高就整個不畫):不准縮 */
     #m-ss-sheet .ds-segmented-sheet__content > .ds-divider{margin:var(--ds-sys-spacing-2xl) 0; flex:none;}
@@ -8791,14 +8792,14 @@
     if (!c) { mRecs = { key: "", items: null, fail: true, busy: false }; return; }
     const key = (Math.round(c.la * 100) / 100).toFixed(2) + "," + (Math.round(c.lo * 100) / 100).toFixed(2);
     if (mRecs.key === key && (mRecs.items || mRecs.busy)) return;
-    const lsKey = "trippps-recs:" + key;
+    const lsKey = "trippps-recs2:" + key;   /* 2:多了國家、都道府縣(11-25),舊的不要 */
     try {
       const keep = JSON.parse(localStorage.getItem(lsKey) || "null");
       if (keep && Date.now() - keep.t < 7 * 864e5 && Array.isArray(keep.items) && keep.items.length) { mRecs = { key, items: keep.items, fail: false, busy: false }; return; }
     } catch (_) {}
     mRecs = { key, items: null, fail: false, busy: true };
     const [la, lo] = key.split(",");
-    fetch(RECS_API + "?lat=" + la + "&lon=" + lo).then(r => r.ok ? r.json() : null).catch(() => null).then(j => {
+    fetch(RECS_API + "?v=2&lat=" + la + "&lon=" + lo).then(r => r.ok ? r.json() : null).catch(() => null).then(j => {
       if (mRecs.key !== key) return;
       const items = j && Array.isArray(j.items) ? j.items.filter(x => x && x.n && isFinite(x.la) && isFinite(x.lo)) : [];
       mRecs = { key, items: items.length ? items : null, fail: !items.length, busy: false };
@@ -8817,13 +8818,14 @@
   function mRecsHTML(list) {
     if (!list.length) return '<p class="m-ss-say">' + (mRecs.busy ? "讀取中…" : "推薦暫時載不出來，可以直接打字搜尋。") + "</p>";
     return '<div class="m-ss-list">' + list.map((x, i) => DS.searchItemHTML({
-      photo: isCommons(x.ph) ? commonsImg(x.ph, 96) : "", icon: "place", name: x.n, info: [x.k || "景點"],
+      /* 跟熱門地點的地點一樣:「日本，愛知縣 · 城」 */
+      photo: isCommons(x.ph) ? commonsImg(x.ph, 96) : "", icon: "place", name: x.n, info: [[x.c, x.s].filter(Boolean).join("，"), x.k || "景點"].filter(Boolean),
     }).replace("<button ", '<button data-m-sug="r' + i + '" ')).join("") + "</div>";
   }
   /* 點了推薦的一個:跟點熱門地點裡的地點一樣(已經有座標,直接當成一筆結果) */
   function mRecTake(x) {
     if (!x) return;
-    sugItems = [{ type: "p", p: { n: x.n, la: x.la, lo: x.lo, k: x.k || "", ph: isCommons(x.ph) ? x.ph : "" } }];
+    sugItems = [{ type: "p", p: { n: x.n, la: x.la, lo: x.lo, c: x.c || "", s: x.s || "", k: x.k || "", ph: isCommons(x.ph) ? x.ph : "" } }];
     sugTake(0);
   }
   /* 許願搜尋下面那張(Lulu 11-25):
