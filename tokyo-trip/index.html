@@ -1920,6 +1920,12 @@
     /* 打字時(熱門地點／不指定地點那張出來)後面什麼都不要有:日曆鈕、＋／−／房子都藏(Lulu 11-23「這裡背景不要有任何東西」) */
     body:has(#m-ss-sheet:not([hidden])) #m-ss-cal, body:has(#m-ss-sheet:not([hidden])) #ss-map .mapzoom{visibility:hidden; pointer-events:none;}
     #m-ss-sheet > .ds-segmented-sheet{max-height:100%; pointer-events:auto;}
+    /* 熱門地點／不指定地點那張出來時,後面(地圖、地圖上的點、「搜地圖內的範圍」)糊掉、不能互動(Lulu 11-25);
+       跟許願牆拉到最高同一種模糊(Figma 背景模糊 8 → CSS 4px)。搜尋框和那張在它上面 */
+    #m-ss::before{content:""; position:absolute; inset:0; pointer-events:none; opacity:0; visibility:hidden;
+      -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px); transition:opacity .3s ease, visibility 0s .3s;}
+    #m-ss:has(#m-ss-sheet:not([hidden]))::before{opacity:1; visibility:visible; pointer-events:auto; transition:opacity .3s ease, visibility 0s;}
+    #m-ss:has(#m-ss-sheet:not([hidden])) #m-ss-bottom{visibility:hidden; pointer-events:none;}
     #m-ss-sheet .ds-segmented-sheet__content{overflow:auto; overscroll-behavior:contain;}
     #m-ss-sheet[hidden], #m-ss-bottom[hidden], #m-ss-card[hidden]{display:none;}
     /* Figma 162205:34040:「重新搜尋整個「東京都」」底在 759/844(離螢幕底 85),提示在它上面 16;「搜地圖內的範圍」(33620)同一個位置 */
