@@ -1943,9 +1943,10 @@
       box-shadow:var(--ds-elevation-surface-medium); transition:top .3s ease, bottom .3s ease;}
     #m-ss-card > .ds-acard{min-height:100%; display:flex; flex-direction:column; box-shadow:none;}
     /* Figma command text area:surface＋pattern、Elevation/surface/medium、上下 16;留言框 310 寬(左右 24) */
-    /* Figma 留言區 230 = 16 ＋ text area 198(text field 154 ＋ 8 ＋ 動作列 36)＋ 16:沒有標籤那一行(只留給讀螢幕的人),
-       沒有「+照片」列,內容框底下少留 6 → 輸入區 154 */
-    #m-ss-card .ds-text-area__label{position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap;}
+    /* Figma 162197:20434(11-25 重讀):留言區有「有什麼想說的？」標籤、留言框、「+照片」、取消／送出。
+       「+照片」要等許願附圖做好才放,先把它那一列的高度留著(內容框底下多留) */
+    /* 頭像只在打留言時出現(Figma 162197:21058 有、20434 沒有) */
+    body:not(.m-ws-typing) #m-ss-card .ds-text-area__avatar{display:none;}
     #m-ss-card .ds-text-area__content{padding-bottom:calc(var(--ds-comp-field-height) - var(--ds-sys-spacing-sm));}
     #m-ss-card .ds-acard__footer{margin-top:auto; padding:var(--ds-sys-spacing-2xl) var(--ds-sys-spacing-4xl); box-shadow:var(--ds-elevation-surface-medium);}
     body.m-ws-open #m-ss-card, body.m-ws-typing #m-ss-card{--m-ss-card-top:calc(16px + env(safe-area-inset-top,0px));}
@@ -5618,6 +5619,8 @@
     seekTurn[SS] = (seekTurn[SS] || 0) + 1;
     const r = { lat: String(p.la), lon: String(p.lo), _n: p.n, display_name: [p.n, p.s, p.c].filter(Boolean).join(", "),
       _k: p.k || "", _geo: { la: p.la, lo: p.lo, c: p.c || "", s: p.s || "", k: p.k || "" } };
+    if (p.src) r._src = p.src;
+    if (p.web) r._web = p.web;
     if (p.ph) { r._wiki = p.ph; r._wikis = [p.ph].concat(p.more || []).filter(isCommons).slice(0, 3); }
     seekList(SS, [r]);
     ssSelect(0, false);
@@ -6068,6 +6071,22 @@
     return v.replace(/\b(Mo|Tu|We|Th|Fr|Sa|Su)\b/g, m => "週" + OH[m]).replace(/\bPH\b/g, "國定假日").replace(/\boff\b/g, "休息")
       .replace(/24\/7/g, "24 小時").replace(/;\s*/g, "; ");
   };
+  /* 景點卡名稱下面那串(Figma 162197:20434,Lulu 11-25 重給):類別、營業時間、門票、輪椅、電話、網站、資料來源。
+     OpenStreetMap 上有標才寫;沒標的那一行不放 */
+  function hitInfo(r) {
+    const x = r.extratags || {};
+    const yn = (v, yes, no, part) => v === "yes" ? yes : v === "no" ? no : v === "limited" && part ? part : v || "";
+    const fee = yn(String(x.fee || ""), "要", "不用");
+    return [
+      { label: "類別", value: hitCat(r) },
+      { label: "營業時間", value: hitHours(r) },
+      { label: "門票", value: fee && x.charge ? fee + "（" + x.charge + "）" : fee },
+      { label: "輪椅", value: yn(String(x.wheelchair || ""), "可以", "不行", "部分可以") },
+      { label: "電話", value: String(x.phone || x["contact:phone"] || "").split(";")[0].trim() },
+      { label: "網站", value: /^https?:\/\//.test(x.website || x["contact:website"] || "") ? (x.website || x["contact:website"]) : r._web || "" },
+      { label: "資料來源", value: r._src === "wiki" ? "維基百科" : r.osm_id || r.extratags ? "OpenStreetMap" : "" },
+    ];
+  }
   const hitHTML = (id, r, i) => {
     const name = hitName(r), cat = hitCat(r), hrs = hitHours(r);
     return '<div class="hcard' + (id === SS && i === ssSel ? " on" : "") + '"><button type="button" class="hit" data-hit="' + id + '" data-i="' + i + '">' +
@@ -8865,7 +8884,7 @@
   function mRecTake(x) {
     if (!x) return;
     const ps = (x.ps || [x.ph]).filter(isCommons);
-    sugItems = [{ type: "p", p: { n: x.n, la: x.la, lo: x.lo, c: x.c || "", s: x.s || "", k: x.k || "", ph: ps[0] || "", more: ps.slice(1) } }];
+    sugItems = [{ type: "p", p: { n: x.n, la: x.la, lo: x.lo, c: x.c || "", s: x.s || "", k: x.k || "", ph: ps[0] || "", more: ps.slice(1), src: "wiki", web: /^https?:\/\//.test(x.web || "") ? x.web : "" } }];
     sugTake(0);
   }
   /* 許願搜尋下面那張(Lulu 11-25):
@@ -8958,8 +8977,10 @@
         mapURL: r === gPick ? "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(hitName(r)) + "&query_place_id=" + encodeURIComponent(r._g)
           : "https://www.google.com/maps/search/?api=1&query=" + r.lat + "," + r.lon,
         /* 右上角 ✕(Lulu 11-25,Figma 162197:21058):回到沒打字、有推薦清單的那一頁 */
-        info: r === gPick ? [] : [{ label: "營業時間", value: hitHours(r) }], closeLabel: "不選這個，回到推薦",
-        footer: DS.textAreaHTML({ photoButton: "", cancel: "取消", submit: "送出許願" }) });
+        info: r === gPick ? [] : hitInfo(r), closeLabel: "不選這個，回到推薦",
+        /* Figma 162197:20434／21058(Lulu 11-25 重給):「有什麼想說的？」標籤要看得到;打字時前面放自己的頭像 */
+        footer: DS.textAreaHTML({ photoButton: "", cancel: "取消", submit: "送出許願",
+          avatar: myMember ? mFace(myMember.id).src : "", avatarAlt: myMember ? nameOf(myMember.id) : "" }) });
       DS.wireAttractionCard(card); DS.wireTextArea(card);
       const ft = card.querySelector(".ds-acard__footer");
       if (ft) ft.classList.add("ds-pattern");
