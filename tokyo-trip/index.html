@@ -1762,7 +1762,10 @@
     body.member-ui #panel-split .st-hint{font-family:var(--ds-sys-font-family-label); font-size:var(--ds-sys-font-size-label-sm); letter-spacing:normal; color:var(--ds-sys-color-text-200);}
     body.member-ui #panel-split .fund-top .left b, body.member-ui #panel-split .fp .amt b{font-family:var(--ds-sys-font-family-body); font-weight:700;}
     body.member-ui #panel-split .fund-top .left b{font-size:var(--ds-sys-font-size-body-sm);}
-    body.member-ui #panel-split .fund-people, body.member-ui #panel-split .net{border-top-color:var(--ds-sys-color-outline-100);}
+    body.member-ui #panel-split .fund-people{border-top-color:var(--ds-sys-color-outline-100);}
+    /* 成員卡「要付出」上面那條 = 設計系統的抖動線 outline 100(Lulu 11-24),不用直線 */
+    body.member-ui #panel-split .person > .ds-divider{margin-top:var(--ds-sys-spacing-md);}
+    body.member-ui #panel-split .net{border-top:0;}
     body.member-ui #panel-split .fp .nm, body.member-ui #panel-split .net{font-family:var(--ds-sys-font-family-label); font-size:var(--ds-sys-font-size-label-md); color:var(--ds-sys-color-text-100);}
     body.member-ui #panel-split .kv .num{font-family:var(--ds-sys-font-family-label); color:var(--ds-sys-color-text-100);}
     body.member-ui #panel-split .person .nm, body.member-ui #panel-split .pay .who1, body.member-ui #panel-split .pay .who2{font-family:var(--ds-sys-font-family-body);
@@ -7528,6 +7531,7 @@
         (pot && b.put ? '<div class="kv"><span>交了預收</span><span class="num">' + twd(b.put) + "</span></div>" : "") +
         (pot && FUND.keeper === m.id && Math.abs(res.fundLeft) >= 0.5 ? '<div class="kv"><span>' + (res.fundLeft > 0 ? "手上預收還剩" : "預收不夠,先墊") + '</span><span class="num">' + twd(Math.abs(res.fundLeft)) + "</span></div>" : "") +
         '<div class="kv"><span>該付</span><span class="num">' + twd(b.owed) + "</span></div>" +
+        (memberUI() && DS ? DS.dividerWiggleHTML({ color: "outline-100" }) : "") +
         '<div class="net"><span>' + word + '</span><span class="v" style="color:' + col + '">' +
         (Math.abs(net) < 0.5 ? "—" : twd(Math.abs(net))) + "</span></div></div>";
     }).join("");

@@ -772,7 +772,7 @@ function B({
   return `<button type="button" class="${l.join(" ")}"${a ? " disabled" : ""}${c ? ` aria-label="${N1(C)}"` : ""}>${M}</button>`;
 }
 function y5({ color: C = "outline-200" } = {}) {
-  return `<div class="ds-divider ds-wiggle-line${C === "primary" ? " ds-divider--primary" : ""}" role="separator"></div>`;
+  return `<div class="ds-divider ds-wiggle-line${C === "primary" ? " ds-divider--primary" : C === "outline-100" ? " ds-divider--outline-100" : ""}" role="separator"></div>`;
 }
 function P({ height: C = 9 } = {}) {
   const e = Math.max(1, Math.round(C / 6)), t = C / e, n = t / 6, L = (s) => +s.toFixed(3);

@@ -4,11 +4,11 @@ import { wireWiggle } from "../wiggle.js";
 
 /**
  * 橫的抖動分隔線（Figma divider/wiggle）
- * color：「outline-200」|「primary」（Figma 的 Property 1）
+ * color：「outline-200」|「primary」（Figma 的 Property 1）|「outline-100」（淺色，sys/color/outline 100）
  * 放進頁面後要呼叫 wireDivider(root) 才會畫線
  */
 export function dividerWiggleHTML({ color = "outline-200" } = {}) {
-  return `<div class="ds-divider ds-wiggle-line${color === "primary" ? " ds-divider--primary" : ""}" role="separator"></div>`;
+  return `<div class="ds-divider ds-wiggle-line${color === "primary" ? " ds-divider--primary" : color === "outline-100" ? " ds-divider--outline-100" : ""}" role="separator"></div>`;
 }
 
 /**

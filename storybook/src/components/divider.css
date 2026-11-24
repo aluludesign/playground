@@ -13,6 +13,10 @@
 .ds-divider--primary {
   --wiggle-color: var(--ds-comp-divider-color-primary);
 }
+/* 淺色：卡片裡的分隔（Lulu 11-24 分帳的成員卡） */
+.ds-divider--outline-100 {
+  --wiggle-color: var(--ds-sys-color-outline-100);
+}
 
 /* 點點線：直的，預設高 9（Figma divider/dot） */
 .ds-divider-dot {
