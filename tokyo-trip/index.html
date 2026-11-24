@@ -7943,7 +7943,8 @@
       const c = wxCache[wxKey(CITY.lat, CITY.lon)];
       const w = c && c.days[d.date];
       cards.push({
-        key: d.date, day: "Day" + d.n, week: WEEK_EN[new Date(d.date + "T00:00:00").getDay()], date: d.date.slice(5).replace("-", "/"),
+        /* 今天那張寫 Today,不寫 DayN(Lulu 11-25) */
+        key: d.date, day: d.date === t ? "Today" : "Day" + d.n, week: WEEK_EN[new Date(d.date + "T00:00:00").getDay()], date: d.date.slice(5).replace("-", "/"),
         color: dayColorN(d.n), state: d.date === state.day ? "active" : d.date < t ? "past" : "default",
         /* 天氣只在預報查得到的日子(Open-Meteo 約 16 天內);太遠的不顯示(Lulu 11-20) */
         weather: w ? { icon: wxIconOf(w[3], w[0]), lo: w[2] != null ? Math.round(w[2]) : "", hi: Math.round(w[1]), rain: Math.round(w[0]) } : null,
