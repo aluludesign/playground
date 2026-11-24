@@ -4,7 +4,7 @@
     "api/notion.js": { "maxDuration": 15 },
     "api/ai.js": { "maxDuration": 60 },
     "api/auth.js": { "maxDuration": 15 },
-    "api/recs.js": { "maxDuration": 45 }
+    "api/recs.js": { "maxDuration": 60 }
   },
   "headers": [
     {

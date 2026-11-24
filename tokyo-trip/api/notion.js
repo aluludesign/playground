@@ -185,19 +185,24 @@ const photoProp = v => ({ url: COMMONS.test(String(v || "")) ? String(v) : null 
 
 /* **地點資訊**(2026-11-02,Lulu:全站搜尋提示):從地圖(OpenStreetMap)選出來的地點才有 ——
    座標、國家、縣市、種類,存成一段 JSON。手打的地點沒有;有 Google 地點編號的也不存(Google 的條款不准把它的資料存起來給別人看)。
-   { la, lo, c: 國家, s: 縣市, k: 種類 } */
+   { la, lo, c: 國家, s: 縣市, k: 種類, ph: [第 2、3 張維基照片] }
+   ph(2026-11-25,Lulu:維基照片有的話最多 3 張):第 1 張照舊在「照片」欄,第 2、3 張放這裡(一樣只收 Commons 的照片頁網址)。
+   從 Google 選的地點只存 ph(照片是維基的,不是 Google 的;座標那些照舊不存) */
 const clip = (v, n) => String(v == null ? "" : v).replace(/[\u0000-\u001f]/g, "").trim().slice(0, n);
+const morePh = v => (Array.isArray(v) ? v : []).map(String).filter(u => COMMONS.test(u)).slice(0, 2);
 function geoClean(v) {
   if (!v || typeof v !== "object") return null;
-  const la = Number(v.la), lo = Number(v.lo);
-  if (!Number.isFinite(la) || !Number.isFinite(lo) || Math.abs(la) > 90 || Math.abs(lo) > 180) return null;
-  return { la: Math.round(la * 1e5) / 1e5, lo: Math.round(lo * 1e5) / 1e5, c: clip(v.c, 40), s: clip(v.s, 40), k: clip(v.k, 20) };
+  const la = Number(v.la), lo = Number(v.lo), ph = morePh(v.ph);
+  if (!Number.isFinite(la) || !Number.isFinite(lo) || Math.abs(la) > 90 || Math.abs(lo) > 180) return ph.length ? { ph } : null;
+  const g = { la: Math.round(la * 1e5) / 1e5, lo: Math.round(lo * 1e5) / 1e5, c: clip(v.c, 40), s: clip(v.s, 40), k: clip(v.k, 20) };
+  if (ph.length) g.ph = ph;
+  return g;
 }
 const geoOut = p => { try { return geoClean(JSON.parse(txt(p) || "null")); } catch (_) { return null; } };
 /* 寫進去的值:`geo` 沒送 = 不動;送了空的、或這一筆有 Google 地點編號 = 清掉 */
 function geoProp(b) {
   if (b.geo === undefined && !b.placeId) return undefined;
-  const g = b.placeId ? null : geoClean(b.geo);
+  const g0 = geoClean(b.geo), g = !g0 ? null : b.placeId ? (g0.ph ? { ph: g0.ph } : null) : g0;
   return { rich_text: richText(g ? JSON.stringify(g) : "") };
 }
 
@@ -1145,12 +1150,12 @@ module.exports = async (req, res) => {
               page_size: 100, start_cursor: cursor, filter: { property: "地點資訊", rich_text: { is_not_empty: true } } }) });
             page.results.forEach(r => {
               const p = r.properties || {}, n = clip(txt(p["地點"]), 80), g = geoOut(p["地點資訊"]);
-              if (!n || !g || (p["地點編號"] && txt(p["地點編號"]))) return;
+              if (!n || !g || !Number.isFinite(g.la) || (p["地點編號"] && txt(p["地點編號"]))) return;
               const k = n.toLowerCase() + "@" + g.la.toFixed(3) + "," + g.lo.toFixed(3);
               const ph = photoUrl(p["照片"]);
               if (seen[k]) { if (ph && !seen[k].ph) seen[k].ph = ph; return; }
               const row = seen[k] = { n: n, la: g.la, lo: g.lo, c: g.c, s: g.s, k: g.k };
-              if (ph) row.ph = ph;
+              if (ph) { row.ph = ph; if (g.ph) row.more = g.ph; }
               rows.push(row);
             });
             cursor = page.has_more ? page.next_cursor : null;
@@ -1175,7 +1180,7 @@ module.exports = async (req, res) => {
       let done = 0;
       for (const x of (Array.isArray(body.rows) ? body.rows : []).slice(0, 10)) {
         const g = geoClean(x && x.geo);
-        if (!g || !/^[0-9a-f-]{32,36}$/i.test(String(x.id || ""))) continue;
+        if (!g || !Number.isFinite(g.la) || !/^[0-9a-f-]{32,36}$/i.test(String(x.id || ""))) continue;
         let page;
         try { page = await notion("/pages/" + x.id); } catch (e) { if (e.status === 404) continue; throw e; }
         const db = String((page.parent && page.parent.database_id) || "").replace(/-/g, "");

@@ -104,6 +104,12 @@ async function twTitles(titles) {
 const claim = (e, p) => { try { return e.claims[p].map(c => c.mainsnak.datavalue.value); } catch (_) { return []; } };
 const label = (e, langs) => { for (const l of langs) if (e.labels && e.labels[l]) return e.labels[l].value; return ""; };
 
+/* 常去的國家直接寫好(維基回 429 的時候國家名稱整個拿不到,實測東京 40 筆全空);其他國家才問 */
+const COUNTRY = { Q17: "日本", Q884: "南韓", Q865: "台灣", Q148: "中國", Q8646: "香港", Q14773: "澳門", Q869: "泰國", Q881: "越南",
+  Q334: "新加坡", Q833: "馬來西亞", Q252: "印尼", Q928: "菲律賓", Q30: "美國", Q16: "加拿大", Q408: "澳洲", Q664: "紐西蘭",
+  Q145: "英國", Q142: "法國", Q183: "德國", Q38: "義大利", Q29: "西班牙", Q45: "葡萄牙", Q39: "瑞士", Q40: "奧地利", Q55: "荷蘭", Q31: "比利時",
+  Q213: "捷克", Q41: "希臘", Q43: "土耳其", Q668: "印度", Q711: "蒙古", Q424: "柬埔寨", Q836: "緬甸", Q819: "寮國", Q96: "墨西哥", Q155: "巴西" };
+
 /* 國家、第一級行政區(日本＝都道府縣)(Lulu 11-25:推薦跟熱門地點一樣寫「日本，三重縣 · 主題樂園」)。
    條目的「所在行政區」(P131)往上找,找到上一層就是國家的那一層;一層一層批次問(最多 5 層) */
 async function placeNames(items, ents) {
@@ -126,7 +132,7 @@ async function placeNames(items, ents) {
     await want(walk.filter(w => !w.done).map(w => w.cur));
   }
   /* 國家的條目很大(日本整份資料 10 秒內常常拿不完),國家只要名字:另外問,只拿名字 */
-  const lands = Array.from(new Set(walk.map(w => w.land).filter(id => id && !(all[id] && all[id].labels))));
+  const lands = Array.from(new Set(walk.map(w => w.land).filter(id => id && !COUNTRY[id] && !(all[id] && all[id].labels))));
   if (lands.length) {
     try {
       const u = "https://www.wikidata.org/w/api.php?format=json&action=wbgetentities&props=labels&languages=zh-tw|zh-hant|zh-hk|zh|ja|en&ids=" + lands.join("|");
@@ -136,11 +142,39 @@ async function placeNames(items, ents) {
     } catch (_) { /* 拿不到就不寫國家 */ }
   }
   walk.forEach(w => {
-    w.x.c = zh(all[w.land]);
+    w.x.c = COUNTRY[w.land] || zh(all[w.land]);
     const s = w.last && w.last !== w.land ? zh(all[w.last]) : "";
     if (s && s !== w.x.c) w.x.s = s;
     delete w.x._id;
   });
+}
+
+/* 照片最多 3 張(Lulu 11-25):條目上的主圖(可能不只一張)→ 景觀 → 夜景 → 內部 → 空拍;
+   不夠 3 張再從這個地方在維基共享資源的分類(P373)補 */
+const PHOTO_PROPS = ["P18", "P8517", "P3451", "P5775", "P8592"];
+const filePage = f => "https://commons.wikimedia.org/wiki/File:" + encodeURIComponent(String(f).replace(/ /g, "_"));
+const PHOTO_OK = f => /\.(jpe?g|png|webp)$/i.test(f) && !/(map|karte|plan|logo|diagram|location|locator|seal|emblem|flag|coat.of.arms|位置|地図)/i.test(f);
+function wdFiles(e) {
+  const out = [];
+  PHOTO_PROPS.forEach(p => claim(e, p).forEach(f => { if (typeof f === "string" && PHOTO_OK(f) && out.indexOf(f) < 0) out.push(f); }));
+  return out.slice(0, 3);
+}
+async function fillFromCategory(items) {
+  const todo = items.filter(x => x.ps.length < 3 && x.cat);
+  const one = async x => {
+    try {
+      const j = await timed("https://commons.wikimedia.org/w/api.php?format=json&action=query&list=categorymembers&cmtype=file&cmlimit=20&cmtitle=" +
+        encodeURIComponent("Category:" + x.cat), {}, 6000);
+      ((j.query && j.query.categorymembers) || []).map(m => String(m.title || "").replace(/^File:/, "")).filter(PHOTO_OK).forEach(f => {
+        const u = filePage(f);
+        if (x.ps.length < 3 && x.ps.indexOf(u) < 0) x.ps.push(u);
+      });
+      if (!x.ph && x.ps[0]) x.ph = x.ps[0];
+    } catch (_) { /* 補不到就照原本的張數 */ }
+  };
+  const lane = async () => { while (todo.length) await one(todo.shift()); };
+  await Promise.all([lane(), lane(), lane()]);
+  items.forEach(x => { delete x.cat; });
 }
 
 module.exports = async (req, res) => {
@@ -173,14 +207,15 @@ module.exports = async (req, res) => {
     /* 「街區」裡會混進行政區(豐島區、某某市):不要 */
     if (kind === "街區" && /[區区市町村縣県都]$/.test(n)) return;
     const a = Array.from(new Set([label(e, ["zh"]), label(e, ["ja"]), label(e, ["en"]), o && o.ja, o && o.osm].filter(x => x && x !== n)));
-    const img = claim(e, "P18")[0];
+    const imgs = wdFiles(e);
     items.push({ n, a, la: +(+pla).toFixed(5), lo: +(+plo).toFixed(5), k: kind,
-      ph: img ? "https://commons.wikimedia.org/wiki/File:" + encodeURIComponent(String(img).replace(/ /g, "_")) : "",
+      ph: imgs[0] ? filePage(imgs[0]) : "", ps: imgs.map(filePage), cat: claim(e, "P373")[0] || "",
       w: Object.keys(e.sitelinks || {}).length, _id: id });
   });
   items.sort((x, y) => y.w - x.w);
   const top = items.slice(0, 40);
   await placeNames(top, ents);
+  await fillFromCategory(top);
   /* 查到東西才存:CDN 一週,過期後兩週內先給舊的、背景再查(stale-while-revalidate) */
   if (top.length) {
     res.setHeader("Cache-Control", "public, max-age=86400");
