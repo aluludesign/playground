@@ -7350,8 +7350,10 @@
   }
 
   /* 票多的在前面。地圖上的編號要跟清單對得起來,所以兩邊共用這個排序。 */
+  /* 一般團員的新畫面(Lulu 11-25):不照喜歡數排 —— 按喜歡、收回喜歡,卡片都留在原本的位置;一律照許願的先後。
+     團主和副團主的畫面照舊(票多的在前面) */
   const wishOrder = () => state.wishes.slice().sort((a, b) =>
-    (b.votes || []).length - (a.votes || []).length ||
+    (memberUI() ? 0 : (b.votes || []).length - (a.votes || []).length) ||
     (a.createdAt || "").localeCompare(b.createdAt || ""));
 
   /* 標題已經講了那個地點:一模一樣,或標題裡就包著它(不分空白、大小寫) */
