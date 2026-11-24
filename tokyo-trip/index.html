@@ -8850,14 +8850,14 @@
     if (!c) { mRecs = { key: "", items: null, fail: true, busy: false }; return; }
     const key = (Math.round(c.la * 100) / 100).toFixed(2) + "," + (Math.round(c.lo * 100) / 100).toFixed(2);
     if (mRecs.key === key && (mRecs.items || mRecs.busy)) return;
-    const lsKey = "trippps-recs3:" + key;   /* 2:多了國家、都道府縣;3:照片最多 3 張(11-25),舊的不要 */
+    const lsKey = "trippps-recs4:" + key;   /* 2:多了國家、都道府縣;3:照片最多 3 張;4:官方網站(11-25),舊的不要 */
     try {
       const keep = JSON.parse(localStorage.getItem(lsKey) || "null");
       if (keep && Date.now() - keep.t < 7 * 864e5 && Array.isArray(keep.items) && keep.items.length) { mRecs = { key, items: keep.items, fail: false, busy: false }; return; }
     } catch (_) {}
     mRecs = { key, items: null, fail: false, busy: true };
     const [la, lo] = key.split(",");
-    fetch(RECS_API + "?v=3&lat=" + la + "&lon=" + lo).then(r => r.ok ? r.json() : null).catch(() => null).then(j => {
+    fetch(RECS_API + "?v=4&lat=" + la + "&lon=" + lo).then(r => r.ok ? r.json() : null).catch(() => null).then(j => {
       if (mRecs.key !== key) return;
       const items = j && Array.isArray(j.items) ? j.items.filter(x => x && x.n && isFinite(x.la) && isFinite(x.lo)) : [];
       mRecs = { key, items: items.length ? items : null, fail: !items.length, busy: false };
