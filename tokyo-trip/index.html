@@ -1953,6 +1953,12 @@
     body.m-ws-open.m-ws-typing #m-ss-cal{opacity:1; visibility:visible; pointer-events:auto; transition:opacity .2s ease, visibility 0s;}
     #m-ss-card .m-ss-form{background:var(--ds-sys-color-surface); border-radius:var(--ds-sys-radius-sm); padding:var(--ds-sys-spacing-2xl) var(--ds-sys-spacing-4xl);}
     #m-ss .m-ss-list{display:flex; flex-direction:column;}
+    /* 當地人氣地點(Lulu 11-24):標題跟「直接許願」同一種(Body/sm/semi-bold、text 100),下面是 Google 的清單 */
+    #m-ss .m-ss-pop{display:flex; flex-direction:column; gap:var(--ds-sys-spacing-2xl);}
+    #m-ss .m-ss-pop h3{margin:0; font-family:var(--ds-sys-font-family-body); font-weight:500; font-size:var(--ds-sys-font-size-body-sm); line-height:1; letter-spacing:.05em; color:var(--ds-sys-color-text-100);}
+    #m-ss .m-ss-pop .uikit{overflow:hidden; border:0; border-radius:var(--ds-sys-radius-sm); background:#fff;}
+    #m-ss .m-ss-pop gmp-place-search{--gmp-mat-font-family:inherit; color-scheme:light; width:100%;}
+    #m-ss .m-ss-pop-say{margin:0; font-family:var(--ds-sys-font-family-body); font-size:var(--ds-sys-font-size-label-lg); color:var(--ds-sys-color-text-200);}
     #m-ss .m-ss-tip[hidden]{display:none;}
     /* Figma wish contain:提示和留言框之間 spacing/5xl(外層 2xl 之外再補) */
     #m-ss .m-ss-tip:not([hidden]) + .ds-text-area{margin-top:calc(var(--ds-sys-spacing-5xl) - var(--ds-sys-spacing-2xl));}
@@ -8614,7 +8620,10 @@
     if (ssAll) ssFillPlan(false);
     loadHints();
     mWsTab = "hot";
+    mPop = null;   /* 當地人氣地點:每打開一次許願搜尋只問 Google 一次 */
     mWsBuild();
+    /* 打字前就先出現「當地人氣地點」(Lulu 11-24「打字先出現當地人氣」) */
+    el("m-ss-sheet").hidden = false; mWsSheet();
     mWsBusy = true;
     mWsMorph(true, () => { mWsBusy = false; });
     setTimeout(() => { const i = el("m-ss-frame").querySelector("input"); if (i) i.focus(); }, 60);
@@ -8633,6 +8642,7 @@
   function mCloseWishSearchNow(sent) {
     document.body.classList.remove("m-ws", "m-ws-open", "m-ws-typing", "m-ws-g");
     const m = el("m-ss"); if (m) m.remove();
+    mPop = null;
     const qo = seekBox(SS); if (qo) { qo.classList.remove("ds-app", "ds-pattern", "m-show-uikit"); qo._g = null; }
     if (!el("seek-screen").hidden) closeSeekScreen(!!sent);
     if (!sent) { el("wish-form").reset(); closeWishAdd(); }
@@ -8718,7 +8728,8 @@
     inp.addEventListener("input", () => {
       el(SS).value = inp.value;
       el(SS).dispatchEvent(new Event("input"));
-      el("m-ss-sheet").hidden = !inp.value.trim();
+      /* 框清空也留著那張:空的時候就是「當地人氣地點」 */
+      el("m-ss-sheet").hidden = false;
       mWsSheet();
     });
     inp.addEventListener("keydown", e => {
@@ -8759,11 +8770,50 @@
     /* 跟主畫面同一條規則(Lulu 11-22):已排的行程開著 = primary、關著 = scrim(80%) */
     el("m-ss-cal").innerHTML = DS.scrimButtonHTML({ icon: "calender", color: ssAll ? "primary" : "scrim", size: "lg", label: "開關已排的行程", pressed: !!ssAll });
   }
+  /* 「當地人氣地點」那張 Google 清單(Lulu 11-24):開團城市方圓 5 公里、Google 照人氣排(rankPreference POPULARITY)。
+     一次打開許願搜尋只建一次、只問 Google 一次;打字時換成熱門地點、對不到再換回來,都是同一張(不重問)。
+     不算進每人的強力搜次數;全站每天的 UI Kit 上限(Google Cloud 300)照舊擋著 */
+  let mPop = null;
+  const M_POP_TYPES = ["tourist_attraction", "museum", "art_gallery", "park", "amusement_park", "aquarium", "zoo",
+    "shopping_mall", "market", "restaurant", "cafe", "bakery", "bar"];
+  function mPopNode() {
+    if (mPop) return mPop;
+    const node = mPop = document.createElement("div");
+    node.className = "m-ss-pop-body";
+    const say = t => { if (mPop === node) node.innerHTML = '<p class="m-ss-pop-say">' + esc(t) + "</p>"; };
+    say("讀取中…");
+    uikitReady().then(ok => {
+      if (mPop !== node) return;
+      if (!ok) { say("當地人氣地點暫時載不出來，可以直接打字搜尋。"); return; }
+      node.innerHTML = '<div class="uikit"><gmp-place-search selectable orientation="horizontal">' +
+        '<gmp-place-content-config><gmp-place-media></gmp-place-media><gmp-place-rating></gmp-place-rating>' +
+        '<gmp-place-price></gmp-place-price><gmp-place-open-now-status></gmp-place-open-now-status></gmp-place-content-config>' +
+        '<gmp-place-nearby-search-request max-result-count="10"></gmp-place-nearby-search-request></gmp-place-search></div>';
+      const ps = node.querySelector("gmp-place-search"), req = node.querySelector("gmp-place-nearby-search-request");
+      ps.addEventListener("gmp-select", ev => {
+        const sh = el("m-ss-sheet"); if (sh) { sh.hidden = true; sh._penKey = null; sh._mode = null; }
+        takeGooglePlace(SS, ev.place, "");
+      });
+      ps.addEventListener("gmp-load", () => { if (!(ps.places || []).length) say("這附近暫時找不到人氣地點，可以直接打字搜尋。"); });
+      ps.addEventListener("gmp-error", () => say("當地人氣地點暫時載不出來，可以直接打字搜尋。"));
+      /* 中心:開團的城市;沒設城市就用地圖現在的中心 */
+      let c = hasCity() ? { lat: CITY.lat, lng: CITY.lon } : null;
+      if (!c) { const v = ssMap()._v; if (v) c = { lat: unY(v.cy, v.z), lng: unX(v.cx, v.z) }; }
+      if (!c) { say("當地人氣地點暫時載不出來，可以直接打字搜尋。"); return; }
+      try {
+        req.includedTypes = M_POP_TYPES;
+        req.rankPreference = "POPULARITY";
+        /* 設了 locationRestriction 才開始查(Nearby Search 一定要範圍) */
+        req.locationRestriction = { center: c, radius: 5000 };
+      } catch (_) { say("當地人氣地點暫時載不出來，可以直接打字搜尋。"); }
+    });
+    return node;
+  }
   /* 打字時下面那張:熱門地點 = 打字提示的資料(全站選過的地點、搜過的字、相似詞);不指定地點 = 直接許願(Lulu 11-21) */
   function mWsSheet() {
     const box = el("m-ss-sheet");
     /* 收起來過:下次出現時分頁籤的線要重畫一次 */
-    if (box.hidden) { box._penKey = null; return; }
+    if (box.hidden) { box._penKey = null; box._mode = null; return; }
     const typed = el(SS).value.trim();
     let content;
     if (mWsTab === "hot") {
@@ -8772,6 +8822,18 @@
       if ((sugItems || []).length) box._sug = { typed, items: sugItems };
       else if (box._sug && box._sug.typed === typed) sugItems = box._sug.items;
       else if (typed) sugItems = sugList(typed);
+      /* 還沒打字、或打的字一筆都對不到 → 「當地人氣地點」(Lulu 11-24):Google 照人氣排的附近地點。
+         Google 的清單只能用它自己的元件(UI Kit,條款 §15.1),所以這一塊長得跟強力搜的清單一樣 */
+      if (!(sugItems || []).length) {
+        if (box._mode === "pop" && box.querySelector(".m-ss-pop")) return;   /* 已經在了:不重畫,不然 Google 那張會被拆掉重問 */
+        box._mode = "pop";
+        box.innerHTML = DS.segmentedSheetHTML({ items: [{ key: "hot", label: "熱門地點" }, { key: "none", label: "不指定地點" }], selected: mWsTab, label: "熱門地點或不指定地點",
+          content: '<div class="m-ss-pop"><h3>當地人氣地點</h3><div class="m-ss-pop-slot"></div></div>' });
+        DS.wireSegmented(box);
+        box.querySelector(".m-ss-pop-slot").appendChild(mPopNode());
+        mPenSeg(box, mWsTab);
+        return;
+      }
       content = '<div class="m-ss-list">' + (sugItems || []).map((it, i) => DS.searchItemHTML({
         photo: it.type === "p" && it.p.ph ? commonsImg(it.p.ph, 96) : "",
         icon: it.type === "h" ? "history" : it.type === "p" ? "place" : "search",
@@ -8785,6 +8847,7 @@
         '<div class="m-ss-tip"' + (mWsTipOff ? " hidden" : "") + ">" + DS.infoHTML({ text: "不選地點直接許願，願望地圖上不會出現地點指標", type: "info", expanded: true, leadingIcon: false, collapseIcon: false, button: "close" }) + "</div>" +
         DS.textAreaHTML({ photoButton: "", cancel: "", submit: "送出許願" }) + "</div>";
     }
+    box._mode = mWsTab;
     box.innerHTML = DS.segmentedSheetHTML({ items: [{ key: "hot", label: "熱門地點" }, { key: "none", label: "不指定地點" }], selected: mWsTab, label: "熱門地點或不指定地點", content });
     DS.wireSegmented(box); DS.wireInfo(box); DS.wireTextArea(box);
     mPenSeg(box, mWsTab);
