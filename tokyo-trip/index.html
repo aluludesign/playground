@@ -1948,6 +1948,8 @@
     body:not(.m-ws-typing) #m-ss-card .ds-text-area__avatar{display:none;}
     #m-ss-card .ds-acard__footer{margin-top:auto; padding:var(--ds-sys-spacing-2xl) var(--ds-sys-spacing-4xl); box-shadow:var(--ds-elevation-surface-medium);}
     body.m-ws-open #m-ss-card, body.m-ws-typing #m-ss-card{--m-ss-card-top:calc(16px + env(safe-area-inset-top,0px));}
+    /* 收著的時候卡片裡面不捲:往上拖是拖整張卡(mWireWsCard),裡面一起捲會先捲、再跳(Lulu 11-25 錄影) */
+    body:not(.m-ws-open):not(.m-ws-typing) #m-ss-card{overflow-y:hidden;}
     /* 選了 Google 的一家(Figma 162390:16203):卡片照內容高(照片＋名字＋地點＋留言框),離底 24,最高頂到搜尋框下 16 */
     body.m-ws-g:not(.m-ws-open):not(.m-ws-typing) #m-ss-card{top:auto; max-height:calc(100% - var(--m-ss-under,160px) - 24px);}
     body.m-ws-g:not(.m-ws-open):not(.m-ws-typing) #m-ss-card > .ds-acard{min-height:0;}
@@ -9091,17 +9093,60 @@
     if (on) card.scrollTop = 0;
   }
   function mWireWsCard(card) {
-    let y0 = null, x0 = 0, top0 = 0;
+    /* 上下拉換狀態(Lulu 11-25「往上拉展開時又跳一下」):
+       以前收著的卡片自己會捲 —— 手指往上滑先把卡片裡面捲上去、捲過頭還彈一下露出地圖,放開才切成展開、捲動又歸零,所以跳。
+       現在:收著的時候裡面不捲,往上拖就是拖整張卡(跟著手指),放開從手指那裡滑到展開的位置(或滑回去);
+       展開之後裡面照常捲,捲到最上面再往下拖才是拖整張卡收回去 */
+    let y0 = null, x0 = 0, top0 = 0, start = 0, drag = false, axis = null, lastY = 0, lastT = 0, vy = 0;
     const open = () => document.body.classList.contains("m-ws-open");
-    card.addEventListener("touchstart", e => { y0 = e.touches[0].clientY; x0 = e.touches[0].clientX; top0 = card.scrollTop; }, { passive: true });
-    card.addEventListener("touchend", e => {
-      if (y0 === null || document.body.classList.contains("m-ws-typing")) { y0 = null; return; }
-      const dy = e.changedTouches[0].clientY - y0, dx = e.changedTouches[0].clientX - x0;
-      y0 = null;
-      if (Math.abs(dy) < 40 || Math.abs(dy) < Math.abs(dx) * 1.2) return;
-      if (!open() && dy < 0) mWsCardState("open");
-      else if (open() && dy > 0 && top0 <= 0) mWsCardState("");
+    const typing = () => document.body.classList.contains("m-ws-typing");
+    /* 展開時卡片頂在哪(上 16 ＋ 安全區):量一次 */
+    const openTop = () => {
+      const pr = document.createElement("div");
+      pr.style.cssText = "position:absolute;top:calc(16px + env(safe-area-inset-top,0px));height:0;width:0;visibility:hidden";
+      card.parentNode.appendChild(pr); const t = pr.offsetTop; pr.remove(); return t;
+    };
+    const settle = (to, state) => {
+      /* 從手指放開的位置滑到終點,滑完才把位置交還給 CSS(不然換回 CSS 那一下會跳) */
+      const from = card.offsetTop;
+      card.style.transition = "none";
+      card.style.top = to + "px";
+      if (state !== null) mWsCardState(state);
+      const fin = () => { card.style.top = ""; void card.offsetTop; card.style.transition = ""; };
+      if (!card.animate || Math.abs(to - from) < 1) { fin(); return; }
+      const an = card.animate([{ top: from + "px" }, { top: to + "px" }], { duration: 300, easing: "cubic-bezier(.2,.8,.2,1)" });
+      an.onfinish = fin; an.oncancel = fin;
+    };
+    card.addEventListener("touchstart", e => {
+      y0 = e.touches[0].clientY; x0 = e.touches[0].clientX; top0 = card.scrollTop; start = card.offsetTop;
+      drag = false; axis = null; lastY = y0; lastT = performance.now(); vy = 0;
     }, { passive: true });
+    card.addEventListener("touchmove", e => {
+      if (y0 === null || typing()) return;
+      const y = e.touches[0].clientY, dy = y - y0, dx = e.touches[0].clientX - x0;
+      if (axis === null && (Math.abs(dy) > 6 || Math.abs(dx) > 6)) axis = Math.abs(dy) > Math.abs(dx) ? "y" : "x";
+      if (axis !== "y") return;
+      /* 收著:一律拖整張卡;展開:捲在最上面、而且往下拉,才拖整張卡 */
+      if (!drag) drag = !open() || (card.scrollTop <= 0 && top0 <= 0 && dy > 0);
+      if (!drag) return;
+      if (e.cancelable) e.preventDefault();
+      const now = performance.now(); vy = (y - lastY) / Math.max(1, now - lastT); lastY = y; lastT = now;
+      const min = openTop(), t = start + dy;
+      card.style.transition = "none";
+      card.style.top = (t < min ? min - (min - t) / 4 : t) + "px";   /* 拉過頭會變重 */
+    }, { passive: false });
+    card.addEventListener("touchend", e => {
+      if (y0 === null) return;
+      const dy = e.changedTouches[0].clientY - y0;
+      y0 = null;
+      if (!drag) return;
+      drag = false;
+      const fling = Math.abs(vy) > 0.5;
+      if (!open()) settle(dy < -40 || (fling && vy < 0) ? openTop() : start, dy < -40 || (fling && vy < 0) ? "open" : null);
+      else settle(dy > 60 || (fling && vy > 0) ? start + Math.max(0, card.parentNode.clientHeight - 24 - Math.min(400, card.parentNode.clientHeight - 140) - start) : start,
+        dy > 60 || (fling && vy > 0) ? "" : null);
+    }, { passive: true });
+    card.addEventListener("touchcancel", () => { if (drag) { drag = false; settle(start, null); } y0 = null; }, { passive: true });
     card.addEventListener("wheel", e => {
       if (document.body.classList.contains("m-ws-typing") || Math.abs(e.deltaY) < Math.abs(e.deltaX) || Math.abs(e.deltaY) < 8) return;
       if (!open() && e.deltaY > 0) { e.preventDefault(); mWsCardState("open"); }
