@@ -7988,9 +7988,9 @@
     /* 最前面一格:開始前倒數、結束後回味中(旅途中不放) */
     if (DAYS.length && t < DAYS[0].date) {
       const left = Math.round((new Date(DAYS[0].date) - new Date(t)) / 864e5);
-      cards.push({ state: "status", title: "正在倒數", count: left, ...mToday(t) });
+      cards.push({ state: "status", title: "正在倒數", count: left, todayLabel: "Today", ...mToday(t) });   /* 寫 Today 不寫「今天」(Lulu 11-25) */
     } else if (tripEnded() || (DAYS.length && t > DAYS[DAYS.length - 1].date)) {
-      cards.push({ state: "status", title: "回味中", value: "", ...mToday(t) });
+      cards.push({ state: "status", title: "回味中", value: "", todayLabel: "Today", ...mToday(t) });
     }
     DAYS.forEach(d => {
       const c = wxCache[wxKey(CITY.lat, CITY.lon)];
