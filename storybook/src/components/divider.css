@@ -17,6 +17,10 @@
 .ds-divider--outline-100 {
   --wiggle-color: var(--ds-sys-color-outline-100);
 }
+/* 深色：清單分段（Lulu 11-25 許願搜尋的人氣／推薦） */
+.ds-divider--outline-300 {
+  --wiggle-color: var(--ds-sys-color-outline-300);
+}
 
 /* 點點線：直的，預設高 9（Figma divider/dot） */
 .ds-divider-dot {

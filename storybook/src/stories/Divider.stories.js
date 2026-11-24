@@ -4,7 +4,7 @@ import { dividerWiggleHTML, dividerDotHTML, wireDivider } from "../components/di
 const USAGE = `import { dividerWiggleHTML, dividerDotHTML, wireDivider } from "./components/divider.js";
 
 // 橫的抖動線：寬度跟著外面那層
-el.innerHTML = dividerWiggleHTML({ color: "outline-200" }); // "outline-200" | "primary" | "outline-100"
+el.innerHTML = dividerWiggleHTML({ color: "outline-200" }); // "outline-200" | "primary" | "outline-100" | "outline-300"
 wireDivider(el); // 畫線；尺寸變了會自己重畫
 
 // 直的點點線（height 不給就是 9）
@@ -27,6 +27,7 @@ export const 全部 = {
 <tr><td class="nm">outline 200</td><td class="dv-cell">${dividerWiggleHTML()}</td><td><code class="var">--ds-comp-divider-color-strong</code></td></tr>
 <tr><td class="nm">primary</td><td class="dv-cell">${dividerWiggleHTML({ color: "primary" })}</td><td><code class="var">--ds-comp-divider-color-primary</code></td></tr>
 <tr><td class="nm">outline 100</td><td class="dv-cell">${dividerWiggleHTML({ color: "outline-100" })}</td><td><code class="var">--ds-sys-color-outline-100</code></td></tr>
+<tr><td class="nm">outline 300</td><td class="dv-cell">${dividerWiggleHTML({ color: "outline-300" })}</td><td><code class="var">--ds-sys-color-outline-300</code></td></tr>
 </tbody></table></section>
 
 <section class="tk"><h2>divider/dot</h2>
