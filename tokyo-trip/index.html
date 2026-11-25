@@ -1801,7 +1801,12 @@
       padding:var(--ds-sys-spacing-2xl) var(--ds-sys-spacing-4xl) max(var(--ds-sys-spacing-2xl), env(safe-area-inset-bottom,0px));
       /* Figma 那一條 390×113 = 上 16 ＋ 膠囊 63 ＋ 底 34(就是 home indicator 那塊):有安全區時底下剛好是它,沒有時留 16 */
       /* Figma bottom nav_member 外面那一條(390 寬、膠囊上 16 到螢幕底):白 1% ＋ 背景模糊 8(CSS 是一半 = 4px)(Lulu 11-22) */
-      background:rgb(255 255 255 / .01); -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px);}
+      isolation:isolate;}
+    /* 那一條的模糊是漸層的(Figma 162057:12104 Progressive blur:上緣 0 → 往下 39.6% 處到 8,以下都是 8;CSS 是一半 = 4px)(Lulu 11-25)。
+       模糊放在 ::before 上用遮罩漸層做,膠囊本身不被遮罩 */
+    #m-nav::before{content:""; position:absolute; inset:0; z-index:-1; pointer-events:none; background:rgb(255 255 255 / .01);
+      -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px);
+      -webkit-mask-image:linear-gradient(to bottom, transparent 0, #000 39.6%); mask-image:linear-gradient(to bottom, transparent 0, #000 39.6%);}
     /* 面板拉到最低時底部導覽收起來(Figma 162123:12383 的畫法;待 Lulu 確認) */
     body.member-ui.m-sheet-min #m-nav{transform:translateY(110%); transition:transform .25s ease;}
     /* 最低時 ＋／− 照樣在日曆鈕底下(Lulu 11-22「面板最低時的＋／−也要有」,取代 11-21 收起來的那條) */
@@ -2030,6 +2035,16 @@
     body.member-ui[data-view="wish"].m-wish-max:not(.m-in-detail) #map-sheet .mapzoom,
     body.m-detail-open #m-cal, body.m-detail-open #map-sheet .mapzoom{opacity:0; visibility:hidden; pointer-events:none;
       transition:opacity .2s ease, visibility 0s .2s;}
+    /* **地圖被模糊蓋住的地方,就只剩地圖**(Lulu 11-25):不能操作,上面也不放任何元件 ——
+       地圖上的點和名字、＋／−／房子、日曆鈕、許願鈕、「搜地圖內的範圍」都淡出。底部導覽那條的模糊不算(導覽照常)。
+       會模糊的三種:許願牆拉到最高、熱門地點／不指定地點那張出來、細節卡展開 */
+    .map .pin, .map .pins, #m-iris, #m-head{transition:opacity .2s ease, visibility 0s;}
+    body.member-ui[data-view="wish"].m-wish-max:not(.m-in-detail):not(.m-ws) .map :is(.pin, .pins),
+    body.member-ui[data-view="wish"].m-wish-max:not(.m-in-detail):not(.m-ws) #m-iris,
+    body:has(#m-ss-sheet:not([hidden])) #ss-map :is(.pin, .pins),
+    body.member-ui.m-detail-open .map :is(.pin, .pins), body.m-detail-open #m-iris, body.m-detail-open #m-head,
+    body.m-detail-open #m-wish-box, body.m-detail-open #m-sheet-box, body.m-detail-open #m-seg{
+      opacity:0; visibility:hidden; pointer-events:none; transition:opacity .2s ease, visibility 0s .2s;}
     /* 這個點不在地圖上(Figma 162653:32362):底下一個 Info default,三秒後消失 */
     #m-toast{position:absolute; left:16px; right:16px; bottom:24px; z-index:8; display:flex; justify-content:center; pointer-events:none;}
     #m-toast[hidden]{display:none;}
