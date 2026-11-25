@@ -1931,8 +1931,19 @@
        跟許願牆拉到最高同一種模糊(Figma 背景模糊 8 → CSS 4px)。搜尋框和那張在它上面 */
     #m-ss::before{content:""; position:absolute; inset:0; pointer-events:none; opacity:0; visibility:hidden;
       -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px); transition:opacity .3s ease, visibility 0s .3s;}
-    #m-ss:has(#m-ss-sheet:not([hidden]))::before{opacity:1; visibility:visible; pointer-events:auto; transition:opacity .3s ease, visibility 0s;}
-    #m-ss:has(#m-ss-sheet:not([hidden])) #m-ss-bottom{visibility:hidden; pointer-events:none;}
+    /* 11-25(Lulu 給的 162197:20434 展開、162197:21058 打留言、162205:34715 Google 清單、162390:16203 選了 Google 的一家):
+       這四種也是整片背景模糊 8,模糊的地方只剩地圖 —— 點、名字、日曆鈕、＋／−／房子、「搜地圖內的範圍」都淡出 */
+    #m-ss:has(#m-ss-sheet:not([hidden]))::before, body.m-ws-open #m-ss::before, body.m-ws-typing #m-ss::before,
+    body.m-ws-g #m-ss::before, body:has(#ss-q-out.m-show-uikit) #m-ss::before{opacity:1; visibility:visible; pointer-events:auto; transition:opacity .3s ease, visibility 0s;}
+    #m-ss:has(#m-ss-sheet:not([hidden])) #m-ss-bottom, body.m-ws-open #m-ss-bottom, body.m-ws-typing #m-ss-bottom,
+    body.m-ws-g #m-ss-bottom, body:has(#ss-q-out.m-show-uikit) #m-ss-bottom{visibility:hidden; pointer-events:none;}
+    body.m-ws #ss-map .pin{transition:opacity .2s ease, visibility 0s;}
+    body.m-ws:is(.m-ws-open, .m-ws-typing, .m-ws-g) #ss-map .pin, body.m-ws:has(#ss-q-out.m-show-uikit) #ss-map .pin,
+    body.m-ws:is(.m-ws-open, .m-ws-typing, .m-ws-g) #m-ss-cal, body.m-ws:has(#ss-q-out.m-show-uikit) #m-ss-cal,
+    body.m-ws:is(.m-ws-open, .m-ws-typing, .m-ws-g) #ss-map .mapzoom, body.m-ws:has(#ss-q-out.m-show-uikit) #ss-map .mapzoom{
+      opacity:0 !important; visibility:hidden !important; pointer-events:none !important; transition:opacity .2s ease, visibility 0s .2s;}
+    /* Google 的清單在 #m-ss 外面:要疊在模糊上面 */
+    body.m-ws #ss-q-out.m-show-uikit{z-index:6;}
     #m-ss-sheet .ds-segmented-sheet__content{overflow:auto; overscroll-behavior:contain;}
     #m-ss-sheet[hidden], #m-ss-bottom[hidden], #m-ss-card[hidden]{display:none;}
     /* Figma 162205:34040:「重新搜尋整個「東京都」」底在 759/844(離螢幕底 85),提示在它上面 16;「搜地圖內的範圍」(33620)同一個位置 */
@@ -1968,7 +1979,6 @@
     body.m-ws-open #m-ss-frame, body.m-ws-typing #m-ss-frame, body.m-ws-open #m-ss-cal,
     body.m-ws-open #ss-map .mapzoom, body.m-ws-typing #ss-map .mapzoom{opacity:0; visibility:hidden; pointer-events:none; transition:opacity .2s ease, visibility 0s .2s;}
     body.m-ws-typing #m-ss-cal{top:env(safe-area-inset-top,0px) !important; z-index:3;}
-    body.m-ws-open.m-ws-typing #m-ss-cal{opacity:1; visibility:visible; pointer-events:auto; transition:opacity .2s ease, visibility 0s;}
     #m-ss-card .m-ss-form{background:var(--ds-sys-color-surface); border-radius:var(--ds-sys-radius-sm); padding:var(--ds-sys-spacing-2xl) var(--ds-sys-spacing-4xl);}
     #m-ss .m-ss-list{display:flex; flex-direction:column;}
     /* 推薦／人氣(Lulu 11-25):標題跟「直接許願」同一種(Body/sm/semi-bold、text 100);兩段中間抖動線 outline 300 */
