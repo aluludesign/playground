@@ -18,7 +18,7 @@
 
 /* draw（預設，Lulu 11-25，Figma 162682:45489）：跟地點標記 pin/draw「icon」同一個樣子 ——
  *   28 的塗鴉底（同 .ds-pin-badge__bg 的形狀和位置），填分類色、不透明；
- *   中間 icon 16，填 text 100（Lulu 11-25「icon 全都用 text 100 去填色」）、Elevation/text/xs（0 0.5 1.5 rgb(0 0 0 / .48)），跟號碼那顆一樣 */
+ *   中間 icon 12×12（Lulu 11-25），填 text 100（Lulu 11-25「icon 全都用 text 100 去填色」）、Elevation/text/xs（0 0.5 1.5 rgb(0 0 0 / .48)），跟號碼那顆一樣 */
 .ds-cat-badge--draw {
   position: relative;
   width: 28px;
@@ -37,7 +37,7 @@
 }
 .ds-cat-badge--draw .ds-cat-badge__icon {
   position: relative;
-  width: 16px;
-  height: 16px;
+  width: 12px;
+  height: 12px;
   filter: drop-shadow(0 0.5px 0.75px rgb(0 0 0 / 0.48));
 }

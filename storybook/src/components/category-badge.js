@@ -20,7 +20,7 @@ export const CATEGORIES = {
 };
 
 /** 一顆分類圓章。key：transport／stay／food／sight／shop／other
- *  look：「draw」（預設，Lulu 11-25，Figma 162682:45489 pin/draw Property 1=icon 的樣子）—— 28 的塗鴉底（分類色、不透明）＋ 中間 icon 16（填 text 100、Elevation/text/xs）
+ *  look：「draw」（預設，Lulu 11-25，Figma 162682:45489 pin/draw Property 1=icon 的樣子）—— 28 的塗鴉底（分類色、不透明）＋ 中間 icon 12×12（填 text 100、Elevation/text/xs）
  *        「solid」—— 舊的實心圓（分類色）＋ icon 填 text 100，大小跟著 --cat-icon */
 export function categoryBadgeHTML({ key = "other", label, look = "draw" } = {}) {
   const c = CATEGORIES[key] || CATEGORIES.other;
