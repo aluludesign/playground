@@ -5521,6 +5521,8 @@
      全螢幕搜尋框打 1 個字以上,下面就出提示,最多 8 筆。**只用 App 自己的資料** —— Nominatim 的使用條款不准拿它做邊打邊查。
      三種來源:
        地點   全站所有團從地圖選出來的地點(resource=hints,伺服器去重;不含是哪一團、誰、哪一天)。
+              11-25 起也收別團用 Google 強力搜選的、手打的地點(只有名字＋那團的城市,點了是拿名字去搜);
+              排序:這一團城市附近的先 → 越多團選過的先 → 越近的先。
               點了直接當一筆結果標在地圖上、選起來並框住,不再查 Nominatim。
        搜過   這支手機搜過的字(localStorage)。點了填進搜尋框、照平常搜。
        相似   SYN 相似詞表(打「拉」→「拉麵」「ラーメン」)。點了一樣填進去搜。
@@ -5531,7 +5533,7 @@
      Google(強力搜)選的地點不在裡面:伺服器不存它的資料,手機上的也不拿來給提示(Google 的座標不能畫在這張 OSM 地圖上)。
      強力搜上膛時照樣出提示,但點了什麼都是填字、走強力搜。
      Enter、搜尋、點外面、✕ 都會收起來。 */
-  const HINT_LS = "trippps-hints", HIST_LS = "trippps-ss-hist", SUG_MAX = 8;
+  const HINT_LS = "trippps-hints2", HIST_LS = "trippps-ss-hist", SUG_MAX = 8;
   let hintRows = null, hintAt = 0, sugItems = [];
   /* 全站的地點清單:進全螢幕搜尋時看一次,三十分鐘內抓過就用這台手機存著的那份 */
   function loadHints() {
@@ -5574,17 +5576,29 @@
     /* 這一團自己的地點先放(剛存的、全站清單還沒抓到的也有),再接全站的;同名同座標的算同一個,公開照片互相補 */
     const own = (state.stops || []).concat(state.wishes || []).filter(r => r && r.place && r.geo && !r.placeId)
       .map(r => ({ n: r.place, la: r.geo.la, lo: r.geo.lo, c: r.geo.c, s: r.geo.s, k: r.geo.k, ph: r.photo || "", more: r.geo.ph || [] }));
-    const byKey = {}, places = [];
+    const byKey = {}, places = [], hasName = {};
     own.concat(hintRows || []).forEach(p => {
-      if (!p || !p.n || !isFinite(p.la) || !isFinite(p.lo)) return;
+      if (!p || !p.n || p.nc || !isFinite(p.la) || !isFinite(p.lo)) return;
       const k = String(p.n).toLowerCase() + "@" + (+p.la).toFixed(3) + "," + (+p.lo).toFixed(3);
-      if (byKey[k]) { if (!byKey[k].ph && p.ph) byKey[k].ph = p.ph; return; }
+      hasName[String(p.n).toLowerCase()] = true;
+      if (byKey[k]) { if (!byKey[k].ph && p.ph) byKey[k].ph = p.ph; byKey[k].t = Math.max(byKey[k].t || 1, p.t || 1); return; }
       places.push(byKey[k] = Object.assign({}, p));
     });
+    /* 全站其他團用 Google 強力搜選的、手打的(11-25 Lulu:「人氣」要整個資料庫):只有名字和那一團的城市,
+       已經有同名、有座標的就不重複放。點了填進搜尋框、照平常搜 */
+    (hintRows || []).forEach(p => {
+      if (!p || !p.n || !p.nc || hasName[String(p.n).toLowerCase()]) return;
+      const cc = CITIES.find(x => x.c === p.c && x.keys.some(k => String(p.s || "").indexOf(k) >= 0));
+      places.push(Object.assign({}, p, cc ? { _la: cc.lat, _lo: cc.lon } : {}));
+    });
     histGet().filter(h => fold(h) !== t).slice(0, 30).forEach((h, i) => add({ type: "h", rank: 0, tier: tierOf(fold(h)), i: i, text: h }, "w" + fold(h)));
+    /* 同一層裡:這一團城市附近的先(約 50 公里內;沒座標的看城市名),再來越多團選過的越前面,再來越近越前面 */
+    const myCity = String(trip && trip.city || "");
     places.forEach((p, i) => {
-      const d = c ? Math.pow(p.la - c.lat, 2) + Math.pow((p.lo - c.lon) * cos, 2) : 0;
-      add({ type: "p", rank: 1, tier: tierOf(fold(p.n), fold(geoLine(p))), i: d, p: p }, "p" + i);
+      const la = p.nc ? p._la : p.la, lo = p.nc ? p._lo : p.lo;
+      const d = c && isFinite(la) ? Math.pow(la - c.lat, 2) + Math.pow((lo - c.lon) * cos, 2) : 99;
+      const near = d < 0.25 || (p.nc && myCity && p.s && (myCity.indexOf(p.s) >= 0 || p.s.indexOf(myCity) >= 0));
+      add({ type: "p", rank: 1, tier: tierOf(fold(p.n), fold(geoLine(p))), i: (near ? 0 : 1e6) - Math.min(p.t || 1, 99) * 1000 + Math.min(d, 99), p: p }, "p" + i);
     });
     synG.forEach(gi => SYN[gi].forEach((w, wi) => { if (SYN_F[gi][wi] !== t) add({ type: "s", rank: 2, tier: SYN_F[gi][wi].indexOf(t) >= 0 ? 0 : 1, i: gi * 10 + wi, text: w }, "w" + SYN_F[gi][wi]); }));
     out.sort((a, b) => a.tier - b.tier || a.rank - b.rank || a.i - b.i);
@@ -5626,7 +5640,7 @@
     if (!it) return;
     const inp = el(SS);
     /* 搜過的字、相似詞,或強力搜上膛:填進去,照平常搜(上膛就是走強力搜那條路) */
-    if (it.type !== "p" || (seekArmed[SS] && !onSnapshot())) { inp.value = it.type === "p" ? it.p.n : it.text; runSeek(SS); return; }
+    if (it.type !== "p" || it.p.nc || (seekArmed[SS] && !onSnapshot())) { inp.value = it.type === "p" ? it.p.n : it.text; runSeek(SS); return; }
     /* 地點:已經有座標,直接當成一筆結果。還在飛的那一輪搜尋作廢,不然它晚回來會把這張蓋掉 */
     const p = it.p;
     inp.value = p.n;
@@ -8764,6 +8778,9 @@
         if (it) {
           const k = it.dataset.mSug;
           if (k[0] === "r") mRecTake((el("m-ss-sheet")._recs || [])[+k.slice(1)]); else sugTake(+k);
+          /* 框裡的字跟著換成選的那個(別團的地點只有名字,是拿它去搜) */
+          const fi = el("m-ss-frame").querySelector("input");
+          if (fi && fi.value !== el(SS).value) fi.value = el(SS).value;
           el("m-ss-sheet").hidden = true; el("m-ss-sheet")._penKey = null; return;
         }
         const px = e.target.closest("[data-proxy]");

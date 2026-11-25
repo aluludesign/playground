@@ -1162,27 +1162,49 @@ module.exports = async (req, res) => {
     if (!me) return stop({ status: 401, why: "login", error: "請先用 LINE 登入" });
     try {
       if (!hintCache.rows || Date.now() - hintCache.at > 10 * 60 * 1000) {
-        if (!(await hasGeoCol())) hintCache = { rows: [], at: Date.now() };
-        else {
-          const seen = {}, rows = [];
-          let cursor;
-          do {
-            const page = await notion("/databases/" + DB.itinerary + "/query", { method: "POST", body: JSON.stringify({
-              page_size: 100, start_cursor: cursor, filter: { property: "地點資訊", rich_text: { is_not_empty: true } } }) });
-            page.results.forEach(r => {
-              const p = r.properties || {}, n = clip(txt(p["地點"]), 80), g = geoOut(p["地點資訊"]);
-              if (!n || !g || !Number.isFinite(g.la) || (p["地點編號"] && txt(p["地點編號"]))) return;
+        /* 11-25(Lulu:「人氣」要給整個資料庫有相關的,不是只有這一團):
+           除了從地圖選的(有座標),**Google 強力搜選的和手打的地點名字也收**。
+           這兩種沒有座標(Google 的不能存),只給名字,點了就填進搜尋框、照平常搜;
+           國家、城市用那一團開團設的(只給城市名,不給是哪一團)。
+           t = 有幾團選過這個地方(同一團選兩次算一次),手機拿來排「人氣」 */
+        const trips = {};
+        let cursor;
+        do {
+          const page = await notion("/databases/" + DB.trips + "/query", { method: "POST", body: JSON.stringify({ page_size: 100, start_cursor: cursor }) });
+          page.results.forEach(r => { const t = tripOut(r); if (t.code) trips[t.code] = { c: t.country || "", city: t.city || "" }; });
+          cursor = page.has_more ? page.next_cursor : null;
+        } while (cursor);
+        const geo = await hasGeoCol();
+        const seen = {}, named = {}, rows = [];
+        const bump = (row, trip) => { row._t = row._t || {}; row._t[trip || "?"] = 1; };
+        cursor = null;
+        do {
+          const page = await notion("/databases/" + DB.itinerary + "/query", { method: "POST", body: JSON.stringify({
+            page_size: 100, start_cursor: cursor, filter: { property: "地點", rich_text: { is_not_empty: true } } }) });
+          page.results.forEach(r => {
+            const p = r.properties || {}, n = clip(txt(p["地點"]), 80).trim();
+            if (!n) return;
+            const trip = txt(p["團"]), tc = trips[trip] || {};
+            const g = geo && !(p["地點編號"] && txt(p["地點編號"])) ? geoOut(p["地點資訊"]) : null;
+            if (g && Number.isFinite(g.la)) {
               const k = n.toLowerCase() + "@" + g.la.toFixed(3) + "," + g.lo.toFixed(3);
               const ph = photoUrl(p["照片"]);
-              if (seen[k]) { if (ph && !seen[k].ph) seen[k].ph = ph; return; }
+              if (seen[k]) { if (ph && !seen[k].ph) seen[k].ph = ph; bump(seen[k], trip); return; }
               const row = seen[k] = { n: n, la: g.la, lo: g.lo, c: g.c, s: g.s, k: g.k };
               if (ph) { row.ph = ph; if (g.ph) row.more = g.ph; }
+              bump(row, trip);
               rows.push(row);
-            });
-            cursor = page.has_more ? page.next_cursor : null;
-          } while (cursor);
-          hintCache = { rows: rows, at: Date.now() };
-        }
+              return;
+            }
+            /* 沒座標的:同一個名字(不分大小寫)、同一個城市算同一個 */
+            const k = n.toLowerCase() + "|" + (tc.city || "");
+            if (!named[k]) { named[k] = { n: n, c: tc.c || "", s: tc.city || "", nc: 1 }; rows.push(named[k]); }
+            bump(named[k], trip);
+          });
+          cursor = page.has_more ? page.next_cursor : null;
+        } while (cursor);
+        rows.forEach(r => { r.t = Object.keys(r._t || {}).length || 1; delete r._t; });
+        hintCache = { rows: rows, at: Date.now() };
       }
       return res.status(200).json({ rows: hintCache.rows });
     } catch (e) { return fail(e); }
