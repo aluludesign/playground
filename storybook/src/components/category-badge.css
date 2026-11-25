@@ -18,14 +18,14 @@
 
 /* draw（預設，Lulu 11-25，Figma 162682:45489）：跟地點標記 pin/draw「icon」同一個樣子 ——
  *   28 的塗鴉底（同 .ds-pin-badge__bg 的形狀和位置），填分類色、不透明；
- *   中間 icon 16，text inverse 100、Elevation/text/xs（0 0.5 1.5 rgb(0 0 0 / .48)） */
+ *   中間 icon 16，填 text 100（Lulu 11-25「icon 全都用 text 100 去填色」）、Elevation/text/xs（0 0.5 1.5 rgb(0 0 0 / .48)），跟號碼那顆一樣 */
 .ds-cat-badge--draw {
   position: relative;
   width: 28px;
   height: 28px;
   border-radius: 0;
   background: none;
-  color: var(--ds-sys-color-text-inverse-100);
+  color: var(--ds-sys-color-text-100);
 }
 .ds-cat-badge__bg {
   position: absolute;
