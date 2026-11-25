@@ -15,3 +15,29 @@
   color: var(--ds-sys-color-text-100);
 }
 .ds-cat-badge__icon { width: var(--cat-icon); height: var(--cat-icon); display: block; }
+
+/* draw（預設，Lulu 11-25，Figma 162682:45489）：跟地點標記 pin/draw「icon」同一個樣子 ——
+ *   28 的塗鴉底（同 .ds-pin-badge__bg 的形狀和位置），填分類色、不透明；
+ *   中間 icon 16，text inverse 100、Elevation/text/xs（0 0.5 1.5 rgb(0 0 0 / .48)） */
+.ds-cat-badge--draw {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  border-radius: 0;
+  background: none;
+  color: var(--ds-sys-color-text-inverse-100);
+}
+.ds-cat-badge__bg {
+  position: absolute;
+  left: 5.07%;
+  top: 5.43%;
+  width: 89.82%;
+  height: 89.11%;
+  fill: var(--cat-color, var(--ds-sys-color-disabled));
+}
+.ds-cat-badge--draw .ds-cat-badge__icon {
+  position: relative;
+  width: 16px;
+  height: 16px;
+  filter: drop-shadow(0 0.5px 0.75px rgb(0 0 0 / 0.48));
+}
