@@ -117,3 +117,29 @@ button.ds-trip-header__title:focus-visible {
   letter-spacing: 0.04em;
 }
 .ds-trip-header__dot { display: inline-block; min-width: 16px; text-align: center; }
+
+/* 「我」那頁：大頭貼＋名字，間距 spacing/md；大頭貼跟右邊人頭一樣大（icon/xl 32） */
+.ds-trip-header__who {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-sys-spacing-md);
+  min-width: 0;
+  margin-right: auto;
+}
+.ds-trip-header__who .ds-trip-header__titlebox { margin-right: 0; }
+.ds-trip-header__face {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  border-radius: 50%;
+  background: var(--face);
+  color: #fff;
+  font-family: var(--ds-sys-font-family-label);
+  font-weight: 700;
+  font-size: 16px;
+}
+.ds-trip-header__who .ds-avatar,
+.ds-trip-header__face {
+  width: var(--ds-sys-icon-xl, 32px);
+  height: var(--ds-sys-icon-xl, 32px);
+}

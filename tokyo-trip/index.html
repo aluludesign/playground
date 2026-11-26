@@ -1834,10 +1834,6 @@
     #m-me[hidden]{display:none;}
     body.member-ui[data-view="me"] .wrap > footer,
     body.member-ui[data-view="me"] .wrap > .foot{display:none;}
-    #m-me h2{border:0; padding:0; margin:0 0 var(--ds-sys-spacing-md); font-family:var(--ds-sys-font-family-headline); font-weight:900;
-      font-size:var(--ds-sys-font-size-headline-xs); letter-spacing:.05em;}
-    #m-me-who{margin:0 0 var(--ds-sys-spacing-2xl); color:var(--ds-sys-color-text-200);
-      font-family:var(--ds-sys-font-family-zhtw-handwriting-zhtw); font-size:var(--ds-sys-font-size-label-lg);}
     #m-me-ops{display:flex; flex-direction:column; align-items:stretch; gap:var(--ds-sys-spacing-xl);}
     body.member-ui[data-view="me"] .wrap > main{display:none;}
     /* 許願頁(Figma 161950:14100):沒有頂列;最上面是「許個願,想去東京哪?」那顆(Dynamic Iris,就是一般的＋許願、不接 AI),
@@ -2136,7 +2132,7 @@
   <div id="m-wish-box" hidden></div>
   <div id="m-detail" hidden><div id="m-detail-card"></div></div>
   <div id="m-toast" hidden></div>
-  <section id="m-me" aria-labelledby="m-me-h" hidden><h2 id="m-me-h">我</h2><p id="m-me-who"></p><div id="m-me-ops"></div></section>
+  <section id="m-me" aria-label="我" hidden><div id="m-me-ops"></div></section>
   <div id="m-nav"></div>
   <div id="m-photo"></div>
 </div>
@@ -7809,7 +7805,9 @@
     /* 交通、花費、我:團名那格換成頁名、副標換成一句說明(10 字內),不能切團(Lulu 11-23) */
     const page = mMe ? M_PAGE_HEAD.me : M_PAGE_HEAD[state.tab];
     const headHTML = page
-      ? DS.tripHeaderHTML({ title: page[0], meta: [page[1]], ended: false, expanded: false, switchable: false, peopleLabel: "看成員名單" })
+      ? DS.tripHeaderHTML({ title: mMe && myMember ? nameOf(myMember.id) : page[0], meta: [page[1]], ended: false, expanded: false, switchable: false, peopleLabel: "看成員名單",
+          /* 「我」:頁名換成自己的大頭貼＋名字,所以頁面裡原本的「我／名字」那段拿掉(Lulu 11-26) */
+          avatar: mMe && myMember ? mFace(myMember.id) : null })
       : DS.tripHeaderHTML({
       title: trip.name, meta: mMeta(), ended: tripEnded(), expanded: menuOpen,
       switchable: mTrips === null || mTrips.length > 1, peopleLabel: "看成員名單",
@@ -8197,7 +8195,6 @@
     /* 跟漢堡選單同一份按鈕(renderCloudBar 決定有哪幾顆、各自做什麼),這裡只換成 Storybook 的按鈕畫一次 */
     const box = el("m-me-ops");
     if (!box || !DS) return;
-    el("m-me-who").textContent = el("cloud-msg").textContent;
     box.innerHTML = [].map.call(el("cloud-ops").children, b => {
       const html = DS.buttonHTML({ label: b.textContent.trim(), leadingIcon: false, size: "md",
         variant: b.classList.contains("btn-ghost") ? "outlined" : "filled", color: b.id === "cloud-out" ? "error" : "primary" });
