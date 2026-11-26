@@ -6830,8 +6830,8 @@
   /* 重新定位(Figma map control 的 place,Lulu 11-22「回到看得到全部點的畫面」):地圖上現在畫著的點全部框進
      沒被蓋住的那一塊(扣掉上面的頂列／許願鈕／搜尋框、下面的面板／許願牆／卡片)。只有一個點時不貼到街區。
      這是程式自己移動畫面,不算使用者動過(不叫 _onMove,「搜地圖內的範圍」不會因為它跑出來) */
-  function mFitAll(box) {
-    const pts = (box._pts || []).filter(p => isFinite(p.la) && isFinite(p.lo));
+  function mFitAll(box, only) {
+    const pts = (only || box._pts || []).filter(p => isFinite(p.la) && isFinite(p.lo));
     if (!pts.length || !box._v) return;
     const lons = pts.map(p => p.lo), lats = pts.map(p => p.la);
     if (box.id === "ss-map" && document.body.classList.contains("m-ws") && hasCity()) { ssHome(box); return; }
@@ -6841,21 +6841,25 @@
     let top = 0, bot = 0;
     const cover = mDetail ? under("#m-detail-card .m-dcard") : state.tab === "wish" ? under("#m-wish-box .ds-sheet") : under("#m-sheet-box .ds-sheet");
     if (cover) bot = Math.max(0, r.bottom - Math.max(r.top, cover.top));
-    const head = mDetail ? null : state.tab === "wish" ? under("#m-iris .ds-iris-btn") : under("#m-head");
-    if (head) top = Math.max(0, head.bottom - r.top);
+    /* 「地圖視野」(Lulu 11-26):上面浮著的東西(頂列／許願鈕＋日曆鈕)下緣 到 下面蓋住地圖那一塊上緣 —— 露出來、能操作的那一塊 */
+    const heads = mDetail ? [] : state.tab === "wish" ? [under("#m-iris .ds-iris-btn"), under("#m-cal")] : [under("#m-head")];
+    heads.forEach(b => { if (b && b.top < r.top + h / 2) top = Math.max(top, b.bottom - r.top); });
     if (h - top - bot < 120) { top = 0; bot = 0; }
     const vh = h - top - bot;
+    /* 點的圖釘和名字長在座標的上面(約 60):上面多留一點,名字才不會被頂到視野外 */
+    const padT = 64, padB = 16, padX = 32;
     let z = pts.length > 1 ? 16 : 14;
     if (pts.length > 1) {
       for (; z > zMin(box); z--) {
         const xs = lons.map(lo => projX(lo, z)), ys = lats.map(la => projY(la, z));
-        if ((Math.max.apply(null, xs) - Math.min.apply(null, xs)) * TILE < w - 40 &&
-            (Math.max.apply(null, ys) - Math.min.apply(null, ys)) * TILE < vh - 40) break;
+        if ((Math.max.apply(null, xs) - Math.min.apply(null, xs)) * TILE < w - 2 * padX &&
+            (Math.max.apply(null, ys) - Math.min.apply(null, ys)) * TILE < vh - padT - padB) break;
       }
     }
     const xs = lons.map(lo => projX(lo, z)), ys = lats.map(la => projY(la, z));
+    /* 點群的中心對到視野的中心;圖釘往上長,所以整群再往下挪 (padT − padB)/2 */
     box._v = { z: z, cx: (Math.max.apply(null, xs) + Math.min.apply(null, xs)) / 2,
-               cy: (Math.max.apply(null, ys) + Math.min.apply(null, ys)) / 2 - (top - bot) / 2 / TILE };
+               cy: (Math.max.apply(null, ys) + Math.min.apply(null, ys)) / 2 - (top - bot) / 2 / TILE - (padT - padB) / 2 / TILE };
     glide(box);
   }
   /* 主地圖在一般團員的新外框裡,點和 ＋／− 改用 Storybook 的元件 */
@@ -7305,7 +7309,9 @@
     /* 這是「回到預設視角」—— 點變了才重算,不然你拉到一半被拉回去 */
     box._v = { z: z, cx: (Math.max.apply(null, xs) + Math.min.apply(null, xs)) / 2,
                      cy: (Math.max.apply(null, ys) + Math.min.apply(null, ys)) / 2 + cov / 2 / TILE };
-    glide(box);
+    /* 一般團員:點要框在「地圖視野」的正中間 —— 扣掉上面的頂列／許願鈕、日曆鈕,下面的面板／許願牆(Lulu 11-26) */
+    if (mPins(box)) mFitAll(box, fit);
+    else glide(box);
     initMapGestures(box);
 
   }
