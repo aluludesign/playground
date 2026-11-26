@@ -8160,15 +8160,20 @@
     mWireDetailSwipe();
     el("m-detail-card").addEventListener("ds-card-photo", e => {
       const c = e.target.closest(".m-dcard");
+      /* 還沒展開:點照片也是展開整張卡;展開之後點照片才看大圖(Lulu 11-26) */
+      if (!el("m-detail").classList.contains("is-open")) {
+        if (c && c.classList.contains("is-cur") && !c.classList.contains("is-moving")) mDetailOpen(true, true);
+        return;
+      }
       const x = mDetail && mDetailList()[c ? +c.dataset.i : mDetail.i];
       if (x) mOpenPhotos(x, e.detail.index);
     });
-    /* 點卡片也能展開(Lulu 11-26):照片以外的地方都算,沒照片就是整張;照片(看大圖)、✕、Google 地圖連結、愛心這些照舊做自己的事 */
+    /* 點卡片也能展開(Lulu 11-26):整張都算,照片也是(照片那條在 ds-card-photo 裡);✕、Google 地圖連結、愛心這些照舊做自己的事 */
     el("m-detail-card").addEventListener("click", e => {
       if (el("m-detail").classList.contains("is-open")) return;
       const c = e.target.closest(".m-dcard");
       if (!c || !c.classList.contains("is-cur") || c.classList.contains("is-moving")) return;
-      if (e.target.closest(".ds-acard__photos, .ds-acard__close, a, button, input, textarea, [role=button]")) return;
+      if (e.target.closest(".ds-acard__close, a, button, input, textarea, [role=button]")) return;
       mDetailOpen(true, true);
     });
     el("m-photo").addEventListener("ds-photo-at", e => mPaintPhoto(e.detail.index));
