@@ -2026,6 +2026,7 @@
     #m-detail-card .m-dcard.is-float{position:fixed; z-index:1; margin:0; max-width:none; height:auto;
       left:max(16px, calc(50% - 195px)); right:max(16px, calc(50% - 195px));
       top:max(16px, env(safe-area-inset-top,0px)); bottom:24px;}
+    #m-detail:not(.is-open) #m-detail-card .m-dcard.is-cur{cursor:pointer;}
     #m-detail-card .m-dcard.is-moving{transition:left .3s ease, top .3s ease, width .3s ease, height .3s ease;}
     #m-detail-card .m-dcard-ph{flex:0 0 100%; max-width:390px; height:100%; scroll-snap-align:center; scroll-snap-stop:always;}
     #m-detail.is-open #m-detail-card .m-dcard.is-cur{overflow-y:auto; overscroll-behavior:contain; touch-action:pan-x pan-y;} /* 展開時照片一樣能左右滑(iPhone 取交集) */
@@ -8161,6 +8162,14 @@
       const c = e.target.closest(".m-dcard");
       const x = mDetail && mDetailList()[c ? +c.dataset.i : mDetail.i];
       if (x) mOpenPhotos(x, e.detail.index);
+    });
+    /* 點卡片也能展開(Lulu 11-26):照片以外的地方都算,沒照片就是整張;照片(看大圖)、✕、Google 地圖連結、愛心這些照舊做自己的事 */
+    el("m-detail-card").addEventListener("click", e => {
+      if (el("m-detail").classList.contains("is-open")) return;
+      const c = e.target.closest(".m-dcard");
+      if (!c || !c.classList.contains("is-cur") || c.classList.contains("is-moving")) return;
+      if (e.target.closest(".ds-acard__photos, .ds-acard__close, a, button, input, textarea, [role=button]")) return;
+      mDetailOpen(true, true);
     });
     el("m-photo").addEventListener("ds-photo-at", e => mPaintPhoto(e.detail.index));
     el("m-photo").addEventListener("ds-photo-close", () => { el("m-photo").innerHTML = ""; mPhotoState = null; });
