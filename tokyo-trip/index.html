@@ -1950,7 +1950,9 @@
        留言框在卡片最底下。打留言、鍵盤出來(162197:21058):卡片從上面 16 到鍵盤上 24,留言框滑上來蓋住資訊(接在照片下面),
        日曆鈕在右上角 */
     /* 離底 24 是從螢幕最底量起(Figma 820/844),不再加安全區 */
-    #m-ss-card{--m-ss-card-top:calc(100% - 24px - min(400px, 100% - 140px));
+    /* 收著的高度(Lulu 11-26 截圖):有照片＝照片＋名字＋地點;沒照片＝名字＋地點＋第一行資訊。--m-ss-peek 由 mWsPeek 量;
+       最高頂到搜尋框下面 */
+    #m-ss-card{--m-ss-card-top:calc(100% - 24px - min(var(--m-ss-peek,400px), 100% - var(--m-ss-under,160px) - 24px));
       position:absolute; left:var(--ds-sys-spacing-2xl); right:var(--ds-sys-spacing-2xl);
       top:var(--m-ss-card-top); bottom:24px;
       overflow-y:auto; overscroll-behavior:contain; border-radius:var(--ds-sys-radius-sm); touch-action:pan-x pan-y; /* pan-x:卡片裡的照片要能左右滑(iPhone 會取祖先交集) */
@@ -1965,6 +1967,8 @@
     /* 收著的時候卡片裡面不捲:往上拖是拖整張卡(mWireWsCard),裡面一起捲會先捲、再跳(Lulu 11-25 錄影) */
     body:not(.m-ws-open):not(.m-ws-typing) #m-ss-card{overflow-y:hidden;}
     /* 選了 Google 的一家(Figma 162390:16203):卡片照內容高(照片＋名字＋地點＋留言框),離底 24,最高頂到搜尋框下 16 */
+    body:not(.m-ws-open):not(.m-ws-typing) #m-ss-card{cursor:pointer;}
+    /* 選了 Google 的一家(Figma 162390:16203,不是地圖上的點):照舊 —— 卡片照內容高(照片＋名字＋地點＋留言框),離底 24,最高頂到搜尋框下 16 */
     body.m-ws-g:not(.m-ws-open):not(.m-ws-typing) #m-ss-card{top:auto; max-height:calc(100% - var(--m-ss-under,160px) - 24px);}
     body.m-ws-g:not(.m-ws-open):not(.m-ws-typing) #m-ss-card > .ds-acard{min-height:0;}
     /* 打留言:搜尋畫面已經貼齊看得到的那一塊(mWsVV),卡片離底 24 就是鍵盤上 24。鍵盤動的時候不要再加 transition(會追著跳) */
@@ -8849,10 +8853,17 @@
       });
       mWireWsCard(el("m-ss-card"));
       /* 結果卡上的照片點了一樣放大(Lulu 11-22「搜尋結果有圖的細節卡上照片點了怎麼沒有放大」) */
-      el("m-ss-card").addEventListener("ds-card-close", () => mWsBackToRecs());
+      /* ✕ 回上一頁(Lulu 11-26):有打字就停在「有打字、有推薦清單」那樣(字留著、清單出來);沒打字就是推薦那一頁 */
+      el("m-ss-card").addEventListener("ds-card-close", () => {
+        const q = el("m-ss-frame").querySelector("input"), typed = q ? q.value : "";
+        mWsBackToRecs();
+        if (typed.trim() && q) { q.value = typed; q.dispatchEvent(new Event("input")); }
+      });
       /* 搜尋框的 ✕ 清掉字:一樣回到推薦那一頁(Lulu 11-25) */
       root.addEventListener("ds-text-field-clear", e => { if (e.target.closest("#m-ss-frame")) mWsBackToRecs(true); });
       el("m-ss-card").addEventListener("ds-card-photo", e => {
+        /* 收著的時候點照片 = 展開整張;展開之後點照片才看大圖(Lulu 11-26) */
+        if (!document.body.classList.contains("m-ws-open") && !document.body.classList.contains("m-ws-typing")) { mWsCardState("open"); return; }
         const out = seekBox(SS), r = ssSel >= 0 && out._hits ? out._hits[ssSel] : out._g || null;
         if (r && r._wiki) mOpenPhotos({ photo: r._wiki, geo: { ph: wikiList(r).slice(1) }, title: hitName(r) }, e.detail.index);
       });
@@ -9097,6 +9108,8 @@
       const ft = card.querySelector(".ds-acard__footer");
       if (ft) ft.classList.add("ds-pattern");
       card.scrollTop = 0;
+      mWsPeek(card);
+      card.querySelectorAll("img").forEach(i => i.addEventListener("load", () => mWsPeek(card), { once: true }));
     }
     if (!r) { card.dataset.at = ""; mWsCardState(""); }
     requestAnimationFrame(() => mPlaceZoom(ssMap()));
@@ -9133,6 +9146,16 @@
       scr.style.height = Math.round(vv.height) + "px";
       scr.style.bottom = "auto";
     } else { scr.style.top = ""; scr.style.height = ""; scr.style.bottom = ""; }
+  }
+  /* 收著的卡片要多高(Lulu 11-26):有照片 → 照片＋名字＋地點;沒照片 → 名字＋地點＋第一行資訊;下面留 24 */
+  function mWsPeek(card) {
+    const a = card && card.querySelector(".ds-acard");
+    if (!a) return;
+    const base = a.getBoundingClientRect().top;
+    const top = a.querySelector(".ds-acard__top"), li = a.querySelector(".ds-acard__info li");
+    const end = !a.querySelector(".ds-acard__photos") && li ? li : top;
+    if (!end) return;
+    card.style.setProperty("--m-ss-peek", Math.ceil(end.getBoundingClientRect().bottom - base + 24) + "px");
   }
   /* 結果卡的三種樣子:""=收著、"open"=往上滑展開、打留言時另外加 m-ws-typing(鍵盤收起來就回到原本那一種) */
   function mWsCardState(st) {
@@ -9176,6 +9199,20 @@
       pr.style.cssText = "position:absolute;top:calc(16px + env(safe-area-inset-top,0px));height:0;width:0;visibility:hidden";
       card.parentNode.appendChild(pr); const t = pr.offsetTop; pr.remove(); return t;
     };
+    /* 收著時卡片頂在哪:跟 CSS 的 --m-ss-card-top 同一條算式 */
+    const shutTop = () => {
+      const H = card.parentNode.clientHeight, cs = getComputedStyle(card);
+      const peek = parseFloat(cs.getPropertyValue("--m-ss-peek")) || 400, under = parseFloat(cs.getPropertyValue("--m-ss-under")) || 160;
+      return H - 24 - Math.min(peek, H - under - 24);
+    };
+    let dragEnd = 0;
+    /* 收著的時候點卡片(照片也算)就展開整張(Lulu 11-26);✕、地圖連結、按鈕照舊 */
+    card.addEventListener("click", e => {
+      if (open() || typing() || performance.now() - dragEnd < 400) return;
+      if (e.target.closest(".ds-acard__photo")) return;   /* 照片由 ds-card-photo 那邊展開 */
+      if (e.target.closest(".ds-acard__close, a, button, input, textarea, [role=button]")) return;
+      mWsCardState("open");
+    });
     const settle = (to, state) => {
       /* 從手指放開的位置滑到終點,滑完才把位置交還給 CSS(不然換回 CSS 那一下會跳) */
       const from = card.offsetTop;
@@ -9210,11 +9247,10 @@
       const dy = e.changedTouches[0].clientY - y0;
       y0 = null;
       if (!drag) return;
-      drag = false;
+      drag = false; dragEnd = performance.now();
       const fling = Math.abs(vy) > 0.5;
       if (!open()) settle(dy < -40 || (fling && vy < 0) ? openTop() : start, dy < -40 || (fling && vy < 0) ? "open" : null);
-      else settle(dy > 60 || (fling && vy > 0) ? start + Math.max(0, card.parentNode.clientHeight - 24 - Math.min(400, card.parentNode.clientHeight - 140) - start) : start,
-        dy > 60 || (fling && vy > 0) ? "" : null);
+      else settle(dy > 60 || (fling && vy > 0) ? shutTop() : start, dy > 60 || (fling && vy > 0) ? "" : null);
     }, { passive: true });
     card.addEventListener("touchcancel", () => { if (drag) { drag = false; settle(start, null); } y0 = null; }, { passive: true });
     card.addEventListener("wheel", e => {
