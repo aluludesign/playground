@@ -1,0 +1,264 @@
+/* 外框輸入框 Field —— Figma「input」section（162734:51591）的 Text field（162736:15206）、Text area（162736:15574）
+ *
+ *   Material 3 outlined：surf container lowest 底、圓角 comp/field/radius、內距 spacing/2xl、icon 和內容間距 spacing/2xl
+ *   單行：最小高 comp/field/height（56），內容垂直置中
+ *   多行：高 comp/field/area-height（120），文字靠上換行
+ *
+ *   框線（Figma 的 Outline，畫在框裡面）
+ *     Enabled   outline 100、border/xs
+ *     Hovered   text 100（錯誤時 on error container）
+ *     Focused   primary、comp/field/focus-outline-width（錯誤時 error）
+ *     Error     error
+ *     Disabled  disable container；字全部 on disable container
+ *
+ *   標題
+ *     空的、沒對焦：躺在框裡（Label resting，Body/sm/regular、text 200）
+ *     有值或對焦：浮在框線上（Floating label，label/sm/regular，x 13、垂直置中在框線上；
+ *                 Notch＝標題下半截墊一塊底色，把框線遮掉）。對焦時 primary、錯誤時 error
+ *   提示字（Placeholder）只在對焦、還沒打字時出現
+ *   錯誤：右邊換成錯誤 icon（error），說明文字變 error
+ *   說明文字（Supporting text）：框下面 spacing/xs，左右內距 spacing/2xl，label/sm/regular
+ */
+
+.ds-field {
+  --field-line: var(--ds-sys-color-outline-100);
+  --field-line-width: var(--ds-sys-border-xs);
+  --field-label: var(--ds-sys-color-text-200);
+  /* 躺著的標題：只有 disabled 會換色（錯誤、對焦都還是 text 200） */
+  --field-rest: var(--ds-sys-color-text-200);
+  --field-text: var(--ds-sys-color-text-100);
+  --field-hint: var(--ds-sys-color-text-200);
+  --field-bg: var(--ds-sys-color-surf-container-lowest);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-sys-spacing-xs);
+  min-width: 0;
+  font-family: var(--ds-sys-font-family-body);
+}
+
+.ds-field__box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--ds-sys-spacing-2xl);
+  box-sizing: border-box;
+  min-height: var(--ds-comp-field-height);
+  padding: var(--ds-sys-spacing-2xl);
+  border-radius: var(--ds-comp-field-radius);
+  background: var(--field-bg);
+  cursor: text;
+}
+.ds-field--area .ds-field__box {
+  align-items: flex-start;
+  height: var(--ds-comp-field-area-height);
+}
+
+/* 框線：疊在最上面、畫在框裡面（Figma stroke inside），換顏色、變粗都會漸變 */
+.ds-field__outline {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 var(--field-line-width) var(--field-line);
+  pointer-events: none;
+  transition: box-shadow 0.15s ease;
+}
+
+.ds-field__icon {
+  flex: none;
+  width: var(--ds-comp-field-icon);
+  height: var(--ds-comp-field-icon);
+  color: var(--field-hint);
+}
+.ds-field__icon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.ds-field__error-icon {
+  display: none;
+  color: var(--ds-sys-color-error);
+}
+
+/* 內容：標題（躺著）、提示字、值疊在同一格 */
+.ds-field__content {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+}
+.ds-field--area .ds-field__content {
+  align-items: flex-start;
+}
+
+.ds-field__input {
+  flex: 1 1 0;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: none;
+  color: var(--field-text);
+  caret-color: var(--ds-sys-color-primary);
+  font-family: var(--ds-sys-font-family-body);
+  font-weight: 400;
+  font-size: var(--ds-sys-font-size-body-sm);
+  line-height: 16px;
+  letter-spacing: 0.04em;
+}
+textarea.ds-field__input {
+  align-self: stretch;
+  resize: none;
+  overflow-y: auto;
+  line-height: 16px;
+}
+/* 提示字只在對焦、還沒打字時出現 */
+.ds-field__input::placeholder {
+  color: var(--ds-sys-color-text-200);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.ds-field.is-focused .ds-field__input::placeholder {
+  opacity: 1;
+}
+
+/* 躺在框裡的標題 */
+.ds-field__rest {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--field-rest);
+  font-size: var(--ds-sys-font-size-body-sm);
+  line-height: 16px;
+  letter-spacing: 0.04em;
+  pointer-events: none;
+  transform: translateY(-50%);
+  transition: opacity 0.15s ease;
+}
+.ds-field--area .ds-field__rest {
+  top: 0;
+  transform: none;
+}
+
+/* 浮在框線上的標題：下半截墊底色（Notch）把框線遮掉 */
+.ds-field__float {
+  position: absolute;
+  left: 13px;
+  top: -7px;
+  z-index: 1;
+  max-width: calc(100% - 26px);
+  box-sizing: border-box;
+  padding: 0 var(--ds-sys-spacing-xs);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--field-label);
+  background: linear-gradient(to bottom, transparent 5px, var(--field-bg) 5px);
+  font-size: var(--ds-sys-font-size-label-sm);
+  line-height: 12px;
+  letter-spacing: 0.04em;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.15s ease, transform 0.15s ease, color 0.15s ease;
+}
+
+/* 有值或對焦：標題浮上去 */
+.ds-field:is(.is-focused, .is-filled) .ds-field__rest {
+  opacity: 0;
+}
+.ds-field:is(.is-focused, .is-filled) .ds-field__float {
+  opacity: 1;
+  transform: none;
+}
+
+/* 清除 ✕（Trailing icon：有字才按得到） */
+.ds-field__clear {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.ds-field__clear:focus-visible {
+  outline: var(--ds-comp-focus-ring-border) solid var(--ds-comp-focus-ring-color);
+  outline-offset: 2px;
+  border-radius: 50%;
+}
+
+.ds-field__support {
+  padding: 0 var(--ds-sys-spacing-2xl);
+  color: var(--ds-sys-color-text-200);
+  font-size: var(--ds-sys-font-size-label-sm);
+  line-height: 14px;
+  letter-spacing: 0.04em;
+}
+
+/* ---------- 狀態 ---------- */
+
+@media (hover: hover) {
+  .ds-field:not(.is-disabled, .is-focused) .ds-field__box:hover {
+    --field-line: var(--ds-sys-color-text-100);
+  }
+}
+.ds-field.is-hover:not(.is-focused) {
+  --field-line: var(--ds-sys-color-text-100);
+}
+
+.ds-field.is-focused {
+  --field-line: var(--ds-sys-color-primary);
+  --field-line-width: var(--ds-comp-field-focus-outline-width);
+  --field-label: var(--ds-sys-color-primary);
+}
+
+.ds-field.is-error {
+  --field-line: var(--ds-sys-color-error);
+  --field-label: var(--ds-sys-color-error);
+}
+.ds-field.is-error .ds-field__support {
+  color: var(--ds-sys-color-error);
+}
+.ds-field.is-error .ds-field__error-icon {
+  display: block;
+}
+.ds-field.is-error .ds-field__trailing {
+  display: none;
+}
+@media (hover: hover) {
+  .ds-field.is-error:not(.is-disabled, .is-focused) .ds-field__box:hover {
+    --field-line: var(--ds-sys-color-on-error-container);
+  }
+}
+.ds-field.is-error.is-hover:not(.is-focused) {
+  --field-line: var(--ds-sys-color-on-error-container);
+}
+
+.ds-field.is-disabled {
+  --field-line: var(--ds-sys-color-disable-container);
+  --field-label: var(--ds-sys-color-on-disable-container);
+  --field-rest: var(--ds-sys-color-on-disable-container);
+  --field-text: var(--ds-sys-color-on-disable-container);
+  --field-hint: var(--ds-sys-color-on-disable-container);
+}
+.ds-field.is-disabled .ds-field__box {
+  cursor: default;
+}
+.ds-field.is-disabled .ds-field__support {
+  color: var(--ds-sys-color-on-disable-container);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ds-field__outline,
+  .ds-field__float,
+  .ds-field__rest,
+  .ds-field__input::placeholder {
+    transition: none;
+  }
+}
