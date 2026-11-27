@@ -2098,6 +2098,52 @@
     #members-overlay .dot{width:12px; height:12px; border-radius:50%; flex:none;}
     #members-overlay .role{margin-left:auto; font-size:12px; color:var(--muted);}
 
+
+    /* ===== 全部的對話框換成 Storybook 的對話框 Dialog(2026-11-27,Lulu)=====
+       Figma:dialogue 162768:53321、section 162776:15212、輸入框 input section 162734:51591。
+       原本那張卡(.signin)留著當外殼(id、submit、DIALOG_CANCEL 都靠它),裡面換成 dialogHTML 的結構,
+       原本的表單整個搬進 .ds-dialog__content;輸入框換成外框輸入框(fieldHTML 的結構,input 本身沒換)。
+       做法在 dsDressDialog()。照片放大、全螢幕地圖搜尋不是對話框,不換 */
+    .overlay.ds-app{padding:var(--ds-sys-spacing-2xl);}
+    .signin.m-dlg{max-width:380px; padding:0; background:none; border:0; border-radius:var(--ds-comp-dialog-radius); box-shadow:none;
+      display:flex; flex-direction:column; gap:0; max-height:calc(100dvh - 2 * var(--ds-sys-spacing-2xl)); overflow:visible;}
+    .signin.m-dlg.wide{max-width:440px; max-height:calc(100dvh - 2 * var(--ds-sys-spacing-2xl)); overflow:visible;}
+    .m-dlg > .ds-dialog{max-width:100%; max-height:100%; min-height:0; flex:1 1 auto;}
+    .overlay:not([hidden]) .m-dlg:not([hidden]) > .ds-dialog{animation:ds-dialog-in .22s cubic-bezier(.2,.9,.3,1.1) both;}
+    .m-dlg h2.ds-dialog__title-text{font:inherit; letter-spacing:inherit; margin:0;}
+    .m-dlg p.ds-dialog__desc{font-family:var(--ds-sys-font-family-label); font-size:var(--ds-sys-font-size-label-md); line-height:18px; letter-spacing:.04em; color:var(--ds-sys-color-text-200);}
+    .m-dlg .ds-dialog__content{gap:var(--ds-sys-spacing-2xl); color:var(--ds-sys-color-text-100); font-family:var(--ds-sys-font-family-body);}
+    .m-dlg .ds-dialog__content div:has(> .fld):not(.fld){gap:var(--ds-sys-spacing-2xl);}
+    .m-dlg .grid2{gap:var(--ds-sys-spacing-2xl) var(--ds-sys-spacing-md);}
+    /* 送出、取消搬到下面那一排(對話框的按鈕);原本的留在表單裡藏著,按下面那兩顆＝按它們 */
+    .m-dlg .m-dlg-moved{display:none !important;}
+    .m-dlg .ops:not(:has(> :not([hidden]):not(.m-dlg-moved))){display:none;}
+    .m-dlg .ops{display:flex; flex-wrap:wrap; gap:var(--ds-sys-spacing-md);}
+    /* 交通一次讀到好幾段:疊在後面的那幾張也換成對話框的底 */
+    .ds-app .stack-ghost{background:var(--ds-comp-dialog-container); border:0; border-radius:var(--ds-comp-dialog-radius);}
+    .stack > .signin.m-dlg{box-shadow:none;}
+    .stack.multi > .signin.m-dlg{overflow:visible;}
+    .stack.multi > .m-dlg > .ds-dialog{height:100%;}
+    .m-dlg .stack-n{top:var(--ds-comp-dialog-padding); right:calc(var(--ds-comp-dialog-padding) + 32px);}
+    /* 只是一段的標題(下面是一排選項,不是輸入框)＝段落標題 Section title */
+    .m-dlg .rm-label.ds-section-title{position:static; transform:none; padding:0; margin:0 0 var(--ds-sys-spacing-md); background:none;}
+    /* 外框輸入框:select、日期、時間的標題一直浮著(它們沒有「空的」樣子) */
+    .m-dlg .ds-field__input{width:100%; box-sizing:border-box;}
+    .m-dlg select.ds-field__input{appearance:none; -webkit-appearance:none; cursor:pointer; padding-right:20px;}
+    .m-dlg .ds-field:has(select) .ds-field__box::after{content:""; position:absolute; right:var(--ds-sys-spacing-2xl); top:50%; width:0; height:0;
+      border:5px solid transparent; border-top-color:var(--ds-sys-color-text-200); border-bottom:0; transform:translateY(-50%); pointer-events:none;}
+    .m-dlg input[type="color"].ds-field__input{flex:none; width:40px; height:24px; padding:0; border-radius:var(--ds-sys-radius-xs); cursor:pointer;}
+    .m-dlg .ds-field__content{position:relative; display:flex; flex:1 1 auto; min-width:0; align-self:stretch; align-items:center;}
+    .m-dlg .ds-field--area .ds-field__content{flex-direction:column; align-items:stretch;}
+    /* 有「搜尋」鈕的那一格:鈕排在輸入框右邊 */
+    .m-dlg .seek{display:flex; gap:var(--ds-sys-spacing-md); align-items:center;}
+    .m-dlg .seek > .ds-field{flex:1 1 auto;}
+    /* AI 的框:照片、拍照、選圖還是在同一個框裡,放在打字的下面(2026-10-12 的決定) */
+    .m-dlg .ai-box{border:0; padding:0; background:none; box-shadow:none;}
+    .m-dlg .ai-box .ds-field--area .ds-field__box{height:auto; min-height:var(--ds-comp-field-area-height);}
+    .m-dlg .ai-box textarea.ds-field__input{min-height:72px;}
+    /* 開團/登入那張卡:沒有 ✕、沒有下面那排按鈕(不能關,原本的按鈕都在內容裡) */
+    #home-card.m-dlg .ds-dialog__content .ops{flex-direction:column; align-items:stretch;}
   </style>
 </head>
 <body>
@@ -7727,7 +7773,7 @@
       const fl = document.createElement("link");
       fl.rel = "stylesheet"; fl.href = "ds/fonts.css";
       document.head.appendChild(fl);
-      dsLoading = import("./ds/components.js").then(m => { DS = m; renderMemberShell(); })
+      dsLoading = import("./ds/components.js").then(m => { DS = m; dsDressDialogs(); renderMemberShell(); })
         .catch(e => { dsLoading = null; console.error("ds/components.js", e); });
     }
     return dsLoading;
@@ -12463,6 +12509,135 @@
     if (btn) btn.click(); else ov.hidden = true;
     return true;
   }
+
+  /* ================= 對話框換成 Storybook 的 Dialog(2026-11-27,Lulu:團主、團員都換) =================
+     **不重寫表單。** 原本那張卡(.signin,有 id、有 submit、DIALOG_CANCEL 認得它)留著當外殼,
+     裡面換成 dialogHTML 的結構:標題(螢光筆)、說明、右上 ✕、下面「取消＋馬克筆送出」;
+     原本的 h2、說明那段 <p> 搬進去(程式會改它們的字,所以搬的是同一個元素),其他全部搬進中間的內容。
+     下面那兩顆是代理:按送出＝按原本的送出鈕(表單照舊送出、檢查必填),按取消或 ✕＝按原本的取消鈕。
+     原本那兩顆的字、藏不藏、能不能按改了,下面那兩顆跟著改。其他的按鈕(跳過、刪掉、重來…)留在內容的最下面。
+     輸入框換成外框輸入框(fieldHTML 的結構),input／select 本身沒換,id 和監聽都還在。
+     照片放大、全螢幕地圖搜尋不是對話框,不換。開團/登入那張卡也換,但沒有 ✕ 和下面那排(它不能關)。 */
+  const DS_DIALOGS = ["settings-overlay", "invite-overlay", "flight-overlay", "exp-edit-overlay", "edit-overlay", "stop-add-overlay",
+    "ai-overlay", "wish-add-overlay", "wish-edit-overlay", "time-overlay", "fund-top-overlay", "confirm-overlay", "members-overlay", "pick-overlay"];
+  const FIXED_TYPES = ["select-one", "date", "time", "datetime-local", "month", "color"];
+  function dsDressField(fld) {
+    if (fld.dataset.dsField) return;
+    const label = fld.querySelector(":scope > .rm-label");
+    const inp = fld.querySelector(":scope > .rm-input, :scope > .seek > .rm-input, :scope > .ai-box > .rm-input");
+    if (!inp) {
+      /* 一排選項(誰分攤、種類…)的標題:段落標題 */
+      if (label) { label.classList.add("ds-section-title"); fld.dataset.dsField = "1"; }
+      return;
+    }
+    fld.dataset.dsField = "1";
+    const f = document.createElement("div");
+    f.className = "ds-field" + (inp.tagName === "TEXTAREA" ? " ds-field--area" : "");
+    f.innerHTML = '<div class="ds-field__box"><div class="ds-field__content"></div><span class="ds-field__float" aria-hidden="true"></span><span class="ds-field__outline" aria-hidden="true"></span></div>';
+    const box = f.firstElementChild, content = box.firstElementChild, float = box.querySelector(".ds-field__float");
+    inp.replaceWith(f);
+    if (label) {
+      label.classList.remove("rm-label"); label.classList.add("ds-field__rest");
+      content.appendChild(label);
+      const syncLabel = () => { float.textContent = label.textContent; };
+      syncLabel();
+      new MutationObserver(syncLabel).observe(label, { childList: true, characterData: true, subtree: true });
+    }
+    inp.classList.remove("rm-input"); inp.classList.add("ds-field__input");
+    content.appendChild(inp);
+    /* AI 那一格:讀進來的照片、拍照、選圖一樣在框裡,排在打字的下面 */
+    const ai = f.parentNode.classList.contains("ai-box") ? f.parentNode : null;
+    if (ai) [...ai.children].filter(c => c !== f).forEach(c => content.appendChild(c));
+    const fixed = FIXED_TYPES.includes(inp.type);
+    const d = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(inp), "value");
+    const sync = () => f.classList.toggle("is-filled", fixed || !!d.get.call(inp));
+    /* 程式直接改 .value(打開時填好、搜尋挑了一個地點)也要跟著浮上去,不會發 input 事件 */
+    Object.defineProperty(inp, "value", { configurable: true, get() { return d.get.call(this); }, set(v) { d.set.call(this, v); sync(); } });
+    inp.addEventListener("input", sync); inp.addEventListener("change", sync);
+    inp.addEventListener("focus", () => f.classList.add("is-focused"));
+    inp.addEventListener("blur", () => f.classList.remove("is-focused"));
+    box.addEventListener("click", e => { if (!e.target.closest("button, input, select, textarea, a, .ai-im") && !inp.disabled) inp.focus(); });
+    sync();
+  }
+  function dsDressFields(root) { root.querySelectorAll(".fld").forEach(dsDressField); }
+  function dsDressDialog(card, { closable = true } = {}) {
+    if (!DS || card.querySelector(":scope > .ds-dialog")) return;
+    const h2 = card.querySelector(":scope > h2");
+    let desc = null;
+    for (let n = h2 && h2.nextElementSibling; n; n = n.nextElementSibling) {
+      if (n.classList.contains("stack-n")) continue;
+      if (n.tagName === "P" && !n.className) desc = n;
+      break;
+    }
+    const ops = closable ? card.querySelector(":scope > .ops") : null;
+    const btns = ops ? [...ops.children] : [];
+    const cancelIds = Object.values(DIALOG_CANCEL).flat();
+    const cancel = btns.find(b => cancelIds.includes(b.id)) || null;
+    const primary = btns.find(b => b.type === "submit") || btns.find(b => b !== cancel && /btn-main|btn-line/.test(b.className)) || null;
+    const wrap = document.createElement("div");
+    wrap.innerHTML = DS.dialogHTML({ title: "-", description: desc ? "-" : "", close: closable,
+      cancel: cancel ? cancel.textContent.trim() : "", confirm: primary ? primary.textContent.trim() : "", content: "<i></i>", drawn: true });
+    const dlg = wrap.firstElementChild;
+    /* 外殼那張卡已經是對話框了(role、aria-modal、Esc 都在它身上),裡面這層不再報一次 */
+    ["role", "aria-modal", "aria-labelledby", "aria-describedby"].forEach(a => dlg.removeAttribute(a));
+    if (h2) {
+      h2.classList.add("ds-dialog__title-text");
+      dlg.querySelector(".ds-dialog__title-text").replaceWith(h2);
+    } else dlg.querySelector(".ds-dialog__title-row").hidden = true;
+    if (desc) { desc.classList.add("ds-dialog__desc"); dlg.querySelector(".ds-dialog__desc").replaceWith(desc); }
+    const content = dlg.querySelector(".ds-dialog__content");
+    content.textContent = "";
+    [...card.childNodes].forEach(n => { if (n !== h2 && n !== desc) content.appendChild(n); });
+    card.appendChild(dlg);
+    card.classList.add("m-dlg");
+    /* 下面那兩顆＝按原本的 */
+    const proxy = (orig, ds, labelSel) => {
+      if (!orig || !ds) return;
+      orig.classList.add("m-dlg-moved");
+      const lab = ds.querySelector(labelSel) || ds;
+      const sync = () => { lab.textContent = orig.textContent.trim(); ds.hidden = orig.hidden; ds.disabled = !!orig.disabled; };
+      sync();
+      new MutationObserver(sync).observe(orig, { attributes: true, attributeFilter: ["hidden", "disabled"], childList: true, characterData: true, subtree: true });
+    };
+    proxy(primary, dlg.querySelector("[data-dialog=confirm]"), ".ds-marker__label");
+    proxy(cancel, dlg.querySelector("[data-dialog=cancel]"), ".ds-btn__label");
+    dlg.addEventListener("ds-dialog-confirm", () => { if (primary && !primary.disabled) primary.click(); });
+    dlg.addEventListener("ds-dialog-close", () => {
+      /* ✕ 和取消一樣(按原本的取消,各張表取消時要收拾的東西不一樣);沒有取消鈕的話照點外面的規則 */
+      if (cancel) cancel.click(); else { const ov = card.closest(".overlay"); if (ov) tryCloseDialog(ov); }
+    });
+    DS.wireDialog(card);   /* 它找的是 root 底下的 .ds-dialog,不含 root 自己 */
+    dsDressFields(content);
+    /* 後來才畫進來的格子(每人分多少、每人交多少…)也換 */
+    new MutationObserver(() => dsDressFields(content)).observe(content, { childList: true, subtree: true });
+  }
+  /* 打開時螢光筆由左往右畫出來(跟 Storybook 的 openDialog 一樣,晚 180ms) */
+  function dsDrawTitle(ov) {
+    ov.querySelectorAll(".m-dlg:not([hidden]) .ds-dialog__title .ds-pen-marker").forEach(pen => {
+      pen.classList.remove("is-drawn");
+      setTimeout(() => pen.classList.add("is-drawn"), 180);
+    });
+  }
+  function dsDressDialogs() {
+    DS_DIALOGS.forEach(id => {
+      const ov = el(id);
+      if (!ov) return;
+      ov.classList.add("ds-app");
+      ov.querySelectorAll(".signin").forEach(c => dsDressDialog(c));
+      new MutationObserver(() => { if (!ov.hidden) dsDrawTitle(ov); }).observe(ov, { attributes: true, attributeFilter: ["hidden"] });
+      /* AI 那張「先問」→「確認一下」換卡的時候也畫一次 */
+      ov.querySelectorAll(".signin").forEach(c => new MutationObserver(() => { if (!c.hidden && !ov.hidden) dsDrawTitle(ov); })
+        .observe(c, { attributes: true, attributeFilter: ["hidden"] }));
+    });
+    /* 開團/登入那張卡:內容每次由 openHome() 整張換掉,換完再套一次 */
+    const home = el("home-card"), hov = el("home-overlay");
+    hov.classList.add("ds-app");
+    const dressHome = () => { if (home.firstElementChild && !home.querySelector(":scope > .ds-dialog")) { dsDressDialog(home, { closable: false }); dsDrawTitle(hov); } };
+    dressHome();
+    new MutationObserver(dressHome).observe(home, { childList: true });
+  }
+  loadDS();
+
   /* Esc = 點外面,只作用在最上面那一張。對話框開著的時候 Esc 不穿過去(不然會關掉它背後的地圖) */
   document.addEventListener("keydown", ev => {
     if (ev.key !== "Escape") return;

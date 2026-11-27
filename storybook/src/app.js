@@ -31,3 +31,5 @@ export { segmentedHTML, segmentedSheetHTML, segmentedItemHTML, wireSegmented } f
 export { textFieldHTML, wireTextField } from "./components/text-field.js";
 export { progressBarHTML, progressItemHTML, progressColor } from "./components/progress-bar.js";
 export { categoryBadgeHTML, CATEGORIES } from "./components/category-badge.js";
+export { dialogHTML, sectionTitleHTML, dialogSectionHTML, wireDialog, openDialog, closeDialog } from "./components/dialog.js";
+export { fieldHTML, wireField } from "./components/field.js";
