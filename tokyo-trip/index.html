@@ -8883,6 +8883,8 @@
           if (k[0] === "r") mRecTake((el("m-ss-sheet")._recs || [])[+k.slice(1)]); else sugTake(+k);
           /* 框裡的字跟著換成選的那個(別團的地點只有名字,是拿它去搜) */
           const fi = el("m-ss-frame").querySelector("input");
+          /* 記住他自己打的字:按卡片的 ✕ 回來時框裡放回這個,不是選的那個的全名(Lulu 11-27) */
+          if (fi) root._typed = fi.value;
           if (fi && fi.value !== el(SS).value) fi.value = el(SS).value;
           el("m-ss-sheet").hidden = true; el("m-ss-sheet")._penKey = null; return;
         }
@@ -8900,8 +8902,11 @@
       mWireWsCard(el("m-ss-card"));
       /* 結果卡上的照片點了一樣放大(Lulu 11-22「搜尋結果有圖的細節卡上照片點了怎麼沒有放大」) */
       /* ✕ 回上一頁(Lulu 11-26):有打字就停在「有打字、有推薦清單」那樣(字留著、清單出來);沒打字就是推薦那一頁 */
+      /* 自己再打字就不用記了(那時框裡的就是他打的) */
+      root.addEventListener("input", e => { if (e.isTrusted && e.target.closest("#m-ss-frame")) root._typed = null; }, true);
       el("m-ss-card").addEventListener("ds-card-close", () => {
-        const q = el("m-ss-frame").querySelector("input"), typed = q ? q.value : "";
+        const q = el("m-ss-frame").querySelector("input"), typed = root._typed != null ? root._typed : q ? q.value : "";
+        root._typed = null;
         mWsBackToRecs();
         if (typed.trim() && q) { q.value = typed; q.dispatchEvent(new Event("input")); }
       });
@@ -9164,6 +9169,7 @@
      搜到的點、選的那一家都收掉,字清空,下面出現推薦。keep:搜尋框的 ✕(游標留在框裡,鍵盤不收) */
   function mWsBackToRecs(keep) {
     const out = seekBox(SS), card = el("m-ss-card");
+    if (el("m-ss")) el("m-ss")._typed = null;
     const ae = document.activeElement;
     if (!keep && ae && ae.blur && (card.contains(ae) || el("m-ss-frame").contains(ae))) ae.blur();
     document.body.classList.remove("m-ws-typing");
