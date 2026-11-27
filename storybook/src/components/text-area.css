@@ -98,7 +98,8 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  padding: var(--ds-sys-spacing-2xs) var(--ds-sys-spacing-5xl) var(--ds-comp-field-height) 0;
+  /* 下面的留白固定 120（sys/height/3xl），不借輸入框的高度：11-27 輸入框改 56 時它被帶著變矮，Lulu 說不要變矮 */
+  padding: var(--ds-sys-spacing-2xs) var(--ds-sys-spacing-5xl) var(--ds-sys-height-3xl) 0;
   background: var(--ds-sys-color-opacity-opacity-primary-50);
 }
 
