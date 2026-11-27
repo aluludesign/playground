@@ -8945,6 +8945,15 @@
       /* 自己再打字就不用記了(那時框裡的就是他打的) */
       root.addEventListener("input", e => { if (e.isTrusted && e.target.closest("#m-ss-frame")) root._typed = null; }, true);
       el("m-ss-card").addEventListener("ds-card-close", () => {
+        /* 展開著按 ✕ = 收回縮小的卡;縮小的卡上的 ✕ 才回推薦清單(Lulu 11-27,跟細節卡一樣) */
+        const b = document.body.classList;
+        if (b.contains("m-ws-open") || b.contains("m-ws-typing")) {
+          const ae = document.activeElement;
+          if (ae && ae.blur && el("m-ss-card").contains(ae)) ae.blur();
+          if (b.contains("m-ws-typing")) mWsTyping(false);
+          el("m-ss-card")._shut();
+          return;
+        }
         const q = el("m-ss-frame").querySelector("input"), typed = root._typed != null ? root._typed : q ? q.value : "";
         root._typed = null;
         mWsBackToRecs();
@@ -9316,6 +9325,8 @@
       const an = card.animate([{ top: from + "px" }, { top: to + "px" }], { duration: 300, easing: "cubic-bezier(.2,.8,.2,1)" });
       an.onfinish = fin; an.oncancel = fin;
     };
+    /* 展開的卡收回縮小(✕ 用,11-27):跟往下滑同一條漸變 */
+    card._shut = () => settle(shutTop(), "");
     card.addEventListener("touchstart", e => {
       y0 = e.touches[0].clientY; x0 = e.touches[0].clientX; top0 = card.scrollTop; start = card.offsetTop;
       drag = false; axis = null; lastY = y0; lastT = performance.now(); vy = 0;
