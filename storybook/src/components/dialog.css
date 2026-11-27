@@ -65,8 +65,8 @@
    * 下：有按鈕＝內容和按鈕的間距；沒有＝外框內距 */
   padding: calc(var(--ds-comp-dialog-gap) - var(--ds-comp-dialog-header-gap)) var(--ds-comp-dialog-padding) var(--ds-comp-dialog-padding);
   overflow-y: auto;
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
+  /* 順順地滑：捲到頭／底不彈跳（iPhone 的橡皮筋效果關掉），也不會帶動後面的頁面 */
+  overscroll-behavior: none;
 }
 .ds-dialog--has-desc .ds-dialog__scroll {
   padding-top: var(--ds-comp-dialog-gap);
