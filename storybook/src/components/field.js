@@ -49,7 +49,8 @@ export function fieldHTML({
 
 /** 對焦、有字時換樣子；點框的任何地方都會對焦；✕ 清除（發出 ds-field-clear） */
 export function wireField(root = document) {
-  root.querySelectorAll(".ds-field").forEach((f) => {
+  // root 本身就是 .ds-field 也接得到線
+  [...(root.matches?.(".ds-field") ? [root] : []), ...root.querySelectorAll(".ds-field")].forEach((f) => {
     if (f.dataset.wired) return;
     f.dataset.wired = "1";
     const input = f.querySelector(".ds-field__input");

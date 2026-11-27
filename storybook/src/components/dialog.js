@@ -58,7 +58,8 @@ export function dialogSectionHTML({ title = "淺草寺", icon = false, content =
  * 也幫外框畫抖動線。真的要不要關起來由用的人決定（例如改過內容就不能點外面關）。
  */
 export function wireDialog(root = document) {
-  root.querySelectorAll(".ds-dialog").forEach((d) => {
+  // root 本身就是 .ds-dialog 也接得到線
+  [...(root.matches?.(".ds-dialog") ? [root] : []), ...root.querySelectorAll(".ds-dialog")].forEach((d) => {
     if (d.dataset.wired) return;
     d.dataset.wired = "1";
     d.addEventListener("click", (e) => {
