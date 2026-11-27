@@ -1,0 +1,223 @@
+/* 對話框 dialog —— Figma「dialogue」（162768:53321，section 162776:15212）
+ *
+ *   外框：bg pattern/bright（comp/dialog/container 底＋8% 的格子）、抖動外框（comp/dialog/outline、wiggle 0.3、border/xs）、
+ *         圓角 comp/dialog/radius；外層 Elevation/surface/medium、框本身 Elevation/surface/soft
+ *   內距 comp/dialog/padding（24），標題區／內容／按鈕之間 comp/dialog/gap（16）
+ *   標題區：標題（Headline/xs/semi-bold、text 100，底下一筆 primary 64% 的螢光筆）＋說明（label/md/regular、text 200），間距 comp/dialog/header-gap
+ *           右上角關閉鈕（Button：Icon Outlined、Secondary、xs、cross），貼著標題那列的右邊、往上 8
+ *   內容：自由替換（Figma「containt replaced」）
+ *   按鈕：靠右，取消（Button Text、Secondary、md）＋送出（馬克筆按鈕 lg），間距 comp/dialog/actions-gap
+ *
+ * 外框的抖動線由 wiggle.js 畫（.ds-wiggle-border），底紋由 pattern.css 畫（.ds-pattern）。
+ */
+
+.ds-dialog {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  width: 100%;
+  /* 最寬＝畫面左右各留 16（Figma 390 寬的手機上是 358）；放在比畫面窄的容器裡可以覆寫 --dialog-max-width */
+  max-width: var(--dialog-max-width, calc(100vw - 2 * var(--ds-sys-spacing-2xl)));
+  max-height: var(--dialog-max-height, calc(100dvh - 2 * var(--ds-sys-spacing-2xl)));
+  border-radius: var(--ds-comp-dialog-radius);
+  box-shadow: var(--ds-elevation-surface-medium);
+  color: var(--ds-sys-color-text-100);
+}
+
+.ds-dialog__body {
+  --pattern-bg: var(--ds-comp-dialog-container);
+  --wiggle-color: var(--ds-comp-dialog-outline);
+  --wiggle-width: var(--ds-sys-border-xs);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-radius: inherit;
+  box-shadow: var(--ds-elevation-surface-soft);
+}
+
+/* 內容太長時在框裡捲動；抖動線畫在 .ds-dialog__body 上，不會被裁 */
+.ds-dialog__inner {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-radius: inherit;
+}
+
+/* 上：標題＋關閉鈕＋說明（Figma「subtitle」），固定不捲。
+ * 說明在原地淡出：往上捲內容時，說明一邊變淡、一邊把自己的高度讓出來給內容（從下往上收，上緣不動） */
+.ds-dialog__header {
+  flex: none;
+  padding: var(--ds-comp-dialog-padding) var(--ds-comp-dialog-padding) 0;
+}
+/* 沒有說明時，標題下面一樣留 header-gap：捲動內容被切在標題下 8，不會貼著標題 */
+.ds-dialog:not(.ds-dialog--has-desc) .ds-dialog__header {
+  padding-bottom: var(--ds-comp-dialog-header-gap);
+}
+
+/* 中：內容，內容太長時只有這一段捲動；和標題區隔 comp/dialog/gap */
+.ds-dialog__scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  /* 上：有說明＝說明和內容的間距；沒有＝標題和內容的間距（標題區下面已經有 header-gap）
+   * 下：有按鈕＝內容和按鈕的間距；沒有＝外框內距 */
+  padding: calc(var(--ds-comp-dialog-gap) - var(--ds-comp-dialog-header-gap)) var(--ds-comp-dialog-padding) var(--ds-comp-dialog-padding);
+  overflow-y: auto;
+  /* 順順地滑：捲到頭／底不彈跳（iPhone 的橡皮筋效果關掉），也不會帶動後面的頁面 */
+  overscroll-behavior: none;
+}
+.ds-dialog--has-desc .ds-dialog__scroll {
+  padding-top: var(--ds-comp-dialog-gap);
+}
+.ds-dialog--has-actions .ds-dialog__scroll {
+  padding-bottom: var(--ds-comp-dialog-gap);
+}
+
+/* 說明：在標題下 header-gap 的位置。捲動時 wireDialog 會把 --dialog-desc-collapse（0–1）調上去，高度從下往上收 */
+.ds-dialog__desc-wrap {
+  --dialog-desc-collapse: 0;
+  /* 和標題的間距不收：說明讓位後，捲動內容被切在「說明原本的上緣」 */
+  margin-top: var(--ds-comp-dialog-header-gap);
+  overflow: hidden;
+  opacity: calc(1 - var(--dialog-desc-collapse));
+}
+
+.ds-dialog__title-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 20px;
+}
+/* 有關閉鈕時，標題不要壓到它 */
+.ds-dialog--closable .ds-dialog__title-row {
+  padding-right: calc(24px + var(--ds-sys-spacing-md));
+}
+
+.ds-dialog__title {
+  position: relative;
+  margin: 0;
+  font-family: var(--ds-sys-font-family-headline);
+  font-weight: 900; /* Headline/xs/semi-bold 用的是源泉圓體 H */
+  font-size: var(--ds-sys-font-size-headline-xs);
+  line-height: 20px;
+  letter-spacing: 0.05em;
+  color: var(--ds-sys-color-text-100);
+}
+/* 標題底下的螢光筆：primary、opacity/xl（Figma 這顆 instance 的實際顏色） */
+.ds-dialog__title .ds-pen-marker {
+  --pen-marker-opacity: var(--ds-sys-opacity-xl);
+  --pen-marker-bottom: 1.2px; /* Figma：線的中心在 20 高的字的 18.8 */
+}
+.ds-dialog__title-text {
+  position: relative;
+}
+
+/* 不排進標題那一列（Figma absolute）：加 .ds-dialog 提高權重，蓋過 .ds-btn 的 position */
+.ds-dialog .ds-dialog__close {
+  position: absolute;
+  top: -8px;
+  right: 0;
+}
+
+.ds-dialog__desc {
+  margin: 0;
+  font-family: var(--ds-sys-font-family-label);
+  font-weight: 400;
+  font-size: var(--ds-sys-font-size-label-md);
+  line-height: 18px;
+  letter-spacing: 0.04em;
+  color: var(--ds-sys-color-text-200);
+}
+
+.ds-dialog__content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-sys-spacing-md);
+  min-width: 0;
+}
+
+.ds-dialog__actions {
+  flex: none;
+  padding: 0 var(--ds-comp-dialog-padding) var(--ds-comp-dialog-padding);
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: var(--ds-comp-dialog-actions-gap);
+}
+
+/* ---------- 打開／關起來（openDialog／closeDialog） ---------- */
+
+.ds-dialog-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--ds-sys-spacing-2xl);
+  box-sizing: border-box;
+}
+.ds-dialog-layer[hidden] {
+  display: none;
+}
+
+.ds-dialog-layer .ds-dialog {
+  animation: ds-dialog-in 0.22s cubic-bezier(0.2, 0.9, 0.3, 1.1) both;
+}
+.ds-dialog-layer.is-closing .ds-dialog {
+  animation: ds-dialog-out 0.16s ease-in both;
+}
+@keyframes ds-dialog-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.96); }
+}
+@keyframes ds-dialog-out {
+  to { opacity: 0; transform: translateY(8px) scale(0.98); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ds-dialog-layer .ds-dialog,
+  .ds-dialog-layer.is-closing .ds-dialog {
+    animation-duration: 0.01s;
+  }
+}
+
+/* ---------- 段落標題 Section title —— Figma「Section title」（162768:53947） ----------
+ *   label/lg/semi-bold、text 100，一列 22 高；前面可以放一個 arrow_forward（comp/section title/icon），間距 comp/section title/gap
+ *   內容範本（Figma「replace containt/contain section template」）：一段＝標題＋輸入框，段和段、段裡面都是 spacing/2xl
+ */
+.ds-section-title {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-comp-section-title-gap);
+  min-height: 22px;
+  margin: 0;
+  font-family: var(--ds-sys-font-family-label);
+  font-weight: 700; /* label/lg/semi-bold 用的是源泉圓體 B */
+  font-size: var(--ds-sys-font-size-label-lg);
+  line-height: 20px;
+  letter-spacing: 0.04em;
+  color: var(--ds-sys-color-text-100);
+}
+.ds-section-title__icon {
+  flex: none;
+  width: var(--ds-comp-section-title-icon);
+  height: var(--ds-comp-section-title-icon);
+}
+.ds-section-title__icon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.ds-dialog-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-sys-spacing-2xl);
+}
+.ds-dialog-sections {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-sys-spacing-2xl);
+}

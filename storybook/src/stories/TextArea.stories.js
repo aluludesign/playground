@@ -58,7 +58,7 @@ export const 全部 = {
 <table><thead><tr><th>用在</th><th>token</th></tr></thead><tbody>
 <tr><td class="al">標籤</td><td>label/sm（源泉圓體 B、字距 5%）<code class="var">--ds-sys-color-text-100</code></td></tr>
 <tr><td class="al">頭像</td><td>頭像 Avatar 或一般 icon，大小 <code class="var">--ds-comp-text-area-avatar</code>（icon/lg＝28）</td></tr>
-<tr><td class="al">內容框</td><td>底色 <code class="var">--ds-sys-color-opacity-opacity-primary-50</code>；內距上 2xs、右 5xl、下 <code class="var">--ds-comp-field-height</code>（120）</td></tr>
+<tr><td class="al">內容框</td><td>底色 <code class="var">--ds-sys-color-opacity-opacity-primary-50</code>；內距上 2xs、右 5xl、下 <code class="var">--ds-comp-field-height</code>（56）</td></tr>
 <tr><td class="al">字</td><td>手寫 body/lg（20/22、字距 5%）<code class="var">--ds-sys-color-text-100</code>；提示字 <code class="var">--ds-sys-color-text-200</code></td></tr>
 <tr><td class="al">照片列</td><td>「+照片」馬克筆按鈕 secondary・md；照片縮圖 32（radius/sm、outline 50 細框），右上角 Scrim sm 圓鈕（16）；間距 2xl／xl</td></tr>
 <tr><td class="al">✕</td><td><code class="var">--ds-comp-text-field-icon-sm</code></td></tr>
