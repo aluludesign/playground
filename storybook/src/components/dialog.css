@@ -51,7 +51,7 @@
 }
 
 /* 中：說明＋內容，內容太長時只有這一段捲動。
- * 說明放在捲動區最上面：往上捲時它跟著捲走、同時淡出，空間讓給內容 */
+ * 說明釘在原地不跟著捲（sticky），往上捲時在原地淡出；內容從它下面捲上來、蓋過去，空間讓給內容 */
 .ds-dialog__scroll {
   flex: 1 1 auto;
   min-height: 0;
@@ -116,6 +116,14 @@
   letter-spacing: 0.04em;
   color: var(--ds-sys-color-text-200);
   opacity: var(--dialog-desc-opacity, 1);
+  position: sticky;
+  top: var(--ds-comp-dialog-header-gap);
+  z-index: 0;
+  pointer-events: none;
+}
+.ds-dialog__content {
+  position: relative;
+  z-index: 1;
 }
 
 .ds-dialog__content {

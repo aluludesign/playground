@@ -68,13 +68,12 @@ export function wireDialog(root = document) {
       if (kind === "confirm") d.dispatchEvent(new CustomEvent("ds-dialog-confirm", { bubbles: true }));
       else d.dispatchEvent(new CustomEvent("ds-dialog-close", { bubbles: true, detail: { reason: kind } }));
     });
-    // 說明跟著內容往上捲時淡出：捲過說明＋下面的間距就完全看不見
+    // 說明在原地淡出：往上捲到說明的高度時完全看不見
     const scroll = d.querySelector(".ds-dialog__scroll");
     const desc = d.querySelector(".ds-dialog__desc");
     if (scroll && desc) {
       const fade = () => {
-        const gap = parseFloat(getComputedStyle(scroll).rowGap) || 0;
-        const o = Math.max(0, 1 - scroll.scrollTop / (desc.offsetHeight + gap));
+        const o = Math.max(0, 1 - scroll.scrollTop / Math.max(1, desc.offsetHeight));
         desc.style.setProperty("--dialog-desc-opacity", o.toFixed(3));
       };
       scroll.addEventListener("scroll", fade, { passive: true });
