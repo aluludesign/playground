@@ -1834,6 +1834,10 @@
     #m-me[hidden]{display:none;}
     body.member-ui[data-view="me"] .wrap > footer,
     body.member-ui[data-view="me"] .wrap > .foot{display:none;}
+    /* 有 AI 那一格:六格放得進手機(390 寬 − 左右 16 − 內距 8 − 六顆 55 = 20,格距 4);寬一點的畫面照舊 12 */
+    #m-nav.m-nav-ai .ds-bottom-nav{gap:clamp(2px, calc((100vw - 2 * var(--ds-sys-spacing-2xl) - 2 * var(--ds-sys-spacing-xs) - 6 * 55px) / 5), var(--ds-sys-spacing-xl));}
+    /* 原本頁面裡的「加一筆」(交通、費用)搬到頂列右上角了,頁面裡那顆藏起來 */
+    body.member-ui #fly-add, body.member-ui #add-exp-btn{display:none !important;}
     #m-me-ops{display:flex; flex-direction:column; align-items:stretch; gap:var(--ds-sys-spacing-xl);}
     /* 通知清單(原本鈴鐺彈出來的那一份):攤在頁面上,不是浮出來的小框 */
     #m-me-ops .m-me-bell{min-width:0; max-width:none; max-height:none; overflow:visible; display:flex; flex-direction:column; gap:var(--ds-sys-spacing-md);
@@ -7789,7 +7793,9 @@
     }
     return dsLoading;
   }
-  const memberUI = () => !!myMember && myMember.role === "成員" && !!trip;
+  /* 新外框:11-20 起一般團員;11-27 起團主、副團主也用(Lulu:「團主和副團主也換成新外框」)。
+     名字沿用 memberUI,意思是「用新外框」,不是「是一般團員」—— 權限一律看 editable()/bellBoss() */
+  const memberUI = () => !!myMember && !!trip;
   /* 搬進面板的原本那幾塊,記住原本的位置才搬得回去(切到團主身分、或換團時) */
   const mMoved = [];
   function mMove(node, into) {
@@ -7810,6 +7816,7 @@
     const days = el("m-days") && el("m-days").offsetHeight || 144;
     return [Math.min(H - head, 40 + days + 2), Math.round(H * 450 / 844), H - head];
   }
+  const M_PAGE_ADD = { plan: "add-stop-btn", fly: "fly-add", cost: "add-exp-btn" };
   const M_PAGE_HEAD = {
     fly: ["交通", "去回程航班和座位"],
     cost: ["花費", "大家的記帳和分帳"],
@@ -7872,7 +7879,7 @@
     /* 內容沒變就不重畫:同步、天氣回來都會跑到這裡,手指按下到放開之間按鈕被換掉,那一下就點不到(Lulu 11-21「要點很多次」) */
     /* 交通、花費、我:團名那格換成頁名、副標換成一句說明(10 字內),不能切團(Lulu 11-23) */
     const page = mMe ? M_PAGE_HEAD.me : M_PAGE_HEAD[state.tab];
-    const headHTML = page
+    let headHTML = page
       ? DS.tripHeaderHTML({ title: mMe && myMember ? nameOf(myMember.id) : page[0], meta: [page[1]], ended: false, expanded: false, switchable: false, peopleLabel: "看成員名單",
           /* 「我」:頁名換成自己的大頭貼＋名字,所以頁面裡原本的「我／名字」那段拿掉(Lulu 11-26) */
           avatar: mMe && myMember ? mFace(myMember.id) : null })
@@ -7880,6 +7887,13 @@
       title: trip.name, meta: mMeta(), ended: tripEnded(), expanded: menuOpen,
       switchable: mTrips === null || mTrips.length > 1, peopleLabel: "看成員名單",
     });
+    /* 右上角:這一頁有「加一筆」(行程、交通、費用)而且你能加 → 換成那顆(Button primary sm),取代綠臉(Lulu 11-27);
+       按它＝按原本那顆(權限、要打開哪張表都照舊)。沒有的頁(我、分帳、不能加的人)照舊是綠臉 */
+    const addOrig = mMe ? null : el(M_PAGE_ADD[state.tab] || "");
+    if (addOrig && !addOrig.hidden) {
+      headHTML = headHTML.replace(/<button type="button" class="ds-trip-header__people"[\s\S]*?<\/button>/,
+        DS.buttonHTML({ label: addOrig.textContent.trim(), color: "primary", variant: "filled", size: "sm" }).replace("<button ", '<button data-m-add="' + addOrig.id + '" '));
+    }
     if (el("m-head")._html !== headHTML) {
       /* 結束的提示放在頂列裡面:重畫頂列前先把它拿出來,不然會跟著被清掉 */
       if (el("m-head").contains(el("m-ended"))) el("m-shell").insertBefore(el("m-ended"), el("m-cal"));
@@ -7941,8 +7955,7 @@
       mSwipeDays();
       el("m-tl").addEventListener("ds-stop-open", e => openDayDetail(e.detail.key));
       el("m-tl").addEventListener("ds-photos-open", e => openStopPhotos(e.detail.key));
-      el("m-nav").innerHTML = DS.bottomNavHTML({ active: mNavKey(), label: "主要導覽" });
-      DS.wireBottomNav(el("m-nav"));
+      mPaintNav();
       document.body.style.setProperty("--m-navh", el("m-nav").offsetHeight + "px");
       mSheet = DS.wireBottomSheet(el("m-sheet-box").querySelector(".ds-sheet"), { snaps: mSnaps, at: 1, scroller: "#m-scroll" });
       el("m-sheet-box").addEventListener("ds-sheet-snap", e => {
@@ -7992,6 +8005,7 @@
       wireMemberShell();
       mWatchHead();
     } else {
+      mPaintNav();
       mSyncNav();
       if (mSheet) mSheet.refresh();
     }
@@ -8180,6 +8194,27 @@
 
   /* 底部導覽的 key ↔ 分頁:交通 = fly、花費 = cost(分帳也算花費)、我 = 選單 */
   const NAV_TAB = { plan: "plan", wish: "wish", transport: "fly", spend: "cost", me: "" };
+  /* 底部導覽:團主、副團主正中間多一顆 AI(Lulu 11-27;一般團員沒有 AI)。跟其他格一樣是藍圓,icon 用 bulb(Figma 161699:8188);
+     按它打開 AI 對話框,不換頁、也不變成「現在這頁」。團結束了 AI 全關,這顆也不出現 */
+  const mNavAI = () => bellBoss() && !el("ai-btn").hidden;
+  function mPaintNav() {
+    const ai = mNavAI();
+    if (el("m-nav")._ai === ai && el("m-nav").firstElementChild) return;
+    el("m-nav")._ai = ai;
+    const items = DS.BOTTOM_NAV_ITEMS.slice();
+    if (ai) items.splice(2, 0, { key: "ai", label: "AI", icon: "bulb" });
+    el("m-nav").innerHTML = DS.bottomNavHTML({ items, active: mNavKey(), label: "主要導覽" });
+    el("m-nav").classList.toggle("m-nav-ai", ai);
+    DS.wireBottomNav(el("m-nav"));
+    const b = el("m-nav").querySelector('[data-key="ai"]');
+    if (b) {
+      b.setAttribute("aria-haspopup", "dialog");
+      b.setAttribute("aria-label", "AI 幫你加");
+      /* 擋在導覽列自己的點擊之前:不然它會被當成換頁、亮起來 */
+      b.addEventListener("click", e => { e.stopPropagation(); openAI(); });
+    }
+    document.body.style.setProperty("--m-navh", el("m-nav").offsetHeight + "px");
+  }
   function mNavKey() {
     if (mMe) return "me";
     return state.tab === "wish" ? "wish" : state.tab === "fly" ? "transport" : (state.tab === "cost" || state.tab === "split") ? "spend" : "plan";
@@ -8261,6 +8296,11 @@
       if (orig) orig.click();
     });
     el("m-head").addEventListener("ds-header-people", openMembers);
+    el("m-head").addEventListener("click", e => {
+      const b = e.target.closest("[data-m-add]");
+      const orig = b && el(b.dataset.mAdd);
+      if (orig) orig.click();
+    });
     /* 結束提示收合／展開:頂列高度變了,日曆鈕和面板跟著重算 */
     el("m-shell").addEventListener("ds-info-toggle", e => {
       if (!e.target.closest("#m-ended")) return;
