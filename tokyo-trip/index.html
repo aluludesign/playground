@@ -1835,6 +1835,13 @@
     body.member-ui[data-view="me"] .wrap > footer,
     body.member-ui[data-view="me"] .wrap > .foot{display:none;}
     #m-me-ops{display:flex; flex-direction:column; align-items:stretch; gap:var(--ds-sys-spacing-xl);}
+    /* 通知清單(原本鈴鐺彈出來的那一份):攤在頁面上,不是浮出來的小框 */
+    #m-me-ops .m-me-bell{min-width:0; max-width:none; max-height:none; overflow:visible; display:flex; flex-direction:column; gap:var(--ds-sys-spacing-md);
+      margin-bottom:var(--ds-sys-spacing-2xl);}
+    #m-me-ops .m-me-bell li{color:var(--ds-sys-color-text-100); font-family:var(--ds-sys-font-family-body);}
+    #m-me-ops .m-me-bell li small,#m-me-ops .m-me-bell .empty{color:var(--ds-sys-color-text-200);}
+    #m-me-ops .m-me-bell li[data-bell-go]:hover{background:var(--ds-sys-color-opacity-opacity-primary-50, rgba(0,0,0,.04));}
+    #m-me-ops .m-me-bell li.new span::before{background:var(--ds-sys-color-primary);}
     body.member-ui[data-view="me"] .wrap > main{display:none;}
     /* 許願頁(Figma 161950:14100):沒有頂列;最上面是「許個願,想去東京哪?」那顆(Dynamic Iris,就是一般的＋許願、不接 AI),
        日曆鈕是 primary;許願牆沒有面板的底,卡片直接浮在地圖上,三段:下拉只剩一排、預設、上拉到許願鈕下面 */
@@ -3862,7 +3869,7 @@
     try { feed = (await api("?resource=activity&t=" + encodeURIComponent(TRIP))).rows || []; }
     catch (_) { feed = []; }
     paintBell();
-    if (!el("bell-pop").hidden) renderBell();
+    if (!el("bell-pop").hidden || mMe) renderBell();
   }
   /* 一則一則照時間排(新的在上面);比上次打開鈴鐺還新的是「沒看過的」 */
   function bellItems() {
@@ -3890,8 +3897,12 @@
   const BELL_TAB = { "許願": "wish", "行程": "plan", "交通": "fly", "花費": "cost", "分帳": "split" };
   const bellWhen = iso => { try { return new Intl.DateTimeFormat("zh-TW", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(iso)); } catch (_) { return ""; } };
   function renderBell() {
+    el("bell-list").innerHTML = bellListHTML();
+    if (mMe) mMeOps();   /* 一般團員的通知在「我」頁(11-27) */
+  }
+  function bellListHTML() {
     const items = bellItems();
-    el("bell-list").innerHTML = (items.length && !unread() ? '<p class="empty">目前沒有新通知。之前的:</p>' : "") + (items.length
+    return (items.length && !unread() ? '<p class="empty">目前沒有新通知。之前的:</p>' : "") + (items.length
       ? "<ul>" + items.map(x => '<li class="' + (x.at > bellSince ? "new" : "") + '"' +
           (BELL_TAB[x.kind] ? ' data-bell-go="' + BELL_TAB[x.kind] + '"' + (x.day ? ' data-bell-day="' + esc(x.day) + '"' : "") : "") + ">" +
           x.html + '<small class="when">' + esc(bellWhen(x.at)) + "</small></li>").join("") + "</ul>"
@@ -8231,6 +8242,17 @@
     el("m-photo").addEventListener("ds-photo-at", e => mPaintPhoto(e.detail.index));
     el("m-photo").addEventListener("ds-photo-close", () => { el("m-photo").innerHTML = ""; mPhotoState = null; });
     el("m-me-ops").addEventListener("click", e => {
+      const li = e.target.closest("[data-bell-go]");
+      if (li) {
+        switchTab(li.dataset.bellGo);
+        renderMemberShell();
+        const day = li.dataset.bellDay;
+        if (li.dataset.bellGo === "plan" && day && state.day !== day) {
+          const d = document.querySelector('#days [data-day="' + day + '"]');
+          if (d) d.click();
+        }
+        return;
+      }
       const b = e.target.closest("[data-for]");
       const orig = b && el(b.dataset.for);
       if (orig) orig.click();
@@ -8262,12 +8284,16 @@
     document.body.dataset.view = "me";
     renderCloudBar();
     renderMemberShell();
+    /* 打開「我」= 看到通知了:跟打開鈴鐺一樣,記下來;這一次沒看過的那幾則還是亮的 */
+    if (unread() && !newcomersSeen) markNewcomersSeen();
   }
   function mMeOps() {
     /* 跟漢堡選單同一份按鈕(renderCloudBar 決定有哪幾顆、各自做什麼),這裡只換成 Storybook 的按鈕畫一次 */
     const box = el("m-me-ops");
     if (!box || !DS) return;
-    box.innerHTML = [].map.call(el("cloud-ops").children, b => {
+    /* 通知(Lulu 11-27「先把通知移到我裡面」):一般團員沒有頂列的鈴鐺,清單放在「我」最上面;點一則一樣跳去那裡 */
+    const bell = '<section class="m-me-bell bell-pop" aria-label="通知">' + DS.sectionTitleHTML({ text: "通知", level: 2 }) + bellListHTML() + "</section>";
+    box.innerHTML = bell + [].map.call(el("cloud-ops").children, b => {
       const html = DS.buttonHTML({ label: b.textContent.trim(), leadingIcon: false, size: "md",
         variant: b.classList.contains("btn-ghost") ? "outlined" : "filled", color: b.id === "cloud-out" ? "error" : "primary" });
       return html.replace("<button ", '<button data-for="' + b.id + '" ');
@@ -9424,6 +9450,8 @@
   const PANEL_OF = { plan: "plan", wish: "plan", fly: "fly", cost: "cost", split: "split" };
   function switchTab(name) {
     state.tab = name;
+    /* 離開「我」= 關掉通知:剛剛看過的就不再是「新的」(跟關掉鈴鐺同一條) */
+    if (mMe && myMember && myMember.seenAt) { bellSince = myMember.seenAt; newcomersSeen = false; paintBell(); }
     mMe = false;
     if (mDetail) { mDetail = null; document.body.classList.remove("m-in-detail"); el("m-detail").hidden = true; }
     TABS.forEach(t => el("tab-" + t).setAttribute("aria-selected", String(t === name)));
