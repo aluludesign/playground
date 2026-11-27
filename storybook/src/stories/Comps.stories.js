@@ -17,3 +17,4 @@ export const Focus外框 = () => page(table(p("focus-ring/"), { title: "Focus �
 Focus外框.storyName = "Focus 外框";
 export const 底部導覽 = () => page(table(p("bottom nav/"), { title: "底部導覽" }));
 export const 分頁點點 = () => page(table(p("pagination/"), { title: "分頁點點" }));
+export const 對話框 = () => page(table(p("dialog/"), { title: "對話框" }), table(p("section title/"), { title: "段落標題" }));

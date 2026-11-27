@@ -877,9 +877,18 @@ C:btn/segment/lg/height|F|@S:height/xl
 C:btn/segment/lg/icon|F|@S:icon/sm
 C:field/radius|F|@S:radius/lg
 C:field/icon|F|@S:icon/md
-C:field/height|F|@S:height/3xl
+C:field/height|F|@S:height/2xl
 C:field/area-height|F|@S:height/3xl
 C:field/focus-outline-width|F|@S:border/lg
+C:dialog/radius|F|@S:radius/xs
+C:dialog/padding|F|@S:spacing/4xl
+C:dialog/gap|F|@S:spacing/2xl
+C:dialog/header-gap|F|@S:spacing/md
+C:dialog/actions-gap|F|@S:spacing/md
+C:dialog/container|C|@S:color/surface bright
+C:dialog/outline|C|@S:color/outline 300
+C:section title/gap|F|@S:spacing/2xs
+C:section title/icon|F|@S:icon/xs
 C:chip/radius|F|@S:radius/full
 C:chip/sm/height|F|@S:height/xs
 C:chip/sm/icon|F|@S:icon/xs
