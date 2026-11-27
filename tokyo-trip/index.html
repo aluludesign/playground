@@ -1838,6 +1838,7 @@
     #m-nav.m-nav-ai .ds-bottom-nav{gap:clamp(2px, calc((100vw - 2 * var(--ds-sys-spacing-2xl) - 2 * var(--ds-sys-spacing-xs) - 6 * 55px) / 5), var(--ds-sys-spacing-xl));}
     /* 原本頁面裡的「加一筆」(交通、費用)搬到頂列右上角了,頁面裡那顆藏起來 */
     body.member-ui #fly-add, body.member-ui #add-exp-btn{display:none !important;}
+    #m-head .m-head-acts{display:flex; align-items:center; gap:var(--ds-sys-spacing-md); flex:none;}
     #m-me-ops{display:flex; flex-direction:column; align-items:stretch; gap:var(--ds-sys-spacing-xl);}
     /* 通知清單(原本鈴鐺彈出來的那一份):攤在頁面上,不是浮出來的小框 */
     #m-me-ops .m-me-bell{min-width:0; max-width:none; max-height:none; overflow:visible; display:flex; flex-direction:column; gap:var(--ds-sys-spacing-md);
@@ -7891,9 +7892,13 @@
        按它＝按原本那顆(權限、要打開哪張表都照舊)。沒有的頁(我、分帳、不能加的人)照舊是綠臉 */
     const addOrig = mMe ? null : el(M_PAGE_ADD[state.tab] || "");
     if (addOrig && !addOrig.hidden) {
+      const addBtn = DS.buttonHTML({ label: addOrig.textContent.trim(), color: "primary", variant: "filled", size: "sm" }).replace("<button ", '<button data-m-add="' + addOrig.id + '" ');
+      /* 行程頁(Lulu 11-27 第二次):綠臉留著,右邊再加一顆;交通、費用照第一次說的,綠臉換成那一顆 */
       headHTML = headHTML.replace(/<button type="button" class="ds-trip-header__people"[\s\S]*?<\/button>/,
-        DS.buttonHTML({ label: addOrig.textContent.trim(), color: "primary", variant: "filled", size: "sm" }).replace("<button ", '<button data-m-add="' + addOrig.id + '" '));
+        m => state.tab === "plan" ? '<div class="m-head-acts">' + m + addBtn + "</div>" : addBtn);
     }
+    /* 綠臉:團主、副團主按了是「邀請朋友」(Figma 的綠臉就是團主的邀請鈕);一般團員照舊看成員名單 */
+    if (bellBoss()) headHTML = headHTML.replace('aria-label="看成員名單"', 'aria-label="邀請朋友"');
     if (el("m-head")._html !== headHTML) {
       /* 結束的提示放在頂列裡面:重畫頂列前先把它拿出來,不然會跟著被清掉 */
       if (el("m-head").contains(el("m-ended"))) el("m-shell").insertBefore(el("m-ended"), el("m-cal"));
@@ -8295,7 +8300,7 @@
       const orig = b && el(b.dataset.for);
       if (orig) orig.click();
     });
-    el("m-head").addEventListener("ds-header-people", openMembers);
+    el("m-head").addEventListener("ds-header-people", () => bellBoss() ? openInvite() : openMembers());
     el("m-head").addEventListener("click", e => {
       const b = e.target.closest("[data-m-add]");
       const orig = b && el(b.dataset.mAdd);
