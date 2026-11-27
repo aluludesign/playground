@@ -2156,6 +2156,10 @@
     .m-dlg .ai-box textarea.ds-field__input{min-height:72px;}
     /* 開團/登入那張卡:沒有 ✕、沒有下面那排按鈕(不能關,原本的按鈕都在內容裡) */
     #home-card.m-dlg .ds-dialog__content .ops{flex-direction:column; align-items:stretch;}
+    /* 邀請朋友(11-27 Lulu):複製改成文字鈕、字直的;換一組邀請碼改成有框的鈕、放正中間;用 LINE 傳＝螢光筆換成 LINE 綠 */
+    #invite-overlay .inv-copy{flex:none; writing-mode:vertical-rl; text-orientation:upright; letter-spacing:.1em; padding:4px 2px; min-height:0;}
+    #invite-overlay .ds-dialog__content .ops{justify-content:center;}
+    #invite-overlay .ds-marker{--marker-color:#06C755; --marker-shade:rgba(0,90,30,.32); --marker-text:#fff;}
   </style>
 </head>
 <body>
@@ -2539,11 +2543,11 @@
   <div class="signin" role="dialog" aria-modal="true" aria-labelledby="inv-title">
     <h2 id="inv-title">邀請朋友</h2>
     <p>把網址傳給朋友,他用 LINE 登入、輸入邀請碼就進來了。<b>這是你自己的邀請碼</b> —— 朋友用它加入,團裡會記得是你邀請的。</p>
-    <div class="fld"><span class="rm-label">網址</span><div class="inv-row"><code id="inv-url"></code><button type="button" class="btn btn-sm" id="inv-copy-url">複製</button></div></div>
-    <div class="fld"><span class="rm-label">邀請碼</span><div class="inv-row"><code class="inv-code" id="inv-code"></code><button type="button" class="btn btn-sm" id="inv-copy-code">複製</button></div></div>
+    <div class="fld"><span class="rm-label">網址</span><div class="inv-row"><code id="inv-url"></code><button type="button" class="btn btn-ghost btn-sm inv-copy" id="inv-copy-url">複製</button></div></div>
+    <div class="fld"><span class="rm-label">邀請碼</span><div class="inv-row"><code class="inv-code" id="inv-code"></code><button type="button" class="btn btn-ghost btn-sm inv-copy" id="inv-copy-code">複製</button></div></div>
     <div class="ops">
       <a class="btn btn-line" id="inv-line" target="_blank" rel="noopener">用 LINE 傳給朋友</a>
-      <button type="button" class="btn btn-ghost btn-sm" id="inv-renew">換一組邀請碼(舊的就不能用了)</button>
+      <button type="button" class="btn btn-sm" id="inv-renew">換一組邀請碼(舊的就不能用了)</button>
       <button type="button" class="btn btn-ghost btn-sm" id="inv-close">關掉</button>
     </div>
   </div>
