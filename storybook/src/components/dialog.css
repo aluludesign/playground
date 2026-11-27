@@ -40,18 +40,35 @@
 .ds-dialog__inner {
   display: flex;
   flex-direction: column;
-  gap: var(--ds-comp-dialog-gap);
   min-height: 0;
-  padding: var(--ds-comp-dialog-padding);
   border-radius: inherit;
-  overflow: auto;
-  overscroll-behavior: contain;
 }
 
+/* 上：標題＋關閉鈕，固定不捲 */
 .ds-dialog__header {
+  flex: none;
+  padding: var(--ds-comp-dialog-padding) var(--ds-comp-dialog-padding) 0;
+}
+
+/* 中：說明＋內容，內容太長時只有這一段捲動。
+ * 說明放在捲動區最上面：往上捲時它跟著捲走、同時淡出，空間讓給內容 */
+.ds-dialog__scroll {
+  flex: 1 1 auto;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--ds-comp-dialog-header-gap);
+  gap: var(--ds-comp-dialog-gap);
+  /* 上：有說明＝標題和說明的間距；沒有＝標題區和內容的間距。下：有按鈕＝內容和按鈕的間距；沒有＝外框內距 */
+  padding: var(--ds-comp-dialog-gap) var(--ds-comp-dialog-padding) var(--ds-comp-dialog-padding);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.ds-dialog--has-desc .ds-dialog__scroll {
+  padding-top: var(--ds-comp-dialog-header-gap);
+}
+.ds-dialog--has-actions .ds-dialog__scroll {
+  padding-bottom: var(--ds-comp-dialog-gap);
 }
 
 .ds-dialog__title-row {
@@ -98,6 +115,7 @@
   line-height: 18px;
   letter-spacing: 0.04em;
   color: var(--ds-sys-color-text-200);
+  opacity: var(--dialog-desc-opacity, 1);
 }
 
 .ds-dialog__content {
@@ -108,6 +126,8 @@
 }
 
 .ds-dialog__actions {
+  flex: none;
+  padding: 0 var(--ds-comp-dialog-padding) var(--ds-comp-dialog-padding);
   display: flex;
   align-items: flex-start;
   justify-content: flex-end;

@@ -34,10 +34,11 @@ export function dialogHTML({
   const actions = cancel || confirm
     ? `<div class="ds-dialog__actions">${cancel ? buttonHTML({ label: cancel, color: "secondary", variant: "text", size: "md", leadingIcon: false }).replace('class="ds-btn', 'data-dialog="cancel" class="ds-btn') : ""}${confirm ? markerButtonHTML({ label: confirm, size: "lg" }).replace('class="ds-marker', 'data-dialog="confirm" class="ds-marker') : ""}</div>`
     : "";
-  return `<div class="ds-dialog${close ? " ds-dialog--closable" : ""}" role="dialog" aria-modal="true" aria-labelledby="${id}-title"${description ? ` aria-describedby="${id}-desc"` : ""}${label ? ` aria-label="${esc(label)}"` : ""}>
+  const mods = (close ? " ds-dialog--closable" : "") + (description ? " ds-dialog--has-desc" : "") + (actions ? " ds-dialog--has-actions" : "");
+  return `<div class="ds-dialog${mods}" role="dialog" aria-modal="true" aria-labelledby="${id}-title"${description ? ` aria-describedby="${id}-desc"` : ""}${label ? ` aria-label="${esc(label)}"` : ""}>
 <div class="ds-dialog__body ds-pattern ds-pattern--bright ds-wiggle-border"><div class="ds-dialog__inner">
-<div class="ds-dialog__header"><div class="ds-dialog__title-row"><h2 class="ds-dialog__title" id="${id}-title">${penMarkerHTML({ drawn, color: "primary" })}<span class="ds-dialog__title-text">${esc(title)}</span></h2>${close ? buttonHTML({ label: "關閉", color: "secondary", variant: "icon-outlined", size: "xs", icon: CROSS }).replace('class="ds-btn', 'data-dialog="close" class="ds-dialog__close ds-btn') : ""}</div>${description ? `<p class="ds-dialog__desc" id="${id}-desc">${esc(description)}</p>` : ""}</div>
-${content ? `<div class="ds-dialog__content">${content}</div>` : ""}
+<div class="ds-dialog__header"><div class="ds-dialog__title-row"><h2 class="ds-dialog__title" id="${id}-title">${penMarkerHTML({ drawn, color: "primary" })}<span class="ds-dialog__title-text">${esc(title)}</span></h2>${close ? buttonHTML({ label: "關閉", color: "secondary", variant: "icon-outlined", size: "xs", icon: CROSS }).replace('class="ds-btn', 'data-dialog="close" class="ds-dialog__close ds-btn') : ""}</div></div>
+<div class="ds-dialog__scroll">${description ? `<p class="ds-dialog__desc" id="${id}-desc">${esc(description)}</p>` : ""}${content ? `<div class="ds-dialog__content">${content}</div>` : ""}</div>
 ${actions}
 </div></div></div>`;
 }
@@ -67,6 +68,18 @@ export function wireDialog(root = document) {
       if (kind === "confirm") d.dispatchEvent(new CustomEvent("ds-dialog-confirm", { bubbles: true }));
       else d.dispatchEvent(new CustomEvent("ds-dialog-close", { bubbles: true, detail: { reason: kind } }));
     });
+    // 說明跟著內容往上捲時淡出：捲過說明＋下面的間距就完全看不見
+    const scroll = d.querySelector(".ds-dialog__scroll");
+    const desc = d.querySelector(".ds-dialog__desc");
+    if (scroll && desc) {
+      const fade = () => {
+        const gap = parseFloat(getComputedStyle(scroll).rowGap) || 0;
+        const o = Math.max(0, 1 - scroll.scrollTop / (desc.offsetHeight + gap));
+        desc.style.setProperty("--dialog-desc-opacity", o.toFixed(3));
+      };
+      scroll.addEventListener("scroll", fade, { passive: true });
+      fade();
+    }
   });
   wireWiggle(root);
 }

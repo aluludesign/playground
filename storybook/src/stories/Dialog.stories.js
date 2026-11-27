@@ -37,7 +37,7 @@ export const 全部 = {
 <p class="lead">白底小格子、手繪外框的卡片，浮在畫面中間。上面是標題（底下一筆螢光筆）和說明，右上角關閉鈕；中間的內容可以自由替換；下面靠右是「取消」和馬克筆的送出鈕。</p>
 
 <section class="tk"><h2>打開看看</h2>
-<p class="note">打開時從下面浮上來、標題的螢光筆接著畫出來。按 ✕ 或「取消」關起來，「送出」也會關；還沒打字時點外面也會關，打過字就只能按按鈕。（後面那層半透明的黑只是這頁示範用，Figma 沒有畫。）</p>
+<p class="note">內容太長時只有中間會捲動，標題、關閉鈕和下面的按鈕都固定不動；有說明的話，往上捲時說明會淡出、空間讓給內容。打開時從下面浮上來、標題的螢光筆接著畫出來。按 ✕ 或「取消」關起來，「送出」也會關；還沒打字時點外面也會關，打過字就只能按按鈕。（後面那層半透明的黑只是這頁示範用，Figma 沒有畫。）</p>
 <div class="dg-row"><button type="button" class="dg-open" data-k="wish">許願</button><button type="button" class="dg-open" data-k="form">表單</button></div></section>
 
 <section class="tk"><h2>Figma 的三個例子</h2>
@@ -51,6 +51,7 @@ export const 全部 = {
 <table><tbody>
 <tr><td class="nm">沒有說明</td><td class="dg-cell">${dialogHTML({ title: "淺草寺", content: WISH() })}</td></tr>
 <tr><td class="nm">沒有關閉鈕</td><td class="dg-cell">${dialogHTML({ title: "淺草寺", description: "desicriptions", close: false, content: WISH() })}</td></tr>
+<tr><td class="nm">內容很長<br>（這裡限高 420，捲捲看）</td><td class="dg-cell">${dialogHTML({ title: "淺草寺", description: "不選地點也能許願，願望地圖上不會出現地點指標。", confirm: "送出", content: SECTIONS() }).replace('class="ds-dialog', 'style="--dialog-max-height:420px" class="ds-dialog')}</td></tr>
 <tr><td class="nm">沒有按鈕</td><td class="dg-cell">${dialogHTML({ title: "淺草寺", description: "desicriptions", cancel: "", confirm: "", content: WISH() })}</td></tr>
 </tbody></table></section>
 
