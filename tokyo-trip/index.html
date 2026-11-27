@@ -8212,7 +8212,7 @@
       const c = e.target.closest(".m-dcard");
       /* 還沒展開:點照片也是展開整張卡;展開之後點照片才看大圖(Lulu 11-26) */
       if (!el("m-detail").classList.contains("is-open")) {
-        if (c && c.classList.contains("is-cur") && !c.classList.contains("is-moving")) mDetailOpen(true, true);
+        if (c && !c.classList.contains("is-moving")) { mDetailMakeCur(c); mDetailOpen(true, true); }
         return;
       }
       const x = mDetail && mDetailList()[c ? +c.dataset.i : mDetail.i];
@@ -8222,8 +8222,10 @@
     el("m-detail-card").addEventListener("click", e => {
       if (el("m-detail").classList.contains("is-open")) return;
       const c = e.target.closest(".m-dcard");
-      if (!c || !c.classList.contains("is-cur") || c.classList.contains("is-moving")) return;
+      if (!c || c.classList.contains("is-moving")) return;
       if (e.target.closest(".ds-acard__close, a, button, input, textarea, [role=button]")) return;
+      /* 桌機上好幾張並排:點旁邊那張也是展開它,不用先把它滑到中間(Lulu 11-27) */
+      mDetailMakeCur(c);
       mDetailOpen(true, true);
     });
     el("m-photo").addEventListener("ds-photo-at", e => mPaintPhoto(e.detail.index));
@@ -8478,6 +8480,15 @@
       const x = mDetailList()[i];
       if (x) { mFocusDetail(x, mDetailKey(i)); mLoadPlaceInfo(x); }
     }, 120);
+  }
+  /* 換成這一張(跟左右滑停下來那條一樣:它的點放大、移到地圖中間、讀地點資料) */
+  function mDetailMakeCur(c) {
+    const i = +c.dataset.i;
+    if (!mDetail || i === mDetail.i) return;
+    mDetail.i = i;
+    el("m-detail-card").querySelectorAll(".m-dcard").forEach(d => d.classList.toggle("is-cur", d === c));
+    const x = mDetailList()[i];
+    if (x) { mFocusDetail(x, mDetailKey(i)); mLoadPlaceInfo(x); }
   }
   /* 有座標:放大、置中;沒有(不指定地點的願望、沒標位置的行程):不放大任何點,底下提示「這個點不在地圖上」 */
   function mFocusDetail(x, key) {
