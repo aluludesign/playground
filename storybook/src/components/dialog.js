@@ -68,7 +68,7 @@ export function wireDialog(root = document) {
       if (kind === "confirm") d.dispatchEvent(new CustomEvent("ds-dialog-confirm", { bubbles: true }));
       else d.dispatchEvent(new CustomEvent("ds-dialog-close", { bubbles: true, detail: { reason: kind } }));
     });
-    // 說明在原地淡出：內容往上捲多少，說明就讓出多少高度（含上面的間距），同時變淡；捲回最上面再出現。
+    // 說明在原地淡出：內容往上捲多少，說明就讓出多少高度（上緣不動，從下往上收），同時變淡；捲回最上面再出現。
     // 讓出的高度不會超過「還能捲的距離的一半」，內容只多一點點時不會來回跳
     const scroll = d.querySelector(".ds-dialog__scroll");
     const wrap = d.querySelector(".ds-dialog__desc-wrap");

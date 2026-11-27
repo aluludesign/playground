@@ -45,10 +45,14 @@
 }
 
 /* 上：標題＋關閉鈕＋說明（Figma「subtitle」），固定不捲。
- * 說明在原地淡出：往上捲內容時，說明一邊變淡、一邊把自己的高度（含上面 header-gap）讓出來給內容 */
+ * 說明在原地淡出：往上捲內容時，說明一邊變淡、一邊把自己的高度讓出來給內容（從下往上收，上緣不動） */
 .ds-dialog__header {
   flex: none;
   padding: var(--ds-comp-dialog-padding) var(--ds-comp-dialog-padding) 0;
+}
+/* 沒有說明時，標題下面一樣留 header-gap：捲動內容被切在標題下 8，不會貼著標題 */
+.ds-dialog:not(.ds-dialog--has-desc) .ds-dialog__header {
+  padding-bottom: var(--ds-comp-dialog-header-gap);
 }
 
 /* 中：內容，內容太長時只有這一段捲動；和標題區隔 comp/dialog/gap */
@@ -57,24 +61,27 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
-  /* 下：有按鈕＝內容和按鈕的間距；沒有＝外框內距 */
-  padding: var(--ds-comp-dialog-gap) var(--ds-comp-dialog-padding) var(--ds-comp-dialog-padding);
+  /* 上：有說明＝說明和內容的間距；沒有＝標題和內容的間距（標題區下面已經有 header-gap）
+   * 下：有按鈕＝內容和按鈕的間距；沒有＝外框內距 */
+  padding: calc(var(--ds-comp-dialog-gap) - var(--ds-comp-dialog-header-gap)) var(--ds-comp-dialog-padding) var(--ds-comp-dialog-padding);
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
+}
+.ds-dialog--has-desc .ds-dialog__scroll {
+  padding-top: var(--ds-comp-dialog-gap);
 }
 .ds-dialog--has-actions .ds-dialog__scroll {
   padding-bottom: var(--ds-comp-dialog-gap);
 }
 
-/* 說明：標題下 header-gap。捲動時 wireDialog 會把 --dialog-desc-collapse（0–1）調上去 */
+/* 說明：在標題下 header-gap 的位置。捲動時 wireDialog 會把 --dialog-desc-collapse（0–1）調上去，高度從下往上收 */
 .ds-dialog__desc-wrap {
   --dialog-desc-collapse: 0;
+  /* 和標題的間距不收：說明讓位後，捲動內容被切在「說明原本的上緣」 */
+  margin-top: var(--ds-comp-dialog-header-gap);
   overflow: hidden;
   opacity: calc(1 - var(--dialog-desc-collapse));
-}
-.ds-dialog__desc-wrap > .ds-dialog__desc {
-  padding-top: var(--ds-comp-dialog-header-gap);
 }
 
 .ds-dialog__title-row {
