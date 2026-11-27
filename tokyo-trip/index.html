@@ -8215,7 +8215,10 @@
       b.click();
       renderMemberShell();
     });
-    el("m-detail-card").addEventListener("ds-card-close", mCloseDetail);
+    /* ✕(Lulu 11-27):展開著 = 收回縮小的卡(漸變);縮小的卡上的 ✕ 才是離開細節頁 */
+    el("m-detail-card").addEventListener("ds-card-close", () => {
+      if (el("m-detail").classList.contains("is-open")) mDetailOpen(false, true); else mCloseDetail();
+    });
     el("m-detail-card").addEventListener("ds-like", e => toggleVote(e.detail.key));
     el("m-detail-card").addEventListener("scroll", mDetailScrolled, { passive: true });
     mWireDetailSwipe();
